@@ -1,0 +1,423 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+:root {
+    --ui-font-family: "Yu Gothic UI", "Meiryo UI", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    --ui-radius: 0.5rem;
+
+    --cd-titlebar: #eef0f4;
+    --cd-titlebar-text: #3b3f4a;
+    --cd-sidebar: #f6f7f9;
+    --cd-canvas: #e7e9ee;
+    --cd-paper-shadow: 0 1px 2px rgb(15 23 42 / 0.06), 0 8px 24px rgb(15 23 42 / 0.08);
+    --cd-draft: #b7791f;
+    --cd-draft-bg: #fdf6e3;
+    --cd-draft-border: #f1dfaa;
+    --cd-highlight: #fff3bf;
+    --cd-chg-app: #fff1c2;
+    --cd-selected: color-mix(in oklab, var(--ui-color-primary-500) 13%, transparent);
+
+    --cd-ed-bg: #ffffff;
+    --cd-ed-text: #1f2330;
+    --cd-ed-gutter: #f7f8fa;
+    --cd-ed-gutter-text: #a1a6b3;
+    --cd-ed-active: #f3f5fb;
+    --cd-ed-selection: #d6defc;
+    --cd-ed-cursor: #3446c9;
+    --cd-syn-title: #1d2a8f;
+    --cd-syn-chapter: #6b3fa0;
+    --cd-syn-article: #2948c9;
+    --cd-syn-mark: #9aa1b2;
+    --cd-syn-ref: #0f7a5a;
+    --cd-syn-ref-bad: #c02626;
+    --cd-syn-code: #8a4b08;
+    --cd-syn-hint: #8b93a7;
+}
+
+/* 条文の CSS（:root）があとから読み込まれても上書きされないように、:root.dark にする */
+:root.dark {
+    --cd-titlebar: #121318;
+    --cd-titlebar-text: #c9ccd6;
+    --cd-sidebar: #15161c;
+    --cd-canvas: #0e0f13;
+    --cd-paper-shadow: 0 0 0 1px rgb(255 255 255 / 0.06), 0 10px 30px rgb(0 0 0 / 0.5);
+    --cd-draft: #e3b341;
+    --cd-draft-bg: #2a2310;
+    --cd-draft-border: #4d3f17;
+    --cd-highlight: #3a3418;
+    --cd-chg-app: #4a3d12;
+
+    --cd-ed-bg: #17181e;
+    --cd-ed-text: #dfe2ea;
+    --cd-ed-gutter: #17181e;
+    --cd-ed-gutter-text: #555a68;
+    --cd-ed-active: #1e2028;
+    --cd-ed-selection: #2e3a6b;
+    --cd-ed-cursor: #8ea2ff;
+    --cd-syn-title: #b4c2ff;
+    --cd-syn-chapter: #d2a8ff;
+    --cd-syn-article: #8ea2ff;
+    --cd-syn-mark: #5d6374;
+    --cd-syn-ref: #5fd3a8;
+    --cd-syn-ref-bad: #ff7b7b;
+    --cd-syn-code: #e8b26b;
+    --cd-syn-hint: #6b7286;
+
+    --cd-paper: #1c1d24;
+    --cd-ink: #e3e5ec;
+    --cd-ink-soft: #9ba1b0;
+    --cd-rule: #5b6070;
+    --cd-rule-soft: #33363f;
+    --cd-head-bg: #252731;
+    --cd-missing: #ff8080;
+    --cd-missing-bg: #3d1d1f;
+    --pele-surface: #23252e;
+    --pele-surface-alt: #2b2e38;
+    --pele-border: #4a4f5e;
+    --pele-accent: #8ea2ff;
+}
+
+html,
+body,
+#__nuxt {
+    height: 100%;
+}
+
+body {
+    font-family: var(--ui-font-family);
+    background: var(--ui-bg);
+    color: var(--ui-text);
+}
+
+.cd-compare .cd-chg {
+    background: var(--cd-chg-app);
+}
+
+.cd-wide {
+    max-width: min(1100px, 95vw) !important;
+    width: 100%;
+}
+
+.cd-paper {
+    background: var(--cd-paper);
+    color: var(--cd-ink);
+    box-shadow: var(--cd-paper-shadow);
+    border-radius: 2px;
+}
+
+.cd-canvas {
+    background: var(--cd-canvas);
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--ui-border-accented) transparent;
+}
+
+.cd-modal-fill {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
+}
+
+.cd-no-linenums .cm-lineNumbers {
+    display: none !important;
+}
+
+.cd-no-hints .cm-editor .cd-hint {
+    display: none !important;
+}
+
+body.cd-resizing {
+    cursor: col-resize !important;
+    user-select: none;
+}
+
+body.cd-resizing * {
+    cursor: col-resize !important;
+}
+
+.cd-hint {
+    color: var(--cd-syn-hint);
+    font-size: 11px;
+    padding: 0 5px;
+    border-radius: 4px;
+    background: var(--ui-bg-elevated);
+    font-family: var(--ui-font-family);
+    user-select: none;
+    white-space: nowrap;
+}
+
+.cd-hint-article {
+    color: var(--cd-syn-article);
+}
+
+.cd-hint-chapter {
+    color: var(--cd-syn-chapter);
+}
+
+.cd-modal-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    width: 100%;
+}
+
+.cd-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.cd-full {
+    width: 100%;
+}
+
+.cd-grow {
+    flex: 1;
+    min-width: 0;
+}
+
+.cd-muted {
+    font-size: 12px;
+    color: var(--ui-text-muted);
+    margin: 0;
+}
+
+.cd-w-input {
+    width: 260px;
+}
+
+.cd-w-small {
+    width: 110px;
+}
+
+.cd-w-wide {
+    width: 380px;
+}
+
+.cd-side-sec {
+    padding: 6px 0 12px;
+    border-bottom: 1px solid var(--ui-border);
+}
+
+.cd-side-sec:last-child {
+    border-bottom: none;
+}
+
+.cd-list-group {
+    padding-bottom: 8px;
+}
+
+.cd-list-group+.cd-list-group {
+    border-top: 1px solid var(--ui-border);
+}
+
+.cd-chip {
+    display: inline-flex;
+    align-items: center;
+    max-width: 220px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1.6;
+    background: var(--ui-bg-elevated);
+    border: 1px solid var(--ui-border);
+    color: var(--ui-text-toned);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+button.cd-chip {
+    cursor: pointer;
+}
+
+button.cd-chip:hover {
+    border-color: var(--ui-color-primary-500);
+    color: var(--ui-text-highlighted);
+}
+
+.cd-chip.warn {
+    border-color: color-mix(in oklab, var(--ui-color-warning-500) 50%, transparent);
+    background: color-mix(in oklab, var(--ui-color-warning-500) 10%, transparent);
+}
+
+.cd-chip.gone {
+    color: var(--ui-text-dimmed);
+    text-decoration: line-through;
+}
+
+.cd-pane-col {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+}
+
+.cd-pane-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    flex-shrink: 0;
+    padding: 0 4px 0 12px;
+    border-bottom: 1px solid var(--ui-border);
+    background: var(--ui-bg);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ui-text-muted);
+    letter-spacing: 0.05em;
+}
+
+.cd-pane-bar>.cd-pane-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cd-pane-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ui-text-muted);
+    letter-spacing: 0.05em;
+}
+
+.cd-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--ui-border);
+    flex-wrap: wrap;
+}
+
+.cd-statusbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 26px;
+    padding: 0 12px;
+    flex-shrink: 0;
+    font-size: 11px;
+    color: var(--ui-text-muted);
+    border-top: 1px solid var(--ui-border);
+    background: var(--cd-sidebar);
+}
+
+.cd-statusbar>span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.cd-preview {
+    flex: 1;
+    overflow: auto;
+    padding: 28px 24px;
+}
+
+.cd-side-body {
+    overflow: hidden !important;
+}
+
+.cd-preview .cd-compare thead th {
+    position: sticky;
+    top: -31px;
+    z-index: 1;
+    box-shadow: inset 0 -1px 0 var(--cd-rule), inset 0 1px 0 var(--cd-rule), 0 -8px 0 var(--cd-paper);
+}
+
+.cd-modal-tall {
+    height: min(86vh, 920px);
+}
+
+.cd-modal-split {
+    overflow: hidden !important;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.cd-modal-split>* {
+    flex: 1;
+    min-height: 0;
+}
+
+.cd-crumb-btn {
+    -webkit-app-region: no-drag;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    max-width: 300px;
+    height: 26px;
+    padding: 0 7px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    font-size: 12px;
+    color: inherit;
+    cursor: pointer;
+}
+
+.cd-crumb-btn:hover,
+.cd-crumb-btn.open {
+    background: var(--ui-bg);
+    border-color: var(--ui-border);
+}
+
+.cd-crumb-btn .ci {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    opacity: 0.85;
+}
+
+.cd-crumb-btn .nm {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+.cd-crumb-btn .caret {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    opacity: 0.55;
+}
+
+.cd-crumb-btn.doc .nm {
+    font-weight: 400;
+}
+
+.cd-crumb-btn.draft {
+    color: var(--cd-draft);
+    background: var(--cd-draft-bg);
+    border-color: var(--cd-draft-border);
+}
+
+.cd-crumb-btn .tag {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 0 4px;
+    border-radius: 4px;
+    background: var(--cd-draft);
+    color: #fff;
+    flex-shrink: 0;
+}
+
+:root {
+    --cd-brand: #201ed0;
+}
+
+:root.dark {
+    --cd-brand: #9d9bff;
+}
