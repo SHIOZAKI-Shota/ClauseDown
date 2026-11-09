@@ -21,7 +21,7 @@
     --cd-ed-text: #1f2330;
     --cd-ed-gutter: #f7f8fa;
     --cd-ed-gutter-text: #a1a6b3;
-    --cd-ed-active: #f3f5fb;
+    --cd-ed-active: rgba(105, 130, 205, 0.08);
     --cd-ed-selection: #d6defc;
     --cd-ed-cursor: #3446c9;
     --cd-syn-title: #1d2a8f;
@@ -51,7 +51,7 @@
     --cd-ed-text: #dfe2ea;
     --cd-ed-gutter: #17181e;
     --cd-ed-gutter-text: #555a68;
-    --cd-ed-active: #1e2028;
+    --cd-ed-active: rgba(93, 104, 130, 0.1);
     --cd-ed-selection: #2e3a6b;
     --cd-ed-cursor: #8ea2ff;
     --cd-syn-title: #b4c2ff;
