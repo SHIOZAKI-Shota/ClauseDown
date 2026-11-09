@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 
 export const repoKey = (dir: string) => {
     const r = resolve(dir)
-    return process.platform === 'win32' ? r.toLowerCase() : r
+    return process.platform === 'win32' || process.platform === 'darwin' ? r.toLowerCase() : r
 }
 
 const held = new AsyncLocalStorage<ReadonlySet<string>>()

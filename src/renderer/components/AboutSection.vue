@@ -63,7 +63,7 @@ async function install() {
             <p class="cd-muted">バージョン {{ data?.app.version ?? '—' }}　© 2026</p>
         </div>
         <SettingRow label="更新" :description="status">
-            <UButton v-if="update?.state === 'available' || (update?.state === 'error' && update.version)" label="ダウンロード"
+            <UButton v-if="update?.state === 'available' || (update?.state === 'error' && update.version)" :label="IS_MAC ? '配布ページを開く' : 'ダウンロード'"
                 icon="i-lucide-download" size="sm" @click="download" />
             <UButton v-else-if="update?.state === 'ready'" label="再起動して更新" icon="i-lucide-rotate-cw" size="sm"
                 @click="install" />

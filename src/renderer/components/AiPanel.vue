@@ -224,7 +224,7 @@ function openSettings() {
                     <UButton v-else label="頼む" icon="i-lucide-send" size="sm" :disabled="!input.trim()"
                         @click="send()" />
                 </div>
-                <p class="note">{{ sendNote }}Ctrl+Enter で送信</p>
+                <p class="note">{{ sendNote }}{{ keys('Ctrl+Enter') }} で送信</p>
             </footer>
         </template>
     </aside>

@@ -1,3 +1,5 @@
+import { fontNames } from './fonts'
+
 export interface DocStyle {
     font: string
     fontSize: number
@@ -68,8 +70,8 @@ export const DEFAULT_PREFS: AppPrefs = {
 }
 
 
-export const BODY_FONTS = ['游明朝', 'BIZ UD明朝 Medium', 'ＭＳ 明朝', 'ＭＳ Ｐ明朝', 'Noto Serif JP', '游ゴシック', 'BIZ UDゴシック', 'メイリオ', 'ＭＳ ゴシック']
-export const EDITOR_FONTS = ['BIZ UDゴシック', 'ＭＳ ゴシック', 'Cascadia Mono', 'Consolas', 'Noto Sans Mono CJK JP', 'HackGen', 'HackGen Console NF', 'UDEV Gothic', 'メイリオ', '游ゴシック']
+export const BODY_FONTS = ['游明朝', 'BIZ UD明朝 Medium', 'ＭＳ 明朝', 'ＭＳ Ｐ明朝', 'ヒラギノ明朝 ProN', 'Noto Serif JP', '游ゴシック', 'BIZ UDゴシック', 'メイリオ', 'ＭＳ ゴシック', 'ヒラギノ角ゴシック']
+export const EDITOR_FONTS = ['BIZ UDゴシック', 'ＭＳ ゴシック', 'Cascadia Mono', 'Consolas', 'Noto Sans Mono CJK JP', 'HackGen', 'HackGen Console NF', 'UDEV Gothic', 'メイリオ', '游ゴシック', 'ヒラギノ角ゴシック']
 
 const num = (v: unknown, min: number, max: number, d: number) => {
     const x = Number(v)
@@ -89,8 +91,9 @@ export function cleanStyle(s: Partial<DocStyle> | null | undefined): DocStyle {
 }
 
 export function cssFont(name: string, kind: 'serif' | 'mono' = 'serif'): string {
-    const fallback = kind === 'mono' ? '"BIZ UDGothic", "MS Gothic", monospace' : '"Yu Mincho", "YuMincho", "MS Mincho", serif'
-    return `"${name.replace(/["\\<>;{}]/g, '')}", ${fallback}`
+    const fallback = kind === 'mono' ? ['BIZ UDGothic', 'MS Gothic'] : ['Yu Mincho', 'YuMincho', 'MS Mincho']
+    const names = new Set([...fontNames(name.replace(/["\\<>;{}]/g, '')), ...fallback])
+    return `${[...names].map((n) => `"${n}"`).join(', ')}, ${kind === 'mono' ? 'monospace' : 'serif'}`
 }
 
 export function styleVars(s: DocStyle): string {

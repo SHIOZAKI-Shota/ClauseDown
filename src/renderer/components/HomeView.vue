@@ -30,7 +30,6 @@ const hello = computed(() => {
     const g = h < 10 ? 'おはようございます' : h < 18 ? 'こんにちは' : 'お疲れさまです'
     return app.me ? `${app.me}さん、${g}` : g
 })
-const isMac = navigator.userAgent.includes('Mac')
 
 const steps = computed(() => [
     {
@@ -101,7 +100,7 @@ function addRepo() {
                 <UIcon name="i-lucide-search" />
                 <span>文書・条の見出し・改定案・操作を検索</span>
                 <span class="cd-grow" />
-                <UKbd :value="isMac ? 'meta' : 'ctrl'" />
+                <UKbd value="meta" />
                 <UKbd value="K" />
             </button>
             <div class="quick">

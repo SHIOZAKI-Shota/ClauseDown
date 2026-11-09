@@ -303,7 +303,7 @@ const tipOf = (it: TimelineItem) =>
                     @click="panBy(trackW / 2)" />
             </UFieldGroup>
             <SegmentSwitch v-model="scale" size="xs" :items="SCALES.map((s) => ({ value: s.value, label: s.label }))" />
-            <UTooltip text="Ctrl＋ホイールで拡大・縮小します。背景のドラッグか Shift＋ホイールで、表示する期間を前後に動かします。空いた所をダブルクリックすると、その日に期日を足します">
+            <UTooltip :text="`${MOD_KEY}＋ホイールで拡大・縮小します。背景のドラッグか Shift＋ホイールで、表示する期間を前後に動かします。空いた所をダブルクリックすると、その日に期日を足します`">
                 <UIcon name="i-lucide-circle-help" class="help" />
             </UTooltip>
         </div>

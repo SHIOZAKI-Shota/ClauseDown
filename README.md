@@ -1,6 +1,6 @@
 # ClauseDown
 
-ClauseDown は法律案・条例・契約書・規約・規程など、「第○条」と条文を並べる文書を書き、版を管理する Windows 用のデスクトップアプリです。
+ClauseDown は法律案・条例・契約書・規約・規程など、「第○条」と条文を並べる文書を書き、版を管理する Windows・macOS 用のデスクトップアプリです。
 士業（弁護士・司法書士・行政書士・社労士など）、企業の法務・人事、議員や法制の担当者など、条文を書く人に向けて作っています。
 
 文書は Markdown で書き、版は Git で記録します。画面では Git の用語を使わないので、Git や VS Code を知らない事務担当者でも、編集・版の保存・改定案・確認依頼・新旧対照表・施行日・納品までを扱えます。
@@ -111,10 +111,15 @@ npm test           # 単体テスト（同期・GitHub／GitLab 連携のテス�
 npm run test:e2e   # 画面のテスト（ビルドしてから Electron で起動し、主な画面を開いて操作する）
 npm run typecheck  # main 側（tsconfig.node.json）と Nuxt 側の両方
 npm run build      # out/ に main・preload・画面を出力
-npm run dist       # インストーラを作る（release/）
+npm run dist       # Windows 用のインストーラと macOS 用の dmg・zip をまとめて作る（release/。macOS で実行する）
+npm run dist:win   # Windows 用（x64）だけを作る。Windows でも実行できる
+npm run dist:mac   # macOS 用（Apple シリコン）だけを作る。macOS で実行する
+npm run release    # dist と同じものを作り、GitHub Releases に公開する（release:win・release:mac もある。GH_TOKEN が必要）
 ```
 
 VS Code のターミナルでは `ELECTRON_RUN_AS_NODE=1` が設定されていることがあります。`npm run dev` は自動で外しますが、`electron .` などを直接実行するときは外してください。
+
+macOS 版は Apple の Developer ID で署名・公証していません（アドホック署名）。そのため、ダウンロードした dmg から入れたアプリは、初回の起動を macOS が止めます。「システム設定」→「プライバシーとセキュリティ」の「このまま開く」で起動できます。また、アプリの中からの自動更新はできないので、macOS では更新の確認だけを行い、配布ページを開きます（`src/main/updater.ts`）。
 
 ### GitHub・GitLab との接続の準備
 
@@ -192,7 +197,7 @@ App が読み書きできるのは、インストールのときに選んだリ�
 - **同時の操作**：同期・版の保存・統合・AI の書き込み・記録の書き込みなど、リポジトリを書き換える処理は、リポジトリごとに 1 つずつ順に実行します。
 - **書き込み**：文書と設定は、一時ファイルに書いてから名前を変える方法で書きます。
 - **改行コード**：CRLF / LF の違いだけでは変更とみなしません（Windows の core.autocrlf への対策）。
-- **認証情報**：Electron の `safeStorage`（Windows では DPAPI）で暗号化して保存します。
+- **認証情報**：Electron の `safeStorage`（Windows では DPAPI、macOS ではキーチェーン）で暗号化して保存します。
 - エンジニアは同じリポジトリを VS Code や git コマンドでそのまま扱えます。
 
 ### 期日

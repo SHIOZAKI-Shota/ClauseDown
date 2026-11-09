@@ -20,8 +20,12 @@
     "typecheck": "vue-tsc --noEmit -p tsconfig.node.json && nuxt typecheck",
     "test": "vitest run",
     "test:e2e": "npm run build && vitest run -c vitest.e2e.config.ts",
-    "dist": "npm run build && electron-builder --win --publish never",
-    "release": "npm run build && electron-builder --win --publish always",
+    "dist": "npm run build && electron-builder --mac --win --publish never",
+    "dist:win": "npm run build && electron-builder --win --publish never",
+    "dist:mac": "npm run build && electron-builder --mac --publish never",
+    "release": "npm run build && electron-builder --mac --win --publish always",
+    "release:win": "npm run build && electron-builder --win --publish always",
+    "release:mac": "npm run build && electron-builder --mac --publish always",
     "postinstall": "node node_modules/electron/install.js && nuxt prepare",
     "testdata": "node scripts/make-testdata.mjs"
   },
@@ -88,12 +92,31 @@
       "package.json"
     ],
     "win": {
-      "target": "nsis",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": "x64"
+        }
+      ],
       "icon": "build/icon.png"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": "arm64"
+        },
+        {
+          "target": "zip",
+          "arch": "arm64"
+        }
+      ],
+      "icon": "build/icon-mac.png",
+      "category": "public.app-category.productivity"
     },
     "electronFuses": {
       "runAsNode": false,
@@ -101,7 +124,8 @@
       "enableNodeOptionsEnvironmentVariable": false,
       "enableNodeCliInspectArguments": false,
       "enableEmbeddedAsarIntegrityValidation": true,
-      "onlyLoadAppFromAsar": true
+      "onlyLoadAppFromAsar": true,
+      "resetAdHocDarwinSignature": true
     }
   }
 }

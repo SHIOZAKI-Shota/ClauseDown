@@ -523,7 +523,7 @@ async function addSamples() {
                 description="例：https://github.com/組織名/リポジトリ名、https://gitlab.com/組織名/リポジトリ名">
                 <UInput v-model="url" class="cd-w-wide" placeholder="https://github.com/組織名/リポジトリ名" />
             </SettingRow>
-            <SettingRow v-if="mode === 'open'" label="フォルダ" description="Ctrl や Shift を押しながら選ぶと、複数のリポジトリをまとめて追加できます。">
+            <SettingRow v-if="mode === 'open'" label="フォルダ" :description="`${MOD_KEY} や Shift を押しながら選ぶと、複数のリポジトリをまとめて追加できます。`">
                 <span class="path">{{ folderPaths.length ? `${folderPaths.length}件を選択` : '（未選択）' }}</span>
                 <UButton label="選ぶ" icon="i-lucide-folder-open" size="sm" color="neutral" variant="outline"
                     @click="pick" />

@@ -227,9 +227,9 @@ async function editCommand(cmd: 'cut' | 'copy' | 'paste') {
 }
 const editMenu = computed<DropdownMenuItem[][]>(() => [
     [
-        { label: '切り取り', icon: 'i-lucide-scissors', kbds: ['ctrl', 'x'], disabled: selEmpty.value, onSelect: () => editCommand('cut') },
-        { label: 'コピー', icon: 'i-lucide-copy', kbds: ['ctrl', 'c'], disabled: selEmpty.value, onSelect: () => editCommand('copy') },
-        { label: '貼り付け', icon: 'i-lucide-clipboard', kbds: ['ctrl', 'v'], onSelect: () => editCommand('paste') },
+        { label: '切り取り', icon: 'i-lucide-scissors', kbds: ['meta', 'x'], disabled: selEmpty.value, onSelect: () => editCommand('cut') },
+        { label: 'コピー', icon: 'i-lucide-copy', kbds: ['meta', 'c'], disabled: selEmpty.value, onSelect: () => editCommand('copy') },
+        { label: '貼り付け', icon: 'i-lucide-clipboard', kbds: ['meta', 'v'], onSelect: () => editCommand('paste') },
     ],
     [
         { label: selEmpty.value ? 'この行に書式を付ける…' : '選んだ範囲に書式を付ける…', icon: 'i-lucide-type', onSelect: addFormat },
@@ -468,23 +468,23 @@ const saveState = computed(() =>
             </UTooltip>
             <span class="sep" />
             <UFieldGroup size="sm">
-                <UTooltip text="元に戻す（Ctrl+Z）">
+                <UTooltip :text="`元に戻す（${keys('Ctrl+Z')}）`">
                     <UButton icon="i-lucide-undo-2" square color="neutral" variant="outline" :disabled="!history.undo"
                         aria-label="元に戻す" @click="editor?.undo()" />
                 </UTooltip>
-                <UTooltip text="やり直す（Ctrl+Y）">
+                <UTooltip :text="`やり直す（${REDO_KEYS}）`">
                     <UButton icon="i-lucide-redo-2" square color="neutral" variant="outline" :disabled="!history.redo"
                         aria-label="やり直す" @click="editor?.redo()" />
                 </UTooltip>
             </UFieldGroup>
             <UFieldGroup size="sm">
-                <UTooltip text="条を追加（Ctrl+Alt+A）">
+                <UTooltip :text="`条を追加（${keys('Ctrl+Alt+A')}）`">
                     <UButton label="条" icon="i-lucide-plus" color="neutral" variant="outline" @click="addArticle" />
                 </UTooltip>
-                <UTooltip text="項を追加（Ctrl+Alt+P）">
+                <UTooltip :text="`項を追加（${keys('Ctrl+Alt+P')}）`">
                     <UButton label="項" icon="i-lucide-plus" color="neutral" variant="outline" @click="addParagraph" />
                 </UTooltip>
-                <UTooltip text="号を追加（Ctrl+Alt+I）。行頭で Tab を押しても号になります">
+                <UTooltip :text="`号を追加（${keys('Ctrl+Alt+I')}）。行頭で Tab を押しても号になります`">
                     <UButton label="号" icon="i-lucide-plus" color="neutral" variant="outline" @click="addItem" />
                 </UTooltip>
                 <UTooltip text="号の細分（イ、ロ…）を追加">
@@ -615,7 +615,7 @@ const saveState = computed(() =>
             <span>{{ articleCount }} 条</span>
             <span>{{ chars.toLocaleString() }} 文字</span>
             <span class="cd-grow" />
-            <span class="hint">[[ で条参照 ／ Tab で項→号 ／ Ctrl+F で検索</span>
+            <span class="hint">[[ で条参照 ／ Tab で項→号 ／ {{ keys('Ctrl+F') }} で検索</span>
             <span :class="['save', saving === 'pending' ? 'pending' : changed ? 'dirty' : 'clean']">
                 <UIcon
                     :name="saving === 'pending' ? 'i-lucide-loader' : changed ? 'i-lucide-circle-dot' : 'i-lucide-circle-check'" />

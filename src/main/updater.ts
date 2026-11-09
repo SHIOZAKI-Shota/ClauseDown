@@ -1,4 +1,4 @@
-import { app } from 'electron'
+import { app, shell } from 'electron'
 import electronUpdater, { type UpdateInfo } from 'electron-updater'
 import type { UpdateState } from '../shared/api'
 
@@ -7,6 +7,9 @@ const { autoUpdater } = electronUpdater
 let state: UpdateState = { state: 'idle', current: app.getVersion() }
 let notify: (s: UpdateState) => void = () => { }
 let ready = false
+
+const MANUAL = process.platform === 'darwin'
+const RELEASES_URL = 'https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest'
 
 function set(next: Omit<UpdateState, 'current'>) {
     state = { ...next, current: app.getVersion() }
@@ -51,7 +54,7 @@ function setup() {
 function friendly(e: unknown): string {
     const m = e instanceof Error ? e.message : String(e)
     if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|ENETUNREACH|net::ERR_/i.test(m)) return 'インターネットにつながらないため、更新を確認できませんでした'
-    if (/404|latest\.yml/i.test(m)) return '配布されている更新の情報が見つかりませんでした'
+    if (/404|latest(-mac)?\.yml/i.test(m)) return '配布されている更新の情報が見つかりませんでした'
     return `更新でエラーが起きました：${m.split('\n')[0]}`
 }
 
@@ -80,6 +83,10 @@ export async function checkUpdate(): Promise<UpdateState> {
 export async function downloadUpdate(): Promise<UpdateState> {
     if (state.state !== 'available' && state.state !== 'error') return state
     if (!state.version) return state
+    if (MANUAL) {
+        await shell.openExternal(RELEASES_URL)
+        return state
+    }
     setup()
     set({ state: 'downloading', version: state.version, notes: state.notes, date: state.date, percent: 0 })
     try {

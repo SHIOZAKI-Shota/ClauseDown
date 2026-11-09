@@ -11,6 +11,7 @@ import {
 } from '@codemirror/search'
 import type { EditorState, Extension } from '@codemirror/state'
 import { EditorView, type Panel, type ViewUpdate } from '@codemirror/view'
+import { keys } from './platform'
 
 const ICONS = {
     up: 'm18 15-6-6-6 6',
@@ -102,7 +103,7 @@ function createPanel(view: EditorView): Panel {
         return b
     }
     const replaceOne = textBtn('置換', '1件置換して次へ（Enter）', () => replaceNext(view))
-    const replaceEvery = textBtn('すべて置換', 'すべて置換（Ctrl+Alt+Enter）', () => replaceAll(view))
+    const replaceEvery = textBtn('すべて置換', `すべて置換（${keys('Ctrl+Alt+Enter')}）`, () => replaceAll(view))
     const row2 = el('div', 'cd-find-row cd-find-replace')
     row2.append(el('span', 'cd-find-spacer'), replaceField, replaceOne, replaceEvery)
 

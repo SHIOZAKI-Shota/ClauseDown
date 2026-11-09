@@ -2,7 +2,7 @@ import { app, BrowserWindow, dialog, ipcMain, nativeTheme, net, protocol, shell 
 import type { AiStatus, AppSettings, DocChangedEvent, McpConfig } from '../shared/api'
 import { existsSync, statSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
-import { dirname, join, resolve, sep } from 'node:path'
+import { dirname, isAbsolute, join, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { getCACertificates, setDefaultCACertificates } from 'node:tls'
 import * as git from './git'
@@ -23,6 +23,7 @@ import * as accounts from './accounts'
 import { identity } from './git-base'
 import { forgetCachedSettings, loadSecret, loadSettings, resetAllData, saveSecret, updateSettings } from './settings'
 import { listFonts } from './fonts'
+import { setAppMenu } from './menu'
 import { aiReset, aiRun, aiStop, testAi } from './ai-agent'
 import { keyName, resolveAi } from './ai/provider'
 import { listAiModels } from './ai/models'
@@ -179,7 +180,7 @@ async function setAiConfig(config: AiConfig): Promise<AiStatus> {
 }
 
 async function openFolder(p: unknown): Promise<void> {
-    if (typeof p !== 'string' || !/^[A-Za-z]:[\\/]/.test(p)) throw new Error('この場所は開けません')
+    if (typeof p !== 'string' || !(process.platform === 'win32' ? /^[A-Za-z]:[\\/]/.test(p) : isAbsolute(p))) throw new Error('この場所は開けません')
     const full = resolve(p)
     if (!statSync(full, { throwIfNoEntry: false })?.isDirectory()) throw new Error('フォルダが見つかりません')
     await shell.openPath(full)
@@ -383,6 +384,7 @@ for (const [name, fn] of Object.entries(handlers)) {
 }
 
 app.whenReady().then(() => {
+    setAppMenu()
     serveRenderer()
     createWindow()
     void listFonts()

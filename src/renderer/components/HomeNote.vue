@@ -58,7 +58,7 @@ function onKey(e: KeyboardEvent) {
         <div v-if="editing" class="edit" @keydown="onKey">
             <UTextarea v-model="draft" :rows="5" autoresize :maxrows="14" class="cd-full" autofocus
                 placeholder="例：〇〇様からの依頼分。担当：山田。次回の見直しは2027年4月。" />
-            <p class="cd-muted hint">見出し（#）と箇条書き（-）を使えます。保存すると版として記録します。同期すると、リポジトリを使うほかの人にも見えます。Ctrl+Enter で保存。</p>
+            <p class="cd-muted hint">見出し（#）と箇条書き（-）を使えます。保存すると版として記録します。同期すると他の編集者も閲覧可能です。{{ keys('Ctrl+Enter') }} で保存。</p>
             <div class="row">
                 <span class="cd-grow" />
                 <UButton label="やめる" size="xs" color="neutral" variant="outline" @click="editing = false" />

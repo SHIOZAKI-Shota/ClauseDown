@@ -1,3 +1,5 @@
+import { fontNames } from './fonts'
+
 export interface CdProps {
     fontSize?: string
     fontFamily?: string
@@ -136,7 +138,7 @@ export function propsStyle(p: CdProps | undefined): string {
     if (!p) return ''
     const out: string[] = []
     if (p.fontSize) out.push(`font-size:${p.fontSize}`)
-    if (p.fontFamily) out.push(`font-family:'${p.fontFamily}'`)
+    if (p.fontFamily) out.push(`font-family:${fontNames(p.fontFamily).map((n) => `'${n}'`).join(',')}`)
     if (p.textAlign) out.push(`text-align:${p.textAlign}`)
     if (p.lineHeight) out.push(`line-height:${p.lineHeight}`)
     if (p.break) out.push('break-before:page')
