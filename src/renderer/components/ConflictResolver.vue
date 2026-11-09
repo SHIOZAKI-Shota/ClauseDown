@@ -5,7 +5,9 @@ import type { Conflict, ConflictChoice } from '@shared/api'
 import { linesFor, merge3, type Hunk, type HunkChoice, type MergeResult } from '@shared/merge3'
 import { parseLegal } from '@shared/legal-parser'
 import { renderDoc } from '@shared/legal-renderer'
+import { useApp } from '~/stores/app'
 
+const app = useApp()
 const props = defineProps<{ conflicts: Conflict[]; oursLabel: string; theirsLabel: string }>()
 const choices = defineModel<Record<string, ConflictChoice>>({ required: true })
 
@@ -135,7 +137,7 @@ watch(
 
 const result = computed(() => build(spot.value.path))
 const resultView = ref<'preview' | 'text'>('preview')
-const previewHtml = computed(() => renderDoc(parseLegal(result.value.text)))
+const previewHtml = computed(() => withImages(renderDoc(parseLegal(result.value.text)), app.repoDir, spot.value.path))
 const fullText = computed({
     get: () => result.value.text,
     set: (v: string) => (fs.value.override = v),

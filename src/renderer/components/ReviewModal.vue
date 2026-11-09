@@ -54,7 +54,7 @@ watch(file, async (f) => {
         window.api.readAt(app.repoDir!, app.mainBranch.oid, f),
         window.api.readAt(app.repoDir!, b.value.oid, f),
     ])
-    table.value = renderCompareTable(compareSources(oldSrc ?? '', newSrc ?? ''), { omitUnchanged: true }).replace(
+    table.value = withImages(renderCompareTable(compareSources(oldSrc ?? '', newSrc ?? ''), { omitUnchanged: true }), app.repoDir, f).replace(
         '<th>改正後</th><th>改正前</th>',
         `<th>改定案</th><th>現行版</th>`,
     )

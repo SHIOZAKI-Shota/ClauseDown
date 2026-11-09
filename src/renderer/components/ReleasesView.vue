@@ -304,7 +304,7 @@ const itemsOf = (d: DeliveryRecord) => d.items.map((x) => ITEM_LABEL[x] ?? x)
                     </dl>
                 </template>
 
-                <DocPaper v-if="selOid" :text="content" />
+                <DocPaper v-if="selOid" :text="content" :doc-path="path" />
                 <div v-else-if="loaded && !selDue" class="none">
                     <UIcon name="i-lucide-calendar-check" class="big" />
                     <p>施行日を付けた版と、納品の記録がここに並びます。</p>

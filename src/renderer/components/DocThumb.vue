@@ -28,7 +28,7 @@ async function load() {
     const n = ++seq
     try {
         const src = await window.api.readDoc(app.repoDir!, props.path)
-        if (n === seq) html.value = renderDoc(parseLegal(headOf(src)))
+        if (n === seq) html.value = withImages(renderDoc(parseLegal(headOf(src))), app.repoDir, props.path)
     } catch {
         if (n === seq) html.value = null
     }

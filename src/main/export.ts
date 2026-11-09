@@ -1,10 +1,12 @@
 import { BrowserWindow, dialog } from 'electron'
 import { promises as fsp } from 'node:fs'
 import { join } from 'node:path'
-import type { DeliverInput, DeliveryRecord, ExportRequest } from '../shared/api'
+import type { DeliverInput, DeliveryRecord, DocBase, ExportRequest } from '../shared/api'
 import { mermaidSvg, parseFence } from '../shared/blocks'
 import { compareSources } from '../shared/article-diff'
-import { compareToDocx, docToDocx, inlineToDocx, type Figures } from '../shared/docx-export'
+import { compareToDocx, docToDocx, inlineToDocx, type Figures, type Images } from '../shared/docx-export'
+import { imageLine, imagePathOf, rewriteImages } from '../shared/images'
+import { dataUrl, readImage } from './images'
 import { toHouritsu } from '../shared/houritsu'
 import { LEGAL_CSS } from '../shared/legal-css'
 import { parseLegal, type Item, type LegalDoc, type Paragraph } from '../shared/legal-parser'
@@ -96,31 +98,59 @@ async function rasterizeFigures(doc: LegalDoc): Promise<Figures> {
     return figures
 }
 
-export function makeBuilders(style: DocStyle, css = ''): Builders {
+async function inlineImages(html: string, base: DocBase | undefined): Promise<string> {
+    if (!base) return html
+    const urls = new Map<string, string | null>()
+    const srcs = new Set<string>()
+    rewriteImages(html, (src) => (srcs.add(src), null))
+    for (const src of srcs) {
+        if (!imagePathOf(base.docPath, src)) continue
+        const img = await readImage(base.dir, base.docPath, src)
+        urls.set(src, img ? dataUrl(img) : null)
+    }
+    return rewriteImages(html, (src) => urls.get(src) ?? null)
+}
+
+async function loadImages(source: string, base: DocBase | undefined): Promise<Images | undefined> {
+    if (!base) return undefined
+    const images: Images = new Map()
+    for (const line of source.split('\n')) {
+        const im = imageLine(line)
+        if (!im || images.has(im.src)) continue
+        const img = await readImage(base.dir, base.docPath, im.src)
+        if (img && img.width && img.height && img.ext !== 'webp') images.set(im.src, { data: img.data, type: img.ext === 'jpeg' ? 'jpg' : img.ext, width: img.width, height: img.height })
+    }
+    return images
+}
+
+export function makeBuilders(style: DocStyle, css = '', base?: DocBase): Builders {
     return {
         docPdf: async (src) => {
             const doc = parseLegal(src)
-            return toPdf(page(renderDoc(doc), doc.title, style, false, css), false, style)
+            return toPdf(await inlineImages(page(renderDoc(doc), doc.title, style, false, css), base), false, style)
         },
         docDocx: async (src) => {
             const doc = parseLegal(src)
-            return docToDocx(doc, await rasterizeFigures(doc), style)
+            return docToDocx(doc, await rasterizeFigures(doc), style, await loadImages(src, base))
         },
-        cmpPdf: (o, n, title) =>
-            toPdf(page(renderCompareTable(compareSources(o, n), { title, omitUnchanged: true }), title, style, true, css), true, style),
+        cmpPdf: async (o, n, title) =>
+            toPdf(await inlineImages(page(renderCompareTable(compareSources(o, n), { title, omitUnchanged: true }), title, style, true, css), base), true, style),
         cmpDocx: (o, n, title) => compareToDocx(compareSources(o, n), { title, omitUnchanged: true, style }),
     }
 }
 
-export async function previewPdf(source: string, style: DocStyle): Promise<Uint8Array> {
+const baseOf = (req: { dir?: string; docPath?: string }): DocBase | undefined =>
+    typeof req.dir === 'string' && typeof req.docPath === 'string' ? { dir: req.dir, docPath: req.docPath } : undefined
+
+export async function previewPdf(source: string, style: DocStyle, base?: DocBase): Promise<Uint8Array> {
     const { prefs } = await loadSettings()
-    return makeBuilders(cleanStyle(style ?? DEFAULT_STYLE), prefs.typesetCss).docPdf(String(source))
+    return makeBuilders(cleanStyle(style ?? DEFAULT_STYLE), prefs.typesetCss, baseOf(base ?? {})).docPdf(String(source))
 }
 
 async function build(req: ExportRequest): Promise<Uint8Array> {
     const style = cleanStyle(req.style ?? DEFAULT_STYLE)
     const { prefs } = await loadSettings()
-    const b = makeBuilders(style, prefs.typesetCss)
+    const b = makeBuilders(style, prefs.typesetCss, baseOf(req))
     if (req.kind === 'doc' && req.format === 'md') return new TextEncoder().encode(toHouritsu(req.source))
     if (req.kind === 'doc') return req.format === 'docx' ? b.docDocx(req.source) : b.docPdf(req.source)
     const rows = compareSources(req.oldSource, req.newSource)
@@ -128,10 +158,10 @@ async function build(req: ExportRequest): Promise<Uint8Array> {
     if (req.compareStyle === 'inline') {
         if (req.format === 'docx') return inlineToDocx(rows, { ...opts, style })
         const head = `<p class="cd-title">${req.title.replace(/[<>&]/g, '')}</p><p style="text-align: center; margin-bottom: 1em"><del class="cd-del">削除文字</del>　<ins class="cd-ins">追加文字</ins></p>`
-        return toPdf(page(head + renderInlineDiff(rows, opts), req.title, style, false, prefs.typesetCss), false, style)
+        return toPdf(await inlineImages(page(head + renderInlineDiff(rows, opts), req.title, style, false, prefs.typesetCss), baseOf(req)), false, style)
     }
     if (req.format === 'docx') return compareToDocx(rows, { ...opts, style })
-    return toPdf(page(renderCompareTable(rows, opts), req.title, style, true, prefs.typesetCss), true, style)
+    return toPdf(await inlineImages(page(renderCompareTable(rows, opts), req.title, style, true, prefs.typesetCss), baseOf(req)), true, style)
 }
 
 const today = () => {
@@ -162,7 +192,7 @@ export async function deliverWithDialog(parent: BrowserWindow | null, dir: strin
     const r = parent ? await dialog.showOpenDialog(parent, opts) : await dialog.showOpenDialog(opts)
     if (r.canceled || !r.filePaths[0]) return null
     const { style } = resolveStyle(prefs.docStyle, await listFolderStyles(dir), input.docPath)
-    return deliver(dir, input, r.filePaths[0], makeBuilders(style, prefs.typesetCss))
+    return deliver(dir, input, r.filePaths[0], makeBuilders(style, prefs.typesetCss, { dir, docPath: input.docPath }))
 }
 
 export async function exportScheduleIcs(parent: BrowserWindow | null, dir: string, today: string): Promise<{ path: string; count: number } | null> {

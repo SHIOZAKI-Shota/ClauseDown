@@ -23,6 +23,8 @@ import * as accounts from './accounts'
 import { identity } from './git-base'
 import { forgetCachedSettings, loadSecret, loadSettings, resetAllData, saveSecret, updateSettings } from './settings'
 import { listFonts } from './fonts'
+import { saveImage } from './images'
+import { imageExt } from '../shared/images'
 import { setAppMenu } from './menu'
 import { aiReset, aiRun, aiStop, testAi } from './ai-agent'
 import { keyName, resolveAi } from './ai/provider'
@@ -54,10 +56,26 @@ const CSP = [
     "frame-src 'self' blob:",
 ].join('; ')
 
+async function serveRepoImage(pathname: string): Promise<Response> {
+    const [encDir, ...rest] = pathname.slice('/__repo/'.length).split('/')
+    try {
+        const dir = decodeURIComponent(encDir)
+        const path = rest.map((s) => decodeURIComponent(s)).join('/')
+        if (!imageExt(path)) return new Response('Forbidden', { status: 403 })
+        await assertAllowedDir(dir)
+        const full = git.safeJoin(dir, path)
+        if (!statSync(full, { throwIfNoEntry: false })?.isFile()) return new Response('Not Found', { status: 404 })
+        return await net.fetch(pathToFileURL(full).toString())
+    } catch {
+        return new Response('Forbidden', { status: 403 })
+    }
+}
+
 function serveRenderer() {
     const root = resolve(import.meta.dirname, '../renderer')
     protocol.handle('app', async (req) => {
         const { pathname } = new URL(req.url)
+        if (pathname.startsWith('/__repo/')) return serveRepoImage(pathname)
         let file = resolve(root, '.' + decodeURIComponent(pathname))
         if (file !== root && !file.startsWith(root + sep)) return new Response('Forbidden', { status: 403 })
         if (!existsSync(file) || statSync(file).isDirectory()) {
@@ -148,7 +166,7 @@ const DIR_FIRST = new Set([
     'deleteBranch', 'listEffective', 'addEffective', 'removeEffective', 'listFolderStyles', 'saveFolderStyle', 'getRules', 'saveRules',
     'forgeKind', 'listReviews', 'addReview', 'listDeliveries', 'deliver', 'aiRun',
     'occurrences', 'listEvents', 'saveEvent', 'deleteEvent', 'setEventDone', 'getEventKinds', 'saveEventKinds',
-    'detectHouritsu', 'convertHouritsu', 'duplicateRepo', 'forkRepo', 'suggestVersionMessage',
+    'detectHouritsu', 'convertHouritsu', 'duplicateRepo', 'forkRepo', 'suggestVersionMessage', 'saveImage',
 ])
 
 const LOCKED = new Set([
@@ -282,8 +300,15 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
     previewMerge: git.previewMerge,
     mergeBranch: wf.adoptOrMerge,
     deleteBranch: git.deleteBranch,
-    exportFile: (req) => exportFile(win, req),
-    previewPdf,
+    exportFile: async (req) => {
+        if (req?.dir) await assertAllowedDir(req.dir)
+        return exportFile(win, req)
+    },
+    previewPdf: async (source, style, base) => {
+        if (base?.dir) await assertAllowedDir(base.dir)
+        return previewPdf(source, style, base)
+    },
+    saveImage,
     updateState,
     checkUpdate,
     downloadUpdate,

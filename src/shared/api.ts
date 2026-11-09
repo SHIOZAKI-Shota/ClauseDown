@@ -254,9 +254,14 @@ export interface Identity {
     label: string
 }
 
+export interface DocBase {
+    dir: string
+    docPath: string
+}
+
 export type ExportRequest =
-    | { kind: 'doc'; format: 'pdf' | 'docx' | 'md'; source: string; name: string; style?: DocStyle }
-    | {
+    | ({ kind: 'doc'; format: 'pdf' | 'docx' | 'md'; source: string; name: string; style?: DocStyle } & Partial<DocBase>)
+    | ({
         kind: 'compare'
         format: 'pdf' | 'docx'
         oldSource: string
@@ -266,7 +271,12 @@ export type ExportRequest =
         omitUnchanged: boolean
         compareStyle?: 'table' | 'inline'
         style?: DocStyle
-    }
+    } & Partial<DocBase>)
+
+export interface SavedImage {
+    path: string
+    src: string
+}
 
 export interface Api {
     getSettings(): Promise<AppSettings>
@@ -324,7 +334,8 @@ export interface Api {
     deleteBranch(dir: string, name: string): Promise<void>
 
     exportFile(req: ExportRequest): Promise<string | null>
-    previewPdf(source: string, style: DocStyle): Promise<Uint8Array>
+    previewPdf(source: string, style: DocStyle, base?: DocBase): Promise<Uint8Array>
+    saveImage(dir: string, docPath: string, data: Uint8Array, ext: string): Promise<SavedImage>
     editCommand(cmd: 'cut' | 'copy' | 'paste' | 'selectAll'): Promise<void>
 
     listEffective(dir: string, docPath: string): Promise<EffectiveVersion[]>

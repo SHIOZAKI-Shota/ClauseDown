@@ -1,5 +1,6 @@
 import fs, { promises as fsp } from 'node:fs'
 import { join, relative, resolve, sep, dirname, basename } from 'node:path'
+import { imageExt } from '../shared/images'
 import git, { TREE, dropCache } from './igit'
 import http from 'isomorphic-git/http/node'
 import type { CommitObject, TreeEntry } from 'isomorphic-git'
@@ -145,7 +146,7 @@ async function sameIgnoringEol(dir: string, head: string, filepath: string): Pro
     return norm(stored) === norm(work)
 }
 
-const versioned = (path: string, head: number) => head === 1 || path.toLowerCase().endsWith('.md')
+const versioned = (path: string, head: number) => head === 1 || path.toLowerCase().endsWith('.md') || imageExt(path) !== null
 
 async function realStatus(dir: string) {
     const [matrix, head] = await Promise.all([git.statusMatrix({ fs, dir }), tryResolve(dir, 'HEAD')])

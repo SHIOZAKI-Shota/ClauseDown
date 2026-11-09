@@ -29,6 +29,7 @@ const emit = defineEmits<{
     scroll: [number]
     shortcut: ['article' | 'paragraph' | 'item']
     history: [{ undo: number; redo: number }]
+    images: [File[]]
 }>()
 const host = ref<HTMLDivElement>()
 let view: EditorView | null = null
@@ -58,6 +59,22 @@ onMounted(() => {
                     if (u.docChanged || u.transactions.length) emit('history', { undo: undoDepth(u.state), redo: redoDepth(u.state) })
                 }),
                 EditorView.domEventHandlers({
+                    paste: (e) => {
+                        const files = imageFiles(e.clipboardData)
+                        if (!files.length || props.readonly || e.clipboardData?.getData('text/plain')) return false
+                        e.preventDefault()
+                        emit('images', files)
+                        return true
+                    },
+                    drop: (e, v) => {
+                        const files = imageFiles(e.dataTransfer)
+                        if (!files.length || props.readonly) return false
+                        e.preventDefault()
+                        const pos = v.posAtCoords({ x: e.clientX, y: e.clientY })
+                        if (pos !== null) v.dispatch({ selection: { anchor: pos } })
+                        emit('images', files)
+                        return true
+                    },
                     scroll: (_e, v) => {
                         if (scrollFrame) return
                         scrollFrame = requestAnimationFrame(() => {
@@ -134,6 +151,50 @@ function insertAfterLine(text: string, cursorOffset = text.length) {
         selection: { anchor: line.to + 1 + cursorOffset },
         scrollIntoView: true,
     })
+    view.focus()
+}
+
+const imageFiles = (dt: DataTransfer | null) => [...(dt?.files ?? [])].filter((f) => f.type.startsWith('image/'))
+
+function insertBlock(text: string) {
+    if (!view) return
+    const doc = view.state.doc
+    const cur = doc.lineAt(view.state.selection.main.head)
+    let ref = cur
+    while (!ref.text.trim() && ref.number > 1) ref = doc.line(ref.number - 1)
+    const m = /^(\s*)([-*+]\s+)?/.exec(ref.text)!
+    const indent = ' '.repeat(m[1].length + (m[2]?.length ?? 0))
+    const blank = !cur.text.trim()
+    const insert = blank ? `${indent}${text}` : `\n${indent}${text}`
+    view.dispatch({
+        changes: { from: blank ? cur.from : cur.to, to: cur.to, insert },
+        selection: { anchor: (blank ? cur.from : cur.to) + insert.length },
+        scrollIntoView: true,
+    })
+    view.focus()
+}
+
+function insertAfterBullet(text: string, cursorOffset = text.length) {
+    if (!view) return
+    const line = view.state.doc.lineAt(view.state.selection.main.head)
+    const m = /^\s*[-*+]\s+/.exec(line.text)
+    const at = m ? line.from + m[0].length : view.state.selection.main.head
+    view.dispatch({ changes: { from: at, insert: text }, selection: { anchor: at + cursorOffset }, scrollIntoView: true })
+    view.focus()
+}
+
+function insertPreamble() {
+    if (!view) return
+    const doc = view.state.doc
+    let at = doc.length
+    for (let n = 1; n <= doc.lines; n++) {
+        const l = doc.line(n)
+        if (/^##\s/.test(l.text)) {
+            at = l.from
+            break
+        }
+    }
+    view.dispatch({ changes: { from: at, insert: '\n\n' }, selection: { anchor: at === doc.length ? at + 1 : at }, scrollIntoView: true })
     view.focus()
 }
 
@@ -246,7 +307,7 @@ function focus() {
     view?.focus()
 }
 
-defineExpose({ focus, insertAfterLine, insertAtCursor, wrapLines, wrapInline, insertBeforeLines, selectionInfo, insertRef, currentLine, goToLine, undo, redo, selectedText, flush })
+defineExpose({ focus, insertAfterLine, insertAtCursor, insertBlock, insertAfterBullet, insertPreamble, wrapLines, wrapInline, insertBeforeLines, selectionInfo, insertRef, currentLine, goToLine, undo, redo, selectedText, flush })
 </script>
 
 <template>

@@ -69,6 +69,7 @@ export const LEGAL_CSS = `
 .cd-block th, .cd-appendix th { background: var(--cd-head-bg); font-weight: normal; }
 .cd-figure { margin: 0.4em 0; text-indent: 0; }
 .cd-figure svg { max-width: 100%; height: auto; }
+.cd-doc img, .cd-compare img, .cd-inline img { max-width: 100%; height: auto; vertical-align: middle; }
 .cd-figure-error { color: var(--cd-missing); font-size: 9pt; }
 .cd-figure-error pre { white-space: pre-wrap; color: var(--cd-ink-soft); margin: 0.3em 0 0; }
 .cd-appendix { margin-top: 2em; break-before: page; }

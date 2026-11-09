@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { parseLegal } from '@shared/legal-parser'
 import { renderDoc } from '@shared/legal-renderer'
+import { useApp } from '~/stores/app'
 
-const props = defineProps<{ text: string | null | undefined; empty?: string }>()
-const html = computed(() => (typeof props.text === 'string' ? renderDoc(parseLegal(props.text)) : ''))
+const props = defineProps<{ text: string | null | undefined; empty?: string; docPath?: string }>()
+const app = useApp()
+const html = computed(() => (typeof props.text === 'string' ? withImages(renderDoc(parseLegal(props.text)), app.repoDir, props.docPath) : ''))
 </script>
 
 <template>

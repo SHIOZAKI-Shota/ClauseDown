@@ -21,14 +21,17 @@ import { parseFence, parseTable } from './blocks'
 import type { DocStyle } from './prefs'
 import { inlineRuns, mergeProps, type CdProps } from './cd-prop'
 import { tableSpans } from './table-span'
+import { imageLine } from './images'
 
 export type Figures = Map<string, { png: Uint8Array; width: number; height: number }>
+export type Images = Map<string, { data: Uint8Array; type: 'png' | 'jpg' | 'gif'; width: number; height: number }>
 
 type Block = DocxParagraph | Table
 
 interface Ctx {
     doc: LegalDoc
     figures?: Figures
+    images?: Images
     width: number
 }
 
@@ -86,6 +89,38 @@ function para(text: string, left: number, hanging: number, opts: { bold?: boolea
         spacing: p?.lineHeight ? { line: Math.round(Number(p.lineHeight) * 240 * 0.8) } : undefined,
         children: runs(text, { bold: opts.bold, props: p }),
     })
+}
+
+function imagePara(src: string, alt: string, indent: number, ctx: Ctx): DocxParagraph {
+    const img = ctx.images?.get(src)
+    if (!img) return para(alt ? `［図：${alt}］` : '［図］', indent, 0)
+    const maxPx = ((ctx.width - indent * EM) / 1440) * 96
+    const scale = Math.min(1, maxPx / img.width)
+    return new DocxParagraph({
+        indent: { left: indent * EM },
+        children: [new ImageRun({ type: img.type, data: img.data, transformation: { width: Math.round(img.width * scale), height: Math.round(img.height * scale) } })],
+    })
+}
+
+function textParas(lead: string, text: string, left: number, hanging: number, out: Block[], ctx: Ctx, opts: { props?: CdProps } = {}) {
+    let buf: string[] = []
+    let leadDone = false
+    const flush = () => {
+        if (!buf.length && (leadDone || !lead)) return
+        out.push(para(`${leadDone ? '' : lead}${plain(buf.join('\n'), ctx.doc)}`, left, hanging, opts))
+        leadDone = true
+        buf = []
+    }
+    for (const line of text.split('\n')) {
+        const im = imageLine(line)
+        if (!im) {
+            buf.push(line)
+            continue
+        }
+        flush()
+        out.push(imagePara(im.src, im.alt, left, ctx))
+    }
+    flush()
 }
 
 function inherited(p: CdProps | undefined): CdProps | undefined {
@@ -194,7 +229,7 @@ function items(list: Item[], out: Block[], ctx: Ctx, inherit?: CdProps) {
     const { doc } = ctx
     for (const it of list) {
         const props = mergeProps(inherit, it.props)
-        out.push(para(`${it.label}　${plain(it.text, doc)}`, it.level + 1 + step(doc), 1, { props }))
+        textParas(`${it.label}　`, it.text, it.level + 1 + step(doc), 1, out, ctx, { props })
         attachBlocks(it.blocks, it.level + 1 + step(doc), out, ctx, it.blockProps, inherited(props))
         items(it.children, out, ctx, inherited(props))
     }
@@ -207,7 +242,7 @@ function paragraphs(list: Paragraph[], out: Block[], ctx: Ctx, head?: string, in
         const label = p.label ? `${p.label}　` : ''
         const left = lead ? 1 : 1 + step(doc)
         const props = mergeProps(inherit, idx === 0 ? first : undefined, p.props)
-        if (p.text || label || lead) out.push(para(`${lead}${label}${plain(p.text, doc)}`, left, 1, { props }))
+        textParas(`${lead}${label}`, p.text, left, 1, out, ctx, { props })
         attachBlocks(p.blocks, 1 + step(doc), out, ctx, p.blockProps, inherited(props))
         items(p.items, out, ctx, inherited(props))
     })
@@ -288,10 +323,10 @@ function build(children: (DocxParagraph | Table)[], landscape = false, style?: D
     return Packer.toBuffer(document)
 }
 
-export function docToDocx(doc: LegalDoc, figures?: Figures, style?: DocStyle): Promise<Buffer> {
+export function docToDocx(doc: LegalDoc, figures?: Figures, style?: DocStyle, images?: Images): Promise<Buffer> {
     const out: Block[] = []
     basePt = style?.fontSize ?? SIZE / 2
-    const ctx: Ctx = { doc, figures, width: A4_SHORT - 2 * marginTwip(style) }
+    const ctx: Ctx = { doc, figures, images, width: A4_SHORT - 2 * marginTwip(style) }
     if (doc.title) out.push(para(doc.title, 0, 0, { center: true }))
     out.push(new DocxParagraph({}))
     if (doc.preambleParts) partsBlocks(doc.preambleParts, out, ctx)

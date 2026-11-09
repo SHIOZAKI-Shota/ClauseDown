@@ -4,6 +4,7 @@ import { parseLegal } from '@shared/legal-parser'
 import { renderDoc } from '@shared/legal-renderer'
 import { autoMerge } from '@shared/merge3'
 import { DEFAULT_CONFIG, writeConfig, type DocConfig } from '@shared/config'
+import { extOfMime } from '@shared/images'
 import { useApp } from '~/stores/app'
 import { lastAtOrBefore, positionLabel } from '~/utils/legal-editor'
 import { toPlain } from '~/utils/ipc'
@@ -74,7 +75,7 @@ const PREVIEW_KINDS = [
     { value: 'print' as const, label: '印刷', icon: 'i-lucide-printer' },
 ]
 const showPrint = computed(() => mode.value !== 'edit' && printKind.value === 'print')
-const html = computed(() => (mode.value === 'edit' || showPrint.value ? '' : renderDoc(doc.value)))
+const html = computed(() => (mode.value === 'edit' || showPrint.value ? '' : withImages(renderDoc(doc.value), app.repoDir, path)))
 const pdfUrl = ref('')
 const pdfBusy = ref(false)
 const pdfError = ref('')
@@ -84,7 +85,7 @@ async function makePdf() {
     const n = ++pdfSeq
     pdfBusy.value = true
     try {
-        const bytes = await window.api.previewPdf(settled.value, toPlain(app.style))
+        const bytes = await window.api.previewPdf(settled.value, toPlain(app.style), { dir: app.repoDir!, docPath: path })
         if (n !== pdfSeq) return
         const old = pdfUrl.value
         pdfUrl.value = `${URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/pdf' }))}#toolbar=0&view=FitH`
@@ -172,8 +173,37 @@ onBeforeUnmount(() => {
 })
 
 const indentOf = () => /^(\s*)/.exec(editor.value?.currentLine() ?? '')![1].length
+function addChapter() {
+    editor.value?.insertAfterLine('\n## ', 4)
+}
 function addArticle() {
     editor.value?.insertAfterLine('\n### \n- ', 5)
+}
+function addBranchArticle() {
+    editor.value?.insertAfterLine('\n###  {branch}\n- ', 5)
+}
+function addDeletedArticle() {
+    editor.value?.insertAfterLine('\n### {deleted}\n')
+}
+function addNumberedArticle() {
+    editor.value?.insertAfterLine('\n###  {n=}\n- ', 9)
+}
+function addItemNumber() {
+    editor.value?.insertAfterBullet('{n=} ', 3)
+}
+function addItemBranch() {
+    editor.value?.insertAfterBullet('{b=} ', 3)
+}
+function addPreamble() {
+    editor.value?.insertPreamble()
+}
+function addSupplement() {
+    const body = '\n## 附則 {supplement}\n- この規則は、　年　月　日から施行する。\n'
+    editor.value?.insertAfterLine(body, body.indexOf('　年'))
+}
+function addClosing() {
+    const body = '\n## {closing}\n本契約の成立を証するため、本書2通を作成し、甲乙記名押印のうえ、各1通を保有する。\n\n　年　月　日\n\n甲　\n\n乙　\n'
+    editor.value?.insertAfterLine(body, body.indexOf('本契約'))
 }
 function addParagraph() {
     editor.value?.insertAfterLine('- ')
@@ -198,6 +228,21 @@ function addFigure() {
     const i = blockIndent()
     const body = ['```mermaid', 'flowchart LR', '  A[申請] --> B[承認]', '  B --> C[実施]', '```'].map((l) => i + l).join('\n')
     editor.value?.insertAfterLine(`\n${body}\n`, 1 + body.indexOf('A['))
+}
+async function addImages(files: File[]) {
+    for (const f of files) {
+        const data = new Uint8Array(await f.arrayBuffer())
+        const saved = await app.run(() => window.api.saveImage(app.repoDir!, path, data, extOfMime(f.type) ?? 'png'))
+        if (saved) editor.value?.insertBlock(`![図](${saved.src})`)
+    }
+}
+function pickImages() {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/png,image/jpeg,image/gif,image/webp'
+    input.multiple = true
+    input.onchange = () => void addImages([...(input.files ?? [])])
+    input.click()
 }
 function addAppendix() {
     editor.value?.insertAfterLine('\n## 別表第一 {appendix}\n| 区分 | 内容 |\n|---|---|\n| ・・・ | ・・・ |\n', 4)
@@ -237,17 +282,59 @@ const editMenu = computed<DropdownMenuItem[][]>(() => [
     ],
     [{ label: '条参照を入れる', icon: 'i-lucide-link', onSelect: () => editor.value?.insertRef() }],
 ])
+function backToEditor(e: Event) {
+    e.preventDefault()
+    editor.value?.focus()
+}
 const insertMenu: DropdownMenuItem[][] = [
     [
-        { label: '表', icon: 'i-lucide-table', onSelect: addTable },
+        { label: '章', icon: 'i-lucide-heading-2', onSelect: addChapter },
+        {
+            label: '条',
+            icon: 'i-lucide-heading-3',
+            children: [
+                { label: '条', kbds: ['meta', 'alt', 'a'], onSelect: addArticle },
+                { label: '枝番号の条（第○条の2）', onSelect: addBranchArticle },
+                { label: '削除された条（第○条　削除）', onSelect: addDeletedArticle },
+                { label: '番号を指定した条（{n=10}）', onSelect: addNumberedArticle },
+            ],
+        },
+        {
+            label: '項・号',
+            icon: 'i-lucide-list',
+            children: [
+                { label: '項', kbds: ['meta', 'alt', 'p'], onSelect: addParagraph },
+                { label: '号', kbds: ['meta', 'alt', 'i'], onSelect: addItem },
+                { label: '号の細分', onSelect: addSubitem },
+                { label: '号の番号を指定（{n=3}）', onSelect: addItemNumber },
+                { label: '号の枝番号（{b=2}）', onSelect: addItemBranch },
+            ],
+        },
+    ],
+    [
+        { label: '前文（最初の章の前）', icon: 'i-lucide-pilcrow', onSelect: addPreamble },
+        { label: '附則', icon: 'i-lucide-book-plus', onSelect: addSupplement },
+        { label: '後文・署名欄', icon: 'i-lucide-pen-line', onSelect: addClosing },
+        { label: '別表', icon: 'i-lucide-sheet', onSelect: addAppendix },
+    ],
+    [
+        {
+            label: '表',
+            icon: 'i-lucide-table',
+            children: [
+                { label: '表', onSelect: addTable },
+                { label: '右隣のセルと結合（>）', onSelect: () => editor.value?.insertAtCursor('>') },
+                { label: '上のセルと結合（^）', onSelect: () => editor.value?.insertAtCursor('^') },
+            ],
+        },
         { label: '図（流れ図など）', icon: 'i-lucide-workflow', onSelect: addFigure },
+        { label: '画像（ファイルから）…', icon: 'i-lucide-image', onSelect: pickImages },
         { label: '条参照', icon: 'i-lucide-link', kbds: ['[', '['], onSelect: () => editor.value?.insertRef() },
     ],
     [
         { label: '改ページ（この行の前）', icon: 'i-lucide-separator-horizontal', onSelect: addPageBreak },
         { label: '書式を付ける…', icon: 'i-lucide-type', onSelect: addFormat },
     ],
-    [{ label: '別表', icon: 'i-lucide-sheet', onSelect: addAppendix }],
 ]
 function onShortcut(kind: 'article' | 'paragraph' | 'item') {
     if (kind === 'article') addArticle()
@@ -437,7 +524,7 @@ async function exportAs(format: 'pdf' | 'docx' | 'md') {
     await writeNow()
     const name = doc.value.title || path.replace(/\.md$/, '')
     const out = await app.run(() =>
-        window.api.exportFile({ kind: 'doc', format, source: text.value, name, style: toPlain(app.style) }),
+        window.api.exportFile({ kind: 'doc', format, source: text.value, name, style: toPlain(app.style), dir: app.repoDir!, docPath: path }),
     )
     if (out) app.notify(`書き出しました：${out}`)
 }
@@ -491,8 +578,8 @@ const saveState = computed(() =>
                     <UButton label="細分" icon="i-lucide-plus" color="neutral" variant="outline" @click="addSubitem" />
                 </UTooltip>
             </UFieldGroup>
-            <UTooltip :text="compact ? '挿入（表・図・条参照・別表）' : ''">
-                <UDropdownMenu :items="insertMenu">
+            <UTooltip :text="compact ? '挿入（章・条・附則・表・図・画像など）' : ''">
+                <UDropdownMenu :items="insertMenu" :content="{ onCloseAutoFocus: backToEditor }">
                     <UButton :label="compact ? undefined : '挿入'" aria-label="挿入" icon="i-lucide-square-plus"
                         trailing-icon="i-lucide-chevron-down" size="sm" color="neutral" variant="outline" />
                 </UDropdownMenu>
@@ -558,7 +645,7 @@ const saveState = computed(() =>
                     <div class="pane-body" @wheel="zoomEditor" @contextmenu="onEditorMenu">
                         <CodeEditor ref="editor" v-model="text" :legal="doc" :wrap="app.prefs.lineWrap"
                             :readonly="aiRunning" :diff-base="savedText" @cursor="onCursor" @scroll="onScroll"
-                            @shortcut="onShortcut" @history="(h) => (history = h)" />
+                            @shortcut="onShortcut" @history="(h) => (history = h)" @images="addImages" />
                     </div>
                 </UContextMenu>
             </div>

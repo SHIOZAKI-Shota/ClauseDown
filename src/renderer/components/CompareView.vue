@@ -71,7 +71,11 @@ const style = computed({
     set: (v: 'table' | 'inline') => app.setPrefsLive({ compareStyle: v }),
 })
 const html = computed(() =>
-    style.value === 'inline' ? renderInlineDiff(rows.value, { omitUnchanged: omit.value }) : renderCompareTable(rows.value, { omitUnchanged: omit.value }),
+    withImages(
+        style.value === 'inline' ? renderInlineDiff(rows.value, { omitUnchanged: omit.value }) : renderCompareTable(rows.value, { omitUnchanged: omit.value }),
+        app.repoDir,
+        app.currentPath,
+    ),
 )
 
 const title = computed(() => `${app.currentDoc?.title ?? ''} ${style.value === 'inline' ? '変更箇所' : '新旧対照表'}`)
@@ -88,6 +92,8 @@ async function exportAs(format: 'pdf' | 'docx') {
             omitUnchanged: omit.value,
             compareStyle: style.value,
             style: toPlain(app.style),
+            dir: app.repoDir!,
+            docPath: app.currentPath!,
         }),
     )
     if (out) app.notify(`書き出しました：${out}`)

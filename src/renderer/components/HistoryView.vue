@@ -124,7 +124,7 @@ async function onEffectiveAdded() {
                             @click="confirmBring = true" />
                     </template>
                 </div>
-                <DocPaper :text="content" />
+                <DocPaper :text="content" :doc-path="path" />
             </template>
         </div>
         <EffectiveDateModal v-if="showEffective && selectedCommit" :oid="selectedCommit.oid" :path="path"
