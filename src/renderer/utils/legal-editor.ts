@@ -7,6 +7,7 @@ import { tags as t } from '@lezer/highlight'
 import { parseFence, mermaidSvg } from '@shared/blocks'
 import type { Article, Item, LegalDoc, Paragraph } from '@shared/legal-parser'
 import { articleTitle } from '@shared/legal-parser'
+import { checkDefinitions } from '@shared/definitions'
 
 export const legalTheme = EditorView.theme({
     '&': { height: '100%', fontSize: 'var(--cd-ed-size, 14px)', backgroundColor: 'var(--cd-ed-bg)', color: 'var(--cd-ed-text)' },
@@ -238,6 +239,7 @@ const legalLinter = linter(
             const error = mermaidError(fence.body)
             if (error) out.push({ from: f.index!, to: f.index! + f[0].length, severity: 'warning', message: `図を描けません：${error}` })
         }
+        for (const d of checkDefinitions(text)) out.push({ from: d.from, to: d.to, severity: 'error', source: '定義語', message: d.message })
         for (const w of ld.warnings) {
             const m = /^(\d+)行目/.exec(w)
             const line = m ? view.state.doc.line(Math.min(Number(m[1]), view.state.doc.lines)) : view.state.doc.line(1)

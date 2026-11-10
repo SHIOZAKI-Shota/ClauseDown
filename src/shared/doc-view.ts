@@ -1,5 +1,6 @@
 import { parseLegal, type Item, type LegalDoc, type Paragraph } from './legal-parser'
 import { mermaidSvg, parseFence } from './blocks'
+import { checkDefinitions } from './definitions'
 import { formatNumber, type NumeralStyle } from './numerals'
 
 const branchSuffix = (path: number[] | undefined, style: NumeralStyle) =>
@@ -82,6 +83,7 @@ export function checkDoc(input: string): DocIssue[] {
         const { error } = mermaidSvg(fence.body)
         if (error) out.push({ line: lineOf(f.index!), severity: 'warning', message: `図を描けません：${error}` })
     }
+    for (const d of checkDefinitions(source)) out.push({ line: d.line, severity: 'error', message: `定義語：${d.message}` })
     for (const w of doc.warnings) {
         const m = /^(\d+)行目/.exec(w)
         out.push({ line: m ? Number(m[1]) : 0, severity: 'warning', message: w })
