@@ -419,15 +419,17 @@ export function chapterHeading(ch: Chapter): string {
     return [ch.label, ch.title].filter(Boolean).join('　')
 }
 
+export const articleTitle = (a: Article, doc: LegalDoc): string => (a.title ? stripInlineProps(resolveRefs(a.title, doc)) : '')
+
 export function articleLines(a: Article, doc: LegalDoc): string[] {
     const { config } = doc
     const out: string[] = []
     const step = config.paragraph.indent === 'nested' ? 1 : 0
     const pad = (n: number) => '　'.repeat(n)
     const r = (s: string) => stripInlineProps(resolveRefs(s, doc)).replace(/\n/g, '')
-    if (config.article.title === 'above' && a.title && !a.deleted) out.push(`（${a.title}）`)
+    if (config.article.title === 'above' && a.title && !a.deleted) out.push(`（${articleTitle(a, doc)}）`)
     const head =
-        config.article.title === 'inline' && a.title && !a.deleted ? `${a.label}（${a.title}）` : a.label
+        config.article.title === 'inline' && a.title && !a.deleted ? `${a.label}（${articleTitle(a, doc)}）` : a.label
     if (a.deleted) {
         out.push(`${head}　削除`)
         return out

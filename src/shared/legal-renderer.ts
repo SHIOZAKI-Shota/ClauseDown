@@ -53,9 +53,9 @@ function renderArticle(a: Article, doc: LegalDoc): string {
     if (a.deleted) {
         return `${html}<p class="cd-para cd-first"><span class="cd-num">${esc(a.label)}</span>　削除</p></div>`
     }
-    if (style === 'above' && a.title) html += `<p class="cd-art-title">（${esc(a.title)}）</p>`
+    if (style === 'above' && a.title) html += `<p class="cd-art-title">（${inline(a.title, doc)}）</p>`
     if (style === 'inline' && a.title) {
-        html += `<p class="cd-art-head"><span class="cd-num">${esc(a.label)}</span>（${esc(a.title)}）</p>`
+        html += `<p class="cd-art-head"><span class="cd-num">${esc(a.label)}</span>（${inline(a.title, doc)}）</p>`
         html += renderParagraphs(a.paragraphs, doc)
     } else if (a.paragraphs.length === 0) {
         html += `<p class="cd-para cd-first"><span class="cd-num">${esc(a.label)}</span></p>`

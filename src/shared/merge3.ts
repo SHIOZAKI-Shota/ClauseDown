@@ -1,5 +1,5 @@
 import { diffArrays } from 'diff'
-import { parseLegal, type LegalDoc } from './legal-parser'
+import { articleTitle, parseLegal, type LegalDoc } from './legal-parser'
 
 export const splitLines = (s: string) => s.replace(/\r\n/g, '\n').split('\n')
 
@@ -27,7 +27,7 @@ export function whereIs(doc: LegalDoc, line: number): string {
             label = ch.kind === 'appendix' || ch.kind === 'closing' ? ch.title || '別表' : [ch.label, ch.title].filter(Boolean).join('　') || label
         }
         for (const a of ch.articles) {
-            if (a.line <= line) label = `${a.refLabel}${a.title ? `（${a.title}）` : ''}`
+            if (a.line <= line) label = `${a.refLabel}${a.title ? `（${articleTitle(a, doc)}）` : ''}`
         }
     }
     return label || '文書の先頭'

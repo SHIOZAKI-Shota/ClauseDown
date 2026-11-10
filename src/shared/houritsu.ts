@@ -1,4 +1,4 @@
-import { articleLabel, parseLegal, resolveRefs, type Article, type Item, type LegalDoc, type Paragraph } from './legal-parser'
+import { articleLabel, articleTitle, parseLegal, resolveRefs, type Article, type Item, type LegalDoc, type Paragraph } from './legal-parser'
 import { toFullwidth, toKanji } from './numerals'
 import { stripInlineProps } from './cd-prop'
 
@@ -375,7 +375,7 @@ export function toHouritsu(source: string): string {
                 i = j
                 continue
             }
-            out.push(`${deep} ${label(a)}${a.title ? `（${a.title}）` : ''}`, '')
+            out.push(`${deep} ${label(a)}${a.title ? `（${articleTitle(a, doc)}）` : ''}`, '')
             paragraphLines(a.paragraphs, doc, out, false)
         }
     }

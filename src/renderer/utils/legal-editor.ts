@@ -6,6 +6,7 @@ import { Decoration, EditorView, keymap, ViewPlugin, WidgetType, type Decoration
 import { tags as t } from '@lezer/highlight'
 import { parseFence, mermaidSvg } from '@shared/blocks'
 import type { Article, Item, LegalDoc, Paragraph } from '@shared/legal-parser'
+import { articleTitle } from '@shared/legal-parser'
 
 export const legalTheme = EditorView.theme({
     '&': { height: '100%', fontSize: 'var(--cd-ed-size, 14px)', backgroundColor: 'var(--cd-ed-bg)', color: 'var(--cd-ed-text)' },
@@ -190,7 +191,7 @@ function refCompletions(ctx: CompletionContext) {
             if (a.deleted) continue
             const id = a.id ?? idFor(a, ld)
             options.push({
-                label: `${a.refLabel}${a.title ? `（${a.title}）` : ''}`,
+                label: `${a.refLabel}${a.title ? `（${articleTitle(a, ld)}）` : ''}`,
                 detail: a.id ? `[[${a.id}]]` : '名前を付けて参照',
                 apply: (view, _c, from, to) => {
                     from -= 2

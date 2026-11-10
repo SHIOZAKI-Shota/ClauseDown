@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { applyClause, defaultChoice, extractClauses, targetArticles, type Clause, type ClauseInsert, type RefChoice } from '@shared/clauses'
 import type { LegalDoc } from '@shared/legal-parser'
-import { parseLegal } from '@shared/legal-parser'
+import { articleTitle, parseLegal } from '@shared/legal-parser'
 import { renderDoc } from '@shared/legal-renderer'
 import { withImages } from '~/utils/images'
 
@@ -48,7 +48,7 @@ const preview = computed(() => (selected.value ? withImages(renderDoc(parseLegal
 const encode = (c: RefChoice) => (c.kind === 'article' ? `a:${c.index}` : c.kind)
 const decode = (v: string): RefChoice => (v.startsWith('a:') ? { kind: 'article', index: Number(v.slice(2)) } : { kind: v as 'text' | 'keep' })
 const choiceItems = computed(() => [
-    ...targetArticles(props.target).map((a, i) => ({ label: a.title ? `${a.label}（${a.title}）` : a.label, value: `a:${i}` })),
+    ...targetArticles(props.target).map((a, i) => ({ label: a.title ? `${a.label}（${articleTitle(a, props.target)}）` : a.label, value: `a:${i}` })),
     { label: '参照を外して見出しの文字で残す', value: 'text' },
     { label: 'そのまま残す（参照切れになります）', value: 'keep' },
 ])

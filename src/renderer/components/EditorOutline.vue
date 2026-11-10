@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { LegalDoc } from '@shared/legal-parser'
-import { chapterHeading } from '@shared/legal-parser'
+import { articleTitle, chapterHeading } from '@shared/legal-parser'
 import { lastAtOrBefore } from '~/utils/legal-editor'
 const props = defineProps<{ legal: LegalDoc; line: number }>()
 const emit = defineEmits<{ jump: [number] }>()
@@ -22,7 +22,7 @@ const entries = computed<Entry[]>(() => {
         if (ch.kind === 'closing') return
         const head = chapterHeading(ch)
         if (head && ch.line >= 0) out.push({ key: `c${ci}`, line: ch.line, label: ch.label || head, title: ch.label ? ch.title : '', kind: 'chapter' })
-        for (const a of ch.articles) out.push({ key: `a${n++}`, line: a.line, label: a.label, title: a.title, kind: 'article', deleted: a.deleted })
+        for (const a of ch.articles) out.push({ key: `a${n++}`, line: a.line, label: a.label, title: articleTitle(a, props.legal), kind: 'article', deleted: a.deleted })
     })
     return out
 })

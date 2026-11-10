@@ -283,11 +283,11 @@ function article(a: Article, out: Block[], ctx: Ctx, inherit?: CdProps) {
         return
     }
     if (style === 'above' && a.title) {
-        out.push(para(`（${a.title}）`, 1, 0, { props: own }))
+        out.push(para(`（${resolveRefs(a.title, ctx.doc)}）`, 1, 0, { props: own }))
         if (a.paragraphs.length) paragraphs(a.paragraphs, out, ctx, a.label, body)
         else out.push(para(a.label, 1, 1, { props: body }))
     } else if (style === 'inline' && a.title) {
-        out.push(para(`${a.label}（${a.title}）`, 0, 0, { bold: true, props: own }))
+        out.push(para(`${a.label}（${resolveRefs(a.title, ctx.doc)}）`, 0, 0, { bold: true, props: own }))
         paragraphs(a.paragraphs, out, ctx, undefined, body)
     } else if (a.paragraphs.length === 0) {
         out.push(para(a.label, 1, 1, { props: own }))

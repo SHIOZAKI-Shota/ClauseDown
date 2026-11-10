@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { parseLegal } from '@shared/legal-parser'
+import { articleTitle, parseLegal } from '@shared/legal-parser'
 import { useApp } from '~/stores/app'
 import { folderOf } from '~/utils/folders'
 import { useTheme } from '~/composables/useTheme'
@@ -34,10 +34,13 @@ async function loadArticles() {
         app.docs.map(async (d) => {
             const src = await window.api.readDoc(dir, d.path).catch(() => '')
             const out: ArticleHit[] = []
-            for (const ch of parseLegal(src).chapters)
+            const ld = parseLegal(src)
+            for (const ch of ld.chapters)
                 for (const a of ch.articles)
-                    if (!a.deleted && a.line >= 0)
-                        out.push({ path: d.path, doc: d.title, line: a.line, label: a.label, title: a.title, key: norm(`${a.label} ${a.title}`) })
+                    if (!a.deleted && a.line >= 0) {
+                        const title = articleTitle(a, ld)
+                        out.push({ path: d.path, doc: d.title, line: a.line, label: a.label, title, key: norm(`${a.label} ${title} ${a.title}`) })
+                    }
             return out
         }),
     )
