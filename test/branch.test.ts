@@ -150,3 +150,28 @@ describe('同じ箇所の重なり', () => {
         expect(await git.readDoc(dir, 'a.md')).toBe(resolved)
     })
 })
+
+describe('最初の版を改定案に保存する', () => {
+    it('現行版は空のまま、書きかけを改定案に何度も保存でき、完成したら現行版に反映できる', async () => {
+        const fsm = await import('node:fs')
+        const os = await import('node:os')
+        const dir = fsm.mkdtempSync(join(os.tmpdir(), 'cd-first-draft-'))
+        await git.initRepo(dir)
+        await git.writeDoc(dir, '規程.md', '# 規程\n### 目的\n- 書きかけ\n')
+        const d = await git.createBranch(dir, '初版の作成')
+        await git.saveVersion(dir, { message: '下書き1' })
+        await git.writeDoc(dir, '規程.md', '# 規程\n### 目的\n- 完成\n')
+        await git.saveVersion(dir, { message: '下書き2' })
+
+        const branches = await git.listBranches(dir)
+        expect(branches.find((b) => b.current)?.name).toBe(d)
+        const main = branches.find((b) => b.isMain)!
+        expect(await git.readAt(dir, main.oid, '規程.md')).toBeNull()
+        expect((await git.log(dir)).map((c) => c.message.trim())).toEqual(['下書き2', '下書き1', 'リポジトリを作成'])
+
+        await git.mergeBranch(dir, { from: d, into: 'main', choices: {}, message: '初版' })
+        expect((await git.listBranches(dir)).find((b) => b.current)?.isMain).toBe(true)
+        expect(await git.readDoc(dir, '規程.md')).toBe('# 規程\n### 目的\n- 完成\n')
+        fsm.rmSync(dir, { recursive: true, force: true })
+    })
+})

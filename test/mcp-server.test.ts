@@ -18,6 +18,7 @@ vi.mock('../src/main/settings', () => ({
 }))
 const git = await import('../src/main/git')
 const { applyMcp, stopMcp, mcpToken } = await import('../src/main/mcp-server')
+const { spawn } = await import('node:child_process')
 
 const PORT = 39300 + Math.floor(Math.random() * 500)
 const URL_ = `http://127.0.0.1:${PORT}/mcp`
@@ -31,7 +32,7 @@ beforeAll(async () => {
     fs.writeFileSync(join(dir, '就業規則.md'), '# 就業規則\n\n### 目的\n- 定める。\n')
     repos.push({ name: 'A社_規程', dir })
     token = await mcpToken()
-    const st = await applyMcp({ enabled: true, port: PORT }, changed)
+    const st = await applyMcp({ enabled: true, port: PORT }, changed, { socket: null })
     expect(st).toEqual({ running: true, url: URL_ })
 })
 afterAll(() => stopMcp())
@@ -80,5 +81,80 @@ describe('MCP サーバー', () => {
             req.end(body)
         })
         expect(status).toBe(403)
+    })
+})
+
+const BRIDGE = join(import.meta.dirname, '../build/mcp-bridge/mcp-bridge.sh')
+
+function bridge(sock: string) {
+    const p = spawn('sh', [BRIDGE, sock])
+    let buf = ''
+    const lines: string[] = []
+    const waiters: (() => void)[] = []
+    p.stdout.setEncoding('utf8')
+    p.stdout.on('data', (d: string) => {
+        buf += d
+        let i
+        while ((i = buf.indexOf('\n')) >= 0) {
+            lines.push(buf.slice(0, i))
+            buf = buf.slice(i + 1)
+            waiters.shift()?.()
+        }
+    })
+    const next = async () => {
+        if (!lines.length) await new Promise<void>((r) => waiters.push(r))
+        return JSON.parse(lines.shift()!)
+    }
+    const send = (msg: object) => p.stdin.write(JSON.stringify(msg) + '\n')
+    return { p, next, send, pending: () => lines.length }
+}
+
+describe.skipIf(process.platform === 'win32')('Claude Desktop 用の通訳（ソケット）', () => {
+    let sockDir = ''
+    let sock = ''
+    beforeAll(async () => {
+        await stopMcp()
+        sockDir = fs.mkdtempSync(join(os.tmpdir(), 'cd-sock-'))
+        sock = join(sockDir, 'mcp.sock')
+        fs.writeFileSync(sock, '')
+        const st = await applyMcp({ enabled: true, port: PORT }, changed, { socket: sock })
+        expect(st.socket).toBe(sock)
+    })
+    afterAll(async () => {
+        await stopMcp()
+        fs.rmSync(sockDir, { recursive: true, force: true })
+    })
+
+    it('残っていたファイルを片付けて待ち受け、本人だけが開ける', () => {
+        expect(fs.statSync(sock).isSocket()).toBe(true)
+        expect(fs.statSync(sock).mode & 0o777).toBe(0o600)
+    })
+
+    it('トークンなしで、stdio から道具を呼べる。通知には何も返さない', async () => {
+        const b = bridge(sock)
+        b.send({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 't', version: '1' } } })
+        expect((await b.next()).result.serverInfo.name).toBe('clausedown')
+        b.send({ jsonrpc: '2.0', method: 'notifications/initialized' })
+        b.send({ jsonrpc: '2.0', id: 'two', method: 'tools/list' })
+        const list = await b.next()
+        expect(list.id).toBe('two')
+        expect(list.result.tools.map((t: { name: string }) => t.name)).toContain('read_doc')
+        b.send({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'read_doc', arguments: { repo: 'A社_規程', path: '就業規則.md' } } })
+        const read = await b.next()
+        expect(read.id).toBe(3)
+        expect(JSON.stringify(read.result.content)).toContain('〔第1条〕### 目的')
+        expect(b.pending()).toBe(0)
+        b.p.stdin.end()
+    })
+
+    it('ClauseDown が止まっていれば、要求の id でエラーを返す', async () => {
+        await stopMcp()
+        expect(fs.existsSync(sock)).toBe(false)
+        const b = bridge(sock)
+        b.send({ jsonrpc: '2.0', id: 7, method: 'tools/list' })
+        const err = await b.next()
+        expect(err.id).toBe(7)
+        expect(err.error.message).toContain('ClauseDown が起動していない')
+        b.p.stdin.end()
     })
 })

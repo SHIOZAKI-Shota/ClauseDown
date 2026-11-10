@@ -38,6 +38,12 @@ export interface McpConfig {
 
 export const DEFAULT_MCP_PORT = 39217
 
+export interface DesktopStatus {
+    state: 'notInstalled' | 'unregistered' | 'registered' | 'outdated' | 'broken'
+    path: string | null
+    error?: string
+}
+
 export interface LicenseEntry {
     name: string
     version: string
@@ -60,7 +66,7 @@ export interface AiStatus {
     reason?: string
     hasKey: boolean
     local: boolean
-    mcp: { running: boolean; url: string; error?: string }
+    mcp: { running: boolean; url: string; error?: string; socket?: string; socketError?: string }
 }
 
 export interface AiModel {
@@ -382,6 +388,9 @@ export interface Api {
     testAi(): Promise<string>
     getMcpToken(): Promise<string>
     regenerateMcpToken(): Promise<string>
+    desktopStatus(): Promise<DesktopStatus>
+    registerDesktop(): Promise<DesktopStatus>
+    unregisterDesktop(): Promise<DesktopStatus>
     setMcp(config: McpConfig): Promise<AiStatus>
     aiRun(dir: string, input: AiRunInput): Promise<void>
     aiStop(session: string): Promise<void>

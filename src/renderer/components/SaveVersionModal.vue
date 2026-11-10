@@ -8,13 +8,13 @@ export interface SaveRequest {
     draftName?: string
 }
 
-const props = defineProps<{ busy: boolean; branchLabel: string; onMain: boolean; hasHistory: boolean }>()
+const props = defineProps<{ busy: boolean; branchLabel: string; onMain: boolean; hasHistory: boolean; newDoc: boolean; docTitle: string }>()
 const emit = defineEmits<{ close: []; save: [SaveRequest] }>()
 const message = ref('')
 const withDate = ref(false)
 const date = ref(todayISO())
-const target = ref<'here' | 'draft'>('here')
-const draftName = ref('')
+const target = ref<'here' | 'draft'>(props.newDoc ? 'draft' : 'here')
+const draftName = ref(props.newDoc ? `${props.docTitle}の作成` : '')
 
 const app = useApp()
 const aiReady = ref(false)
@@ -51,10 +51,13 @@ function save() {
         @update:open="(v) => !v && emit('close')">
         <template #body>
             <div class="cd-form">
-                <UFormField v-if="onMain && hasHistory" label="保存先">
-                    <SegmentSwitch v-model="target" aria-label="保存先" :items="[
+                <UFormField v-if="onMain" label="保存先">
+                    <SegmentSwitch v-model="target" aria-label="保存先" :items="!newDoc ? [
                         { value: 'here', label: '現行版に保存', icon: 'i-lucide-badge-check', description: 'すぐに正式な版になります。誤字の修正など、確認がいらない変更に' },
                         { value: 'draft', label: '新しい改定案として保存', icon: 'i-lucide-git-branch', description: '現行版はそのまま。確認が済んだら「現行版に反映」します' },
+                    ] : [
+                        { value: 'draft', label: '改定案として保存', icon: 'i-lucide-git-branch', description: '書きかけのまま区切りごとに保存できます。完成して確認が済んだら「現行版に反映」します' },
+                        { value: 'here', label: hasHistory ? '現行版に保存' : '現行版として保存', icon: 'i-lucide-badge-check', description: 'すでに完成している内容を、そのまま現行版に入れます' },
                     ]" />
                 </UFormField>
                 <UFormField v-if="target === 'draft'" label="改定案の名前" description="例：2026年4月改定">

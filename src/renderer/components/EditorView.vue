@@ -22,6 +22,7 @@ const editor = ref<InstanceType<typeof CodeEditor>>()
 const preview = ref<HTMLDivElement>()
 const showConfig = ref(false)
 const showSave = ref(false)
+const newDoc = ref(false)
 const saving = ref<'idle' | 'pending' | 'saved'>('idle')
 const confirmDiscard = ref(false)
 const cursorLine = ref(0)
@@ -530,10 +531,15 @@ async function exportAs(format: 'pdf' | 'docx' | 'md') {
 }
 
 const changed = computed(() => app.currentDoc?.changed)
+async function openSave() {
+    const main = app.mainBranch
+    newDoc.value = !main || (await window.api.readAt(app.repoDir!, main.oid, path).catch(() => null)) === null
+    showSave.value = true
+}
 async function saveShortcut() {
     if (showSave.value || app.dialog) return
     await app.flushEditor()
-    if (app.currentDoc?.changed) showSave.value = true
+    if (app.currentDoc?.changed) await openSave()
     else app.notify('前の版から変わっていません。書いた内容は自動で PC に書き込んでいます')
 }
 defineShortcuts({ meta_s: { handler: () => void saveShortcut(), usingInput: true } })
@@ -618,7 +624,7 @@ const saveState = computed(() =>
                     :title="compact ? '書き出し（PDF・Word・Markdown）' : undefined" icon="i-lucide-download"
                     trailing-icon="i-lucide-chevron-down" size="sm" color="neutral" variant="outline" />
             </UDropdownMenu>
-            <UButton label="版を保存" icon="i-lucide-save" size="sm" :disabled="!changed" @click="showSave = true" />
+            <UButton label="版を保存" icon="i-lucide-save" size="sm" :disabled="!changed" @click="openSave" />
         </div>
         <ConfigPanel v-if="showConfig" :config="doc.config" :warnings="doc.warnings" @change="changeConfig"
             @preset="preset" />
@@ -712,7 +718,8 @@ const saveState = computed(() =>
         <PropModal v-if="propFor" :sample="propFor.sample" :inline="propFor.inline" :can-inline="propFor.inline"
             @close="propFor = null" @apply="applyProp" />
         <SaveVersionModal v-if="showSave" :busy="app.busy" :branch-label="app.currentBranch?.label ?? ''"
-            :on-main="!app.onDraft" :has-history="app.branches.length > 0" @close="showSave = false"
+            :on-main="!app.onDraft" :has-history="app.branches.length > 0" :new-doc="newDoc"
+            :doc-title="doc.title || path.replace(/\.md$/i, '').split('/').pop()!" @close="showSave = false"
             @save="saveVersion" />
         <ConfirmModal v-model:open="confirmDiscard" title="変更を取り消す" description="最後に保存した版のあとの変更をすべて取り消します。"
             confirm-label="取り消す" color="error" @confirm="discard" />

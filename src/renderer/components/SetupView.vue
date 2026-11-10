@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { SegmentItem } from '~/components/SegmentSwitch.vue'
-import { DEFAULT_MCP_PORT, type AiStatus, type RepoEntry } from '@shared/api'
+import { DEFAULT_MCP_PORT, type AiStatus, type DesktopStatus, type RepoEntry } from '@shared/api'
 import { EDITOR_FONTS, cssFont, type AppPrefs } from '@shared/prefs'
 import { useApp } from '~/stores/app'
 import { baseName } from '~/utils/folders'
@@ -106,10 +106,29 @@ const mcpEnabled = ref(app.settings?.mcp?.enabled ?? false)
 const mcpPort = ref(app.settings?.mcp?.port ?? DEFAULT_MCP_PORT)
 const mcpToken = ref('')
 const showMcpToken = ref(false)
+const desktop = ref<DesktopStatus | null>(null)
+const refreshDesktop = async () => (desktop.value = await window.api.desktopStatus().catch(() => null))
 onMounted(async () => {
     ai.value = await window.api.aiStatus()
     if (mcpEnabled.value) mcpToken.value = await window.api.getMcpToken()
+    void refreshDesktop()
 })
+const DESKTOP_TEXT: Record<DesktopStatus['state'], string> = {
+    registered: '登録済みです。Claude Desktop のチャットから ClauseDown の文書を扱えます。',
+    unregistered: 'ボタンを押すと、Claude Desktop から ClauseDown の文書を扱えるようにします。',
+    outdated: 'ClauseDown の場所が変わったため、登録し直す必要があります。',
+    notInstalled: 'Claude Desktop が見つかりません。入れて一度起動してから、この画面を開き直してください。',
+    broken: '',
+}
+const desktopText = computed(() => (desktop.value ? desktop.value.error ?? DESKTOP_TEXT[desktop.value.state] : ''))
+async function registerDesktop() {
+    const s = await app.run(() => window.api.registerDesktop(), 'Claude Desktop に登録しました。Claude Desktop を再起動すると使えます')
+    if (s) desktop.value = s
+}
+async function unregisterDesktop() {
+    const s = await app.run(() => window.api.unregisterDesktop(), 'Claude Desktop への登録を外しました。Claude Desktop を再起動すると反映されます')
+    if (s) desktop.value = s
+}
 async function applyMcp() {
     const s = await app.run(() => window.api.setMcp({ enabled: mcpEnabled.value, port: Number(mcpPort.value) }))
     if (!s) return
@@ -481,6 +500,16 @@ async function addSamples() {
                     <UButton label="コピー" icon="i-lucide-copy" size="sm" color="neutral" variant="outline"
                         @click="copy(mcpToken, '接続用トークン')" />
                     <UButton label="作り直す" size="sm" color="neutral" variant="ghost" @click="regenerateToken" />
+                </SettingRow>
+                <SettingRow label="Claude Desktop への登録" :description="desktopText">
+                    <UBadge v-if="desktop?.state === 'registered'" label="登録済み" color="success" variant="subtle"
+                        icon="i-lucide-check" />
+                    <UButton v-if="desktop?.state === 'unregistered'" label="登録する" icon="i-lucide-plug" size="sm"
+                        @click="registerDesktop" />
+                    <UButton v-if="desktop?.state === 'outdated'" label="登録し直す" icon="i-lucide-refresh-cw" size="sm"
+                        @click="registerDesktop" />
+                    <UButton v-if="desktop?.state === 'registered' || desktop?.state === 'outdated'" label="登録を外す"
+                        size="sm" color="neutral" variant="ghost" @click="unregisterDesktop" />
                 </SettingRow>
                 <SettingRow label="Claude Code への登録" stacked
                     description="ターミナルで次のコマンドを実行すると、Claude Code から ClauseDown の文書を扱えます。">

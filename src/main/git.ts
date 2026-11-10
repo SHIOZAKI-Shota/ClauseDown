@@ -366,8 +366,11 @@ export async function listBranches(dir: string): Promise<BranchInfo[]> {
 }
 
 export async function createBranch(dir: string, label: string, from?: string): Promise<string> {
-    if (!(await hasHead(dir))) throw new Error('改定案を作る前に、現行版を一度「版を保存」してください')
     const name = draftRef(label)
+    if (!(await hasHead(dir))) {
+        const tree = await git.writeTree({ fs, dir, tree: [] })
+        await git.commit({ fs, dir, message: 'リポジトリを作成', author: await author(dir), tree, parent: [] })
+    }
     const exists = (await tryResolve(dir, `refs/heads/${name}`)) || (await tryResolve(dir, `refs/remotes/origin/${name}`))
     if (exists) throw new Error(`「${branchLabel(name, '')}」という改定案はすでにあります`)
     const current = await git.currentBranch({ fs, dir })

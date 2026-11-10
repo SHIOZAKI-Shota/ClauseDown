@@ -10,7 +10,7 @@ const names: (keyof Api)[] = [
     'occurrences', 'occurrencesAll', 'exportSchedule', 'listEvents', 'saveEvent', 'deleteEvent', 'setEventDone', 'getEventKinds', 'saveEventKinds',
     'listDeliveries', 'deliver', 'openPath', 'openExternal', 'getLicenses',
     'accounts', 'identity', 'loginStart', 'loginWait', 'logout',
-    'aiStatus', 'setAiKey', 'setAiConfig', 'listAiModels', 'aiLoginOpenRouter', 'testAi', 'getMcpToken', 'regenerateMcpToken', 'setMcp', 'aiRun', 'aiStop', 'aiReset',
+    'aiStatus', 'setAiKey', 'setAiConfig', 'listAiModels', 'aiLoginOpenRouter', 'testAi', 'getMcpToken', 'regenerateMcpToken', 'setMcp', 'desktopStatus', 'registerDesktop', 'unregisterDesktop', 'aiRun', 'aiStop', 'aiReset',
 ]
 
 function listen<T>(channel: string) {

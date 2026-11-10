@@ -32,6 +32,7 @@ import { listAiModels } from './ai/models'
 import { loginOpenRouter } from './ai/openrouter-auth'
 import { aiBaseOf, cleanAiConfig, type AiConfig, type AiProvider } from '../shared/ai-providers'
 import { applyMcp, mcpState, mcpToken, regenerateMcpToken } from './mcp-server'
+import { desktopStatus, registerDesktop, unregisterDesktop } from './claude-desktop'
 
 try {
     setDefaultCACertificates([...getCACertificates('default'), ...getCACertificates('system')])
@@ -380,6 +381,9 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
     },
     testAi,
     getMcpToken: mcpToken,
+    desktopStatus,
+    registerDesktop,
+    unregisterDesktop,
     regenerateMcpToken: async () => {
         const token = await regenerateMcpToken()
         await applyMcp((await loadSettings()).mcp, notifyChanged('mcp'))

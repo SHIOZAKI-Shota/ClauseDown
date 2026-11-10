@@ -91,6 +91,12 @@
       "out/**/*",
       "package.json"
     ],
+    "extraResources": [
+      {
+        "from": "build/mcp-bridge",
+        "to": "mcp-bridge"
+      }
+    ],
     "win": {
       "target": [
         {

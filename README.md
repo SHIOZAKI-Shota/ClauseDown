@@ -199,6 +199,7 @@ App が読み書きできるのは、インストールのときに選んだリ�
 - **書き込み**：文書と設定は、一時ファイルに書いてから名前を変える方法で書きます。
 - **改行コード**：CRLF / LF の違いだけでは変更とみなしません（Windows の core.autocrlf への対策）。
 - **認証情報**：Electron の `safeStorage`（Windows では DPAPI、macOS ではキーチェーン）で暗号化して保存します。
+- **MCP**：Claude Code など向けの `127.0.0.1` のポート（トークンで認証）と、Claude Desktop 向けのソケット（macOS は Unix ドメインソケット、Windows は名前付きパイプ）。Claude Desktop には同梱のスクリプト（`build/mcp-bridge/`）が stdio とソケットを取り次ぎます。
 - エンジニアは同じリポジトリを VS Code や git コマンドでそのまま扱えます。
 
 ### 期日
