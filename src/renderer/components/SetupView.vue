@@ -438,6 +438,11 @@ async function addSamples() {
                 <USwitch :model-value="app.prefs.numberHints"
                     @update:model-value="(v: boolean) => setPref('numberHints', v)" />
             </SettingRow>
+            <SettingRow label="校閲（黄色の波線）を表示する"
+                description="ら抜き言葉・二重否定・「は」などの助詞の重なり・全角と半角の英字の混在・公用文の用字（「または」→「又は」など）に黄色の波線を引きます。定義語の誤り（赤い波線）は、この設定に関係なく表示します。">
+                <USwitch :model-value="app.prefs.proofread"
+                    @update:model-value="(v: boolean) => setPref('proofread', v)" />
+            </SettingRow>
         </SettingsSection>
 
         <SettingsSection id="sync" title="同期">

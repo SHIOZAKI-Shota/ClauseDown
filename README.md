@@ -6,7 +6,7 @@ ClauseDown は法律案・条例・契約書・規約・規程など、「第○
 文書は Markdown で書き、版は Git で記録します。画面では Git の用語を使わないので、Git や VS Code を知らない事務担当者でも、編集・版の保存・改定案・確認依頼・新旧対照表・施行日・納品までを扱えます。
 
 > [!NOTE]
-> このアプリは私が業務で使用していた [MPE](https://shd101wyy.github.io/markdown-preview-enhanced) 設定とスクリプトをAIの助けで受肉させたものです、多くの場合 VSCode と MPE を使用されたほうが軽量かつ多機能かと思います。
+> このアプリは私が業務で使用していた [MPE](https://shd101wyy.github.io/markdown-preview-enhanced) ・スクリプトを・Textlint・Git 等をAIの助けで受肉させたものです、多くの場合 VSCode を使用されたほうが軽量かつ多機能かと思います。
 
 > **[操作マニュアルを読む](docs/manual/README.md)**　画面の画像を使って、文書の作り方から新旧対照表・施行日・納品までの操作を順に説明しています。
 

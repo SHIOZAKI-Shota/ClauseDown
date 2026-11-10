@@ -2,11 +2,12 @@
 import { EditorView, basicSetup } from 'codemirror'
 import { Compartment, EditorState } from '@codemirror/state'
 import { keymap } from '@codemirror/view'
+import { forEachDiagnostic, openLintPanel } from '@codemirror/lint'
 import { markdown } from '@codemirror/lang-markdown'
 import { startCompletion } from '@codemirror/autocomplete'
 import { redo as cmRedo, redoDepth, undo as cmUndo, undoDepth } from '@codemirror/commands'
 import type { LegalDoc } from '@shared/legal-parser'
-import { legalExtensions, setLegalDoc } from '~/utils/legal-editor'
+import { legalExtensions, proofreadLinter, setLegalDoc } from '~/utils/legal-editor'
 import { diffHighlight, setDiffBase } from '~/utils/diff-highlight'
 import { searchPanel } from '~/utils/search-panel'
 
@@ -15,12 +16,15 @@ const props = withDefaults(
         modelValue: string
         legal: LegalDoc
         wrap?: boolean
+        proofread?: boolean
         readonly?: boolean
         diffBase?: string | null
     }>(),
-    { wrap: true, readonly: false, diffBase: null },
+    { wrap: true, readonly: false, diffBase: null, proofread: true },
 )
 const wrapping = new Compartment()
+const proofreading = new Compartment()
+const proofreadExt = proofreadLinter((text) => window.api.proofread(text))
 const locking = new Compartment()
 const lockExt = (on: boolean) => [EditorState.readOnly.of(on), EditorView.editable.of(!on)]
 const emit = defineEmits<{
@@ -30,6 +34,7 @@ const emit = defineEmits<{
     shortcut: ['article' | 'paragraph' | 'item']
     history: [{ undo: number; redo: number }]
     images: [File[]]
+    issues: [{ errors: number; warnings: number }]
 }>()
 const host = ref<HTMLDivElement>()
 let view: EditorView | null = null
@@ -43,6 +48,7 @@ onMounted(() => {
                 basicSetup,
                 markdown(),
                 wrapping.of(props.wrap ? EditorView.lineWrapping : []),
+                proofreading.of(props.proofread ? proofreadExt : []),
                 locking.of(lockExt(props.readonly)),
                 EditorState.tabSize.of(2),
                 ...legalExtensions(),
@@ -53,7 +59,9 @@ onMounted(() => {
                     { key: 'Mod-Alt-p', run: () => (emit('shortcut', 'paragraph'), true) },
                     { key: 'Mod-Alt-i', run: () => (emit('shortcut', 'item'), true) },
                 ]),
+                EditorState.phrases.of({ Diagnostics: '指摘の一覧', 'No diagnostics': '指摘はありません', close: '閉じる' }),
                 EditorView.updateListener.of((u) => {
+                    emitIssues(u.state)
                     if (u.docChanged) queueEmit(u.state.doc.length)
                     if (u.docChanged || u.selectionSet) emit('cursor', u.state.doc.lineAt(u.state.selection.main.head).number - 1)
                     if (u.docChanged || u.transactions.length) emit('history', { undo: undoDepth(u.state), redo: redoDepth(u.state) })
@@ -124,6 +132,10 @@ watch(
     (w) => view?.dispatch({ effects: wrapping.reconfigure(w ? EditorView.lineWrapping : []) }),
 )
 watch(
+    () => props.proofread,
+    (on) => view?.dispatch({ effects: proofreading.reconfigure(on ? proofreadExt : []) }),
+)
+watch(
     () => props.readonly,
     (on) => view?.dispatch({ effects: locking.reconfigure(lockExt(on)) }),
 )
@@ -172,6 +184,36 @@ function insertBlock(text: string) {
         scrollIntoView: true,
     })
     view.focus()
+}
+
+let lastIssues = ''
+function emitIssues(state: EditorState) {
+    let errors = 0
+    let warnings = 0
+    forEachDiagnostic(state, (d) => (d.severity === 'error' ? errors++ : warnings++))
+    const key = `${errors}/${warnings}`
+    if (key === lastIssues) return
+    lastIssues = key
+    emit('issues', { errors, warnings })
+}
+
+function nextIssue(kind: 'error' | 'warning'): string | null {
+    if (!view) return null
+    const found: { from: number; to: number; message: string }[] = []
+    forEachDiagnostic(view.state, (d, from, to) => {
+        if ((d.severity === 'error') === (kind === 'error')) found.push({ from, to, message: d.message })
+    })
+    if (!found.length) return null
+    found.sort((a, b) => a.from - b.from)
+    const head = view.state.selection.main.head
+    const next = found.find((d) => d.from > head) ?? found[0]
+    view.dispatch({ selection: { anchor: next.from, head: next.to }, scrollIntoView: true })
+    view.focus()
+    return next.message
+}
+
+function openIssues() {
+    if (view) openLintPanel(view)
 }
 
 function insertClause(afterLine: number, block: string, lineEdits: { line: number; text: string }[]) {
@@ -322,7 +364,7 @@ function focus() {
     view?.focus()
 }
 
-defineExpose({ focus, insertAfterLine, insertAtCursor, insertBlock, insertClause, insertAfterBullet, insertPreamble, wrapLines, wrapInline, insertBeforeLines, selectionInfo, insertRef, currentLine, goToLine, undo, redo, selectedText, flush })
+defineExpose({ focus, nextIssue, openIssues, insertAfterLine, insertAtCursor, insertBlock, insertClause, insertAfterBullet, insertPreamble, wrapLines, wrapInline, insertBeforeLines, selectionInfo, insertRef, currentLine, goToLine, undo, redo, selectedText, flush })
 </script>
 
 <template>

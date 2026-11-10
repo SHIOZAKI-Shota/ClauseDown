@@ -25,6 +25,7 @@ export interface AppPrefs {
     lineNumbers: boolean
     lineWrap: boolean
     numberHints: boolean
+    proofread: boolean
     syncOnStart: boolean
     pushOnSave: boolean
     exportDir: string
@@ -55,6 +56,7 @@ export const DEFAULT_PREFS: AppPrefs = {
     lineNumbers: true,
     lineWrap: true,
     numberHints: true,
+    proofread: true,
     syncOnStart: true,
     pushOnSave: true,
     exportDir: '',

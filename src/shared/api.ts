@@ -282,6 +282,13 @@ export type ExportRequest =
         style?: DocStyle
     } & Partial<DocBase>)
 
+export interface ProofreadIssue {
+    from: number
+    to: number
+    rule: string
+    message: string
+}
+
 export interface SavedImage {
     path: string
     src: string
@@ -345,6 +352,7 @@ export interface Api {
     exportFile(req: ExportRequest): Promise<string | null>
     previewPdf(source: string, style: DocStyle, base?: DocBase): Promise<Uint8Array>
     saveImage(dir: string, docPath: string, data: Uint8Array, ext: string): Promise<SavedImage>
+    proofread(text: string): Promise<ProofreadIssue[]>
     editCommand(cmd: 'cut' | 'copy' | 'paste' | 'selectAll'): Promise<void>
 
     listEffective(dir: string, docPath: string): Promise<EffectiveVersion[]>

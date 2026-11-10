@@ -285,6 +285,16 @@ const editMenu = computed<DropdownMenuItem[][]>(() => [
     ],
     [{ label: '条参照を入れる', icon: 'i-lucide-link', onSelect: () => editor.value?.insertRef() }],
 ])
+const issues = ref({ errors: 0, warnings: 0 })
+const issueNote = ref<{ kind: 'error' | 'warning'; text: string } | null>(null)
+let issueTimer: ReturnType<typeof setTimeout> | undefined
+function goIssue(kind: 'error' | 'warning') {
+    const msg = editor.value?.nextIssue(kind)
+    clearTimeout(issueTimer)
+    issueNote.value = msg ? { kind, text: msg } : null
+    if (msg) issueTimer = setTimeout(() => (issueNote.value = null), 10_000)
+}
+watch(text, () => (issueNote.value = null))
 const showClauses = ref(false)
 const clauseLibrary = computed(() => (isEnabled(app.settings, 'clauseLibrary') ? app.settings?.repos.find((r) => r.dir === app.settings?.clauseLibrary) ?? null : null))
 function openClauses() {
@@ -665,9 +675,10 @@ const saveState = computed(() =>
                 </div>
                 <UContextMenu :items="editMenu" size="sm">
                     <div class="pane-body" @wheel="zoomEditor" @contextmenu="onEditorMenu">
-                        <CodeEditor ref="editor" v-model="text" :legal="doc" :wrap="app.prefs.lineWrap"
+                        <CodeEditor ref="editor" v-model="text" :legal="doc" :wrap="app.prefs.lineWrap" :proofread="app.prefs.proofread"
                             :readonly="aiRunning" :diff-base="savedText" @cursor="onCursor" @scroll="onScroll"
-                            @shortcut="onShortcut" @history="(h) => (history = h)" @images="addImages" />
+                            @shortcut="onShortcut" @history="(h) => (history = h)" @images="addImages"
+                            @issues="(n) => (issues = n)" />
                     </div>
                 </UContextMenu>
             </div>
@@ -725,8 +736,21 @@ const saveState = computed(() =>
             </span>
             <span>{{ articleCount }} 条</span>
             <span>{{ chars.toLocaleString() }} 文字</span>
+            <UTooltip :text="`次の誤り（赤い波線）へ。右クリックで一覧を開きます（${keys('Ctrl+Shift+M')}）`">
+                <button class="issue err" :class="{ none: !issues.errors }" :disabled="mode === 'preview'"
+                    @click="goIssue('error')" @contextmenu.prevent="editor?.openIssues()">
+                    <UIcon name="i-lucide-circle-x" />{{ issues.errors }}
+                </button>
+            </UTooltip>
+            <UTooltip :text="`次の注意（黄色の波線）へ。右クリックで一覧を開きます（${keys('Ctrl+Shift+M')}）`">
+                <button class="issue warn" :class="{ none: !issues.warnings }" :disabled="mode === 'preview'"
+                    @click="goIssue('warning')" @contextmenu.prevent="editor?.openIssues()">
+                    <UIcon name="i-lucide-triangle-alert" />{{ issues.warnings }}
+                </button>
+            </UTooltip>
             <span class="cd-grow" />
-            <span class="hint">[[ で条参照 ／ Tab で項→号 ／ {{ keys('Ctrl+F') }} で検索</span>
+            <span v-if="issueNote" class="issue-note" :class="issueNote.kind">{{ issueNote.text }}</span>
+            <span v-else class="hint">[[ で条参照 ／ Tab で項→号 ／ {{ keys('Ctrl+F') }} で検索</span>
             <span :class="['save', saving === 'pending' ? 'pending' : changed ? 'dirty' : 'clean']">
                 <UIcon
                     :name="saving === 'pending' ? 'i-lucide-loader' : changed ? 'i-lucide-circle-dot' : 'i-lucide-circle-check'" />
@@ -748,6 +772,50 @@ const saveState = computed(() =>
 </template>
 
 <style scoped>
+.issue {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 6px;
+    height: 20px;
+    border-radius: 4px;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+}
+
+.issue:hover:not(:disabled) {
+    background: var(--ui-bg-accented);
+}
+
+.issue.err {
+    color: var(--cd-syn-ref-bad);
+}
+
+.issue.warn {
+    color: var(--cd-draft);
+}
+
+.issue.none,
+.issue:disabled {
+    color: var(--ui-text-dimmed);
+    cursor: default;
+}
+
+.issue-note {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.issue-note.error {
+    color: var(--cd-syn-ref-bad);
+}
+
+.issue-note.warning {
+    color: var(--ui-text);
+}
+
 .editor-page {
     display: flex;
     flex-direction: column;

@@ -24,6 +24,7 @@ import { identity } from './git-base'
 import { forgetCachedSettings, loadSecret, loadSettings, resetAllData, saveSecret, updateSettings } from './settings'
 import { listFonts } from './fonts'
 import { saveImage } from './images'
+import { proofread, stopProofread } from './proofread'
 import { imageExt } from '../shared/images'
 import { setAppMenu } from './menu'
 import { aiReset, aiRun, aiStop, testAi } from './ai-agent'
@@ -310,6 +311,7 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
         return previewPdf(source, style, base)
     },
     saveImage,
+    proofread,
     updateState,
     checkUpdate,
     downloadUpdate,
@@ -429,3 +431,4 @@ app.whenReady().then(() => {
     nativeTheme.on('updated', async () => applyTheme((await loadSettings()).theme))
 })
 app.on('window-all-closed', () => app.quit())
+app.on('will-quit', stopProofread)

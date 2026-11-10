@@ -8,6 +8,7 @@ import { parseFence, mermaidSvg } from '@shared/blocks'
 import type { Article, Item, LegalDoc, Paragraph } from '@shared/legal-parser'
 import { articleTitle } from '@shared/legal-parser'
 import { checkDefinitions } from '@shared/definitions'
+import type { ProofreadIssue } from '@shared/api'
 
 export const legalTheme = EditorView.theme({
     '&': { height: '100%', fontSize: 'var(--cd-ed-size, 14px)', backgroundColor: 'var(--cd-ed-bg)', color: 'var(--cd-ed-text)' },
@@ -30,6 +31,19 @@ export const legalTheme = EditorView.theme({
     '.cm-diagnostic': { padding: '4px 8px' },
     '.cm-lintRange-error': { backgroundImage: 'none', textDecoration: 'underline wavy var(--cd-syn-ref-bad)', textUnderlineOffset: '3px' },
     '.cm-lintRange-warning': { backgroundImage: 'none', textDecoration: 'underline wavy var(--cd-draft)', textUnderlineOffset: '3px' },
+    '.cm-panels-bottom': { borderTop: '1px solid var(--ui-border)', backgroundColor: 'var(--cd-ed-bg)' },
+    '.cm-panel.cm-panel-lint ul': { maxHeight: 'min(40vh, 320px)', fontSize: '13px' },
+    '.cm-panel.cm-panel-lint ul [aria-selected], .cm-panel.cm-panel-lint ul:focus [aria-selected]': {
+        backgroundColor: 'var(--cd-selected)',
+        color: 'var(--ui-text)',
+    },
+    '.cm-panel-lint .cm-diagnostic': { display: 'flex', alignItems: 'baseline', gap: '10px', padding: '5px 28px 5px 10px', whiteSpace: 'normal', cursor: 'pointer' },
+    '.cm-panel-lint .cm-diagnostic:hover': { backgroundColor: 'var(--ui-bg-elevated)' },
+    '.cm-panel-lint .cm-diagnosticText': { flex: '1', minWidth: '0' },
+    '.cm-panel-lint .cm-diagnosticSource': { flexShrink: '0', fontSize: '11px', color: 'var(--ui-text-muted)', opacity: '1' },
+    '.cm-diagnostic-error': { borderLeft: '4px solid var(--cd-syn-ref-bad)' },
+    '.cm-diagnostic-warning': { borderLeft: '4px solid var(--cd-draft)' },
+    '.cm-panel.cm-panel-lint [name=close]': { top: '4px', right: '8px', color: 'var(--ui-text-muted)', cursor: 'pointer' },
     '.cd-hint': { marginRight: '6px' },
     '.cd-attr': { color: 'var(--cd-syn-mark)' },
     '.cd-prop': { color: 'var(--cd-syn-mark)', backgroundColor: 'color-mix(in srgb, var(--cd-syn-mark) 10%, transparent)', borderRadius: '3px', fontSize: '0.92em' },
@@ -248,6 +262,21 @@ const legalLinter = linter(
         return out
     },
     { delay: 400, needsRefresh: hasLegalEffect },
+)
+
+const PROOFREAD_MAX = 200_000
+
+export const proofreadLinter = (proofread: (text: string) => Promise<ProofreadIssue[]>) => linter(
+    async (view) => {
+        const text = view.state.doc.toString()
+        if (!text.trim() || text.length > PROOFREAD_MAX) return []
+        const issues = await proofread(text).catch((): ProofreadIssue[] => [])
+        const len = view.state.doc.length
+        return issues
+            .filter((i) => i.from < len)
+            .map((i): Diagnostic => ({ from: i.from, to: Math.min(i.to, len), severity: 'warning', source: `校閲：${i.rule}`, message: i.message }))
+    },
+    { delay: 1200 },
 )
 
 function shiftList(dir: 1 | -1) {
