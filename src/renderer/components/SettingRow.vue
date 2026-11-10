@@ -1,11 +1,13 @@
 <script setup lang="ts">
-defineProps<{ label: string; description?: string; stacked?: boolean }>()
+defineProps<{ label?: string; description?: string; stacked?: boolean }>()
 </script>
 
 <template>
     <div class="row" :class="{ stacked }">
         <div class="text">
-            <div class="label">{{ label }}</div>
+            <div class="label">
+                <slot name="label">{{ label }}</slot>
+            </div>
             <div v-if="description || $slots.description" class="desc">
                 <slot name="description">{{ description }}</slot>
             </div>

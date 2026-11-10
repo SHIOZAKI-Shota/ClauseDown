@@ -174,6 +174,21 @@ function insertBlock(text: string) {
     view.focus()
 }
 
+function insertClause(afterLine: number, block: string, lineEdits: { line: number; text: string }[]) {
+    if (!view) return
+    const doc = view.state.doc
+    const at = doc.line(Math.min(Math.max(afterLine, 0) + 1, doc.lines)).to
+    const changes = view.state.changes([
+        ...lineEdits.filter((e) => e.line + 1 <= doc.lines).map((e) => {
+            const l = doc.line(e.line + 1)
+            return { from: l.from, to: l.to, insert: e.text }
+        }),
+        { from: at, insert: `\n\n${block}` },
+    ])
+    view.dispatch({ changes, selection: { anchor: changes.mapPos(at, -1) + 2 }, scrollIntoView: true })
+    view.focus()
+}
+
 function insertAfterBullet(text: string, cursorOffset = text.length) {
     if (!view) return
     const line = view.state.doc.lineAt(view.state.selection.main.head)
@@ -307,7 +322,7 @@ function focus() {
     view?.focus()
 }
 
-defineExpose({ focus, insertAfterLine, insertAtCursor, insertBlock, insertAfterBullet, insertPreamble, wrapLines, wrapInline, insertBeforeLines, selectionInfo, insertRef, currentLine, goToLine, undo, redo, selectedText, flush })
+defineExpose({ focus, insertAfterLine, insertAtCursor, insertBlock, insertClause, insertAfterBullet, insertPreamble, wrapLines, wrapInline, insertBeforeLines, selectionInfo, insertRef, currentLine, goToLine, undo, redo, selectedText, flush })
 </script>
 
 <template>

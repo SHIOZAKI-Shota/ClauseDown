@@ -1,3 +1,4 @@
+import type { ExperimentId } from './experiments'
 import type { RepoRules, ReviewAction, ReviewEvent } from './review'
 import type { AppPrefs, DocStyle } from './prefs'
 import type { StyleLayers, StyleOverride } from './folder-style'
@@ -29,6 +30,8 @@ export interface AppSettings {
     prefs: AppPrefs
     mcp?: McpConfig
     ai?: AiConfig
+    experiments?: Partial<Record<ExperimentId, boolean>>
+    clauseLibrary?: string
 }
 
 export interface McpConfig {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { SegmentItem } from '~/components/SegmentSwitch.vue'
 import { DEFAULT_MCP_PORT, type AiStatus, type DesktopStatus, type RepoEntry } from '@shared/api'
+import { EXPERIMENTS, isEnabled, type ExperimentId } from '@shared/experiments'
 import { EDITOR_FONTS, cssFont, type AppPrefs } from '@shared/prefs'
 import { useApp } from '~/stores/app'
 import { baseName } from '~/utils/folders'
@@ -316,6 +317,16 @@ watch(
     }, 400),
 )
 
+const experimentOn = (id: ExperimentId) => isEnabled(app.settings, id)
+async function setExperiment(id: ExperimentId, on: boolean) {
+    const s = app.settings!
+    await app.saveSettings({ ...s, experiments: { ...s.experiments, [id]: on } })
+}
+const libraryItems = computed(() => app.settings!.repos.map((r) => ({ label: r.name, value: r.dir })))
+const libraryDir = computed(() => app.settings?.clauseLibrary)
+async function setLibrary(dir: string) {
+    await app.saveSettings({ ...app.settings!, clauseLibrary: dir })
+}
 const samplesBusy = ref(false)
 async function addSamples() {
     const parent = await window.api.pickFolder()
@@ -552,7 +563,8 @@ async function addSamples() {
                 description="例：https://github.com/組織名/リポジトリ名、https://gitlab.com/組織名/リポジトリ名">
                 <UInput v-model="url" class="cd-w-wide" placeholder="https://github.com/組織名/リポジトリ名" />
             </SettingRow>
-            <SettingRow v-if="mode === 'open'" label="フォルダ" :description="`${MOD_KEY} や Shift を押しながら選ぶと、複数のリポジトリをまとめて追加できます。`">
+            <SettingRow v-if="mode === 'open'" label="フォルダ"
+                :description="`${MOD_KEY} や Shift を押しながら選ぶと、複数のリポジトリをまとめて追加できます。`">
                 <span class="path">{{ folderPaths.length ? `${folderPaths.length}件を選択` : '（未選択）' }}</span>
                 <UButton label="選ぶ" icon="i-lucide-folder-open" size="sm" color="neutral" variant="outline"
                     @click="pick" />
@@ -585,6 +597,23 @@ async function addSamples() {
         </SettingsSection>
 
         <SettingsSection id="developer" title="Developer">
+            <template v-for="e in EXPERIMENTS" :key="e.id">
+                <SettingRow :description="e.description">
+                    <template #label>
+                        <span class="exp-label">{{ e.label }}
+                            <UBadge label="試験中" size="sm" color="warning" variant="subtle"
+                                icon="i-lucide-flask-conical" />
+                        </span>
+                    </template>
+                    <USwitch :model-value="experimentOn(e.id)"
+                        @update:model-value="(v: boolean) => setExperiment(e.id, v)" />
+                </SettingRow>
+                <SettingRow v-if="e.id === 'clauseLibrary' && experimentOn('clauseLibrary')" label="ライブラリに使うリポジトリ"
+                    description="このリポジトリの文書に書いた条が、条項ライブラリに並びます。版の保存や同期は、通常のリポジトリと同様です">
+                    <USelect :model-value="libraryDir" :items="libraryItems" placeholder="選んでください" class="cd-w-input"
+                        @update:model-value="setLibrary" />
+                </SettingRow>
+            </template>
             <SettingRow label="サンプルリポジトリを追加"
                 description="社内規程・契約書・条例と要綱・houritsu 形式の法令の 4 つを、選んだフォルダに作って一覧に加えます。版の履歴・改定案・施行日・期日が付いています。">
                 <UButton label="追加" icon="i-lucide-folder-plus" size="sm" color="neutral" variant="outline"
@@ -616,9 +645,9 @@ async function addSamples() {
 
     </SettingsLayout>
 
-    <ConfirmModal :open="resetting === 'prefs'" title="設定を初期値に戻す" description="表示・エディタ・同期・期日の通知・書き出し・印刷の書式・版組 CSS が、最初の状態に戻ります。"
-        confirm-label="初期値に戻す" :loading="resetBusy" @update:open="(v) => !v && (resetting = null)"
-        @confirm="resetPrefs" />
+    <ConfirmModal :open="resetting === 'prefs'" title="設定を初期値に戻す"
+        description="表示・エディタ・同期・期日の通知・書き出し・印刷の書式・版組 CSS が、最初の状態に戻ります。" confirm-label="初期値に戻す" :loading="resetBusy"
+        @update:open="(v) => !v && (resetting = null)" @confirm="resetPrefs" />
     <ConfirmModal :open="resetting === 'all'" title="すべてを初期状態に戻す"
         description="設定・ログイン・AI の API キー・リポジトリの一覧を消して、アプリを起動し直します。リポジトリのフォルダと文書は消えません。元には戻せません。" confirm-label="すべて初期化"
         color="error" :loading="resetBusy" @update:open="(v) => !v && (resetting = null)" @confirm="resetAll" />
@@ -651,6 +680,12 @@ async function addSamples() {
 </template>
 
 <style scoped>
+.exp-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .accounts {
     display: flex;
     flex-direction: column;

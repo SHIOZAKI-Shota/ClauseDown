@@ -5,6 +5,8 @@ import { renderDoc } from '@shared/legal-renderer'
 import { autoMerge } from '@shared/merge3'
 import { DEFAULT_CONFIG, writeConfig, type DocConfig } from '@shared/config'
 import { extOfMime } from '@shared/images'
+import { clauseInsertLine, type ClauseInsert } from '@shared/clauses'
+import { isEnabled } from '@shared/experiments'
 import { useApp } from '~/stores/app'
 import { lastAtOrBefore, positionLabel } from '~/utils/legal-editor'
 import { toPlain } from '~/utils/ipc'
@@ -283,11 +285,22 @@ const editMenu = computed<DropdownMenuItem[][]>(() => [
     ],
     [{ label: '条参照を入れる', icon: 'i-lucide-link', onSelect: () => editor.value?.insertRef() }],
 ])
+const showClauses = ref(false)
+const clauseLibrary = computed(() => (isEnabled(app.settings, 'clauseLibrary') ? app.settings?.repos.find((r) => r.dir === app.settings?.clauseLibrary) ?? null : null))
+function openClauses() {
+    if (!clauseLibrary.value) return app.notify('設定の「Developer」で、条項ライブラリに使うリポジトリを選んでください', true)
+    showClauses.value = true
+}
+function insertClause(r: ClauseInsert) {
+    showClauses.value = false
+    const lines = text.value.replace(/\r\n/g, '\n').split('\n')
+    editor.value?.insertClause(clauseInsertLine(doc.value, lines, cursorLine.value), r.block, r.lineEdits)
+}
 function backToEditor(e: Event) {
     e.preventDefault()
     editor.value?.focus()
 }
-const insertMenu: DropdownMenuItem[][] = [
+const insertMenu = computed<DropdownMenuItem[][]>(() => [
     [
         { label: '章', icon: 'i-lucide-heading-2', onSelect: addChapter },
         {
@@ -336,7 +349,10 @@ const insertMenu: DropdownMenuItem[][] = [
         { label: '改ページ（この行の前）', icon: 'i-lucide-separator-horizontal', onSelect: addPageBreak },
         { label: '書式を付ける…', icon: 'i-lucide-type', onSelect: addFormat },
     ],
-]
+    ...(isEnabled(app.settings, 'clauseLibrary')
+        ? [[{ label: '条項ライブラリから…', icon: 'i-lucide-library', onSelect: openClauses }]]
+        : []),
+])
 function onShortcut(kind: 'article' | 'paragraph' | 'item') {
     if (kind === 'article') addArticle()
     else if (kind === 'paragraph') addParagraph()
@@ -677,14 +693,16 @@ const saveState = computed(() =>
                                 @click="app.setPrefsLive({ zoomLinked: !app.prefs.zoomLinked })" />
                         </UTooltip>
                     </div>
-                    <SegmentSwitch v-model="printKind" size="xs" aria-label="プレビューの種類" :items="PREVIEW_KINDS" class="kind" />
+                    <SegmentSwitch v-model="printKind" size="xs" aria-label="プレビューの種類" :items="PREVIEW_KINDS"
+                        class="kind" />
                     <PaneControls :pane="previewPane" :side="layout.ai ? 'left' : 'right'" label="プレビュー" />
                 </div>
                 <div v-if="showPrint" class="pane-body cd-canvas print-body">
                     <iframe v-if="pdfUrl" :src="pdfUrl" class="pdf" title="印刷プレビュー" />
                     <p v-if="pdfError" class="pdf-error">PDF を作れませんでした：{{ pdfError }}</p>
                 </div>
-                <div v-else ref="preview" class="pane-body cd-preview cd-canvas" @click="onPreviewClick" @wheel="zoomPreview">
+                <div v-else ref="preview" class="pane-body cd-preview cd-canvas" @click="onPreviewClick"
+                    @wheel="zoomPreview">
                     <div class="paper cd-paper" :style="{ zoom: app.prefs.previewZoom / 100 }" v-html="html" />
                 </div>
             </div>
@@ -717,6 +735,9 @@ const saveState = computed(() =>
         </footer>
         <PropModal v-if="propFor" :sample="propFor.sample" :inline="propFor.inline" :can-inline="propFor.inline"
             @close="propFor = null" @apply="applyProp" />
+        <ClauseLibraryModal v-if="showClauses && clauseLibrary" :library-dir="clauseLibrary.dir"
+            :library-name="clauseLibrary.name" :target="doc" :target-text="text" @close="showClauses = false"
+            @insert="insertClause" />
         <SaveVersionModal v-if="showSave" :busy="app.busy" :branch-label="app.currentBranch?.label ?? ''"
             :on-main="!app.onDraft" :has-history="app.branches.length > 0" :new-doc="newDoc"
             :doc-title="doc.title || path.replace(/\.md$/i, '').split('/').pop()!" @close="showSave = false"
