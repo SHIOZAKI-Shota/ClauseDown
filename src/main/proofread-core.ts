@@ -1,4 +1,6 @@
-import type { ProofreadIssue } from '../shared/api'
+import type { ProofreadConfig, ProofreadIssue } from '../shared/api'
+import { LEGAL_OKURIGANA_YAML, LEGAL_TERMS_YAML } from './proofread-legal'
+import { DEFAULT_JOSHI_ALLOW, MAX_TEN, PROOFREAD_RULES, ruleLabel, ruleOn } from '../shared/proofread-rules'
 
 const MAX_CHARS = 200_000
 
@@ -44,21 +46,7 @@ rules:
     pattern: 頂く
 `
 
-const RULES: { id: string; label: string; pkg: string; options?: unknown }[] = [
-    {
-        id: 'no-doubled-joshi',
-        label: '同じ助詞の連続',
-        pkg: 'textlint-rule-no-doubled-joshi',
-        // 条文は一文が長く「に」「が」などが重なるのが普通なので、「は」の重なりなどに絞る
-        options: { allow: ['に', 'が', 'と', 'の', 'を', 'で', 'て', 'も', 'や', 'から', 'より', 'まで', 'に関する', 'について'] },
-    },
-    { id: 'no-dropping-the-ra', label: 'ら抜き言葉', pkg: 'textlint-rule-no-dropping-the-ra' },
-    { id: 'no-double-negative-ja', label: '二重否定', pkg: 'textlint-rule-no-double-negative-ja' },
-    { id: 'no-mixed-zenkaku-and-hankaku-alphabet', label: '全角・半角の混在', pkg: 'textlint-rule-no-mixed-zenkaku-and-hankaku-alphabet' },
-    { id: 'prh', label: '用字', pkg: 'textlint-rule-prh', options: { ruleContents: [DICTIONARY] } },
-]
-
-type Lint = (text: string) => Promise<{ ruleId: string; message: string; range?: [number, number]; index: number; fix?: { range: [number, number] } }[]>
+type Lint = (text: string, config: ProofreadConfig) => Promise<{ ruleId: string; message: string; range?: [number, number]; index: number; fix?: { range: [number, number] } }[]>
 let lint: Promise<Lint> | null = null
 
 // CommonJS の規則を ESM から読むと { default: { default: 規則 } } のように何重にも包まれることがある
@@ -68,12 +56,23 @@ function unwrap(m: unknown): unknown {
     return cur
 }
 
+function optionsOf(id: string, config: ProofreadConfig): unknown {
+    if (id === 'no-doubled-joshi') return { allow: config.joshiAllow ?? DEFAULT_JOSHI_ALLOW }
+    if (id === 'max-ten') return { max: MAX_TEN }
+    if (id === 'prh') return { ruleContents: [DICTIONARY, ...(config.dictionaries ?? [])] }
+    if (id === 'legal-terms') return { ruleContents: [LEGAL_TERMS_YAML] }
+    if (id === 'legal-okurigana') return { ruleContents: [LEGAL_OKURIGANA_YAML] }
+    return true
+}
+
 async function load(): Promise<Lint> {
     const { TextlintKernel } = await import('@textlint/kernel')
     const markdown = unwrap(await import('@textlint/textlint-plugin-markdown'))
-    const rules = await Promise.all(RULES.map(async (r) => ({ ruleId: r.id, rule: unwrap(await import(r.pkg)), options: r.options })))
+    const modules = new Map(await Promise.all(PROOFREAD_RULES.map(async (r) => [r.id, unwrap(await import(r.pkg))] as const)))
     const kernel = new TextlintKernel()
-    return async (text) => {
+    return async (text, config) => {
+        const rules = PROOFREAD_RULES.filter((r) => ruleOn(r.id, config.rules)).map((r) => ({ ruleId: r.id, rule: modules.get(r.id), options: optionsOf(r.id, config) }))
+        if (!rules.length) return []
         const res = await kernel.lintText(text, {
             ext: '.md',
             filePath: 'document.md',
@@ -98,22 +97,21 @@ export function ignoredRanges(source: string): [number, number][] {
     return out
 }
 
-const LABEL = new Map(RULES.map((r) => [r.id, r.label]))
 
-export async function proofread(input: unknown): Promise<ProofreadIssue[]> {
+export async function proofread(input: unknown, config: ProofreadConfig = {}): Promise<ProofreadIssue[]> {
     if (typeof input !== 'string' || !input.trim() || input.length > MAX_CHARS) return []
     const text = input.replace(/\r\n?/g, '\n')
     lint ??= load().catch((e) => {
         lint = null
         throw e
     })
-    const messages = await (await lint)(text)
+    const messages = await (await lint)(text, config)
     const ignored = ignoredRanges(text)
     const out: ProofreadIssue[] = []
     for (const m of messages) {
         const [from, to] = m.fix?.range ?? m.range ?? [m.index, m.index + 1]
         if (ignored.some(([a, b]) => from < b && to > a)) continue
-        out.push({ from, to: Math.max(to, from + 1), rule: LABEL.get(m.ruleId) ?? m.ruleId, message: m.message.split('\n')[0].trim() })
+        out.push({ from, to: Math.max(to, from + 1), rule: ruleLabel(m.ruleId), message: m.message.split('\n')[0].trim() })
     }
     return out
 }

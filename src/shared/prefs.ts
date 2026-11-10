@@ -1,3 +1,4 @@
+import { DEFAULT_JOSHI_ALLOW } from './proofread-rules'
 import { fontNames } from './fonts'
 
 export interface DocStyle {
@@ -26,6 +27,8 @@ export interface AppPrefs {
     lineWrap: boolean
     numberHints: boolean
     proofread: boolean
+    proofreadRules: Partial<Record<string, boolean>>
+    proofreadJoshiAllow: string[]
     syncOnStart: boolean
     pushOnSave: boolean
     exportDir: string
@@ -57,6 +60,8 @@ export const DEFAULT_PREFS: AppPrefs = {
     lineWrap: true,
     numberHints: true,
     proofread: true,
+    proofreadRules: {},
+    proofreadJoshiAllow: DEFAULT_JOSHI_ALLOW,
     syncOnStart: true,
     pushOnSave: true,
     exportDir: '',

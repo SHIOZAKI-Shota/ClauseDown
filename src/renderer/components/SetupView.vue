@@ -2,6 +2,7 @@
 import type { SegmentItem } from '~/components/SegmentSwitch.vue'
 import { DEFAULT_MCP_PORT, type AiStatus, type DesktopStatus, type RepoEntry } from '@shared/api'
 import { EXPERIMENTS, isEnabled, type ExperimentId } from '@shared/experiments'
+import { DEFAULT_JOSHI_ALLOW, PROOFREAD_RULES, ruleOn } from '@shared/proofread-rules'
 import { EDITOR_FONTS, cssFont, type AppPrefs } from '@shared/prefs'
 import { useApp } from '~/stores/app'
 import { baseName } from '~/utils/folders'
@@ -47,6 +48,18 @@ async function resetAll() {
 }
 
 const { saved, flash } = useSavedFlash()
+const proofreadRuleOn = (id: string) => ruleOn(id, app.prefs.proofreadRules)
+const setProofreadRule = (id: string, on: boolean) => setPref('proofreadRules', { ...app.prefs.proofreadRules, [id]: on })
+const joshiText = ref((app.prefs.proofreadJoshiAllow ?? DEFAULT_JOSHI_ALLOW).join('、'))
+function saveJoshi() {
+    const list = [...new Set(joshiText.value.split(/[、,，\s]+/).map((s) => s.trim()).filter(Boolean))]
+    joshiText.value = list.join('、')
+    void setPref('proofreadJoshiAllow', list)
+}
+function resetJoshi() {
+    joshiText.value = DEFAULT_JOSHI_ALLOW.join('、')
+    void setPref('proofreadJoshiAllow', [...DEFAULT_JOSHI_ALLOW])
+}
 async function setPref<K extends keyof AppPrefs>(key: K, value: AppPrefs[K]) {
     await app.setPrefs({ [key]: value } as Partial<AppPrefs>)
     flash()
@@ -439,10 +452,22 @@ async function addSamples() {
                     @update:model-value="(v: boolean) => setPref('numberHints', v)" />
             </SettingRow>
             <SettingRow label="校閲（黄色の波線）を表示する"
-                description="ら抜き言葉・二重否定・「は」などの助詞の重なり・全角と半角の英字の混在・公用文の用字（「または」→「又は」など）に黄色の波線を引きます。定義語の誤り（赤い波線）は、この設定に関係なく表示します。">
+                description="下の規則に当てはまる書き方に、黄色の波線を引きます。規則ごとに切り替えられます。定義語の誤り（赤い波線）は、この設定に関係なく表示します。">
                 <USwitch :model-value="app.prefs.proofread"
                     @update:model-value="(v: boolean) => setPref('proofread', v)" />
             </SettingRow>
+            <template v-if="app.prefs.proofread">
+                <SettingRow v-for="r in PROOFREAD_RULES" :key="r.id" :description="r.description" class="sub-row">
+                    <template #label>{{ r.label }}</template>
+                    <USwitch :model-value="proofreadRuleOn(r.id)"
+                        @update:model-value="(v: boolean) => setProofreadRule(r.id, v)" />
+                </SettingRow>
+                <SettingRow v-if="proofreadRuleOn('no-doubled-joshi')" label="「同じ助詞の連続」で許す助詞" class="sub-row"
+                    description="ここに書いた助詞は、一文に重なっても指摘しません。条文は一文が長いので、「に」「が」などは初めから許しています。読点（、）で区切って書きます。">
+                    <UInput v-model="joshiText" class="cd-w-input" @change="saveJoshi" />
+                    <UButton label="初期値に戻す" size="xs" color="neutral" variant="ghost" @click="resetJoshi" />
+                </SettingRow>
+            </template>
         </SettingsSection>
 
         <SettingsSection id="sync" title="同期">
@@ -685,6 +710,10 @@ async function addSamples() {
 </template>
 
 <style scoped>
+.sub-row {
+    padding-left: 20px;
+}
+
 .exp-label {
     display: inline-flex;
     align-items: center;

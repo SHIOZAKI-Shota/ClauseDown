@@ -71,6 +71,23 @@ for (const dir of dirs) {
     })
 }
 
+const BUNDLED_DATA = [
+    {
+        from: 'kuromoji',
+        name: 'mecab-ipadic（IPA 辞書。kuromoji に同梱。校閲の日本語解析に使用）',
+        version: '2.7.0-20070801',
+        license: 'NAIST / ICOT Free Software',
+        url: 'https://taku910.github.io/mecab/',
+        section: /^mecab-ipadic-2\.7\.0-20070801\n-{3,}\n([\s\S]*)$/m,
+    },
+]
+for (const d of BUNDLED_DATA) {
+    const host = [...seen.values()].find((p) => p.name === d.from)
+    const m = host?.text ? d.section.exec(host.text) : null
+    if (!m) continue
+    seen.set(`${d.name}@${d.version}`, { name: d.name, version: d.version, license: d.license, url: d.url, text: m[1].replace(/[\s˜]+$/, '').trim() })
+}
+
 const list = [...seen.values()].sort((a, b) => a.name.localeCompare(b.name))
 mkdirSync(join(root, 'out'), { recursive: true })
 const app = {

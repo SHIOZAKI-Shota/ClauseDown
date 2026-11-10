@@ -282,6 +282,17 @@ export type ExportRequest =
         style?: DocStyle
     } & Partial<DocBase>)
 
+export interface ProofreadConfig {
+    rules?: Partial<Record<string, boolean>>
+    joshiAllow?: string[]
+    dictionaries?: string[]
+}
+
+export interface ProofreadContext {
+    dir?: string
+    docPath?: string
+}
+
 export interface ProofreadIssue {
     from: number
     to: number
@@ -352,7 +363,7 @@ export interface Api {
     exportFile(req: ExportRequest): Promise<string | null>
     previewPdf(source: string, style: DocStyle, base?: DocBase): Promise<Uint8Array>
     saveImage(dir: string, docPath: string, data: Uint8Array, ext: string): Promise<SavedImage>
-    proofread(text: string): Promise<ProofreadIssue[]>
+    proofread(text: string, ctx?: ProofreadContext): Promise<ProofreadIssue[]>
     editCommand(cmd: 'cut' | 'copy' | 'paste' | 'selectAll'): Promise<void>
 
     listEffective(dir: string, docPath: string): Promise<EffectiveVersion[]>

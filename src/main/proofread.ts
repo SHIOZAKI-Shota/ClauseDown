@@ -1,6 +1,7 @@
 import { utilityProcess, type UtilityProcess } from 'electron'
 import { join } from 'node:path'
-import type { ProofreadIssue } from '../shared/api'
+import type { ProofreadConfig, ProofreadContext, ProofreadIssue } from '../shared/api'
+import { loadSettings } from './settings'
 
 const TIMEOUT_MS = 20_000
 
@@ -41,8 +42,17 @@ function worker(): UtilityProcess {
     return c
 }
 
-export function proofread(text: unknown): Promise<ProofreadIssue[]> {
-    if (typeof text !== 'string' || !text.trim()) return Promise.resolve([])
+async function configFor(_ctx: ProofreadContext | undefined): Promise<ProofreadConfig> {
+    const { prefs } = await loadSettings()
+    return {
+        rules: prefs.proofreadRules ?? {},
+        joshiAllow: Array.isArray(prefs.proofreadJoshiAllow) ? prefs.proofreadJoshiAllow.filter((s) => typeof s === 'string') : undefined,
+    }
+}
+
+export async function proofread(text: unknown, ctx?: ProofreadContext): Promise<ProofreadIssue[]> {
+    if (typeof text !== 'string' || !text.trim()) return []
+    const config = await configFor(ctx)
     const id = ++seq
     return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
@@ -51,7 +61,7 @@ export function proofread(text: unknown): Promise<ProofreadIssue[]> {
             child?.kill()
         }, TIMEOUT_MS)
         pending.set(id, { resolve, reject, timer })
-        worker().postMessage({ id, text })
+        worker().postMessage({ id, text, config })
     })
 }
 
