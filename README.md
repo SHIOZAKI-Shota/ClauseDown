@@ -1,4 +1,4 @@
-# ClauseDown
+# [ClauseDown](https://github.com/SHIOZAKI-Shota/ClauseDown)
 
 ClauseDown は法律案・条例・契約書・規約・規程など、「第○条」と条文を並べる文書を書き、版を管理する Windows・macOS 用のデスクトップアプリです。
 士業（弁護士・司法書士・行政書士・社労士など）、企業の法務・人事、議員や法制の担当者など、条文を書く人に向けて作っています。
