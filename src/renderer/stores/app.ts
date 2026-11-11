@@ -17,6 +17,8 @@ import { FORGE_LABEL, type ForgeKind } from '@shared/forge'
 import { DEFAULT_PREFS, type AppPrefs, type DocStyle, type RecentDoc } from '@shared/prefs'
 import { resolveStyle, type StyleLayers } from '@shared/folder-style'
 import { toPlain } from '~/utils/ipc'
+import { todayISO } from '~/utils/format'
+import { addDays } from '@shared/schedule'
 import { useStoredRef } from '~/composables/useStoredRef'
 
 export type View = 'home' | 'setup' | 'about' | 'repo' | 'docs' | 'schedule' | 'issues' | 'editor' | 'history' | 'compare' | 'releases'
@@ -453,11 +455,13 @@ export const useApp = defineStore('app', () => {
     type DocView = 'editor' | 'history' | 'compare' | 'releases'
     const returnView = ref<View | null>(null)
     const lastDocView = ref<DocView>('editor')
-    const issuesFrom = ref<View | null>(null)
+    type Page = 'issues' | 'schedule'
+    const PAGES: View[] = ['issues', 'schedule']
+    const pageFrom = ref<Record<Page, View | null>>({ issues: null, schedule: null })
     watch(view, (to, from) => {
         if (OVERLAY.includes(to) && !OVERLAY.includes(from)) returnView.value = from
-        if (to === 'issues' && from !== 'issues' && !OVERLAY.includes(from)) issuesFrom.value = from
-        if (to === 'docs') void refreshIssueCount()
+        if (PAGES.includes(to) && from !== to && !OVERLAY.includes(from)) pageFrom.value[to as Page] = from
+        if (to === 'docs') void Promise.all([refreshIssueCount(), refreshDueCount()])
         if (DOC_VIEWS.includes(to)) lastDocView.value = to as DocView
     })
     const backTarget = computed<View>(() => {
@@ -467,16 +471,31 @@ export const useApp = defineStore('app', () => {
         return v
     })
     const returnLabel = computed(() => labelForReturn(backTarget.value))
-    const issuesBack = computed<View>(() => {
-        const v = issuesFrom.value
-        if (!v || v === 'home' || !repoDir.value) return 'docs'
+    function pageBack(page: Page): View {
+        const v = pageFrom.value[page]
+        if (!v || v === page || !repoDir.value) return repoDir.value ? 'docs' : 'home'
         if (DOC_VIEWS.includes(v) && !currentDoc.value) return 'docs'
         return v
-    })
-    const issuesReturnLabel = computed(() => labelForReturn(issuesBack.value))
-    function leaveIssues() {
-        view.value = issuesBack.value
     }
+    const pageReturnLabel = (page: Page) => labelForReturn(pageBack(page))
+    function leavePage(page: Page) {
+        view.value = pageBack(page)
+    }
+    const dueCount = ref<{ due: number; overdue: number } | null>(null)
+    let dueCountSeq = 0
+    async function refreshDueCount() {
+        const dir = repoDir.value
+        const seq = ++dueCountSeq
+        if (!dir) return (dueCount.value = null)
+        const today = todayISO()
+        const until = addDays(today, 30)
+        const r = await window.api.occurrences(dir, addDays(today, -365 * 5), until, today).catch(() => null)
+        if (seq !== dueCountSeq) return
+        if (!r) return (dueCount.value = null)
+        const due = r.items.filter((o) => o.source !== 'delivery' && (o.overdue || (!o.done && (o.end ?? o.date) >= today && o.date <= until)))
+        dueCount.value = { due: due.length, overdue: due.filter((o) => o.overdue).length }
+    }
+    watch(scheduleKey, () => void refreshDueCount())
     const openIssueCount = ref<number | null>(null)
     let issueCountSeq = 0
     async function refreshIssueCount() {
@@ -490,7 +509,9 @@ export const useApp = defineStore('app', () => {
         repoDir,
         () => {
             openIssueCount.value = null
+            dueCount.value = null
             void refreshIssueCount()
+            void refreshDueCount()
         },
         { immediate: true },
     )
@@ -515,6 +536,6 @@ export const useApp = defineStore('app', () => {
         statusOf, currentStatus, toReview,
         repoDir, repo, repoStates, repoProblem, checkRepos, relocateRepo, forgetRepo, openRecent,
         load, saveSettings, refreshDocs, onDocChanged, publishRepo, changeRemote, disconnectRemote, setEditorFlush, flushEditor, markChanged, setRepoUrl, switchRepo, switchBranch,
-        afterBranchChange, openDoc, openCompare, returnLabel, goBack, issuesReturnLabel, leaveIssues, openIssueCount, refreshIssueCount, goRepoHome, lastDocView, jumpTo, openSchedule, openScheduleAll, openIssues, issueTarget, homeTab, scheduleDoc, scheduleKey, scheduleDir, touchSchedule, run, runOk, notify, sync,
+        afterBranchChange, openDoc, openCompare, returnLabel, goBack, pageReturnLabel, leavePage, openIssueCount, refreshIssueCount, dueCount, refreshDueCount, goRepoHome, lastDocView, jumpTo, openSchedule, openScheduleAll, openIssues, issueTarget, homeTab, scheduleDoc, scheduleKey, scheduleDir, touchSchedule, run, runOk, notify, sync,
     }
 })

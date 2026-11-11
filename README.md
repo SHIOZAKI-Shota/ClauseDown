@@ -15,14 +15,40 @@ ClauseDown は法律案・条例・契約書・規約・規程など、「第○
 ## できること
 
 - **[条文を書く](docs/manual/README.md#6-条文を書く)**：条・項・号の番号は自動計算されます。条項を足すと後ろの番号を振り直し、条参照（「第2条」）も追いかけます。法令式・契約書式など番号の付け方を選択可能です。
+
+  <a href="docs/manual/README.md#6-条文を書く"><img src="docs/manual/images/feature-editor.png" width="720" alt="条文を書く画面"></a>
+
 - **[版を記録する](docs/manual/README.md#7-版を保存する)**：区切りごとに版を保存し、改定履歴で過去の版を見たり戻したりします。 (git: commit)
+
+  <a href="docs/manual/README.md#7-版を保存する"><img src="docs/manual/images/feature-history.png" width="720" alt="改定履歴"></a>
+
 - **[新旧対照表を作る](docs/manual/README.md#9-新旧対照表を作る)**：2 つの版を条ごとに並べ、変わった文字に下線を引きます。PDF・Word に書き出せます。
+
+  <a href="docs/manual/README.md#9-新旧対照表を作る"><img src="docs/manual/images/feature-compare.png" width="720" alt="新旧対照表"></a>
+
 - **[改定案で書き直す](docs/manual/README.md#10-改定案で書き直し確認を受けて現行版に反映する)**：現行版を変えずに書き直し、確認依頼・承認を経て現行版に反映します。現行版と同じ箇所を変えたときは、重なった箇所を 1 か所ずつ選んで統合します。 (git: branch, pull request, merge)
+
+  <a href="docs/manual/README.md#10-改定案で書き直し確認を受けて現行版に反映する"><img src="docs/manual/images/feature-review.png" width="720" alt="改定案の確認依頼"></a>
+
 - **[施行日と納品を記録する](docs/manual/README.md#11-施行日を記録し納品する)**：版に施行日を付け、条文と新旧対照表を PDF・Word にまとめて納品し、記録を残します。 (git: tag, releases)
+
+  <a href="docs/manual/README.md#11-施行日を記録し納品する"><img src="docs/manual/images/feature-releases.png" width="720" alt="施行日と納品"></a>
+
 - **[課題を管理する](docs/manual/README.md#12-課題を管理する)**：やることを課題として記録し、版や改定案と結び付けます。版のメッセージに `#1`・`Closes #1` と書くか、画面で選びます。課題ごとにコメントで話し合えます。リモートに接続していなくても使え、GitHub・GitLab では Issue そのものになります。 (git: issues)
+
+  <a href="docs/manual/README.md#12-課題を管理する"><img src="docs/manual/images/feature-issues.png" width="720" alt="課題とコメント"></a>
+
 - **[期日を管理する](docs/manual/README.md#13-期日を管理する)**：施行・公布・提出・届出・更新などの日付をタイムラインで管理し、デスクトップに通知します。iCalendar（.ics）にも書き出せます。
+
+  <a href="docs/manual/README.md#13-期日を管理する"><img src="docs/manual/images/feature-schedule.png" width="720" alt="すべてのリポジトリの期日"></a>
+
 - **[ほかの PC・ほかの人と共有する](docs/manual/README.md#14-ほかの-pcほかの人と共有する)**：GitHub・GitLab（社内の GitLab を含む）と同期します。確認依頼は GitHub のプルリク・GitLab のマージリクエストにもなります。リポジトリの複製・フォークもできます。(git: push, pull)
+
+  <a href="docs/manual/README.md#14-ほかの-pcほかの人と共有する"><img src="docs/manual/images/feature-sync.png" width="720" alt="リモートに送る"></a>
+
 - **[AI に頼む](docs/manual/README.md#16-ai-に確認や書き直しを頼む)**：リーガルチェックや文言の手直しを、Claude・OpenAI 互換のサービス・Ollama（ローカル の中）などに頼めます。外部の AI（Claude Code など）から MCP でつなぐこともできます。
+
+  <a href="docs/manual/README.md#16-ai-に確認や書き直しを頼む"><img src="docs/manual/images/feature-ai.png" width="720" alt="AI に頼む"></a>
 
 ## 使い方
 

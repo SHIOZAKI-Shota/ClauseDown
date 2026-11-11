@@ -184,8 +184,8 @@ onMounted(async () => {
 
 <template>
     <div class="issues">
-        <UButton :label="app.issuesReturnLabel" icon="i-lucide-arrow-left" size="sm" color="neutral" variant="ghost"
-            class="back" @click="app.leaveIssues()" />
+        <UButton :label="app.pageReturnLabel('issues')" icon="i-lucide-arrow-left" size="sm" color="neutral" variant="ghost"
+            class="back" @click="app.leavePage('issues')" />
         <header class="head">
             <div class="title">
                 <h2>課題</h2>

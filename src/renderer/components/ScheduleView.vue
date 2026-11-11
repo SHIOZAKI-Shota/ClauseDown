@@ -185,6 +185,8 @@ const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当�
 <template>
     <div class="schedule">
         <div class="main">
+            <UButton v-if="!isAll" :label="app.pageReturnLabel('schedule')" icon="i-lucide-arrow-left" size="sm" color="neutral"
+                variant="ghost" class="back" @click="app.leavePage('schedule')" />
             <div class="cd-toolbar head">
                 <strong v-if="!isAll" class="h">期日</strong>
                 <span v-if="docFilter" class="cd-chip only">
@@ -346,6 +348,11 @@ const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当�
     min-width: 0;
     display: flex;
     flex-direction: column;
+}
+
+.back {
+    align-self: flex-start;
+    margin: 10px 0 -2px 14px;
 }
 
 .head {

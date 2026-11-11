@@ -197,8 +197,12 @@ const VIEWS = [
                 <HomeSummary />
             </div>
             <span class="cd-grow" />
-            <UButton label="期日" icon="i-lucide-calendar-range" color="neutral" variant="outline"
-                @click="app.openSchedule()" />
+            <UButton label="期日" icon="i-lucide-calendar-range" color="neutral" variant="outline" :title="app.dueCount?.due ? `期限切れ ${app.dueCount.overdue} 件・30 日以内 ${app.dueCount.due - app.dueCount.overdue} 件` : undefined"
+                @click="app.openSchedule()">
+                <template v-if="app.dueCount?.due" #trailing>
+                    <UBadge :label="String(app.dueCount.due)" :color="app.dueCount.overdue ? 'error' : 'neutral'" variant="subtle" size="sm" />
+                </template>
+            </UButton>
             <UButton label="課題" icon="i-lucide-list-todo" color="neutral" variant="outline" @click="app.openIssues()">
                 <template v-if="app.openIssueCount" #trailing>
                     <UBadge :label="String(app.openIssueCount)" color="neutral" variant="subtle" size="sm" />

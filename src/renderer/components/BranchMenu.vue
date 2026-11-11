@@ -39,6 +39,19 @@ const groups = computed(() => {
                     },
                 },
                 {
+                    label: '期日',
+                    icon: 'i-lucide-calendar-range',
+                    suffix: app.dueCount?.due
+                        ? app.dueCount.overdue
+                            ? `期限切れ ${app.dueCount.overdue}`
+                            : `30 日以内 ${app.dueCount.due}`
+                        : undefined,
+                    onSelect: () => {
+                        open.value = false
+                        app.openSchedule()
+                    },
+                },
+                {
                     label: '課題',
                     icon: 'i-lucide-list-todo',
                     suffix: app.openIssueCount ? `未完了 ${app.openIssueCount}` : undefined,
