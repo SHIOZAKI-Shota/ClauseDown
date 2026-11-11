@@ -3,8 +3,9 @@ import { chapterHeading, resolveRefs, type Article, type Item, type LegalDoc, ty
 import { collapseUnchanged, type CompareRow, type InlinePart, type Part } from './article-diff'
 import { renderBlock, renderRich, renderRichParts } from './blocks'
 import { inlinePropsHtml, propsAttrs, type CdProps } from './cd-prop'
+import { useMath } from './math'
 
-const md = new MarkdownIt({ html: false, linkify: false, breaks: true })
+const md = useMath(new MarkdownIt({ html: false, linkify: false, breaks: true }))
 
 const esc = (s: string) =>
     s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)

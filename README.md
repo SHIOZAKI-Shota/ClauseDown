@@ -67,6 +67,7 @@ article: { title: inline }
 | 項・号の下に字下げして書いた表 | その項・号に付く表 |
 | 表のセルの `>`・`^` | 右隣・上のセルと結合する（Markdown Preview Enhanced の拡張テーブル記法） |
 | ` ```mermaid ` の囲み | 図（流れ図など）。[Pele](https://pele.run/) で SVG にする。Word には画像で挿入 |
+| `$…$`・`$$…$$`・` ```math ` の囲み | 数式（LaTeX）。[Temml](https://temml.org/) で MathML にする。Word には独立した数式を画像で挿入 |
 | `![説明](images/文書名/日時.png)` | 画像。エディタに貼り付け・ドロップすると、文書と同じディレクトリの `images/文書名/` に保存してこの行を書く。版・PDF・Word にも入る |
 | 最初の `##` より前の本文 | 前文 |
 | `{break}` だけの行 | 次の要素の前で改ページ |

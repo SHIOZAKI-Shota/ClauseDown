@@ -227,6 +227,14 @@ function addTable() {
     const body = ['| 区分 | 内容 |', '|---|---|', '| ・・・ | ・・・ |'].map((l) => i + l).join('\n')
     editor.value?.insertAfterLine(`\n${body}\n`, 1 + i.length + 2)
 }
+function addInlineMath() {
+    editor.value?.wrapInline('$', '$')
+}
+function addMathBlock() {
+    const i = blockIndent()
+    const body = ['```math', '\\text{補助金の額} = \\min\\left(\\dfrac{2}{3}C,\\ 1{,}000{,}000\\right)', '```'].map((l) => i + l).join('\n')
+    editor.value?.insertAfterLine(`\n${body}\n`, 1 + i.length + 8)
+}
 function addFigure() {
     const i = blockIndent()
     const body = ['```mermaid', 'flowchart LR', '  A[申請] --> B[承認]', '  B --> C[実施]', '```'].map((l) => i + l).join('\n')
@@ -352,6 +360,14 @@ const insertMenu = computed<DropdownMenuItem[][]>(() => [
             ],
         },
         { label: '図（流れ図など）', icon: 'i-lucide-workflow', onSelect: addFigure },
+        {
+            label: '数式',
+            icon: 'i-lucide-sigma',
+            children: [
+                { label: '文中の数式（$…$）', onSelect: addInlineMath },
+                { label: '独立した数式', onSelect: addMathBlock },
+            ],
+        },
         { label: '画像（ファイルから）…', icon: 'i-lucide-image', onSelect: pickImages },
         { label: '条参照', icon: 'i-lucide-link', kbds: ['[', '['], onSelect: () => editor.value?.insertRef() },
     ],
