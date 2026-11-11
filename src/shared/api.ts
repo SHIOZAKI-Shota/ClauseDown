@@ -282,6 +282,54 @@ export type ExportRequest =
         style?: DocStyle
     } & Partial<DocBase>)
 
+export interface IssueLink {
+    oid: string
+    at: string
+    by?: string
+}
+
+export interface Issue {
+    n: number
+    title: string
+    body: string
+    state: 'open' | 'closed'
+    author?: string
+    createdAt: string
+    closedAt?: string
+    closedBy?: string
+    url?: string
+    links: IssueLink[]
+    source: 'local' | 'github' | 'gitlab'
+}
+
+export interface IssueVersion {
+    oid: string
+    message: string
+    at: number
+    how: 'link' | 'ref' | 'close'
+}
+
+export interface IssueComment {
+    id: string
+    body: string
+    by?: string
+    at: string
+    kind: 'user' | 'link' | 'close'
+    oid?: string
+}
+
+export interface IssueDetail extends Issue {
+    versions: IssueVersion[]
+    drafts: string[]
+    comments: IssueComment[]
+}
+
+export interface IssuePatch {
+    title?: string
+    body?: string
+    state?: 'open' | 'closed'
+}
+
 export interface ProofreadConfig {
     rules?: Partial<Record<string, boolean>>
     joshiAllow?: string[]
@@ -364,6 +412,17 @@ export interface Api {
     previewPdf(source: string, style: DocStyle, base?: DocBase): Promise<Uint8Array>
     saveImage(dir: string, docPath: string, data: Uint8Array, ext: string): Promise<SavedImage>
     proofread(text: string, ctx?: ProofreadContext): Promise<ProofreadIssue[]>
+    listIssues(dir: string): Promise<Issue[]>
+    issueDetail(dir: string, n: number): Promise<IssueDetail>
+    createIssue(dir: string, input: { title: string; body: string }): Promise<Issue>
+    updateIssue(dir: string, n: number, patch: IssuePatch): Promise<Issue>
+    linkIssue(dir: string, n: number, oid: string): Promise<void>
+    commentIssue(dir: string, n: number, body: string): Promise<void>
+    closeIssue(dir: string, n: number, oid?: string): Promise<Issue>
+    branchIssues(dir: string, branch: string): Promise<number[]>
+    setBranchIssues(dir: string, branch: string, issues: number[]): Promise<void>
+    pendingLocalIssues(dir: string): Promise<number>
+    moveIssuesToForge(dir: string): Promise<{ moved: number; renumbered: { from: number; to: number }[] }>
     editCommand(cmd: 'cut' | 'copy' | 'paste' | 'selectAll'): Promise<void>
 
     listEffective(dir: string, docPath: string): Promise<EffectiveVersion[]>

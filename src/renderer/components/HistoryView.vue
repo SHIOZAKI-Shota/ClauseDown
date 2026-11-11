@@ -13,6 +13,7 @@ const selected = ref<string | null>(null)
 const content = ref<string | null | undefined>(undefined)
 const confirmRestore = ref(false)
 const showEffective = ref(false)
+const showLink = ref(false)
 const loading = ref(true)
 
 let seq = 0
@@ -105,8 +106,12 @@ async function onEffectiveAdded() {
         <div class="detail">
             <template v-if="selectedCommit">
                 <div class="cd-toolbar actions">
-                    <div class="msg">{{ selectedCommit.message }}</div>
+                    <div class="msg">
+                        <IssueText :text="selectedCommit.message" />
+                    </div>
                     <span class="cd-grow" />
+                    <UButton label="課題に紐付ける" icon="i-lucide-link" size="sm" color="neutral" variant="outline"
+                        @click="showLink = true" />
                     <UButton label="前の版と比較" size="sm" color="neutral" variant="outline" @click="compareWithPrevious" />
                     <UButton label="今の文書と比較" size="sm" color="neutral" variant="outline" @click="compareWithCurrent" />
                     <UButton label="施行日を付ける" icon="i-lucide-calendar-check" size="sm" color="neutral" variant="outline"
@@ -127,6 +132,7 @@ async function onEffectiveAdded() {
                 <DocPaper :text="content" :doc-path="path" />
             </template>
         </div>
+        <IssueLinkModal v-if="showLink && selectedCommit" :oid="selectedCommit.oid" @close="showLink = false" />
         <EffectiveDateModal v-if="showEffective && selectedCommit" :oid="selectedCommit.oid" :path="path"
             @close="showEffective = false" @done="onEffectiveAdded" />
         <ConfirmModal v-model:open="confirmBring" :title="`「${currentLabel}」にコピー`"

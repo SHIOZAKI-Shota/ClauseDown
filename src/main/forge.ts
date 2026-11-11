@@ -1,5 +1,6 @@
 import { GITHUB_BASE, knownBases, matchRemote, type ForgeKind } from '../shared/forge'
 import type { ReviewAction, ReviewEvent } from '../shared/review'
+import type { Issue, IssuePatch } from '../shared/api'
 import { remoteUrl } from './git-base'
 import * as gh from './github'
 import * as gl from './gitlab'
@@ -20,7 +21,38 @@ export interface Forge {
     submit(n: number, action: Exclude<ReviewAction, 'request' | 'withdraw'>, text: string | null, oid: string): Promise<void>
     merge(n: number, message: string, sha: string): Promise<string>
     release(tag: string, name: string, body: string, files: ReleaseFile[]): Promise<string>
+    listIssues(): Promise<Issue[]>
+    createIssue(title: string, body: string): Promise<Issue>
+    updateIssue(n: number, patch: IssuePatch): Promise<Issue>
+    comment(n: number, body: string): Promise<void>
+    comments(n: number): Promise<{ id: string; body: string; by?: string; at: string }[]>
 }
+
+const fromGitHub = (i: gh.GitHubIssue): Issue => ({
+    n: i.number,
+    title: i.title,
+    body: i.body ?? '',
+    state: i.state,
+    author: i.user?.login,
+    createdAt: i.created_at,
+    closedAt: i.closed_at ?? undefined,
+    url: i.html_url,
+    links: [],
+    source: 'github',
+})
+
+const fromGitLab = (i: gl.GitLabIssue): Issue => ({
+    n: i.iid,
+    title: i.title,
+    body: i.description ?? '',
+    state: i.state === 'closed' ? 'closed' : 'open',
+    author: i.author?.username,
+    createdAt: i.created_at,
+    closedAt: i.closed_at ?? undefined,
+    url: i.web_url,
+    links: [],
+    source: 'gitlab',
+})
 
 export async function forgeOf(dir: string): Promise<Forge | null> {
     if (process.env.CLAUSEDOWN_GITHUB_REPO) return githubForge(process.env.CLAUSEDOWN_GITHUB_REPO)
@@ -85,6 +117,13 @@ function githubForge(path: string): Forge {
             for (const f of files) await gh.uploadAsset(rel, f.name, f.data, f.type)
             return rel.html_url
         },
+        listIssues: async () => (await gh.listIssues(r)).map(fromGitHub),
+        createIssue: async (title, body) => fromGitHub(await gh.createIssue(r, title, body)),
+        updateIssue: async (n, patch) => fromGitHub(await gh.updateIssue(r, n, patch)),
+        async comment(n, body) {
+            await gh.commentIssue(r, n, body)
+        },
+        comments: async (n) => (await gh.issueComments(r, n)).map((c) => ({ id: String(c.id), body: c.body, by: c.user?.login, at: c.created_at })),
     }
 }
 
@@ -168,5 +207,13 @@ function gitlabForge(r: gl.GitLabRepo): Forge {
             for (const f of files) await gl.addReleaseLink(r, tag, f.name, await gl.uploadFile(r, f.name, f.data, f.type))
             return gl.releaseWebUrl(r, tag)
         },
+        listIssues: async () => (await gl.listIssues(r)).map(fromGitLab),
+        createIssue: async (title, body) => fromGitLab(await gl.createIssue(r, title, body)),
+        updateIssue: async (n, patch) => fromGitLab(await gl.updateIssue(r, n, patch)),
+        async comment(n, body) {
+            await gl.commentIssue(r, n, body)
+        },
+        comments: async (n) =>
+            (await gl.issueComments(r, n)).filter((c) => !c.system).map((c) => ({ id: String(c.id), body: c.body, by: c.author?.username, at: c.created_at })),
     }
 }

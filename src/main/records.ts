@@ -13,6 +13,9 @@ export const RECORD = {
     events: 'events/',
     rules: 'settings/rules.json',
     eventKinds: 'settings/event-kinds.json',
+    issues: 'issues/',
+    issueLinks: 'issue-links/',
+    issueComments: 'issue-comments/',
 } as const
 
 async function filesOf(dir: string, oid: string | null, into = new Map<string, string>(), prefix = '') {

@@ -19,9 +19,10 @@ ClauseDown は法律案・条例・契約書・規約・規程など、「第○
 - **[新旧対照表を作る](docs/manual/README.md#9-新旧対照表を作る)**：2 つの版を条ごとに並べ、変わった文字に下線を引きます。PDF・Word に書き出せます。
 - **[改定案で書き直す](docs/manual/README.md#10-改定案で書き直し確認を受けて現行版に反映する)**：現行版を変えずに書き直し、確認依頼・承認を経て現行版に反映します。現行版と同じ箇所を変えたときは、重なった箇所を 1 か所ずつ選んで統合します。 (git: branch, pull request, merge)
 - **[施行日と納品を記録する](docs/manual/README.md#11-施行日を記録し納品する)**：版に施行日を付け、条文と新旧対照表を PDF・Word にまとめて納品し、記録を残します。 (git: tag, releases)
-- **[期日を管理する](docs/manual/README.md#12-期日を管理する)**：施行・公布・提出・届出・更新などの日付をタイムラインで管理し、デスクトップに通知します。iCalendar（.ics）にも書き出せます。
-- **[ほかの PC・ほかの人と共有する](docs/manual/README.md#13-ほかの-pcほかの人と共有する)**：GitHub・GitLab（社内の GitLab を含む）と同期します。確認依頼は GitHub のプルリク・GitLab のマージリクエストにもなります。リポジトリの複製・フォークもできます。(git: push, pull)
-- **[AI に頼む](docs/manual/README.md#15-ai-に確認や書き直しを頼む)**：リーガルチェックや文言の手直しを、Claude・OpenAI 互換のサービス・Ollama（ローカル の中）などに頼めます。外部の AI（Claude Code など）から MCP でつなぐこともできます。
+- **[課題を管理する](docs/manual/README.md#12-課題を管理する)**：やることを課題として記録し、版や改定案と結び付けます。版のメッセージに `#1`・`Closes #1` と書くか、画面で選びます。課題ごとにコメントで話し合えます。リモートに接続していなくても使え、GitHub・GitLab では Issue そのものになります。 (git: issues)
+- **[期日を管理する](docs/manual/README.md#13-期日を管理する)**：施行・公布・提出・届出・更新などの日付をタイムラインで管理し、デスクトップに通知します。iCalendar（.ics）にも書き出せます。
+- **[ほかの PC・ほかの人と共有する](docs/manual/README.md#14-ほかの-pcほかの人と共有する)**：GitHub・GitLab（社内の GitLab を含む）と同期します。確認依頼は GitHub のプルリク・GitLab のマージリクエストにもなります。リポジトリの複製・フォークもできます。(git: push, pull)
+- **[AI に頼む](docs/manual/README.md#16-ai-に確認や書き直しを頼む)**：リーガルチェックや文言の手直しを、Claude・OpenAI 互換のサービス・Ollama（ローカル の中）などに頼めます。外部の AI（Claude Code など）から MCP でつなぐこともできます。
 
 ## 使い方
 
@@ -134,13 +135,13 @@ macOS 版は Apple の Developer ID で署名・公証していません（ア�
 1. 「GitHub/GitLab」→ GitHub の「インストールする」で、自分のアカウント（または組織の Organization）に App をインストールし、使うリポジトリだけを選ぶ（組織で一度だけ）
 2. 各 PC で「ログイン」を押し、ブラウザに表示されたコードを入力する
 
-App が読み書きできるのは、インストールのときに選んだリポジトリだけです。権限は Contents と Pull requests の読み書き（と Metadata の読み取り）です。ログインのトークンは 8 時間で切れ、アプリが自動で更新します。client secret は使いません（device flow）。リポジトリのフォークにはこの権限では足りないことがあります。そのときは GitHub のエラーをそのまま画面に出します。
+App が読み書きできるのは、インストールのときに選んだリポジトリだけです。権限は Contents・Pull requests・Issues の読み書き（と Metadata の読み取り）です。Issues の権限は、アプリの「課題」を GitHub の課題として使うためのものです。ログインのトークンは 8 時間で切れ、アプリが自動で更新します。client secret は使いません（device flow）。リポジトリのフォークにはこの権限では足りないことがあります。そのときは GitHub のエラーをそのまま画面に出します。
 
 自分の GitHub App を使う場合は、次の手順で作成
 
 1. GitHub の Settings → Developer settings → GitHub Apps → New GitHub App
 2. 「Enable Device Flow」にチェック。Webhook は不要。トークンの期限切れ（User-to-server token expiration）は有効のまま
-3. Repository permissions：Contents = Read and write、Pull requests = Read and write、Metadata = Read-only
+3. Repository permissions：Contents = Read and write、Pull requests = Read and write、Issues = Read and write、Metadata = Read-only
 4. Client ID を「詳しい設定」に入力する（または `CLAUSEDOWN_GITHUB_CLIENT_ID` 環境変数）
 
 **GitLab（gitlab.com・社内の GitLab）**：確認依頼はマージリクエスト、承認は GitLab の承認、修正依頼とコメントは GitLab のコメント、納品は GitLab のリリース（納品物を添付）になります。サブグループ（`group/sub/project`）や、`https://example.co.jp/gitlab` のようなパス付きの設置にも対応しています。プロジェクトでは「Developer」以上の役割が必要です。

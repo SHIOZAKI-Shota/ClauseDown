@@ -62,6 +62,12 @@ const savedMessage = computed(() => (lastSaved.value ? firstLine(lastSaved.value
             </div>
         </template>
         <template v-if="docView" #right>
+            <UButton label="課題" icon="i-lucide-list-todo" size="sm" color="neutral" variant="ghost"
+                @click="app.openIssues()">
+                <template v-if="app.openIssueCount" #trailing>
+                    <UBadge :label="String(app.openIssueCount)" color="neutral" variant="subtle" size="sm" />
+                </template>
+            </UButton>
             <UButton label="リポジトリホーム" icon="i-lucide-layout-grid" size="sm" color="neutral" variant="ghost"
                 @click="app.goRepoHome()">
                 <template v-if="app.toReview.length" #trailing>

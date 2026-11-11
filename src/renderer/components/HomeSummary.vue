@@ -17,7 +17,7 @@ function review() {
     <div class="facts">
         <span class="fact" :class="{ draft: app.onDraft }" title="作業中（現行版か改定案）">
             <UIcon :name="app.onDraft ? 'i-lucide-git-branch' : 'i-lucide-badge-check'" />{{ app.currentBranch?.label ??
-            '現行版' }}
+                '現行版' }}
         </span>
         <span class="fact url" :title="app.repo?.url ?? 'ローカル だけで管理しています'">
             <UIcon :name="remote ? 'i-lucide-cloud' : 'i-lucide-laptop'" />{{ remote ?? 'ローカル だけ' }}
@@ -43,10 +43,6 @@ function review() {
         <button v-if="app.toReview.length" class="fact primary" @click="review">
             <UIcon name="i-lucide-user-check" />あなたの確認待ち {{ app.toReview.length }}
         </button>
-        <UTooltip text="期日のタイムライン">
-            <UButton icon="i-lucide-calendar-range" size="xs" color="neutral" variant="ghost" aria-label="期日のタイムライン"
-                @click="app.openSchedule()" />
-        </UTooltip>
         <UTooltip text="フォルダを開く">
             <UButton icon="i-lucide-folder-open" size="xs" color="neutral" variant="ghost" aria-label="フォルダを開く"
                 @click="openFolder" />

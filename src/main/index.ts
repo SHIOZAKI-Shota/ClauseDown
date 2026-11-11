@@ -24,6 +24,7 @@ import { identity } from './git-base'
 import { forgetCachedSettings, loadSecret, loadSettings, resetAllData, saveSecret, updateSettings } from './settings'
 import { listFonts } from './fonts'
 import { saveImage } from './images'
+import * as issues from './issues'
 import { proofread, stopProofread } from './proofread'
 import { imageExt } from '../shared/images'
 import { setAppMenu } from './menu'
@@ -169,6 +170,7 @@ const DIR_FIRST = new Set([
     'forgeKind', 'listReviews', 'addReview', 'listDeliveries', 'deliver', 'aiRun',
     'occurrences', 'listEvents', 'saveEvent', 'deleteEvent', 'setEventDone', 'getEventKinds', 'saveEventKinds',
     'detectHouritsu', 'convertHouritsu', 'duplicateRepo', 'forkRepo', 'suggestVersionMessage', 'saveImage',
+    'listIssues', 'issueDetail', 'createIssue', 'updateIssue', 'linkIssue', 'commentIssue', 'closeIssue', 'branchIssues', 'setBranchIssues', 'pendingLocalIssues', 'moveIssuesToForge',
 ])
 
 const LOCKED = new Set([
@@ -288,7 +290,22 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
     log: git.log,
     lastChange: git.lastChange,
     readAt: git.readAt,
-    saveVersion: git.saveVersion,
+    saveVersion: async (dir: string, input: Parameters<typeof git.saveVersion>[1]) => {
+        const oid = await git.saveVersion(dir, input)
+        await issues.afterSave(dir, oid).catch((e) => console.error('[issues]', e))
+        return oid
+    },
+    listIssues: issues.listIssues,
+    issueDetail: issues.issueDetail,
+    createIssue: issues.createIssue,
+    updateIssue: issues.updateIssue,
+    linkIssue: issues.linkIssue,
+    closeIssue: issues.closeIssue,
+    commentIssue: issues.commentIssue,
+    branchIssues: issues.branchIssues,
+    setBranchIssues: issues.setBranchIssues,
+    pendingLocalIssues: issues.pendingLocalIssues,
+    moveIssuesToForge: issues.moveIssuesToForge,
     discardChanges: git.discardChanges,
     sync: git.sync,
     push: git.push,
