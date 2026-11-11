@@ -54,7 +54,9 @@ function openAt(path: string, oid: string) {
                 <div class="day-label">{{ g.label }}</div>
                 <ol class="feed">
                     <li v-for="r in g.items" :key="r.oid">
-                        <div class="msg">{{ firstLine(r.message) }}</div>
+                        <div class="msg">
+                            <IssueText :text="firstLine(r.message)" />
+                        </div>
                         <div class="cd-muted meta">
                             {{ r.author }}・<span :title="fmtDate(r.timestamp, 'ymdhm')">{{ hm(r.timestamp) }}</span>
                         </div>

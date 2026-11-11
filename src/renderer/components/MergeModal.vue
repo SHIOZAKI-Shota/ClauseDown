@@ -51,6 +51,7 @@ async function apply() {
     if (!s) return
     app.syncState = s
     await app.afterBranchChange()
+    void app.refreshIssueCount()
     if (s.state === 'error') app.notify(`反映しましたが、リモートへの送信に失敗しました：${s.message}`, true)
     else app.notify(adopting.value ? `現行版に反映しました${deleteAfter.value ? '。改定案は削除しました' : ''}` : '取り込みました')
     emit('close')

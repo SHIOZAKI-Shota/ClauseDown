@@ -197,3 +197,50 @@ export function forkProject(r: GitLabRepo) {
 export function getProject(r: GitLabRepo, id: number) {
     return call<Project>(r, 'GET', `/projects/${id}`)
 }
+
+export interface GitLabIssue {
+    iid: number
+    title: string
+    description: string | null
+    state: 'opened' | 'closed'
+    author?: { username: string }
+    created_at: string
+    closed_at: string | null
+    web_url: string
+}
+
+export async function listIssues(r: GitLabRepo): Promise<GitLabIssue[]> {
+    const out: GitLabIssue[] = []
+    for (let page = 1; page <= 10; page++) {
+        const list = await call<GitLabIssue[]>(r, 'GET', `${proj(r)}/issues?scope=all&per_page=100&page=${page}`)
+        out.push(...list)
+        if (list.length < 100) break
+    }
+    return out
+}
+
+export function createIssue(r: GitLabRepo, title: string, description: string) {
+    return call<GitLabIssue>(r, 'POST', `${proj(r)}/issues`, { title, description })
+}
+
+export function updateIssue(r: GitLabRepo, iid: number, patch: { title?: string; body?: string; state?: 'open' | 'closed' }) {
+    return call<GitLabIssue>(r, 'PUT', `${proj(r)}/issues/${iid}`, {
+        ...(patch.title !== undefined ? { title: patch.title } : {}),
+        ...(patch.body !== undefined ? { description: patch.body } : {}),
+        ...(patch.state ? { state_event: patch.state === 'closed' ? 'close' : 'reopen' } : {}),
+    })
+}
+
+export function commentIssue(r: GitLabRepo, iid: number, body: string) {
+    return call<unknown>(r, 'POST', `${proj(r)}/issues/${iid}/notes`, { body })
+}
+
+export async function issueComments(r: GitLabRepo, iid: number): Promise<{ id: number; body: string; system?: boolean; author?: { username: string }; created_at: string }[]> {
+    const out: { id: number; body: string; system?: boolean; author?: { username: string }; created_at: string }[] = []
+    for (let page = 1; page <= 20; page++) {
+        const list = await call<typeof out>(r, 'GET', `${proj(r)}/issues/${iid}/notes?per_page=100&sort=asc&order_by=created_at&page=${page}`)
+        out.push(...list)
+        if (list.length < 100) break
+    }
+    return out
+}

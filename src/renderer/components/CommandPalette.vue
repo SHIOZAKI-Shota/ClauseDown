@@ -104,6 +104,8 @@ const groups = computed(() => [
             { label: '同期', icon: 'i-lucide-refresh-cw', onSelect: () => run(() => app.sync()) },
             { label: '初期ページ', icon: 'i-lucide-house', onSelect: () => run(() => (app.view = 'home')) },
             { label: 'リポジトリホーム', icon: 'i-lucide-layout-grid', onSelect: () => run(() => (app.view = 'docs')) },
+            { label: '課題', icon: 'i-lucide-list-todo', onSelect: () => run(() => app.openIssues()) },
+            { label: '新しい課題…', icon: 'i-lucide-circle-plus', onSelect: () => run(() => app.openIssues({ draft: { title: '', body: '' } })) },
             { label: '期日（このリポジトリ）', icon: 'i-lucide-calendar-range', onSelect: () => run(() => app.openSchedule()) },
             { label: 'すべてのリポジトリの期日', icon: 'i-lucide-calendar-days', onSelect: () => run(() => app.openScheduleAll()) },
             { label: '期日を足す…', icon: 'i-lucide-calendar-plus', onSelect: () => run(() => (app.dialog = { kind: 'newEvent' })) },

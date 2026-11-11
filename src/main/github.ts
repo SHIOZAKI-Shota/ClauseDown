@@ -43,7 +43,8 @@ async function call<T>(method: string, url: string, body?: unknown, headers: Rec
             msg = [j.message, ...(j.errors ?? []).map((e) => e.message)].filter(Boolean).join(' / ')
         } catch {
         }
-        throw new GitHubError(res.status, githubMessage(res.status, msg))
+        const issueHint = res.status === 403 && /\/issues(\/|\?|$)/.test(url) ? '。課題を使うには、GitHub App の権限に「Issues: Read and write」が必要です（App の持ち主が設定し、インストール先で承認します）' : ''
+        throw new GitHubError(res.status, githubMessage(res.status, msg) + issueHint)
     }
     if (res.status === 204) return undefined as T
     return (await res.json()) as T
@@ -140,4 +141,48 @@ export function forkRepo(r: GitHubRepo) {
 export function getRepo(fullName: string) {
     const [owner, repo] = fullName.split('/')
     return call<RepoInfo>('GET', repoPath({ owner, repo }))
+}
+
+export interface GitHubIssue {
+    number: number
+    title: string
+    body: string | null
+    state: 'open' | 'closed'
+    user?: { login: string }
+    created_at: string
+    closed_at: string | null
+    html_url: string
+    pull_request?: unknown
+}
+
+export async function listIssues(r: GitHubRepo): Promise<GitHubIssue[]> {
+    const out: GitHubIssue[] = []
+    for (let page = 1; page <= 10; page++) {
+        const list = await call<GitHubIssue[]>('GET', `${repoPath(r)}/issues?state=all&per_page=100&page=${page}`)
+        out.push(...list.filter((i) => !i.pull_request))
+        if (list.length < 100) break
+    }
+    return out
+}
+
+export function createIssue(r: GitHubRepo, title: string, body: string) {
+    return call<GitHubIssue>('POST', `${repoPath(r)}/issues`, { title, body })
+}
+
+export function updateIssue(r: GitHubRepo, n: number, patch: { title?: string; body?: string; state?: 'open' | 'closed' }) {
+    return call<GitHubIssue>('PATCH', `${repoPath(r)}/issues/${n}`, patch)
+}
+
+export function commentIssue(r: GitHubRepo, n: number, body: string) {
+    return call<unknown>('POST', `${repoPath(r)}/issues/${n}/comments`, { body })
+}
+
+export async function issueComments(r: GitHubRepo, n: number): Promise<{ id: number; body: string; user?: { login: string }; created_at: string }[]> {
+    const out: { id: number; body: string; user?: { login: string }; created_at: string }[] = []
+    for (let page = 1; page <= 20; page++) {
+        const list = await call<typeof out>('GET', `${repoPath(r)}/issues/${n}/comments?per_page=100&page=${page}`)
+        out.push(...list)
+        if (list.length < 100) break
+    }
+    return out
 }

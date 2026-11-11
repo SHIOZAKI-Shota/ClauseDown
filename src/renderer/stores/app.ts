@@ -19,7 +19,7 @@ import { resolveStyle, type StyleLayers } from '@shared/folder-style'
 import { toPlain } from '~/utils/ipc'
 import { useStoredRef } from '~/composables/useStoredRef'
 
-export type View = 'home' | 'setup' | 'about' | 'repo' | 'docs' | 'schedule' | 'editor' | 'history' | 'compare' | 'releases'
+export type View = 'home' | 'setup' | 'about' | 'repo' | 'docs' | 'schedule' | 'issues' | 'editor' | 'history' | 'compare' | 'releases'
 
 export const useApp = defineStore('app', () => {
     const toast = useToast()
@@ -362,6 +362,12 @@ export const useApp = defineStore('app', () => {
         scheduleDoc.value = docPath || null
         view.value = 'schedule'
     }
+    const issueTarget = ref<{ n?: number; draft?: { title: string; body: string } } | null>(null)
+    function openIssues(target: { n?: number; draft?: { title: string; body: string } } | null = null) {
+        if (!repoDir.value) return
+        issueTarget.value = target
+        view.value = 'issues'
+    }
     function openScheduleAll() {
         homeTab.value = 'schedule'
         view.value = 'home'
@@ -447,8 +453,11 @@ export const useApp = defineStore('app', () => {
     type DocView = 'editor' | 'history' | 'compare' | 'releases'
     const returnView = ref<View | null>(null)
     const lastDocView = ref<DocView>('editor')
+    const issuesFrom = ref<View | null>(null)
     watch(view, (to, from) => {
         if (OVERLAY.includes(to) && !OVERLAY.includes(from)) returnView.value = from
+        if (to === 'issues' && from !== 'issues' && !OVERLAY.includes(from)) issuesFrom.value = from
+        if (to === 'docs') void refreshIssueCount()
         if (DOC_VIEWS.includes(to)) lastDocView.value = to as DocView
     })
     const backTarget = computed<View>(() => {
@@ -457,13 +466,41 @@ export const useApp = defineStore('app', () => {
         if (DOC_VIEWS.includes(v) && !currentDoc.value) return 'docs'
         return v
     })
-    const returnLabel = computed(() => {
-        const v = backTarget.value
+    const returnLabel = computed(() => labelForReturn(backTarget.value))
+    const issuesBack = computed<View>(() => {
+        const v = issuesFrom.value
+        if (!v || v === 'home' || !repoDir.value) return 'docs'
+        if (DOC_VIEWS.includes(v) && !currentDoc.value) return 'docs'
+        return v
+    })
+    const issuesReturnLabel = computed(() => labelForReturn(issuesBack.value))
+    function leaveIssues() {
+        view.value = issuesBack.value
+    }
+    const openIssueCount = ref<number | null>(null)
+    let issueCountSeq = 0
+    async function refreshIssueCount() {
+        const dir = repoDir.value
+        const seq = ++issueCountSeq
+        if (!dir) return (openIssueCount.value = null)
+        const list = await window.api.listIssues(dir).catch(() => null)
+        if (seq === issueCountSeq) openIssueCount.value = list ? list.filter((i) => i.state === 'open').length : null
+    }
+    watch(
+        repoDir,
+        () => {
+            openIssueCount.value = null
+            void refreshIssueCount()
+        },
+        { immediate: true },
+    )
+    function labelForReturn(v: View) {
         if (DOC_VIEWS.includes(v)) return `${currentDoc.value?.title ?? '文書'}に戻る`
         if (v === 'docs') return 'リポジトリホームに戻る'
         if (v === 'schedule') return '期日の画面に戻る'
+        if (v === 'issues') return '課題の画面に戻る'
         return 'トップページに戻る'
-    })
+    }
     function goBack() {
         view.value = backTarget.value
     }
@@ -478,6 +515,6 @@ export const useApp = defineStore('app', () => {
         statusOf, currentStatus, toReview,
         repoDir, repo, repoStates, repoProblem, checkRepos, relocateRepo, forgetRepo, openRecent,
         load, saveSettings, refreshDocs, onDocChanged, publishRepo, changeRemote, disconnectRemote, setEditorFlush, flushEditor, markChanged, setRepoUrl, switchRepo, switchBranch,
-        afterBranchChange, openDoc, openCompare, returnLabel, goBack, goRepoHome, lastDocView, jumpTo, openSchedule, openScheduleAll, homeTab, scheduleDoc, scheduleKey, scheduleDir, touchSchedule, run, runOk, notify, sync,
+        afterBranchChange, openDoc, openCompare, returnLabel, goBack, issuesReturnLabel, leaveIssues, openIssueCount, refreshIssueCount, goRepoHome, lastDocView, jumpTo, openSchedule, openScheduleAll, openIssues, issueTarget, homeTab, scheduleDoc, scheduleKey, scheduleDir, touchSchedule, run, runOk, notify, sync,
     }
 })

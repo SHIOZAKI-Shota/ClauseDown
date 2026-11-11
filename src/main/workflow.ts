@@ -10,6 +10,7 @@ import * as g from './git'
 import { forgeOf } from './forge'
 import { newId, readRecord, readRecords, RECORD, writeRecord } from './records'
 import { repoKey } from './repo-lock'
+import { afterMain, newOnMain, reviewBodyLines } from './issues'
 
 export async function getRules(dir: string): Promise<RepoRules> {
     return { ...DEFAULT_RULES, ...((await readRecord<RepoRules>(dir, RECORD.rules)) ?? {}) }
@@ -111,7 +112,8 @@ export async function addReview(dir: string, input: ReviewInput): Promise<void> 
         if (input.action === 'request') {
             await g.pushRef(dir, input.branch)
             const label = g.branchLabel(input.branch, main)
-            const r = await forge.openReview(input.branch, main, `改定案「${label}」の確認依頼`, `${text}\n\n（ClauseDown から作成）`)
+            const closes = await reviewBodyLines(dir, input.branch).catch(() => '')
+            const r = await forge.openReview(input.branch, main, `改定案「${label}」の確認依頼`, `${text}\n\n${closes ? `${closes}\n\n` : ''}（ClauseDown から作成）`)
             ev.pr = r.n
             ev.forge = forge.kind
             ev.forgeUser = r.author
@@ -133,6 +135,16 @@ export async function addReview(dir: string, input: ReviewInput): Promise<void> 
 export async function adoptOrMerge(dir: string, input: MergeInput): Promise<SyncState> {
     const main = await g.mainBranch(dir)
     if (input.into !== main) return g.mergeBranch(dir, input)
+    const before = await g.branchOid(dir, main).catch(() => null)
+    const state = await mergeIntoMain(dir, input, main)
+    if (state.state !== 'error') {
+        const after = await g.branchOid(dir, main).catch(() => null)
+        if (after && after !== before) await afterMain(dir, await newOnMain(dir, before, after), input.from).catch(() => { })
+    }
+    return state
+}
+
+async function mergeIntoMain(dir: string, input: MergeInput, main: string): Promise<SyncState> {
 
     const rules = await getRules(dir)
     const events = await listReviews(dir, true)

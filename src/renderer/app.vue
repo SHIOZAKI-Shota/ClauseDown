@@ -53,6 +53,7 @@ defineShortcuts({
                         <RepoSettingsView v-else-if="app.view === 'repo'" />
                         <DocListView v-else-if="app.view === 'docs'" />
                         <ScheduleView v-else-if="app.view === 'schedule'" :key="'s' + app.repoDir" />
+                        <IssuesView v-else-if="app.view === 'issues'" :key="'i' + app.repoDir" />
                         <template v-else-if="app.currentPath">
                             <EditorView v-if="app.view === 'editor'" :key="app.currentPath + '@' + app.reloadKey" />
                             <HistoryView v-else-if="app.view === 'history'"

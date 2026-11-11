@@ -172,7 +172,7 @@ const itemsOf = (d: DeliveryRecord) => d.items.map((x) => ITEM_LABEL[x] ?? x)
                             <DateTile :date="v.date" :active="stateOf(v) === 'current'"
                                 :fade-past="stateOf(v) === 'past'" />
                         </template>
-                        {{ firstLine(v.message) }}
+                        <IssueText :text="firstLine(v.message)" />
                         <template #sub>{{ v.author }}<template v-if="v.date >= today">・{{ untilLabel(daysUntil(v.date,
                             today)) }}</template></template>
                         <template #trail>
@@ -256,8 +256,9 @@ const itemsOf = (d: DeliveryRecord) => d.items.map((x) => ITEM_LABEL[x] ?? x)
                             <strong>{{ fmtDate(selVersion.date, 'ymd') }} 施行</strong>
                             <UBadge :label="STATE[stateOf(selVersion)].label" :color="STATE[stateOf(selVersion)].color"
                                 variant="subtle" size="sm" />
-                            <span class="cd-muted msg" :title="selVersion.message">{{ firstLine(selVersion.message)
-                            }}・{{ selVersion.author }}</span>
+                            <span class="cd-muted msg" :title="selVersion.message">
+                                <IssueText :text="firstLine(selVersion.message)" />・{{ selVersion.author }}
+                            </span>
                         </div>
                         <UButton v-if="previousOf(selVersion)"
                             :label="`${fmtDate(previousOf(selVersion)!.date, 'ymd')} 版と比較`" icon="i-lucide-columns-2"
@@ -278,7 +279,7 @@ const itemsOf = (d: DeliveryRecord) => d.items.map((x) => ITEM_LABEL[x] ?? x)
                         <div class="what">
                             <strong>{{ selDelivery.to || '（宛先なし）' }} へ納品</strong>
                             <span class="cd-muted msg">{{ fmtDate(selDelivery.at, 'ymdhm') }}・{{ selDelivery.by
-                            }}</span>
+                                }}</span>
                         </div>
                         <UButton label="フォルダを開く" icon="i-lucide-folder-open" size="sm" color="neutral" variant="outline"
                             @click="openFolder(selDelivery.folder)" />
@@ -292,7 +293,7 @@ const itemsOf = (d: DeliveryRecord) => d.items.map((x) => ITEM_LABEL[x] ?? x)
                             ${selDelivery.oid.slice(0, 7)}` }}</dd>
                         <dt>渡したもの</dt>
                         <dd class="chips"><span v-for="x in itemsOf(selDelivery)" :key="x" class="cd-chip">{{ x
-                        }}</span></dd>
+                                }}</span></dd>
                         <template v-if="selDelivery.memo">
                             <dt>メモ</dt>
                             <dd class="memo">{{ selDelivery.memo }}</dd>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
-import { parseLegal } from '@shared/legal-parser'
+import { parseLegal, articleTitle } from '@shared/legal-parser'
 import { renderDoc } from '@shared/legal-renderer'
 import { autoMerge } from '@shared/merge3'
 import { DEFAULT_CONFIG, writeConfig, type DocConfig } from '@shared/config'
@@ -292,7 +292,21 @@ const editMenu = computed<DropdownMenuItem[][]>(() => [
         { label: 'この行の前で改ページ', icon: 'i-lucide-separator-horizontal', onSelect: addPageBreak },
     ],
     [{ label: '条参照を入れる', icon: 'i-lucide-link', onSelect: () => editor.value?.insertRef() }],
+    [{ label: articleHere() ? 'この条について課題を作る' : 'この文書について課題を作る', icon: 'i-lucide-list-todo', onSelect: issueHere }],
 ])
+function articleHere() {
+    let hit: { label: string; title: string } | null = null
+    for (const ch of doc.value.chapters)
+        for (const a of ch.articles)
+            if (!a.deleted && a.line >= 0 && a.line <= cursorLine.value) hit = { label: a.label, title: articleTitle(a, doc.value) }
+    return hit
+}
+function issueHere() {
+    const name = app.docs.find((d) => d.path === path)?.title ?? path
+    const a = articleHere()
+    const where = a ? `${name} ${a.label}${a.title ? `（${a.title}）` : ''}` : name
+    app.openIssues({ draft: { title: '', body: where } })
+}
 const issues = ref({ errors: 0, warnings: 0 })
 const issueNote = ref<{ kind: 'error' | 'warning'; text: string } | null>(null)
 let issueTimer: ReturnType<typeof setTimeout> | undefined
@@ -491,6 +505,7 @@ async function saveVersion(input: SaveRequest) {
     showSave.value = false
     await Promise.all([app.refreshDocs(), loadSaved()])
     const s = app.prefs.pushOnSave ? await app.sync() : ({ state: 'local' } as const)
+    void app.refreshIssueCount()
     const where = app.onDraft ? `改定案「${app.currentBranch?.label}」に` : ''
     if (s?.state === 'local' || s?.state === 'upToDate') app.notify(`${where}版を保存しました`)
 }
@@ -691,10 +706,10 @@ const saveState = computed(() =>
                 </div>
                 <UContextMenu :items="editMenu" size="sm">
                     <div class="pane-body" @wheel="zoomEditor" @contextmenu="onEditorMenu">
-                        <CodeEditor ref="editor" v-model="text" :legal="doc" :wrap="app.prefs.lineWrap" :proofread="app.prefs.proofread"
-                            :readonly="aiRunning" :diff-base="savedText" @cursor="onCursor" @scroll="onScroll"
-                            @shortcut="onShortcut" @history="(h) => (history = h)" @images="addImages"
-                            @issues="(n) => (issues = n)" />
+                        <CodeEditor ref="editor" v-model="text" :legal="doc" :wrap="app.prefs.lineWrap"
+                            :proofread="app.prefs.proofread" :readonly="aiRunning" :diff-base="savedText"
+                            @cursor="onCursor" @scroll="onScroll" @shortcut="onShortcut" @history="(h) => (history = h)"
+                            @images="addImages" @issues="(n) => (issues = n)" />
                     </div>
                 </UContextMenu>
             </div>
