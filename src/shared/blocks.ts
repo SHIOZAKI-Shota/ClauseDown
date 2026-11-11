@@ -3,6 +3,7 @@ import MarkdownIt from 'markdown-it'
 import type { MarkdownIt as Md, Token } from 'markdown-it'
 import { render as renderMermaid } from 'pele'
 import { tableSpans, visibleCells } from './table-span'
+import { mathError, renderMath, useMath } from './math'
 
 interface CellTokens {
     open: number
@@ -43,7 +44,7 @@ export function useTableSpans(m: Md): Md {
     return m
 }
 
-const md = useTableSpans(new MarkdownIt({ html: false, linkify: false, breaks: true }))
+const md = useMath(useTableSpans(new MarkdownIt({ html: false, linkify: false, breaks: true })))
 const plainMd = new MarkdownIt({ html: false, linkify: false, breaks: true })
 
 const esc = (s: string) =>
@@ -101,6 +102,11 @@ export function renderBlock(raw: string, props?: CdProps): string {
         if (error) return `<div class="cd-figure cd-figure-error">図を描けません：${esc(error)}<pre>${esc(fence.body)}</pre></div>`
         return `<figure${propsAttrs(props, 'cd-figure')}>${svg}</figure>`
     }
+    if (fence?.lang === 'math') {
+        const error = mathError(fence.body, true)
+        if (error) return `<div class="cd-figure cd-figure-error">数式を描けません：${esc(error)}<pre>${esc(fence.body)}</pre></div>`
+        return `<div${propsAttrs(props, 'cd-math-block')}>${renderMath(fence.body, true)}</div>`
+    }
     return `<div${propsAttrs(props, 'cd-block')}>${withCols(inlinePropsHtml(md.render(raw)), props)}</div>`
 }
 
@@ -138,7 +144,7 @@ export function parseTable(raw: string): string[][] | null {
 export function blockLines(raw: string): string[] {
     const fence = parseFence(raw)
     if (fence) {
-        const head = fence.lang === 'mermaid' ? '［図］' : '［囲み］'
+        const head = fence.lang === 'mermaid' ? '［図］' : fence.lang === 'math' ? '［数式］' : '［囲み］'
         return [head, ...fence.body.split('\n').map((l) => `　${l.trim()}`).filter((l) => l.trim())]
     }
     const rows = parseTable(raw)

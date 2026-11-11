@@ -8,6 +8,7 @@ import { parseFence, mermaidSvg } from '@shared/blocks'
 import type { Article, Item, LegalDoc, Paragraph } from '@shared/legal-parser'
 import { articleTitle } from '@shared/legal-parser'
 import { checkDefinitions } from '@shared/definitions'
+import { findMath, mathError } from '@shared/math'
 import type { ProofreadIssue } from '@shared/api'
 
 export const legalTheme = EditorView.theme({
@@ -48,6 +49,7 @@ export const legalTheme = EditorView.theme({
     '.cd-attr': { color: 'var(--cd-syn-mark)' },
     '.cd-prop': { color: 'var(--cd-syn-mark)', backgroundColor: 'color-mix(in srgb, var(--cd-syn-mark) 10%, transparent)', borderRadius: '3px', fontSize: '0.92em' },
     '.cd-ref': { color: 'var(--cd-syn-ref)', borderBottom: '1px dotted var(--cd-syn-ref)' },
+    '.cd-math-src': { color: 'var(--cd-syn-code)' },
     '.cd-ref-bad': { color: 'var(--cd-syn-ref-bad)', borderBottom: '1px dotted var(--cd-syn-ref-bad)' },
 })
 
@@ -163,6 +165,7 @@ function buildDecorations(view: EditorView): DecorationSet {
             }
             if (PROP_LINE_RE.test(line.text)) marks.push({ from: line.from, to: line.to, deco: Decoration.mark({ class: 'cd-prop' }) })
             else for (const r of line.text.matchAll(PROP_INLINE_RE)) marks.push({ from: line.from + r.index! + 1, to: line.from + r.index! + r[0].length, deco: Decoration.mark({ class: 'cd-prop' }) })
+            for (const m of findMath(line.text)) marks.push({ from: line.from + m.from, to: line.from + m.to, deco: Decoration.mark({ class: 'cd-math-src' }) })
             for (const r of line.text.matchAll(REF_RE)) {
                 const ok = !!ld?.refs[r[1].trim()]
                 marks.push({ from: line.from + r.index!, to: line.from + r.index! + r[0].length, deco: Decoration.mark({ class: ok ? 'cd-ref' : 'cd-ref-bad' }) })
@@ -252,6 +255,14 @@ const legalLinter = linter(
             if (!fence) continue
             const error = mermaidError(fence.body)
             if (error) out.push({ from: f.index!, to: f.index! + f[0].length, severity: 'warning', message: `図を描けません：${error}` })
+        }
+        for (const f of text.matchAll(/^[ \t]*(`{3,}|~{3,})\s*math[^\n]*\n([\s\S]*?)\n[ \t]*\1[ \t]*$/gm)) {
+            const error = mathError(f[2], true)
+            if (error) out.push({ from: f.index!, to: f.index! + f[0].length, severity: 'warning', source: '数式', message: `数式を描けません：${error}` })
+        }
+        for (const m of findMath(text)) {
+            const error = mathError(m.tex, m.display)
+            if (error) out.push({ from: m.from, to: m.to, severity: 'warning', source: '数式', message: `数式を描けません：${error}` })
         }
         for (const d of checkDefinitions(text)) out.push({ from: d.from, to: d.to, severity: 'error', source: '定義語', message: d.message })
         for (const w of ld.warnings) {

@@ -46,6 +46,7 @@
     "markdown-it": "^15.0.3",
     "openai": "^7.50.0",
     "pele": "^1.13.0",
+    "temml": "^0.14.0",
     "textlint-rule-ja-no-abusage": "^3.0.0",
     "textlint-rule-ja-no-redundant-expression": "^4.0.1",
     "textlint-rule-max-ten": "^5.0.0",

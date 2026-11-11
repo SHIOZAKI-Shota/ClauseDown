@@ -22,6 +22,7 @@ import type { DocStyle } from './prefs'
 import { inlineRuns, mergeProps, type CdProps } from './cd-prop'
 import { tableSpans } from './table-span'
 import { imageLine } from './images'
+import { displayLine, mathKey, useMath } from './math'
 
 export type Figures = Map<string, { png: Uint8Array; width: number; height: number }>
 export type Images = Map<string, { data: Uint8Array; type: 'png' | 'jpg' | 'gif'; width: number; height: number }>
@@ -44,13 +45,13 @@ const FONT = '游明朝'
 const SIZE = 21
 const EM = 210
 
-const inlineMd = new MarkdownIt({ html: false, linkify: false })
+const inlineMd = useMath(new MarkdownIt({ html: false, linkify: false }))
 
 function plain(text: string, doc: LegalDoc): string {
     let out = ''
     for (const block of inlineMd.parseInline(resolveRefs(text, doc), {})) {
         for (const t of block.children ?? []) {
-            if (t.type === 'text' || t.type === 'code_inline' || t.type === 'image') out += t.content
+            if (t.type === 'text' || t.type === 'code_inline' || t.type === 'image' || t.type === 'math_inline') out += t.content
             else if (t.type === 'hardbreak') out += '\n'
         }
     }
@@ -102,6 +103,21 @@ function imagePara(src: string, alt: string, indent: number, ctx: Ctx): DocxPara
     })
 }
 
+function figurePara(fig: { png: Uint8Array; width: number; height: number }, indent: number, ctx: Ctx, center = false): DocxParagraph {
+    const maxPx = ((ctx.width - indent * EM) / 1440) * 96
+    const scale = Math.min(1, maxPx / fig.width)
+    return new DocxParagraph({
+        alignment: center ? AlignmentType.CENTER : undefined,
+        indent: { left: indent * EM },
+        children: [new ImageRun({ type: 'png', data: fig.png, transformation: { width: Math.round(fig.width * scale), height: Math.round(fig.height * scale) } })],
+    })
+}
+
+function mathPara(tex: string, indent: number, ctx: Ctx): DocxParagraph {
+    const fig = ctx.figures?.get(mathKey(tex))
+    return fig ? figurePara(fig, indent, ctx, true) : para(tex.trim(), indent, 0)
+}
+
 function textParas(lead: string, text: string, left: number, hanging: number, out: Block[], ctx: Ctx, opts: { props?: CdProps } = {}) {
     let buf: string[] = []
     let leadDone = false
@@ -112,6 +128,12 @@ function textParas(lead: string, text: string, left: number, hanging: number, ou
         buf = []
     }
     for (const line of text.split('\n')) {
+        const tex = displayLine(line)
+        if (tex) {
+            flush()
+            out.push(mathPara(tex, left, ctx))
+            continue
+        }
         const im = imageLine(line)
         if (!im) {
             buf.push(line)
@@ -193,24 +215,11 @@ function attachBlocks(blocks: string[], indent: number, out: Block[], ctx: Ctx, 
         const fence = parseFence(raw)
         if (fence?.lang === 'mermaid') {
             const fig = ctx.figures?.get(fence.body)
-            if (fig) {
-                const maxPx = ((ctx.width - indent * EM) / 1440) * 96
-                const scale = Math.min(1, maxPx / fig.width)
-                out.push(
-                    new DocxParagraph({
-                        indent: { left: indent * EM },
-                        children: [
-                            new ImageRun({
-                                type: 'png',
-                                data: fig.png,
-                                transformation: { width: Math.round(fig.width * scale), height: Math.round(fig.height * scale) },
-                            }),
-                        ],
-                    }),
-                )
-            } else {
-                out.push(para('［図］（図は PDF 版をご覧ください）', indent, 0))
-            }
+            out.push(fig ? figurePara(fig, indent, ctx) : para('［図］（図は PDF 版をご覧ください）', indent, 0))
+            return
+        }
+        if (fence?.lang === 'math') {
+            out.push(mathPara(fence.body, indent, ctx))
             return
         }
         const rows = parseTable(raw)

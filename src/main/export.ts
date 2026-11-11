@@ -9,6 +9,7 @@ import { imageLine, imagePathOf, rewriteImages } from '../shared/images'
 import { dataUrl, readImage } from './images'
 import { toHouritsu } from '../shared/houritsu'
 import { LEGAL_CSS } from '../shared/legal-css'
+import { displayLine, MATH_CSS, mathKey, renderMath } from '../shared/math'
 import { parseLegal, type Item, type LegalDoc, type Paragraph } from '../shared/legal-parser'
 import { renderCompareTable, renderDoc, renderInlineDiff } from '../shared/legal-renderer'
 import { cleanStyle, DEFAULT_STYLE, styleVars, type DocStyle } from '../shared/prefs'
@@ -31,7 +32,8 @@ const userCss = (css: string) => css.replace(/<\/(style)/gi, '<\\/$1')
 function page(body: string, title: string, style: DocStyle, landscape = false, css = ''): string {
     const margin = landscape ? Math.min(style.margin, 15) : style.margin
     return `<!doctype html><html lang="ja"><head>${HIDDEN_CSP}<meta charset="utf-8"><title>${title.replace(/[<>&]/g, '')}</title>
-<style>@page { size: A4${landscape ? ' landscape' : ''}; margin: ${margin}mm; } body { margin: 0; } ${css ? userCss(css) : LEGAL_CSS}
+<style>@page { size: A4${landscape ? ' landscape' : ''}; margin: ${margin}mm; } body { margin: 0; } ${MATH_CSS}
+${css ? userCss(css) : LEGAL_CSS}
 :root { ${styleVars(style)} }</style></head><body>${body}</body></html>`
 }
 
@@ -74,8 +76,54 @@ function mermaidBodies(doc: LegalDoc): string[] {
     return [...new Set(out)]
 }
 
+function mathBodies(doc: LegalDoc): string[] {
+    const out: string[] = []
+    const fromText = (t: string) => t.split('\n').forEach((l) => {
+        const tex = displayLine(l)
+        if (tex) out.push(tex)
+    })
+    const fromBlocks = (blocks: string[]) => {
+        for (const b of blocks) {
+            const f = parseFence(b)
+            if (f?.lang === 'math') out.push(f.body)
+        }
+    }
+    const fromItems = (items: Item[]) => items.forEach((i) => (fromText(i.text), fromBlocks(i.blocks), fromItems(i.children)))
+    const fromParas = (ps: Paragraph[]) => ps.forEach((p) => (fromText(p.text), fromBlocks(p.blocks), fromItems(p.items)))
+    for (const ch of doc.chapters) {
+        fromParas(ch.intro)
+        ch.articles.forEach((a) => fromParas(a.paragraphs))
+    }
+    return [...new Set(out.map((t) => t.trim()))]
+}
+
+const MATH_PX = 28
+const DOC_PX = 14
+
+async function rasterizeMath(texs: string[], figures: Figures): Promise<void> {
+    if (!texs.length) return
+    const win = new BrowserWindow({ show: false, width: 1600, height: 600, webPreferences: { sandbox: true } })
+    win.webContents.on('will-navigate', (e) => e.preventDefault())
+    win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+    try {
+        for (const tex of texs) {
+            const html = `<!doctype html><html><head>${HIDDEN_CSP}<meta charset="utf-8"><style>${MATH_CSS} html,body{margin:0;background:#fff} #m{display:inline-block;padding:4px 6px;font-size:${MATH_PX}px} .cd-math-display{margin:0}</style></head><body><div id="m">${renderMath(tex, true)}</div></body></html>`
+            await win.loadURL(`data:text/html;charset=utf-8;base64,${Buffer.from(html).toString('base64')}`)
+            const r = (await win.webContents.executeJavaScript(
+                `(() => { const b = document.getElementById('m').getBoundingClientRect(); return { w: Math.ceil(b.width), h: Math.ceil(b.height) } })()`,
+            )) as { w: number; h: number }
+            if (!r.w || !r.h) continue
+            const img = await win.webContents.capturePage({ x: 0, y: 0, width: r.w, height: r.h })
+            figures.set(mathKey(tex), { png: img.toPNG(), width: Math.round((r.w * DOC_PX) / MATH_PX), height: Math.round((r.h * DOC_PX) / MATH_PX) })
+        }
+    } finally {
+        win.destroy()
+    }
+}
+
 async function rasterizeFigures(doc: LegalDoc): Promise<Figures> {
     const figures: Figures = new Map()
+    await rasterizeMath(mathBodies(doc), figures)
     const bodies = mermaidBodies(doc)
     if (!bodies.length) return figures
     const win = hiddenWindow(1600, 1600)
