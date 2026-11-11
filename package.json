@@ -26,6 +26,7 @@
     "release": "npm run build && electron-builder --mac --win --publish always",
     "release:win": "npm run build && electron-builder --win --publish always",
     "release:mac": "npm run build && electron-builder --mac --publish always",
+    "ship": "node scripts/ship.mjs",
     "postinstall": "node node_modules/electron/install.js && nuxt prepare",
     "testdata": "node scripts/make-testdata.mjs"
   },
