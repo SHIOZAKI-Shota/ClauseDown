@@ -1,5 +1,4 @@
 import { describe, expect, it, vi, beforeAll, afterAll } from 'vitest'
-import fs from 'node:fs'
 import { join } from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { startGitServer } from './git-server'

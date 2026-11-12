@@ -246,7 +246,7 @@ export async function deliverWithDialog(parent: BrowserWindow | null, dir: strin
 export async function exportScheduleIcs(parent: BrowserWindow | null, dir: string, today: string): Promise<{ path: string; count: number } | null> {
     const { prefs } = await loadSettings()
     const { name, text, count } = await scheduleIcs(dir, today)
-    const file = `${name.replace(/[\/:*?"<>|]/g, '_')}.ics`
+    const file = `${name.replace(/[/:*?"<>|]/g, '_')}.ics`
     const opts = {
         title: '期日をカレンダーの形式で書き出す',
         defaultPath: prefs.exportDir ? join(prefs.exportDir, file) : file,

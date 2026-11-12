@@ -46,7 +46,7 @@ function urlOf(pkg) {
     if (!u) return undefined
     const m = /github\.com[/:]([^/]+\/[^/#.]+)/.exec(u)
     if (m) return `https://github.com/${m[1]}`
-    return /^https:\/\//.test(u) ? u : undefined
+    return u.startsWith('https://') ? u : undefined
 }
 
 const seen = new Map()

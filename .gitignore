@@ -10,6 +10,7 @@ release/
 *.tsbuildinfo
 
 coverage/
+.vitest/
 test-results/
 playwright-report/
 *.local.*

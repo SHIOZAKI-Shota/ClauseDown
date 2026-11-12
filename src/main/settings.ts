@@ -13,7 +13,7 @@ const tokenPath = () => join(app.getPath('userData'), 'token.bin')
 const DEFAULT: AppSettings = { repos: [], author: { name: '', email: '' }, username: 'x-access-token', prefs: DEFAULT_PREFS }
 
 function normalize(saved: Partial<AppSettings>): AppSettings {
-    const prefs = { ...DEFAULT_PREFS, ...(saved.prefs ?? {}) }
+    const prefs = { ...DEFAULT_PREFS, ...saved.prefs }
     return {
         ...DEFAULT,
         ...saved,
@@ -170,15 +170,18 @@ async function refresh(base: string, c: Credential): Promise<Credential | null> 
         headers: { Accept: 'application/json', 'Content-Type': gitlab ? 'application/x-www-form-urlencoded' : 'application/json' },
         body: gitlab ? new URLSearchParams(body).toString() : JSON.stringify(body),
     })
-    const j = (await res.json().catch(() => ({}))) as Record<string, unknown>
+    const j = (await res.json().catch(() => ({}))) as OAuthResponse
     if (!res.ok || !j.access_token) return null
     const next = credentialFromResponse(j, c.provider ?? 'github', c.clientId, c)
     await saveCredential(base, next)
     return next
 }
 
+// OAuth の応答（JSON）。値は文字列か数値
+export type OAuthResponse = Record<string, string | number | undefined>
+
 export function credentialFromResponse(
-    j: Record<string, unknown>,
+    j: OAuthResponse,
     provider: ForgeKind,
     clientId: string,
     who?: { login?: string; name?: string; email?: string } | null,

@@ -86,7 +86,7 @@ export const useApp = defineStore('app', () => {
     )
     const me = computed(() => identity.value?.name ?? '')
     const reviewer = computed<Reviewer>(() => ({ name: me.value || undefined, login: identity.value?.login }))
-    const prefs = computed<AppPrefs>(() => ({ ...DEFAULT_PREFS, ...(settings.value?.prefs ?? {}) }))
+    const prefs = computed<AppPrefs>(() => ({ ...DEFAULT_PREFS, ...settings.value?.prefs }))
     const styleFor = (path: string) => resolveStyle(prefs.value.docStyle, styleLayers.value, path).style
     const style = computed<DocStyle>(() => styleFor(currentPath.value ?? ''))
 
@@ -344,7 +344,7 @@ export const useApp = defineStore('app', () => {
             const dir = repoDir.value
             const title = docs.value.find((d) => d.path === path)?.title ?? path
             const recentDocs = [{ dir, path, title, at: Date.now() }, ...(prefs.value.recentDocs ?? []).filter((d) => !(d.dir === dir && d.path === path))].slice(0, 12)
-            setPrefs({ lastDoc: { dir, path }, recentDocs })
+            void setPrefs({ lastDoc: { dir, path }, recentDocs })
         }
     }
 

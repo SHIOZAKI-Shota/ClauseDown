@@ -57,7 +57,7 @@ const FOLDERS = computed(() => [
 ])
 const inherited = computed(() => inheritedStyle(app.prefs.docStyle, app.styleLayers, folder.value))
 const override = ref<StyleOverride>({})
-watch([folder, () => app.styleLayers], () => (override.value = { ...(app.styleLayers[folder.value] ?? {}) }), { immediate: true })
+watch([folder, () => app.styleLayers], () => (override.value = { ...app.styleLayers[folder.value] }), { immediate: true })
 const scopeName = computed(() => (folder.value ? 'このディレクトリ' : 'このリポジトリ'))
 
 const saveStyle = useDebounced(async () => {

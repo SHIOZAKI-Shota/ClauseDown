@@ -151,7 +151,7 @@ const versioned = (path: string, head: number) => head === 1 || path.toLowerCase
 async function realStatus(dir: string) {
     const [matrix, head] = await Promise.all([git.statusMatrix({ fs, dir }), tryResolve(dir, 'HEAD')])
     const rows = matrix.filter(([p, h, work, stage]) => !(h === 1 && work === 1 && stage === 1) && versioned(p, h))
-    const sameEol = await Promise.all(rows.map(([p, h, work]) => (head && h === 1 && work === 2 ? sameIgnoringEol(dir, head, p) : false)))
+    const sameEol = await Promise.all(rows.map(async ([p, h, work]) => (head && h === 1 && work === 2 ? sameIgnoringEol(dir, head, p) : false)))
     return rows.filter((_, i) => !sameEol[i])
 }
 
@@ -988,7 +988,7 @@ async function threeWay(dir: string, base: string | undefined, ours: string, the
         map: async (filepath, entries) => {
             if (filepath === '.') return true
             const [b, o, t] = entries
-            const types = await Promise.all([o, t, base ? b : null].map((e) => e?.type()))
+            const types = await Promise.all([o, t, base ? b : null].map(async (e) => e?.type()))
             const [oo, to, bo] = await Promise.all([o?.oid(), t?.oid(), base ? b?.oid() : undefined])
             if (oo !== undefined && oo === to && types[0] === types[1]) return null
             if (base && bo !== undefined && bo === to && types[1] === types[2]) return null

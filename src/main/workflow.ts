@@ -13,7 +13,7 @@ import { repoKey } from './repo-lock'
 import { afterMain, newOnMain, reviewBodyLines } from './issues'
 
 export async function getRules(dir: string): Promise<RepoRules> {
-    return { ...DEFAULT_RULES, ...((await readRecord<RepoRules>(dir, RECORD.rules)) ?? {}) }
+    return { ...DEFAULT_RULES, ...(await readRecord<RepoRules>(dir, RECORD.rules)) }
 }
 
 export async function saveRules(dir: string, rules: RepoRules): Promise<void> {
@@ -193,6 +193,7 @@ export interface Builders {
 
 function safeName(s: string): string {
     const n = s
+        // oxlint-disable-next-line no-control-regex -- ファイル名に使えない制御文字を除く
         .replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_')
         .trim()
         .replace(/[. ]+$/, '')

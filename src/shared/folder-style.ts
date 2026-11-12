@@ -6,7 +6,8 @@ export const styleFileOf = (folder: string) => (folder ? `${APP_DIR}/styles/${fo
 
 export type StyleOverride = Partial<DocStyle>
 export type StyleLayers = Record<string, StyleOverride>
-export type StyleSource = 'app' | string
+// 'app'（アプリの設定）か、設定を持つディレクトリのパス
+export type StyleSource = string
 
 export const STYLE_KEYS = Object.keys(DEFAULT_STYLE) as (keyof DocStyle)[]
 

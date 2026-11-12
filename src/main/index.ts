@@ -21,7 +21,7 @@ import { suggestVersionMessage } from './ai-message'
 import * as fstyle from './folder-style'
 import * as accounts from './accounts'
 import { identity } from './git-base'
-import { forgetCachedSettings, loadSecret, loadSettings, resetAllData, saveSecret, updateSettings } from './settings'
+import { forgetCachedSettings, loadSettings, resetAllData, saveSecret, updateSettings } from './settings'
 import { listFonts } from './fonts'
 import { saveImage } from './images'
 import * as issues from './issues'
@@ -135,15 +135,15 @@ async function createWindow() {
         },
     })
     win.webContents.setWindowOpenHandler(({ url }) => {
-        if (url.startsWith('https://')) shell.openExternal(url)
+        if (url.startsWith('https://')) void shell.openExternal(url)
         return { action: 'deny' }
     })
     win.webContents.on('will-navigate', (e, url) => {
         if (url !== win?.webContents.getURL()) e.preventDefault()
     })
     win.webContents.session.setPermissionRequestHandler((_wc, perm, cb) => cb(perm === 'clipboard-sanitized-write'))
-    if (process.env.ELECTRON_RENDERER_URL) win.loadURL(process.env.ELECTRON_RENDERER_URL)
-    else win.loadURL('app://bundle/')
+    if (process.env.ELECTRON_RENDERER_URL) void win.loadURL(process.env.ELECTRON_RENDERER_URL)
+    else void win.loadURL('app://bundle/')
 }
 
 const pickedRoots = new Set<string>()
@@ -431,10 +431,10 @@ for (const [name, fn] of Object.entries(handlers)) {
     })
 }
 
-app.whenReady().then(() => {
+void app.whenReady().then(() => {
     setAppMenu()
     serveRenderer()
-    createWindow()
+    void createWindow()
     void listFonts()
     void loadSettings().then((s) => applyMcp(s.mcp, notifyChanged('mcp')))
     initUpdater((u) => win?.webContents.send('updateState', u))

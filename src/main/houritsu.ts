@@ -18,7 +18,7 @@ async function readHead(full: string): Promise<string> {
 }
 
 async function inPool<T, R>(items: T[], size: number, fn: (x: T) => Promise<R>): Promise<R[]> {
-    const out: R[] = new Array(items.length)
+    const out = Array.from<R>({ length: items.length })
     let next = 0
     const worker = async () => {
         while (next < items.length) {

@@ -54,6 +54,13 @@ describe('校閲', () => {
         expect((await proofread(src, { rules: { 'ja-no-redundant-expression': true } })).map((i) => i.rule)).toContain('冗長な表現')
     }, 60_000)
 
+    it('半角カナ：場所と全角の書き方を示し、リンクの中は見ない', async () => {
+        const src = '- 甲はｶﾞｲﾄﾞに従う。\n- [ｻﾝﾌﾟﾙ](https://example.com) を見る。\n'
+        const hits = (await proofread(src)).filter((i) => i.rule === '半角カナ')
+        expect(hits.map((i) => src.slice(i.from, i.to))).toEqual(['ｶﾞｲﾄﾞ'])
+        expect(hits[0].message).toContain('「ガイド」')
+    }, 60_000)
+
     it('組み込みの辞書に、ほかの辞書を足せる', async () => {
         const src = '- 子供に配る。\n'
         expect(await proofread(src)).toEqual([])

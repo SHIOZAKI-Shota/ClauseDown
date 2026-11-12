@@ -109,7 +109,7 @@ export function serializeConfig(config: DocConfig): string {
     if (Object.keys(diff).length === 0) return ''
     const lines = Object.entries(diff).map(
         ([section, values]) =>
-            `${section}: { ${Object.entries(values).map(([k, v]) => `${k}: ${v}`).join(', ')} }`,
+            `${section}: { ${Object.entries(values).map(([k, v]) => `${k}: ${String(v)}`).join(', ')} }`,
     )
     return lines.join('\n')
 }
@@ -124,7 +124,7 @@ function titleEnd(md: string, from: number): number {
         if (fence) {
             if (f && f[1][0] === fence[0] && f[1].length >= fence.length && !line.slice(f[0].length).trim()) fence = null
         } else if (f) fence = f[1]
-        else if (/^# /.test(line)) return at + line.length
+        else if (line.startsWith('# ')) return at + line.length
         if (nl < 0) break
         at = nl + 1
     }

@@ -108,5 +108,5 @@ export function styleVars(s: DocStyle): string {
 }
 
 export function withDefaults<T extends object>(defaults: T, value: Partial<T> | null | undefined): T {
-    return { ...defaults, ...(value ?? {}) }
+    return { ...defaults, ...value }
 }

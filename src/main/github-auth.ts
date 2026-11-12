@@ -6,7 +6,7 @@ export interface GitHubAccount {
     login: string | null
     method: 'app' | 'token' | null
 }
-import { credentialFromResponse, loadCredential, loadSettings, saveCredential, type Profile } from './settings'
+import { credentialFromResponse, loadCredential, loadSettings, saveCredential, type OAuthResponse, type Profile } from './settings'
 
 const webBase = () => process.env.CLAUSEDOWN_GITHUB_WEB ?? 'https://github.com'
 const apiBase = () => process.env.CLAUSEDOWN_GITHUB_API ?? 'https://api.github.com'
@@ -25,7 +25,7 @@ async function post(path: string, body: Record<string, string>) {
         headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
     })
-    return (await res.json()) as Record<string, unknown>
+    return (await res.json()) as OAuthResponse
 }
 
 let pending: { deviceCode: string; interval: number; expiresAt: number; clientId: string } | null = null
