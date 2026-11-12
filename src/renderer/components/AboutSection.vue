@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { UpdateState } from '@shared/api'
-import { AUTHOR } from '@shared/about'
+import { AUTHOR, PROJECT } from '@shared/about'
 import { useApp } from '~/stores/app'
 
 const { data } = useLicenses()
@@ -88,6 +88,10 @@ async function install() {
             <p class="notes-head">バージョン {{ update.version }} の変更点</p>
             <pre>{{ update.notes }}</pre>
         </div>
+        <SettingRow label="マニュアルとリンク">
+            <UButton label="マニュアル" icon="i-lucide-book-open" size="sm" color="neutral" variant="outline" @click="open(PROJECT.manual)" />
+            <UButton label="GitHub" icon="i-lucide-github" size="sm" color="neutral" variant="outline" @click="open(PROJECT.repo)" />
+        </SettingRow>
         <SettingRow label="" :description="authorName">
             <UButton :label="site" icon="i-lucide-globe" size="sm" color="neutral" variant="outline" @click="openSite" />
             <UButton :label="email" icon="i-lucide-mail" size="sm" color="neutral" variant="outline" @click="openMail" />
