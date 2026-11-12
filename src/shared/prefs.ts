@@ -35,6 +35,7 @@ export interface AppPrefs {
     exportDateSuffix: boolean
     docStyle: DocStyle
     notifyDue: boolean
+    checkUpdateOnStart: boolean
     reopenLastDoc: boolean
     typesetCss: string
     previewZoom: number
@@ -68,6 +69,7 @@ export const DEFAULT_PREFS: AppPrefs = {
     exportDateSuffix: false,
     docStyle: DEFAULT_STYLE,
     notifyDue: true,
+    checkUpdateOnStart: true,
     reopenLastDoc: true,
     typesetCss: '',
     previewZoom: 100,

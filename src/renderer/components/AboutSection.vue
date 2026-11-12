@@ -88,6 +88,9 @@ async function install() {
             <p class="notes-head">バージョン {{ update.version }} の変更点</p>
             <pre>{{ update.notes }}</pre>
         </div>
+        <SettingRow label="起動したら更新を確認する" description="新しいバージョンがあれば通知します">
+            <USwitch :model-value="app.prefs.checkUpdateOnStart" @update:model-value="(v: boolean) => app.setPrefs({ checkUpdateOnStart: v })" />
+        </SettingRow>
         <SettingRow label="マニュアルとリンク">
             <UButton label="マニュアル" icon="i-lucide-book-open" size="sm" color="neutral" variant="outline" @click="open(PROJECT.manual)" />
             <UButton label="GitHub" icon="i-lucide-github" size="sm" color="neutral" variant="outline" @click="open(PROJECT.repo)" />
