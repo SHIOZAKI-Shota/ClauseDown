@@ -23,11 +23,13 @@ watchEffect(() => {
 })
 const colorMode = useColorMode()
 const opening = ref(true)
+const updateNotice = useUpdateNotice()
 
 onMounted(async () => {
     await app.load()
     const theme = app.settings?.theme ?? 'system'
     if (colorMode.preference !== theme) colorMode.preference = theme
+    updateNotice.start()
 })
 
 defineShortcuts({
