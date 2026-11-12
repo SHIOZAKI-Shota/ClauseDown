@@ -54,7 +54,7 @@ const CSP = [
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
     "connect-src 'self'",
-    "frame-src 'self' blob:",
+    "worker-src 'self'",
 ].join('; ')
 
 async function serveRepoImage(pathname: string): Promise<Response> {
@@ -129,7 +129,6 @@ async function createWindow() {
             contextIsolation: true,
             nodeIntegration: false,
             sandbox: true,
-            plugins: true,
         },
     })
     win.webContents.setWindowOpenHandler(({ url }) => {
