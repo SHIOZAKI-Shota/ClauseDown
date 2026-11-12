@@ -9,6 +9,7 @@ import { imageLine, imagePathOf, rewriteImages } from '../shared/images'
 import { dataUrl, readImage } from './images'
 import { toHouritsu } from '../shared/houritsu'
 import { LEGAL_CSS } from '../shared/legal-css'
+import { withLineMarks } from '../shared/line-marks'
 import { displayLine, MATH_CSS, mathKey, renderMath } from '../shared/math'
 import { parseLegal, type Item, type LegalDoc, type Paragraph } from '../shared/legal-parser'
 import { renderCompareTable, renderDoc, renderInlineDiff } from '../shared/legal-renderer'
@@ -198,7 +199,10 @@ const baseOf = (req: { dir?: string; docPath?: string }): DocBase | undefined =>
 
 export async function previewPdf(source: string, style: DocStyle, base?: DocBase): Promise<Uint8Array> {
     const { prefs } = await loadSettings()
-    return makeBuilders(cleanStyle(style ?? DEFAULT_STYLE), prefs.typesetCss, baseOf(base ?? {})).docPdf(String(source))
+    const s = cleanStyle(style ?? DEFAULT_STYLE)
+    const doc = parseLegal(String(source))
+    const html = page(withLineMarks(renderDoc(doc)), doc.title, s, false, prefs.typesetCss)
+    return toPdf(await inlineImages(html, baseOf(base ?? {})), false, s)
 }
 
 async function build(req: ExportRequest): Promise<Uint8Array> {
