@@ -6,7 +6,10 @@ const app = useApp()
 const url = ref(app.repo?.url?.replace(/\.git$/, '') ?? '')
 const sending = ref(false)
 const changed = computed(() => {
-    const v = url.value.trim().replace(/\/+$/, '').replace(/\.git$/, '')
+    const v = url.value
+        .trim()
+        .replace(/\/+$/, '')
+        .replace(/\.git$/, '')
     return !!v && v !== app.repo?.url?.replace(/\.git$/, '')
 })
 
@@ -24,8 +27,7 @@ async function save() {
     <UModal v-model:open="open" title="リモートを変更" description="GitHub・GitLab でリポジトリの名前や持ち主を変えたとき、新しい URL を入れます。">
         <template #body>
             <div class="body">
-                <UInput v-model="url" placeholder="https://github.com/組織名/リポジトリ名" class="cd-full" autofocus
-                    @keydown.enter="changed && save()" />
+                <UInput v-model="url" placeholder="https://github.com/組織名/リポジトリ名" class="cd-full" autofocus @keydown.enter="changed && save()" />
                 <p class="cd-muted">
                     新しいリモートが空なら、すべての版を送信します。中身がある場合は、このリポジトリと同じ履歴を持っているときだけ変更します。別のリポジトリに誤ってつながないためです。
                 </p>

@@ -19,7 +19,18 @@ export function sniffImage(bytes: Uint8Array): ImageExt | null {
     if (b.length >= 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return 'png'
     if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'jpg'
     if (b.length >= 6 && b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38) return 'gif'
-    if (b.length >= 12 && b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return 'webp'
+    if (
+        b.length >= 12 &&
+        b[0] === 0x52 &&
+        b[1] === 0x49 &&
+        b[2] === 0x46 &&
+        b[3] === 0x46 &&
+        b[8] === 0x57 &&
+        b[9] === 0x45 &&
+        b[10] === 0x42 &&
+        b[11] === 0x50
+    )
+        return 'webp'
     return null
 }
 
@@ -38,7 +49,7 @@ export function imageSize(bytes: Uint8Array): { width: number; height: number } 
                 continue
             }
             const len = dv.getUint16(i + 2)
-            if ((marker >= 0xc0 && marker <= 0xcf) && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+            if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
                 return { height: dv.getUint16(i + 5), width: dv.getUint16(i + 7) }
             }
             i += 2 + len
@@ -49,10 +60,14 @@ export function imageSize(bytes: Uint8Array): { width: number; height: number } 
         const tag = String.fromCharCode(bytes[12], bytes[13], bytes[14], bytes[15])
         if (tag === 'VP8 ') return { width: dv.getUint16(26, true) & 0x3fff, height: dv.getUint16(28, true) & 0x3fff }
         if (tag === 'VP8L') {
-            const b0 = bytes[21], b1 = bytes[22], b2 = bytes[23], b3 = bytes[24]
+            const b0 = bytes[21],
+                b1 = bytes[22],
+                b2 = bytes[23],
+                b3 = bytes[24]
             return { width: 1 + (((b1 & 0x3f) << 8) | b0), height: 1 + (((b3 & 0xf) << 10) | (b2 << 2) | ((b1 & 0xc0) >> 6)) }
         }
-        if (tag === 'VP8X') return { width: 1 + (bytes[24] | (bytes[25] << 8) | (bytes[26] << 16)), height: 1 + (bytes[27] | (bytes[28] << 8) | (bytes[29] << 16)) }
+        if (tag === 'VP8X')
+            return { width: 1 + (bytes[24] | (bytes[25] << 8) | (bytes[26] << 16)), height: 1 + (bytes[27] | (bytes[28] << 8) | (bytes[29] << 16)) }
     }
     return null
 }

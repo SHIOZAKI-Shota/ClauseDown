@@ -135,7 +135,8 @@ async function confirmPicker() {
     const kind = picker.value
     picker.value = null
     if (kind === 'link' && pickOid.value) await app.run(() => window.api.linkIssue(dir, n, pickOid.value), '版を紐付けました')
-    if (kind === 'close') await app.run(() => window.api.closeIssue(dir, n, pickOid.value === NO_VERSION ? undefined : pickOid.value || undefined), `#${n} を閉じました`)
+    if (kind === 'close')
+        await app.run(() => window.api.closeIssue(dir, n, pickOid.value === NO_VERSION ? undefined : pickOid.value || undefined), `#${n} を閉じました`)
     await Promise.all([load(), open(n)])
 }
 
@@ -184,8 +185,15 @@ onMounted(async () => {
 
 <template>
     <div class="issues">
-        <UButton :label="app.pageReturnLabel('issues')" icon="i-lucide-arrow-left" size="sm" color="neutral" variant="ghost"
-            class="back" @click="app.leavePage('issues')" />
+        <UButton
+            :label="app.pageReturnLabel('issues')"
+            icon="i-lucide-arrow-left"
+            size="sm"
+            color="neutral"
+            variant="ghost"
+            class="back"
+            @click="app.leavePage('issues')"
+        />
         <header class="head">
             <div class="title">
                 <h2>課題</h2>
@@ -198,28 +206,35 @@ onMounted(async () => {
             <UButton label="新しい課題" icon="i-lucide-plus" @click="startNew()" />
         </header>
 
-        <UAlert v-if="pending" class="banner" color="warning" variant="subtle" icon="i-lucide-arrow-right-left"
+        <UAlert
+            v-if="pending"
+            class="banner"
+            color="warning"
+            variant="subtle"
+            icon="i-lucide-arrow-right-left"
             :title="`このリポジトリには、${sourceLabel} に接続する前に作った課題が ${pending} 件あります`"
             :description="`${sourceLabel} に移すと、以後は ${sourceLabel} の Issue として扱います。新しく作ったリポジトリなら番号もそのまま引き継がれます。`"
-            :actions="[{ label: `${sourceLabel} に移す`, onClick: moveToForge }]" />
+            :actions="[{ label: `${sourceLabel} に移す`, onClick: moveToForge }]"
+        />
 
         <div class="body">
             <aside class="list">
                 <div class="tools">
-                    <SegmentSwitch v-model="filter" size="xs" :items="[
-                        { value: 'open', label: `未完了 ${counts.open}` },
-                        { value: 'closed', label: `完了 ${counts.closed}` },
-                    ]" />
+                    <SegmentSwitch
+                        v-model="filter"
+                        size="xs"
+                        :items="[
+                            { value: 'open', label: `未完了 ${counts.open}` },
+                            { value: 'closed', label: `完了 ${counts.closed}` },
+                        ]"
+                    />
                     <UInput v-model="q" icon="i-lucide-search" placeholder="番号・題名・本文で探す" size="sm" class="w-full" />
                 </div>
                 <p v-if="loading" class="cd-muted pad">読み込んでいます…</p>
                 <p v-else-if="error" class="err pad">{{ error }}</p>
-                <p v-else-if="!shown.length" class="cd-muted pad">{{ filter === 'open' ? '未完了の課題はありません。' :
-                    '完了した課題はありません。' }}
-                </p>
+                <p v-else-if="!shown.length" class="cd-muted pad">{{ filter === 'open' ? '未完了の課題はありません。' : '完了した課題はありません。' }}</p>
                 <button v-for="i in shown" :key="i.n" class="row" :class="{ on: selected === i.n }" @click="open(i.n)">
-                    <UIcon :name="i.state === 'open' ? 'i-lucide-circle-dot' : 'i-lucide-circle-check'"
-                        :class="['st', i.state]" />
+                    <UIcon :name="i.state === 'open' ? 'i-lucide-circle-dot' : 'i-lucide-circle-check'" :class="['st', i.state]" />
                     <span class="num">#{{ i.n }}</span>
                     <span class="ttl">{{ i.title }}</span>
                     <span class="meta">{{ i.author }} {{ dateOf(i.createdAt) }}</span>
@@ -243,35 +258,47 @@ onMounted(async () => {
 
                 <template v-else-if="detail">
                     <div class="d-head">
-                        <UBadge :label="detail.state === 'open' ? '未完了' : '完了'"
-                            :color="detail.state === 'open' ? 'success' : 'neutral'" variant="subtle"
-                            :icon="detail.state === 'open' ? 'i-lucide-circle-dot' : 'i-lucide-circle-check'" />
+                        <UBadge
+                            :label="detail.state === 'open' ? '未完了' : '完了'"
+                            :color="detail.state === 'open' ? 'success' : 'neutral'"
+                            variant="subtle"
+                            :icon="detail.state === 'open' ? 'i-lucide-circle-dot' : 'i-lucide-circle-check'"
+                        />
                         <h3 v-if="!editing">#{{ detail.n }} {{ detail.title }}</h3>
                         <UInput v-else v-model="editTitle" class="grow" />
                         <span class="cd-grow" />
                         <UTooltip text="サイトで書かれたコメントなどを読み直します">
-                            <UButton icon="i-lucide-refresh-cw" size="sm" color="neutral" variant="ghost"
-                                aria-label="再読み込み" :loading="reloading" @click="reloadDetail" />
+                            <UButton
+                                icon="i-lucide-refresh-cw"
+                                size="sm"
+                                color="neutral"
+                                variant="ghost"
+                                aria-label="再読み込み"
+                                :loading="reloading"
+                                @click="reloadDetail"
+                            />
                         </UTooltip>
-                        <UButton v-if="detail.url" :label="`${sourceLabel} で開く`" icon="i-lucide-external-link" size="sm"
-                            color="neutral" variant="ghost" @click="openOnSite(detail.url)" />
+                        <UButton
+                            v-if="detail.url"
+                            :label="`${sourceLabel} で開く`"
+                            icon="i-lucide-external-link"
+                            size="sm"
+                            color="neutral"
+                            variant="ghost"
+                            @click="openOnSite(detail.url)"
+                        />
                     </div>
                     <p class="cd-muted sub">
                         {{ detail.author }} が {{ dateOf(detail.createdAt) }} に作成
-                        <template v-if="detail.state === 'closed' && detail.closedAt">・{{ dateOf(detail.closedAt) }}
-                            に完了</template>
+                        <template v-if="detail.state === 'closed' && detail.closedAt">・{{ dateOf(detail.closedAt) }} に完了</template>
                     </p>
 
                     <div class="actions">
                         <template v-if="!editing">
-                            <UButton label="版を紐付ける" icon="i-lucide-link" size="sm" color="neutral" variant="outline"
-                                @click="openPicker('link')" />
-                            <UButton v-if="detail.state === 'open'" label="閉じる" icon="i-lucide-circle-check" size="sm"
-                                @click="openPicker('close')" />
-                            <UButton v-else label="開き直す" icon="i-lucide-rotate-ccw" size="sm" color="neutral"
-                                variant="outline" @click="reopen" />
-                            <UButton label="編集" icon="i-lucide-pencil" size="sm" color="neutral" variant="ghost"
-                                @click="startEdit" />
+                            <UButton label="版を紐付ける" icon="i-lucide-link" size="sm" color="neutral" variant="outline" @click="openPicker('link')" />
+                            <UButton v-if="detail.state === 'open'" label="閉じる" icon="i-lucide-circle-check" size="sm" @click="openPicker('close')" />
+                            <UButton v-else label="開き直す" icon="i-lucide-rotate-ccw" size="sm" color="neutral" variant="outline" @click="reopen" />
+                            <UButton label="編集" icon="i-lucide-pencil" size="sm" color="neutral" variant="ghost" @click="startEdit" />
                         </template>
                         <template v-else>
                             <UButton label="やめる" size="sm" color="neutral" variant="outline" @click="editing = false" />
@@ -284,16 +311,14 @@ onMounted(async () => {
                     <p v-else class="cd-muted">本文はありません。</p>
 
                     <h4>紐付いた版</h4>
-                    <p v-if="!detail.versions.length" class="cd-muted">まだありません。版を保存するときにこの課題を選ぶか、メッセージに #{{ detail.n }}
-                        と書くと、ここに並びます。</p>
+                    <p v-if="!detail.versions.length" class="cd-muted">
+                        まだありません。版を保存するときにこの課題を選ぶか、メッセージに #{{ detail.n }} と書くと、ここに並びます。
+                    </p>
                     <ul v-else class="vers">
                         <li v-for="v in detail.versions" :key="v.oid">
-                            <UBadge :label="HOW[v.how]" size="sm" :color="v.how === 'close' ? 'success' : 'neutral'"
-                                variant="subtle" />
+                            <UBadge :label="HOW[v.how]" size="sm" :color="v.how === 'close' ? 'success' : 'neutral'" variant="subtle" />
                             <UTooltip :text="app.currentDoc ? '改定履歴で開く' : '文書を開いていると、改定履歴で見られます'">
-                                <button class="oid" :disabled="!app.currentDoc" @click="openVersion(v.oid)">{{
-                                    short(v.oid)
-                                    }}</button>
+                                <button class="oid" :disabled="!app.currentDoc" @click="openVersion(v.oid)">{{ short(v.oid) }}</button>
                             </UTooltip>
                             <span class="vmsg">{{ v.message.split('\n')[0] }}</span>
                             <span class="cd-muted">{{ v.at ? fmtDate(v.at, 'ymd') : '' }}</span>
@@ -302,14 +327,15 @@ onMounted(async () => {
                     <template v-if="detail.drafts.length">
                         <h4>紐付いた改定案（現行版に反映すると閉じます）</h4>
                         <ul class="vers">
-                            <li v-for="b in detail.drafts" :key="b">
-                                <UIcon name="i-lucide-git-branch" />{{ b.replace(/^案\//, '') }}
-                            </li>
+                            <li v-for="b in detail.drafts" :key="b"><UIcon name="i-lucide-git-branch" />{{ b.replace(/^案\//, '') }}</li>
                         </ul>
                     </template>
 
-                    <h4>コメント<span v-if="detail.comments.some((c) => c.kind === 'user')" class="cd-muted count">{{
-                        detail.comments.filter((c) => c.kind === 'user').length }}</span></h4>
+                    <h4>
+                        コメント<span v-if="detail.comments.some((c) => c.kind === 'user')" class="cd-muted count">{{
+                            detail.comments.filter((c) => c.kind === 'user').length
+                        }}</span>
+                    </h4>
                     <ol class="thread">
                         <template v-for="c in detail.comments" :key="c.id">
                             <li v-if="c.kind === 'user'" class="comment">
@@ -324,8 +350,7 @@ onMounted(async () => {
                                 <UIcon :name="c.kind === 'close' ? 'i-lucide-circle-check' : 'i-lucide-link'" />
                                 <span>{{ c.by ?? '' }} が版</span>
                                 <UTooltip :text="app.currentDoc ? '改定履歴で開く' : '文書を開いていると、改定履歴で見られます'">
-                                    <button class="oid" :disabled="!app.currentDoc" @click="openVersion(c.oid!)">{{
-                                        short(c.oid!) }}</button>
+                                    <button class="oid" :disabled="!app.currentDoc" @click="openVersion(c.oid!)">{{ short(c.oid!) }}</button>
                                 </UTooltip>
                                 <span>{{ EVENT[c.kind] }}</span>
                                 <span class="at">{{ fmtDate(c.at, 'ymdhm') }}</span>
@@ -333,12 +358,18 @@ onMounted(async () => {
                         </template>
                     </ol>
                     <div class="composer">
-                        <UTextarea v-model="draft" :rows="3" autoresize :maxrows="12" class="w-full"
-                            placeholder="コメントを書く（Markdown が使えます）" @keydown="onDraftKey" />
+                        <UTextarea
+                            v-model="draft"
+                            :rows="3"
+                            autoresize
+                            :maxrows="12"
+                            class="w-full"
+                            placeholder="コメントを書く（Markdown が使えます）"
+                            @keydown="onDraftKey"
+                        />
                         <div class="c-foot">
                             <span class="cd-muted hint">{{ MOD_KEY }}＋Enter で送信</span>
-                            <UButton label="コメントする" icon="i-lucide-send" size="sm" :loading="posting"
-                                :disabled="!draft.trim()" @click="postComment" />
+                            <UButton label="コメントする" icon="i-lucide-send" size="sm" :loading="posting" :disabled="!draft.trim()" @click="postComment" />
                         </div>
                     </div>
                 </template>
@@ -350,17 +381,19 @@ onMounted(async () => {
             </section>
         </div>
 
-        <UModal :open="!!picker" :title="picker === 'close' ? `#${detail?.n} を閉じる` : `#${detail?.n} に版を紐付ける`"
+        <UModal
+            :open="!!picker"
+            :title="picker === 'close' ? `#${detail?.n} を閉じる` : `#${detail?.n} に版を紐付ける`"
             :description="picker === 'close' ? '解決した版を選ぶと、課題に記録します（選ばなくても閉じられます）。' : '紐付ける版を選びます。'"
-            @update:open="(v) => !v && (picker = null)">
+            @update:open="(v) => !v && (picker = null)"
+        >
             <template #body>
                 <USelect v-model="pickOid" :items="versionItems" class="w-full" />
             </template>
             <template #footer>
                 <div class="cd-modal-foot">
                     <UButton label="やめる" color="neutral" variant="outline" @click="picker = null" />
-                    <UButton :label="picker === 'close' ? '閉じる' : '紐付ける'" :disabled="picker === 'link' && !pickOid"
-                        @click="confirmPicker" />
+                    <UButton :label="picker === 'close' ? '閉じる' : '紐付ける'" :disabled="picker === 'link' && !pickOid" @click="confirmPicker" />
                 </div>
             </template>
         </UModal>

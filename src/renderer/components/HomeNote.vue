@@ -51,14 +51,22 @@ function onKey(e: KeyboardEvent) {
     <section class="cd-side-sec">
         <SectionHead label="メモ" icon="i-lucide-notebook-text">
             <UTooltip v-if="!editing && text" text="編集">
-                <UButton icon="i-lucide-pencil" size="xs" square color="neutral" variant="ghost" aria-label="メモを編集"
-                    @click="edit" />
+                <UButton icon="i-lucide-pencil" size="xs" square color="neutral" variant="ghost" aria-label="メモを編集" @click="edit" />
             </UTooltip>
         </SectionHead>
         <div v-if="editing" class="edit" @keydown="onKey">
-            <UTextarea v-model="draft" :rows="5" autoresize :maxrows="14" class="cd-full" autofocus
-                placeholder="例：〇〇様からの依頼分。担当：山田。次回の見直しは2027年4月。" />
-            <p class="cd-muted hint">見出し（#）と箇条書き（-）を使えます。保存すると版として記録します。同期すると他の編集者も閲覧可能です。{{ keys('Ctrl+Enter') }} で保存。</p>
+            <UTextarea
+                v-model="draft"
+                :rows="5"
+                autoresize
+                :maxrows="14"
+                class="cd-full"
+                autofocus
+                placeholder="例：〇〇様からの依頼分。担当：山田。次回の見直しは2027年4月。"
+            />
+            <p class="cd-muted hint">
+                見出し（#）と箇条書き（-）を使えます。保存すると版として記録します。同期すると他の編集者も閲覧可能です。{{ keys('Ctrl+Enter') }} で保存。
+            </p>
             <div class="row">
                 <span class="cd-grow" />
                 <UButton label="やめる" size="xs" color="neutral" variant="outline" @click="editing = false" />
@@ -68,12 +76,9 @@ function onKey(e: KeyboardEvent) {
         <template v-else-if="text">
             <!-- eslint-disable-next-line vue/no-v-html -- markdown-it は html を無効にしている -->
             <div ref="body" class="note" :class="{ clamp: !expanded }" v-html="md.render(text)" />
-            <button v-if="long || expanded" class="more" @click="expanded = !expanded">{{ expanded ? '短く表示' : '続きを読む'
-                }}</button>
+            <button v-if="long || expanded" class="more" @click="expanded = !expanded">{{ expanded ? '短く表示' : '続きを読む' }}</button>
         </template>
-        <button v-else-if="loaded" class="empty" @click="edit">
-            <UIcon name="i-lucide-plus" />依頼主・担当者・連絡先・次回の見直し予定などを書いておく
-        </button>
+        <button v-else-if="loaded" class="empty" @click="edit"><UIcon name="i-lucide-plus" />依頼主・担当者・連絡先・次回の見直し予定などを書いておく</button>
     </section>
 </template>
 

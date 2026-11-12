@@ -39,7 +39,13 @@ const sendNote = computed(() => {
     const s = status.value
     if (!s) return ''
     if (s.local) return '文書を PC の外に送信しません。'
-    const to = { anthropic: 'Anthropic の Claude API', openai: '設定した接続先', ollama: 'Ollama', openrouter: 'OpenRouter と、選んだモデルの会社', github: 'GitHub Models' }[s.config.provider]
+    const to = {
+        anthropic: 'Anthropic の Claude API',
+        openai: '設定した接続先',
+        ollama: 'Ollama',
+        openrouter: 'OpenRouter と、選んだモデルの会社',
+        github: 'GitHub Models',
+    }[s.config.provider]
     return `文書の内容は ${to} に送信されます。`
 })
 const useSelection = ref(true)
@@ -148,19 +154,30 @@ function openSettings() {
         <header class="head">
             <UIcon name="i-lucide-sparkles" class="mark" />
             <span class="title">AI</span>
-            <button v-if="status?.ready" class="which"
-                :title="status.local ? 'ローカル の中で動いています（文書を PC の外に送信しません）' : '設定の「AI」で変えられます'" @click="openSettings">
+            <button
+                v-if="status?.ready"
+                class="which"
+                :title="status.local ? 'ローカル の中で動いています（文書を PC の外に送信しません）' : '設定の「AI」で変えられます'"
+                @click="openSettings"
+            >
                 <UIcon v-if="status.local" name="i-lucide-shield-check" />{{ status.label }}
             </button>
             <span class="cd-grow" />
             <UTooltip text="新しい会話">
-                <UButton icon="i-lucide-message-square-plus" size="xs" square color="neutral" variant="ghost"
-                    :disabled="!turns.length" aria-label="新しい会話" @click="reset" />
+                <UButton
+                    icon="i-lucide-message-square-plus"
+                    size="xs"
+                    square
+                    color="neutral"
+                    variant="ghost"
+                    :disabled="!turns.length"
+                    aria-label="新しい会話"
+                    @click="reset"
+                />
             </UTooltip>
             <PaneControls v-if="pane" :pane="pane" side="right" label="AI" />
             <UTooltip text="閉じる">
-                <UButton icon="i-lucide-x" size="xs" square color="neutral" variant="ghost" aria-label="閉じる"
-                    @click="emit('close')" />
+                <UButton icon="i-lucide-x" size="xs" square color="neutral" variant="ghost" aria-label="閉じる" @click="emit('close')" />
             </UTooltip>
         </header>
 
@@ -174,8 +191,7 @@ function openSettings() {
             <div ref="list" class="list">
                 <div v-if="!turns.length" class="presets">
                     <p class="cd-muted lead">この文書について、AI に頼めます。</p>
-                    <button v-for="p in AI_PRESETS" :key="p.id" class="preset" :disabled="running"
-                        @click="send(p.prompt)">
+                    <button v-for="p in AI_PRESETS" :key="p.id" class="preset" :disabled="running" @click="send(p.prompt)">
                         <UIcon :name="p.icon" class="icon" />
                         <span>
                             <span class="label">{{ p.label }}</span>
@@ -186,43 +202,44 @@ function openSettings() {
                 <div v-for="(t, i) in turns" :key="i" :class="['turn', t.role]">
                     <div v-if="t.role === 'user'" class="bubble">{{ t.text }}</div>
                     <template v-else>
-                        <details v-if="t.thinking.trim()" class="reasoning"
-                            :open="running && i === turns.length - 1 && !t.text">
+                        <details v-if="t.thinking.trim()" class="reasoning" :open="running && i === turns.length - 1 && !t.text">
                             <summary>{{ running && i === turns.length - 1 && !t.text ? '思考中…' : '思考' }}</summary>
                             <div class="reasoning-body">{{ t.thinking.trim() }}</div>
                         </details>
                         <ul v-if="t.tools.length" class="tools">
-                            <li v-for="(l, j) in t.tools" :key="j">
-                                <UIcon name="i-lucide-wrench" />{{ l }}
-                            </li>
+                            <li v-for="(l, j) in t.tools" :key="j"><UIcon name="i-lucide-wrench" />{{ l }}</li>
                         </ul>
                         <!-- eslint-disable-next-line vue/no-v-html -- markdown-it は html を無効にしている -->
                         <div v-if="t.text" class="answer" v-html="t.html" />
                         <div v-else-if="running && i === turns.length - 1 && !t.thinking.trim()" class="thinking">
                             <UIcon name="i-lucide-loader" class="spin" />考えています…
                         </div>
-                        <UAlert v-if="t.error" :description="t.error" color="error" variant="subtle"
-                            icon="i-lucide-circle-alert" />
+                        <UAlert v-if="t.error" :description="t.error" color="error" variant="subtle" icon="i-lucide-circle-alert" />
                     </template>
                 </div>
             </div>
 
             <div v-if="canRevert && !running" class="revert">
                 <span class="cd-muted">AI が文書を書き換えました。版はまだ保存していません。</span>
-                <UButton label="依頼の前に戻す" icon="i-lucide-undo-2" size="xs" color="neutral" variant="outline"
-                    @click="emit('revert')" />
+                <UButton label="依頼の前に戻す" icon="i-lucide-undo-2" size="xs" color="neutral" variant="outline" @click="emit('revert')" />
             </div>
 
             <footer class="foot">
-                <UTextarea v-model="input" :rows="2" autoresize :maxrows="8" class="cd-full"
-                    placeholder="例：第5条の試用期間を2か月にして、延長の規定も足して" :disabled="running" @keydown="onKey" />
+                <UTextarea
+                    v-model="input"
+                    :rows="2"
+                    autoresize
+                    :maxrows="8"
+                    class="cd-full"
+                    placeholder="例：第5条の試用期間を2か月にして、延長の規定も足して"
+                    :disabled="running"
+                    @keydown="onKey"
+                />
                 <div class="row">
                     <UCheckbox v-model="useSelection" label="選んでいる部分を伝える" size="xs" />
                     <span class="cd-grow" />
-                    <UButton v-if="running" label="止める" icon="i-lucide-square" size="sm" color="neutral"
-                        variant="outline" @click="stop" />
-                    <UButton v-else label="頼む" icon="i-lucide-send" size="sm" :disabled="!input.trim()"
-                        @click="send()" />
+                    <UButton v-if="running" label="止める" icon="i-lucide-square" size="sm" color="neutral" variant="outline" @click="stop" />
+                    <UButton v-else label="頼む" icon="i-lucide-send" size="sm" :disabled="!input.trim()" @click="send()" />
                 </div>
                 <p class="note">{{ sendNote }}{{ keys('Ctrl+Enter') }} で送信</p>
             </footer>

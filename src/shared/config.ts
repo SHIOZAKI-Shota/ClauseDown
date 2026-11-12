@@ -79,7 +79,7 @@ export function readConfig(md: string): ConfigResult {
                 warnings.push(`${choice.label}（${full}）の値「${String(value)}」は使えません`)
                 continue
             }
-            ; (config as any)[section][key] = normalizeValue(section, key, value)
+            ;(config as any)[section][key] = normalizeValue(section, key, value)
         }
     }
     return { config, warnings }
@@ -93,7 +93,7 @@ export function getConfigValue(config: DocConfig, key: ConfigKey): string {
 export function setConfigValue(config: DocConfig, key: ConfigKey, value: string): DocConfig {
     const next = structuredClone(config)
     const [section, name] = key.split('.')
-        ; (next as any)[section][name] = normalizeValue(section, name, value)
+    ;(next as any)[section][name] = normalizeValue(section, name, value)
     return next
 }
 
@@ -103,13 +103,15 @@ export function serializeConfig(config: DocConfig): string {
         const [section, name] = key.split('.')
         const value = (config as any)[section][name]
         if (value !== (DEFAULT_CONFIG as any)[section][name]) {
-            ; (diff[section] ??= {})[name] = value
+            ;(diff[section] ??= {})[name] = value
         }
     }
     if (Object.keys(diff).length === 0) return ''
     const lines = Object.entries(diff).map(
         ([section, values]) =>
-            `${section}: { ${Object.entries(values).map(([k, v]) => `${k}: ${String(v)}`).join(', ')} }`,
+            `${section}: { ${Object.entries(values)
+                .map(([k, v]) => `${k}: ${String(v)}`)
+                .join(', ')} }`,
     )
     return lines.join('\n')
 }

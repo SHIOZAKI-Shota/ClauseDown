@@ -297,8 +297,7 @@ const editMenu = computed<DropdownMenuItem[][]>(() => [
 function articleHere() {
     let hit: { label: string; title: string } | null = null
     for (const ch of doc.value.chapters)
-        for (const a of ch.articles)
-            if (!a.deleted && a.line >= 0 && a.line <= cursorLine.value) hit = { label: a.label, title: articleTitle(a, doc.value) }
+        for (const a of ch.articles) if (!a.deleted && a.line >= 0 && a.line <= cursorLine.value) hit = { label: a.label, title: articleTitle(a, doc.value) }
     return hit
 }
 function issueHere() {
@@ -318,7 +317,9 @@ function goIssue(kind: 'error' | 'warning') {
 }
 watch(text, () => (issueNote.value = null))
 const showClauses = ref(false)
-const clauseLibrary = computed(() => (isEnabled(app.settings, 'clauseLibrary') ? app.settings?.repos.find((r) => r.dir === app.settings?.clauseLibrary) ?? null : null))
+const clauseLibrary = computed(() =>
+    isEnabled(app.settings, 'clauseLibrary') ? (app.settings?.repos.find((r) => r.dir === app.settings?.clauseLibrary) ?? null) : null,
+)
 function openClauses() {
     if (!clauseLibrary.value) return app.notify('設定の「Developer」で、条項ライブラリに使うリポジトリを選んでください', true)
     showClauses.value = true
@@ -389,9 +390,7 @@ const insertMenu = computed<DropdownMenuItem[][]>(() => [
         { label: '改ページ（この行の前）', icon: 'i-lucide-separator-horizontal', onSelect: addPageBreak },
         { label: '書式を付ける…', icon: 'i-lucide-type', onSelect: addFormat },
     ],
-    ...(isEnabled(app.settings, 'clauseLibrary')
-        ? [[{ label: '条項ライブラリから…', icon: 'i-lucide-library', onSelect: openClauses }]]
-        : []),
+    ...(isEnabled(app.settings, 'clauseLibrary') ? [[{ label: '条項ライブラリから…', icon: 'i-lucide-library', onSelect: openClauses }]] : []),
 ])
 function onShortcut(kind: 'article' | 'paragraph' | 'item') {
     if (kind === 'article') addArticle()
@@ -603,28 +602,45 @@ defineShortcuts({ meta_s: { handler: () => void saveShortcut(), usingInput: true
 const position = computed(() => positionLabel(doc.value, cursorLine.value))
 const chars = computed(() => settled.value.replace(/<!--[\s\S]*?-->/g, '').replace(/\s/g, '').length)
 const articleCount = computed(() => doc.value.chapters.reduce((n, c) => n + c.articles.length, 0))
-const saveState = computed(() =>
-    saving.value === 'pending' ? '書き込み中…' : changed.value ? '版を保存していない変更があります' : '保存済みの版と同じです',
-)
+const saveState = computed(() => (saving.value === 'pending' ? '書き込み中…' : changed.value ? '版を保存していない変更があります' : '保存済みの版と同じです'))
 </script>
 
 <template>
     <div v-if="loaded" class="editor-page">
         <div ref="toolbar" class="cd-toolbar toolbar">
             <UTooltip text="文書・目次">
-                <UButton icon="i-lucide-list-tree" size="sm" square
+                <UButton
+                    icon="i-lucide-list-tree"
+                    size="sm"
+                    square
                     :color="outlinePane.state.value.collapsed ? 'neutral' : 'primary'"
-                    :variant="outlinePane.state.value.collapsed ? 'ghost' : 'soft'" @click="outlinePane.toggle()" />
+                    :variant="outlinePane.state.value.collapsed ? 'ghost' : 'soft'"
+                    @click="outlinePane.toggle()"
+                />
             </UTooltip>
             <span class="sep" />
             <UFieldGroup size="sm">
                 <UTooltip :text="`元に戻す（${keys('Ctrl+Z')}）`">
-                    <UButton icon="i-lucide-undo-2" square color="neutral" variant="outline" :disabled="!history.undo"
-                        aria-label="元に戻す" @click="editor?.undo()" />
+                    <UButton
+                        icon="i-lucide-undo-2"
+                        square
+                        color="neutral"
+                        variant="outline"
+                        :disabled="!history.undo"
+                        aria-label="元に戻す"
+                        @click="editor?.undo()"
+                    />
                 </UTooltip>
                 <UTooltip :text="`やり直す（${REDO_KEYS}）`">
-                    <UButton icon="i-lucide-redo-2" square color="neutral" variant="outline" :disabled="!history.redo"
-                        aria-label="やり直す" @click="editor?.redo()" />
+                    <UButton
+                        icon="i-lucide-redo-2"
+                        square
+                        color="neutral"
+                        variant="outline"
+                        :disabled="!history.redo"
+                        aria-label="やり直す"
+                        @click="editor?.redo()"
+                    />
                 </UTooltip>
             </UFieldGroup>
             <UFieldGroup size="sm">
@@ -643,56 +659,91 @@ const saveState = computed(() =>
             </UFieldGroup>
             <UTooltip :text="compact ? '挿入（章・条・附則・表・図・画像など）' : ''">
                 <UDropdownMenu :items="insertMenu" :content="{ onCloseAutoFocus: backToEditor }">
-                    <UButton :label="compact ? undefined : '挿入'" aria-label="挿入" icon="i-lucide-square-plus"
-                        trailing-icon="i-lucide-chevron-down" size="sm" color="neutral" variant="outline" />
+                    <UButton
+                        :label="compact ? undefined : '挿入'"
+                        aria-label="挿入"
+                        icon="i-lucide-square-plus"
+                        trailing-icon="i-lucide-chevron-down"
+                        size="sm"
+                        color="neutral"
+                        variant="outline"
+                    />
                 </UDropdownMenu>
             </UTooltip>
             <UTooltip :text="compact ? '書式設定' : ''">
-                <UButton :label="compact ? undefined : '書式設定'" aria-label="書式設定" icon="i-lucide-sliders-horizontal"
-                    size="sm" :color="showConfig ? 'primary' : 'neutral'" :variant="showConfig ? 'soft' : 'outline'"
-                    @click="showConfig = !showConfig">
+                <UButton
+                    :label="compact ? undefined : '書式設定'"
+                    aria-label="書式設定"
+                    icon="i-lucide-sliders-horizontal"
+                    size="sm"
+                    :color="showConfig ? 'primary' : 'neutral'"
+                    :variant="showConfig ? 'soft' : 'outline'"
+                    @click="showConfig = !showConfig"
+                >
                     <template v-if="doc.warnings.length" #trailing>
                         <UBadge :label="String(doc.warnings.length)" color="error" size="sm" />
                     </template>
                 </UButton>
             </UTooltip>
             <span class="cd-grow" />
-            <SegmentSwitch v-model="layout.mode" aria-label="表示" :items="[
-                { value: 'edit', icon: 'i-lucide-square-pen', tooltip: '編集のみ' },
-                { value: 'split', icon: 'i-lucide-columns-2', tooltip: '編集とプレビュー' },
-                { value: 'preview', icon: 'i-lucide-book-open', tooltip: 'プレビューのみ' },
-            ]" />
+            <SegmentSwitch
+                v-model="layout.mode"
+                aria-label="表示"
+                :items="[
+                    { value: 'edit', icon: 'i-lucide-square-pen', tooltip: '編集のみ' },
+                    { value: 'split', icon: 'i-lucide-columns-2', tooltip: '編集とプレビュー' },
+                    { value: 'preview', icon: 'i-lucide-book-open', tooltip: 'プレビューのみ' },
+                ]"
+            />
             <UTooltip text="AI に編集・チェックを頼む">
-                <UButton label="AI" icon="i-lucide-sparkles" size="sm" :color="layout.ai ? 'primary' : 'neutral'"
-                    :variant="layout.ai ? 'soft' : 'outline'" @click="layout.ai = !layout.ai" />
+                <UButton
+                    label="AI"
+                    icon="i-lucide-sparkles"
+                    size="sm"
+                    :color="layout.ai ? 'primary' : 'neutral'"
+                    :variant="layout.ai ? 'soft' : 'outline'"
+                    @click="layout.ai = !layout.ai"
+                />
             </UTooltip>
             <span class="sep" />
             <UTooltip v-if="changed" :text="compact ? '変更を取り消す' : ''">
-                <UButton :label="compact ? undefined : '変更を取り消す'" aria-label="変更を取り消す"
-                    :icon="compact ? 'i-lucide-rotate-ccw' : undefined" size="sm" color="error" variant="ghost"
-                    @click="confirmDiscard = true" />
+                <UButton
+                    :label="compact ? undefined : '変更を取り消す'"
+                    aria-label="変更を取り消す"
+                    :icon="compact ? 'i-lucide-rotate-ccw' : undefined"
+                    size="sm"
+                    color="error"
+                    variant="ghost"
+                    @click="confirmDiscard = true"
+                />
             </UTooltip>
-            <UDropdownMenu :items="[
-                { label: 'PDF に書き出す', icon: 'i-lucide-file-text', onSelect: () => exportAs('pdf') },
-                { label: 'Word に書き出す', icon: 'i-lucide-file-type', onSelect: () => exportAs('docx') },
-                { label: 'Markdown（法令の形・houritsu）に書き出す', icon: 'i-lucide-file-code', onSelect: () => exportAs('md') },
-            ]">
-                <UButton :label="compact ? undefined : '書き出し'" aria-label="書き出し"
-                    :title="compact ? '書き出し（PDF・Word・Markdown）' : undefined" icon="i-lucide-download"
-                    trailing-icon="i-lucide-chevron-down" size="sm" color="neutral" variant="outline" />
+            <UDropdownMenu
+                :items="[
+                    { label: 'PDF に書き出す', icon: 'i-lucide-file-text', onSelect: () => exportAs('pdf') },
+                    { label: 'Word に書き出す', icon: 'i-lucide-file-type', onSelect: () => exportAs('docx') },
+                    { label: 'Markdown（法令の形・houritsu）に書き出す', icon: 'i-lucide-file-code', onSelect: () => exportAs('md') },
+                ]"
+            >
+                <UButton
+                    :label="compact ? undefined : '書き出し'"
+                    aria-label="書き出し"
+                    :title="compact ? '書き出し（PDF・Word・Markdown）' : undefined"
+                    icon="i-lucide-download"
+                    trailing-icon="i-lucide-chevron-down"
+                    size="sm"
+                    color="neutral"
+                    variant="outline"
+                />
             </UDropdownMenu>
             <UButton label="版を保存" icon="i-lucide-save" size="sm" :disabled="!changed" @click="openSave" />
         </div>
-        <ConfigPanel v-if="showConfig" :config="doc.config" :warnings="doc.warnings" @change="changeConfig"
-            @preset="preset" />
+        <ConfigPanel v-if="showConfig" :config="doc.config" :warnings="doc.warnings" @change="changeConfig" @preset="preset" />
         <div ref="body" class="body">
-            <PaneRail v-if="outlinePane.state.value.collapsed" :pane="outlinePane" side="left" label="文書・目次"
-                icon="i-lucide-list-tree" />
+            <PaneRail v-if="outlinePane.state.value.collapsed" :pane="outlinePane" side="left" label="文書・目次" icon="i-lucide-list-tree" />
             <template v-else>
                 <div class="ed-left" :style="paneStyle(outlinePane)">
                     <DocTree class="ed-docs" :pane="outlinePane" />
-                    <EditorOutline class="ed-outline-pane" :legal="doc" :line="cursorLine"
-                        @jump="(l) => editor?.goToLine(l)" />
+                    <EditorOutline class="ed-outline-pane" :legal="doc" :line="cursorLine" @jump="(l) => editor?.goToLine(l)" />
                 </div>
                 <PaneResizer :pane="outlinePane" side="left" label="文書・目次" />
             </template>
@@ -706,10 +757,21 @@ const saveState = computed(() =>
                 </div>
                 <UContextMenu :items="editMenu" size="sm">
                     <div class="pane-body" @wheel="zoomEditor" @contextmenu="onEditorMenu">
-                        <CodeEditor ref="editor" v-model="text" :legal="doc" :wrap="app.prefs.lineWrap"
-                            :proofread="app.prefs.proofread" :readonly="aiRunning" :diff-base="savedText"
-                            @cursor="onCursor" @scroll="onScroll" @shortcut="onShortcut" @history="(h) => (history = h)"
-                            @images="addImages" @issues="(n) => (issues = n)" />
+                        <CodeEditor
+                            ref="editor"
+                            v-model="text"
+                            :legal="doc"
+                            :wrap="app.prefs.lineWrap"
+                            :proofread="app.prefs.proofread"
+                            :readonly="aiRunning"
+                            :diff-base="savedText"
+                            @cursor="onCursor"
+                            @scroll="onScroll"
+                            @shortcut="onShortcut"
+                            @history="(h) => (history = h)"
+                            @images="addImages"
+                            @issues="(n) => (issues = n)"
+                        />
                     </div>
                 </UContextMenu>
             </div>
@@ -722,60 +784,99 @@ const saveState = computed(() =>
                         <UIcon v-if="pdfBusy" name="i-lucide-loader-circle" class="spin" aria-label="作成中" />
                     </span>
                     <div v-if="!showPrint" class="zoom">
-                        <USlider :model-value="app.prefs.previewZoom" :min="50" :max="200" :step="10" size="xs"
-                            class="zoom-slider" aria-label="プレビューの倍率" @update:model-value="setPreviewZoom" />
-                        <UInputNumber :model-value="app.prefs.previewZoom" :min="50" :max="200" :step="1" size="xs"
-                            class="zoom-input" aria-label="プレビューの倍率（%）" @update:model-value="setPreviewZoom" />
+                        <USlider
+                            :model-value="app.prefs.previewZoom"
+                            :min="50"
+                            :max="200"
+                            :step="10"
+                            size="xs"
+                            class="zoom-slider"
+                            aria-label="プレビューの倍率"
+                            @update:model-value="setPreviewZoom"
+                        />
+                        <UInputNumber
+                            :model-value="app.prefs.previewZoom"
+                            :min="50"
+                            :max="200"
+                            :step="1"
+                            size="xs"
+                            class="zoom-input"
+                            aria-label="プレビューの倍率（%）"
+                            @update:model-value="setPreviewZoom"
+                        />
                         <span class="zoom-unit">%</span>
                         <UTooltip text="エディタと拡縮を同期する">
-                            <UButton :icon="app.prefs.zoomLinked ? 'i-lucide-link' : 'i-lucide-unlink'" size="xs"
+                            <UButton
+                                :icon="app.prefs.zoomLinked ? 'i-lucide-link' : 'i-lucide-unlink'"
+                                size="xs"
                                 :color="app.prefs.zoomLinked ? 'primary' : 'neutral'"
-                                :variant="app.prefs.zoomLinked ? 'soft' : 'ghost'" aria-label="エディタと拡縮を同期する"
+                                :variant="app.prefs.zoomLinked ? 'soft' : 'ghost'"
+                                aria-label="エディタと拡縮を同期する"
                                 :aria-pressed="app.prefs.zoomLinked"
-                                @click="app.setPrefsLive({ zoomLinked: !app.prefs.zoomLinked })" />
+                                @click="app.setPrefsLive({ zoomLinked: !app.prefs.zoomLinked })"
+                            />
                         </UTooltip>
                     </div>
-                    <SegmentSwitch v-model="printKind" size="xs" aria-label="プレビューの種類" :items="PREVIEW_KINDS"
-                        class="kind" />
+                    <SegmentSwitch v-model="printKind" size="xs" aria-label="プレビューの種類" :items="PREVIEW_KINDS" class="kind" />
                     <PaneControls :pane="previewPane" :side="layout.ai ? 'left' : 'right'" label="プレビュー" />
                 </div>
                 <div v-if="showPrint" class="pane-body cd-canvas print-body">
                     <iframe v-if="pdfUrl" :src="pdfUrl" class="pdf" title="印刷プレビュー" />
                     <p v-if="pdfError" class="pdf-error">PDF を作れませんでした：{{ pdfError }}</p>
                 </div>
-                <div v-else ref="preview" class="pane-body cd-preview cd-canvas" @click="onPreviewClick"
-                    @wheel="zoomPreview">
+                <div v-else ref="preview" class="pane-body cd-preview cd-canvas" @click="onPreviewClick" @wheel="zoomPreview">
                     <div class="paper cd-paper" :style="{ zoom: app.prefs.previewZoom / 100 }" v-html="html" />
                 </div>
             </div>
-            <PaneRail v-if="mode === 'edit'" :pane="previewRail" side="right"
-                :label="squeezed ? 'プレビュー（AI を畳んで）' : 'プレビュー'" icon="i-lucide-book-open" />
+            <PaneRail
+                v-if="mode === 'edit'"
+                :pane="previewRail"
+                side="right"
+                :label="squeezed ? 'プレビュー（AI を畳んで）' : 'プレビュー'"
+                icon="i-lucide-book-open"
+            />
 
             <template v-if="layout.ai">
-                <PaneRail v-if="aiPane.state.value.collapsed" :pane="aiPane" side="right" label="AI"
-                    icon="i-lucide-sparkles" />
+                <PaneRail v-if="aiPane.state.value.collapsed" :pane="aiPane" side="right" label="AI" icon="i-lucide-sparkles" />
                 <PaneResizer v-else :pane="aiPane" side="right" label="AI" />
                 <!-- 畳んでも会話を残すため、v-if ではなく v-show で隠す -->
-                <AiPanel v-show="!aiPane.state.value.collapsed" :style="paneStyle(aiPane)" :pane="aiPane" :path="path"
-                    :selection="() => editor?.selectedText() ?? ''" :can-revert="aiChanged && beforeAi !== null"
-                    @start="onAiStart" @end="onAiEnd" @revert="revertAi" @close="layout.ai = false" />
+                <AiPanel
+                    v-show="!aiPane.state.value.collapsed"
+                    :style="paneStyle(aiPane)"
+                    :pane="aiPane"
+                    :path="path"
+                    :selection="() => editor?.selectedText() ?? ''"
+                    :can-revert="aiChanged && beforeAi !== null"
+                    @start="onAiStart"
+                    @end="onAiEnd"
+                    @revert="revertAi"
+                    @close="layout.ai = false"
+                />
             </template>
         </div>
         <footer class="cd-statusbar">
-            <span class="pos">
-                <UIcon name="i-lucide-map-pin" />{{ position || '—' }}
-            </span>
+            <span class="pos"> <UIcon name="i-lucide-map-pin" />{{ position || '—' }} </span>
             <span>{{ articleCount }} 条</span>
             <span>{{ chars.toLocaleString() }} 文字</span>
             <UTooltip :text="`次の誤り（赤い波線）へ。右クリックで一覧を開きます（${keys('Ctrl+Shift+M')}）`">
-                <button class="issue err" :class="{ none: !issues.errors }" :disabled="mode === 'preview'"
-                    @click="goIssue('error')" @contextmenu.prevent="editor?.openIssues()">
+                <button
+                    class="issue err"
+                    :class="{ none: !issues.errors }"
+                    :disabled="mode === 'preview'"
+                    @click="goIssue('error')"
+                    @contextmenu.prevent="editor?.openIssues()"
+                >
                     <UIcon name="i-lucide-circle-x" />{{ issues.errors }}
                 </button>
             </UTooltip>
             <UTooltip :text="`次の注意（黄色の波線）へ。右クリックで一覧を開きます（${keys('Ctrl+Shift+M')}）`">
-                <button class="issue warn" :class="{ none: !issues.warnings }" :disabled="mode === 'preview'"
-                    @click="goIssue('warning')" @contextmenu.prevent="editor?.openIssues()">
+                <button
+                    class="issue warn"
+                    :class="{ none: !issues.warnings }"
+                    :disabled="mode === 'preview'"
+                    @click="goIssue('warning')"
+                    @contextmenu.prevent="editor?.openIssues()"
+                >
                     <UIcon name="i-lucide-triangle-alert" />{{ issues.warnings }}
                 </button>
             </UTooltip>
@@ -783,22 +884,39 @@ const saveState = computed(() =>
             <span v-if="issueNote" class="issue-note" :class="issueNote.kind">{{ issueNote.text }}</span>
             <span v-else class="hint">[[ で条参照 ／ Tab で項→号 ／ {{ keys('Ctrl+F') }} で検索</span>
             <span :class="['save', saving === 'pending' ? 'pending' : changed ? 'dirty' : 'clean']">
-                <UIcon
-                    :name="saving === 'pending' ? 'i-lucide-loader' : changed ? 'i-lucide-circle-dot' : 'i-lucide-circle-check'" />
+                <UIcon :name="saving === 'pending' ? 'i-lucide-loader' : changed ? 'i-lucide-circle-dot' : 'i-lucide-circle-check'" />
                 {{ saveState }}
             </span>
         </footer>
-        <PropModal v-if="propFor" :sample="propFor.sample" :inline="propFor.inline" :can-inline="propFor.inline"
-            @close="propFor = null" @apply="applyProp" />
-        <ClauseLibraryModal v-if="showClauses && clauseLibrary" :library-dir="clauseLibrary.dir"
-            :library-name="clauseLibrary.name" :target="doc" :target-text="text" @close="showClauses = false"
-            @insert="insertClause" />
-        <SaveVersionModal v-if="showSave" :busy="app.busy" :branch-label="app.currentBranch?.label ?? ''"
-            :on-main="!app.onDraft" :has-history="app.branches.length > 0" :new-doc="newDoc"
-            :doc-title="doc.title || path.replace(/\.md$/i, '').split('/').pop()!" @close="showSave = false"
-            @save="saveVersion" />
-        <ConfirmModal v-model:open="confirmDiscard" title="変更を取り消す" description="最後に保存した版のあとの変更をすべて取り消します。"
-            confirm-label="取り消す" color="error" @confirm="discard" />
+        <PropModal v-if="propFor" :sample="propFor.sample" :inline="propFor.inline" :can-inline="propFor.inline" @close="propFor = null" @apply="applyProp" />
+        <ClauseLibraryModal
+            v-if="showClauses && clauseLibrary"
+            :library-dir="clauseLibrary.dir"
+            :library-name="clauseLibrary.name"
+            :target="doc"
+            :target-text="text"
+            @close="showClauses = false"
+            @insert="insertClause"
+        />
+        <SaveVersionModal
+            v-if="showSave"
+            :busy="app.busy"
+            :branch-label="app.currentBranch?.label ?? ''"
+            :on-main="!app.onDraft"
+            :has-history="app.branches.length > 0"
+            :new-doc="newDoc"
+            :doc-title="doc.title || path.replace(/\.md$/i, '').split('/').pop()!"
+            @close="showSave = false"
+            @save="saveVersion"
+        />
+        <ConfirmModal
+            v-model:open="confirmDiscard"
+            title="変更を取り消す"
+            description="最後に保存した版のあとの変更をすべて取り消します。"
+            confirm-label="取り消す"
+            color="error"
+            @confirm="discard"
+        />
     </div>
 </template>
 

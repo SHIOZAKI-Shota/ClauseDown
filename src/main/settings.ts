@@ -42,7 +42,7 @@ async function readSettings(): Promise<AppSettings> {
         console.error('[settings] 設定を読めませんでした', e)
         const bak = await readJson(`${path}.bak`).catch(() => null)
         if (bak) return normalize(bak)
-        await fs.rename(path, `${path}.broken-${Date.now()}`).catch(() => { })
+        await fs.rename(path, `${path}.broken-${Date.now()}`).catch(() => {})
         return structuredClone(DEFAULT)
     }
 }
@@ -56,7 +56,7 @@ export async function saveSettings(s: AppSettings): Promise<void> {
     const next = normalize(s)
     const path = settingsPath()
     await fs.mkdir(app.getPath('userData'), { recursive: true })
-    await fs.copyFile(path, `${path}.bak`).catch(() => { })
+    await fs.copyFile(path, `${path}.bak`).catch(() => {})
     await writeAtomic(path, JSON.stringify(next, null, 2))
     cached = next
 }
@@ -65,7 +65,7 @@ let settingsQueue: Promise<unknown> = Promise.resolve()
 
 export function updateSettings(fn: (s: AppSettings) => AppSettings | Promise<AppSettings>): Promise<void> {
     const next = settingsQueue.then(async () => saveSettings(await fn(await loadSettings())))
-    settingsQueue = next.catch(() => { })
+    settingsQueue = next.catch(() => {})
     return next
 }
 
@@ -133,7 +133,7 @@ function updateStore(fn: (s: Store) => void): Promise<void> {
         fn(s)
         await saveStore(s)
     })
-    storeQueue = next.catch(() => { })
+    storeQueue = next.catch(() => {})
     return next
 }
 

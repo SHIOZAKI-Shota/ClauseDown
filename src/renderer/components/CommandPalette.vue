@@ -125,8 +125,13 @@ const groups = computed(() => [
 <template>
     <UModal v-model:open="open" :ui="{ content: 'cd-palette' }">
         <template #content>
-            <UCommandPalette v-model:search-term="term" :groups="groups" placeholder="文書・条の見出し・改定案・操作を検索…" close
-                @update:open="(v: boolean) => !v && (open = false)" />
+            <UCommandPalette
+                v-model:search-term="term"
+                :groups="groups"
+                placeholder="文書・条の見出し・改定案・操作を検索…"
+                close
+                @update:open="(v: boolean) => !v && (open = false)"
+            />
         </template>
     </UModal>
 </template>

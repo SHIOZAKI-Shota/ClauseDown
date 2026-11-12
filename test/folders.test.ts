@@ -2,17 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { allFolders, findFolder, folderTree, groupByFolder, isUnder } from '../src/renderer/utils/folders'
 
 const d = (path: string, title: string) => ({ path, title, changed: false })
-const DOCS = [
-    d('株式会社A/就業規則.md', '就業規則'),
-    d('株式会社A/賃金規程.md', '賃金規程'),
-    d('B商店/就業規則.md', '就業規則'),
-    d('メモ.md', 'メモ'),
-]
+const DOCS = [d('株式会社A/就業規則.md', '就業規則'), d('株式会社A/賃金規程.md', '賃金規程'), d('B商店/就業規則.md', '就業規則'), d('メモ.md', 'メモ')]
 
 describe('groupByFolder', () => {
     it('クライアントごとにまとめ、フォルダなしは最後', () => {
         expect(groupByFolder(DOCS).map((g) => [g.folder, g.docs.length])).toEqual([
-            ['B商店', 1], ['株式会社A', 2], ['', 1],
+            ['B商店', 1],
+            ['株式会社A', 2],
+            ['', 1],
         ])
     })
     it('クライアント名と文書名を組み合わせて検索できる', () => {
@@ -26,12 +23,7 @@ describe('groupByFolder', () => {
 })
 
 describe('folderTree', () => {
-    const docs = [
-        d('laws/act/412/a.md', 'A'),
-        d('laws/act/323/b.md', 'B'),
-        d('laws/act/1000/c.md', 'C'),
-        d('top.md', 'T'),
-    ]
+    const docs = [d('laws/act/412/a.md', 'A'), d('laws/act/323/b.md', 'B'), d('laws/act/1000/c.md', 'C'), d('top.md', 'T')]
     const tree = folderTree(docs)
 
     it('階層ごとに文書の数を数える', () => {

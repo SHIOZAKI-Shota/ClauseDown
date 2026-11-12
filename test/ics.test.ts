@@ -27,7 +27,10 @@ const events = (s: string) => unfold(s).split('BEGIN:VEVENT').slice(1)
 
 describe('期日の iCalendar', () => {
     it('終日の予定にし、期間の終わりは翌日、知らせる日の 9 時に鳴らす', () => {
-        const s = toIcs([item({}), item({ key: 'k2', kind: 'start', kindLabel: '開始', title: '契約期間', date: '2027-01-01', end: '2027-03-31', remind: 0 })], 'テスト')
+        const s = toIcs(
+            [item({}), item({ key: 'k2', kind: 'start', kindLabel: '開始', title: '契約期間', date: '2027-01-01', end: '2027-03-31', remind: 0 })],
+            'テスト',
+        )
         expect(s.startsWith('BEGIN:VCALENDAR\r\n')).toBe(true)
         expect(s.endsWith('END:VCALENDAR\r\n')).toBe(true)
         const [a, b] = events(s)

@@ -113,8 +113,7 @@ function fixedNumber(flags: Iterable<string>): { fixed?: number; branchPath?: nu
 
 const ITEM_ATTR_RE = /^\{((?:[nb]=[\d.]+\s*)+)\}\s*/
 
-const branchSuffix = (path: number[] | undefined, style: NumeralStyle) =>
-    (path ?? []).map((b) => `の${formatNumber(b, style)}`).join('')
+const branchSuffix = (path: number[] | undefined, style: NumeralStyle) => (path ?? []).map((b) => `の${formatNumber(b, style)}`).join('')
 
 const parsed = new Map<string, LegalDoc>()
 const PARSED_MAX = 4
@@ -189,7 +188,7 @@ function parseUncached(input: string): LegalDoc {
             if (chapter?.kind === 'closing' || chapter?.kind === 'appendix') {
                 const part = lines.slice(t.map[0], t.map[1]).join('\n')
                 chapter.raw += part + '\n\n'
-                    ; (chapter.parts ??= []).push({ md: part, props: propsAt(t.map[0]) })
+                ;(chapter.parts ??= []).push({ md: part, props: propsAt(t.map[0]) })
             }
         }
 
@@ -208,10 +207,10 @@ function parseUncached(input: string): LegalDoc {
                 const kind: ChapterKind = h.flags.has('supplement')
                     ? 'supplement'
                     : h.flags.has('appendix')
-                        ? 'appendix'
-                        : h.flags.has('closing')
-                            ? 'closing'
-                            : 'chapter'
+                      ? 'appendix'
+                      : h.flags.has('closing')
+                        ? 'closing'
+                        : 'chapter'
                 chapter = newChapter(kind, h.text, line)
                 article = null
                 continue
@@ -317,10 +316,7 @@ function numberItems(items: Item[], config: DocConfig, styles: NumeralStyle[]) {
         n = fixed.fixed ?? (fixed.branchPath ? n : n + 1)
         item.number = n
         item.branchPath = fixed.branchPath
-        const style: NumeralStyle =
-            item.level === 1
-                ? (config.item.style as NumeralStyle)
-                : styles[Math.min(item.level - 2, styles.length - 1)]
+        const style: NumeralStyle = item.level === 1 ? (config.item.style as NumeralStyle) : styles[Math.min(item.level - 2, styles.length - 1)]
         item.label = formatNumber(item.number, style) + branchSuffix(item.branchPath, style === 'kanji' ? 'kanji' : 'arabic')
         numberItems(item.children, config, styles)
     }
@@ -358,10 +354,7 @@ function number(doc: LegalDoc) {
         if (ch.kind === 'chapter') {
             chapterNo++
             ch.number = chapterNo
-            ch.label =
-                config.chapter.numeral === 'none'
-                    ? ''
-                    : `第${formatNumber(chapterNo, config.chapter.numeral as NumeralStyle)}章`
+            ch.label = config.chapter.numeral === 'none' ? '' : `第${formatNumber(chapterNo, config.chapter.numeral as NumeralStyle)}章`
             if (config.article.numbering === 'perChapter') articleNo = 0
         }
         let n = ch.kind === 'supplement' ? 0 : articleNo
@@ -410,7 +403,10 @@ export function resolveRefs(text: string, doc: LegalDoc, onMissing?: (id: string
 function dedent(ls: string[]): string {
     const indents = ls.filter((l) => l.trim()).map((l) => /^ */.exec(l)![0].length)
     const n = indents.length ? Math.min(...indents) : 0
-    return ls.map((l) => l.slice(n)).join('\n').trimEnd()
+    return ls
+        .map((l) => l.slice(n))
+        .join('\n')
+        .trimEnd()
 }
 
 export function chapterHeading(ch: Chapter): string {
@@ -428,8 +424,7 @@ export function articleLines(a: Article, doc: LegalDoc): string[] {
     const pad = (n: number) => '　'.repeat(n)
     const r = (s: string) => stripInlineProps(resolveRefs(s, doc)).replace(/\n/g, '')
     if (config.article.title === 'above' && a.title && !a.deleted) out.push(`（${articleTitle(a, doc)}）`)
-    const head =
-        config.article.title === 'inline' && a.title && !a.deleted ? `${a.label}（${articleTitle(a, doc)}）` : a.label
+    const head = config.article.title === 'inline' && a.title && !a.deleted ? `${a.label}（${articleTitle(a, doc)}）` : a.label
     if (a.deleted) {
         out.push(`${head}　削除`)
         return out

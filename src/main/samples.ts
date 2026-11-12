@@ -102,7 +102,14 @@ class SampleRepo {
         const sig = signature(who, date)
         await git.commit({ fs, dir, message: effective ? `${message}\n\n施行日: ${effective}` : message, author: sig, committer: sig })
         for (const d of effective ? docs : []) {
-            await git.annotatedTag({ fs, dir, ref: `施行/${d.replace(/\.md$/, '')}/${effective}`, message: `${d} 施行日 ${effective}`, tagger: sig, force: true })
+            await git.annotatedTag({
+                fs,
+                dir,
+                ref: `施行/${d.replace(/\.md$/, '')}/${effective}`,
+                message: `${d} 施行日 ${effective}`,
+                tagger: sig,
+                force: true,
+            })
         }
     }
 
@@ -149,7 +156,9 @@ class SampleRepo {
     }
 
     private newId() {
-        return `${this.at().replace(/[-:TZ]/g, '').slice(0, 14)}-ex${String(++this.seq).padStart(4, '0')}`
+        return `${this.at()
+            .replace(/[-:TZ]/g, '')
+            .slice(0, 14)}-ex${String(++this.seq).padStart(4, '0')}`
     }
 }
 
@@ -182,8 +191,16 @@ const SAMPLES: Sample[] = [
                 '2026-10-20',
                 '佐藤',
                 [
-                    [RULE, '  - 兄弟姉妹、祖父母、配偶者の父母又は兄弟姉妹が死亡したとき　２日\n', '  - 兄弟姉妹、祖父母、配偶者の父母又は兄弟姉妹が死亡したとき　２日\n  - 子が小学校に入学するとき　１日\n'],
-                    [RULE, AMENDED_2026, `${AMENDED_2026}\n\n## 附則（２０２７年４月１日改正） {supplement}\n\n### 施行期日\n- この規則は、２０２７年４月１日から施行する。`],
+                    [
+                        RULE,
+                        '  - 兄弟姉妹、祖父母、配偶者の父母又は兄弟姉妹が死亡したとき　２日\n',
+                        '  - 兄弟姉妹、祖父母、配偶者の父母又は兄弟姉妹が死亡したとき　２日\n  - 子が小学校に入学するとき　１日\n',
+                    ],
+                    [
+                        RULE,
+                        AMENDED_2026,
+                        `${AMENDED_2026}\n\n## 附則（２０２７年４月１日改正） {supplement}\n\n### 施行期日\n- この規則は、２０２７年４月１日から施行する。`,
+                    ],
                 ],
                 '慶弔休暇に子の入学を追加',
                 '子の入学の慶弔休暇を追加しました。確認をお願いします。',
@@ -232,7 +249,13 @@ const SAMPLES: Sample[] = [
                 '2027年改正',
                 '2026-10-30',
                 '佐藤',
-                [[ORDINANCE, '## 活用の促進', '### 緊急安全措置\n- 市長は、管理不全空き家等の倒壊等により人の生命、身体又は財産に危害が及ぶおそれがあり、緊急の必要があると認めるときは、その危害を避けるために必要な最小限度の措置をとることができる。\n\n## 活用の促進']],
+                [
+                    [
+                        ORDINANCE,
+                        '## 活用の促進',
+                        '### 緊急安全措置\n- 市長は、管理不全空き家等の倒壊等により人の生命、身体又は財産に危害が及ぶおそれがあり、緊急の必要があると認めるときは、その危害を避けるために必要な最小限度の措置をとることができる。\n\n## 活用の促進',
+                    ],
+                ],
                 '緊急安全措置の規定を追加',
                 '緊急安全措置の条を追加しました。法務担当の確認をお願いします。',
             )

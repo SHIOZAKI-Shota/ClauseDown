@@ -65,7 +65,10 @@ describe('doc-view', () => {
     it('CRLF の文書でも図の誤りと行番号を正しく出す', () => {
         const src = '# t\r\n\r\n### 目的\r\n- 本文\r\n\r\n  ```mermaid\r\n  flowchart TD\r\n  A -->\r\n  ```\r\n- [[ない]]\r\n'
         const issues = checkDoc(src)
-        expect(issues.map((i) => [i.line, i.severity])).toEqual([[6, 'warning'], [10, 'error']])
+        expect(issues.map((i) => [i.line, i.severity])).toEqual([
+            [6, 'warning'],
+            [10, 'error'],
+        ])
         expect(numberedText(src).split('\n')[2]).toBe(' 3| 〔第1条〕### 目的')
     })
 

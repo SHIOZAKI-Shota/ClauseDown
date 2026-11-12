@@ -64,9 +64,7 @@ export async function saveEvent(dir: string, input: DueEventInput): Promise<DueE
     const event: DueEvent = {
         ...rest,
         id: prev?.id ?? newId(),
-        done: (prev?.done ?? []).filter((d) =>
-            expand([{ ...rest, id: '', done: [], by: '', at: '', updatedAt: '' }], [], d, d, d).some((o) => o.date === d),
-        ),
+        done: (prev?.done ?? []).filter((d) => expand([{ ...rest, id: '', done: [], by: '', at: '', updatedAt: '' }], [], d, d, d).some((o) => o.date === d)),
         by: prev?.by ?? (await author(dir)).name,
         at: prev?.at ?? now,
         updatedAt: now,
@@ -111,7 +109,12 @@ export async function occurrences(
         listDeliveries(dir).catch(() => []),
     ])
     const items = expand(events, kinds, from, to, today)
-    items.push(...fromEffective(tags.filter((t) => t.date >= from && t.date <= to), kinds))
+    items.push(
+        ...fromEffective(
+            tags.filter((t) => t.date >= from && t.date <= to),
+            kinds,
+        ),
+    )
     const k = kindMap(kinds)(DELIVERY_KIND)
     for (const d of deliveries) {
         const date = localDate(d.at)
@@ -189,7 +192,10 @@ export async function scheduleAll(today: string, days = 365): Promise<ScheduleIt
                 const kindOf = kindMap(kinds)
                 const occ = [
                     ...expand(events, kinds, '1900-01-01', to, today),
-                    ...fromEffective(tags.filter((t) => t.date >= today && t.date <= to), kinds),
+                    ...fromEffective(
+                        tags.filter((t) => t.date >= today && t.date <= to),
+                        kinds,
+                    ),
                 ].filter((o) => o.overdue || (o.end ?? o.date) >= today)
                 return occ.map((o): ScheduleItem => {
                     const k = kindOf(o.kind)
@@ -200,7 +206,5 @@ export async function scheduleAll(today: string, days = 365): Promise<ScheduleIt
             }
         }),
     )
-    return lists
-        .flat()
-        .sort((a, b) => Number(b.overdue) - Number(a.overdue) || byDate(a, b) || a.repo.localeCompare(b.repo, 'ja'))
+    return lists.flat().sort((a, b) => Number(b.overdue) - Number(a.overdue) || byDate(a, b) || a.repo.localeCompare(b.repo, 'ja'))
 }

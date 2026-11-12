@@ -14,10 +14,14 @@ export function fmtDate(t: number | string, kind: 'md' | 'ymd' | 'mdhm' | 'ymdhm
     const md = `${d.getMonth() + 1}/${d.getDate()}`
     const hm = `${pad(d.getHours())}:${pad(d.getMinutes())}`
     switch (kind) {
-        case 'md': return md
-        case 'ymd': return `${d.getFullYear()}/${md}`
-        case 'mdhm': return `${md} ${hm}`
-        case 'ymdhm': return `${d.getFullYear()}/${md} ${hm}`
+        case 'md':
+            return md
+        case 'ymd':
+            return `${d.getFullYear()}/${md}`
+        case 'mdhm':
+            return `${md} ${hm}`
+        case 'ymdhm':
+            return `${d.getFullYear()}/${md} ${hm}`
     }
 }
 

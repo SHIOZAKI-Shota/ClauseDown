@@ -15,7 +15,7 @@ const wf = await import('../src/main/workflow')
 
 let root = ''
 let url = ''
-let closeGit = () => { }
+let closeGit = () => {}
 let api: http.Server
 const state = {
     login: 'staff-a',
@@ -27,7 +27,10 @@ const state = {
 function mergeOnServer(head: string, title: string): string {
     const work = fs.mkdtempSync(join(os.tmpdir(), 'clausedown-gh-'))
     const bare = join(root, 'docs.git')
-    const g = (...args: string[]) => execFileSync('git', ['-C', work, '-c', 'user.name=GitHub', '-c', 'user.email=gh@example.com', ...args]).toString().trim()
+    const g = (...args: string[]) =>
+        execFileSync('git', ['-C', work, '-c', 'user.name=GitHub', '-c', 'user.email=gh@example.com', ...args])
+            .toString()
+            .trim()
     execFileSync('git', ['clone', '-q', bare, work])
     g('merge', '--no-ff', '-q', '-m', title, `origin/${head}`)
     g('push', '-q', 'origin', 'HEAD:main')
@@ -35,7 +38,7 @@ function mergeOnServer(head: string, title: string): string {
 }
 
 beforeAll(async () => {
-    ; ({ root, url, close: closeGit } = await startGitServer())
+    ;({ root, url, close: closeGit } = await startGitServer())
     api = http.createServer(async (req, res) => {
         const chunks: Buffer[] = []
         for await (const c of req) chunks.push(c as Buffer)
@@ -50,7 +53,10 @@ beforeAll(async () => {
         const base = '/repos/office/docs'
         const pull = (n: number) => state.pulls.find((x) => x.number === n)!
         const toJson = (x: (typeof state.pulls)[number]) => ({
-            number: x.number, html_url: `https://github.com/office/docs/pull/${x.number}`, state: x.state, merged: x.merged,
+            number: x.number,
+            html_url: `https://github.com/office/docs/pull/${x.number}`,
+            state: x.state,
+            merged: x.merged,
             head: { ref: x.head, sha: '' },
         })
         let m: RegExpExecArray | null
@@ -65,12 +71,24 @@ beforeAll(async () => {
         }
         if ((m = new RegExp(`^${base}/pulls/(\\d+)/reviews$`).exec(p))) {
             const n = Number(m[1])
-            if (req.method === 'GET') return send(200, state.reviews.filter((r) => r.pr === n))
+            if (req.method === 'GET')
+                return send(
+                    200,
+                    state.reviews.filter((r) => r.pr === n),
+                )
             if (pull(n).author === state.login && body.event === 'APPROVE') {
                 return send(422, { message: 'Unprocessable Entity', errors: [{ message: 'Can not approve your own pull request' }] })
             }
             const st = { APPROVE: 'APPROVED', REQUEST_CHANGES: 'CHANGES_REQUESTED', COMMENT: 'COMMENTED' }[body.event as string]!
-            const r = { id: state.reviews.length + 1, pr: n, user: { login: state.login }, state: st, body: body.body, commit_id: body.commit_id, submitted_at: new Date().toISOString() }
+            const r = {
+                id: state.reviews.length + 1,
+                pr: n,
+                user: { login: state.login },
+                state: st,
+                body: body.body,
+                commit_id: body.commit_id,
+                submitted_at: new Date().toISOString(),
+            }
             state.reviews.push(r)
             return send(200, r)
         }
@@ -155,7 +173,12 @@ describe('GitHub 連携', () => {
         expect(events.map((e) => `${e.action}:${e.by}:${e.source}`)).toContain('approve:boss:github')
 
         const s = await wf.adoptOrMerge(pc(), {
-            from: draft, into: 'main', choices: {}, message: '2026年改定を反映', effectiveDate: '2026-04-01', deleteAfter: true,
+            from: draft,
+            into: 'main',
+            choices: {},
+            message: '2026年改定を反映',
+            effectiveDate: '2026-04-01',
+            deleteAfter: true,
         })
         expect(s).toEqual({ state: 'upToDate' })
         expect(state.pulls[0]).toMatchObject({ state: 'closed', merged: true })

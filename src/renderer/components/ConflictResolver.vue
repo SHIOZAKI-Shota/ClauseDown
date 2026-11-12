@@ -185,11 +185,9 @@ const plain = (lines: string[]) => (lines.length ? esc(lines.join('\n')) : '<spa
             </div>
             <div class="side-list">
                 <template v-for="(s, i) in spots" :key="i">
-                    <div v-if="i === 0 || spots[i - 1].path !== s.path" class="doc">{{ s.path.replace(/\.md$/, '') }}
-                    </div>
+                    <div v-if="i === 0 || spots[i - 1].path !== s.path" class="doc">{{ s.path.replace(/\.md$/, '') }}</div>
                     <button :class="{ on: i === index }" @click="index = i">
-                        <UIcon :name="isResolved(s) ? 'i-lucide-check' : 'i-lucide-dot'"
-                            :class="['mark', { done: isResolved(s) }]" />
+                        <UIcon :name="isResolved(s) ? 'i-lucide-check' : 'i-lucide-dot'" :class="['mark', { done: isResolved(s) }]" />
                         <span class="label">{{ s.label }}</span>
                     </button>
                 </template>
@@ -199,25 +197,24 @@ const plain = (lines: string[]) => (lines.length ? esc(lines.join('\n')) : '<spa
         <section class="center">
             <div class="cd-toolbar toolbar">
                 <UFieldGroup size="sm">
-                    <UButton icon="i-lucide-chevron-up" color="neutral" variant="outline" square :disabled="index === 0"
-                        @click="go(-1)" />
-                    <UButton icon="i-lucide-chevron-down" color="neutral" variant="outline" square
-                        :disabled="index === spots.length - 1" @click="go(1)" />
+                    <UButton icon="i-lucide-chevron-up" color="neutral" variant="outline" square :disabled="index === 0" @click="go(-1)" />
+                    <UButton icon="i-lucide-chevron-down" color="neutral" variant="outline" square :disabled="index === spots.length - 1" @click="go(1)" />
                 </UFieldGroup>
                 <span class="where">{{ spot.label }}</span>
                 <span class="cd-grow" />
                 <template v-if="spot.hunk">
                     <UFieldGroup size="sm">
-                        <UButton :label="oursLabel" color="neutral" :variant="picked === 'ours' ? 'soft' : 'outline'"
-                            @click="pick('ours')" />
-                        <UButton :label="theirsLabel" color="neutral"
-                            :variant="picked === 'theirs' ? 'soft' : 'outline'" @click="pick('theirs')" />
+                        <UButton :label="oursLabel" color="neutral" :variant="picked === 'ours' ? 'soft' : 'outline'" @click="pick('ours')" />
+                        <UButton :label="theirsLabel" color="neutral" :variant="picked === 'theirs' ? 'soft' : 'outline'" @click="pick('theirs')" />
                         <UDropdownMenu :items="bothMenu">
-                            <UButton label="両方" trailing-icon="i-lucide-chevron-down" color="neutral"
-                                :variant="picked === 'oursThenTheirs' || picked === 'theirsThenOurs' ? 'soft' : 'outline'" />
+                            <UButton
+                                label="両方"
+                                trailing-icon="i-lucide-chevron-down"
+                                color="neutral"
+                                :variant="picked === 'oursThenTheirs' || picked === 'theirsThenOurs' ? 'soft' : 'outline'"
+                            />
                         </UDropdownMenu>
-                        <UButton label="元の版" color="neutral" :variant="picked === 'base' ? 'soft' : 'outline'"
-                            @click="pick('base')" />
+                        <UButton label="元の版" color="neutral" :variant="picked === 'base' ? 'soft' : 'outline'" @click="pick('base')" />
                     </UFieldGroup>
                 </template>
             </div>
@@ -225,14 +222,23 @@ const plain = (lines: string[]) => (lines.length ? esc(lines.join('\n')) : '<spa
             <div class="center-body">
                 <div v-if="!spot.hunk" class="deleted">
                     <p>
-                        {{ conflict.oursDeleted ? oursLabel : theirsLabel }}ではこの文書を削除し、{{ conflict.oursDeleted ?
-                            theirsLabel :
-                            oursLabel }}では書き直しています。
+                        {{ conflict.oursDeleted ? oursLabel : theirsLabel }}ではこの文書を削除し、{{
+                            conflict.oursDeleted ? theirsLabel : oursLabel
+                        }}では書き直しています。
                     </p>
-                    <SegmentSwitch :model-value="fs.keep ?? undefined" aria-label="この文書をどうするか" :items="[
-                        { value: conflict.oursDeleted ? 'theirs' : 'ours', label: `文書を残す（${conflict.oursDeleted ? theirsLabel : oursLabel}の内容）`, icon: 'i-lucide-file-check' },
-                        { value: 'delete', label: '文書を削除する', icon: 'i-lucide-file-x' },
-                    ]" @update:model-value="(v) => (fs.keep = v as FileState['keep'])" />
+                    <SegmentSwitch
+                        :model-value="fs.keep ?? undefined"
+                        aria-label="この文書をどうするか"
+                        :items="[
+                            {
+                                value: conflict.oursDeleted ? 'theirs' : 'ours',
+                                label: `文書を残す（${conflict.oursDeleted ? theirsLabel : oursLabel}の内容）`,
+                                icon: 'i-lucide-file-check',
+                            },
+                            { value: 'delete', label: '文書を削除する', icon: 'i-lucide-file-x' },
+                        ]"
+                        @update:model-value="(v) => (fs.keep = v as FileState['keep'])"
+                    />
                 </div>
 
                 <template v-else>
@@ -260,18 +266,21 @@ const plain = (lines: string[]) => (lines.length ? esc(lines.join('\n')) : '<spa
                     </table>
                     <div class="sub">
                         <span class="hint">下線は元の版から変わった文字</span>
-                        <UButton :label="showBase ? '元の版を隠す' : '元の版を表示'" size="xs" color="neutral" variant="link"
-                            @click="showBase = !showBase" />
+                        <UButton :label="showBase ? '元の版を隠す' : '元の版を表示'" size="xs" color="neutral" variant="link" @click="showBase = !showBase" />
                     </div>
 
                     <div class="out-head">
                         <span>統合後</span>
                         <span class="cd-grow" />
-                        <UButton v-if="current !== '' || picked" label="やり直す" size="xs" color="neutral" variant="link"
-                            @click="clear" />
+                        <UButton v-if="current !== '' || picked" label="やり直す" size="xs" color="neutral" variant="link" @click="clear" />
                     </div>
-                    <textarea v-model="current" class="out" spellcheck="false" :placeholder="`上のボタンで選ぶか、ここに直接書いてください`"
-                        :rows="Math.max(4, current.split('\n').length + 1)" />
+                    <textarea
+                        v-model="current"
+                        class="out"
+                        spellcheck="false"
+                        :placeholder="`上のボタンで選ぶか、ここに直接書いてください`"
+                        :rows="Math.max(4, current.split('\n').length + 1)"
+                    />
                 </template>
             </div>
         </section>
@@ -280,10 +289,14 @@ const plain = (lines: string[]) => (lines.length ? esc(lines.join('\n')) : '<spa
             <div class="cd-toolbar toolbar">
                 <span class="where">統合結果</span>
                 <span class="cd-grow" />
-                <SegmentSwitch v-model="resultView" aria-label="統合結果の表示" :items="[
-                    { value: 'preview', icon: 'i-lucide-book-open', tooltip: '条文で見る' },
-                    { value: 'text', icon: 'i-lucide-square-pen', tooltip: '全文を直す' },
-                ]" />
+                <SegmentSwitch
+                    v-model="resultView"
+                    aria-label="統合結果の表示"
+                    :items="[
+                        { value: 'preview', icon: 'i-lucide-book-open', tooltip: '条文で見る' },
+                        { value: 'text', icon: 'i-lucide-square-pen', tooltip: '全文を直す' },
+                    ]"
+                />
             </div>
             <div v-if="resultView === 'preview'" ref="preview" class="right-body cd-canvas">
                 <div class="paper cd-paper" v-html="previewHtml" />
@@ -302,9 +315,7 @@ const plain = (lines: string[]) => (lines.length ? esc(lines.join('\n')) : '<spa
             <span>重なり {{ index + 1 }} / {{ spots.length }}</span>
             <span class="cd-grow" />
             <span v-if="remaining" class="left">未解決 {{ remaining }} か所</span>
-            <span v-else class="done">
-                <UIcon name="i-lucide-circle-check" />すべて解決しました
-            </span>
+            <span v-else class="done"> <UIcon name="i-lucide-circle-check" />すべて解決しました </span>
             <UButton v-if="remaining" label="次の未解決へ" size="xs" color="neutral" variant="link" @click="nextUnresolved" />
         </footer>
     </div>
@@ -452,7 +463,7 @@ const plain = (lines: string[]) => (lines.length ? esc(lines.join('\n')) : '<spa
 
 pre {
     margin: 0;
-    font-family: "BIZ UDGothic", "Yu Gothic UI", monospace;
+    font-family: 'BIZ UDGothic', 'Yu Gothic UI', monospace;
     font-size: 13px;
     line-height: 1.8;
     white-space: pre-wrap;
@@ -497,7 +508,7 @@ pre :deep(.none) {
     background: var(--cd-ed-bg);
     color: var(--cd-ed-text);
     caret-color: var(--cd-ed-cursor);
-    font-family: "BIZ UDGothic", "Yu Gothic UI", monospace;
+    font-family: 'BIZ UDGothic', 'Yu Gothic UI', monospace;
     font-size: 13px;
     line-height: 1.8;
     outline: none;

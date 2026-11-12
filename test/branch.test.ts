@@ -11,9 +11,9 @@ const git = await import('../src/main/git')
 
 let root = ''
 let url = ''
-let close = () => { }
+let close = () => {}
 beforeAll(async () => {
-    ; ({ root, url, close } = await startGitServer())
+    ;({ root, url, close } = await startGitServer())
 })
 afterAll(() => close())
 
@@ -84,7 +84,11 @@ describe('改定案', () => {
         const main = (await git.listBranches(pcA())).find((x) => x.isMain)!
         const d = (await git.listBranches(pcA())).find((x) => x.name === draft)!
         expect(d.mainMoved).toBe(true)
-        expect(main.oid).toBe(execFileSync('git', ['-C', join(root, 'docs.git'), 'rev-parse', 'main']).toString().trim())
+        expect(main.oid).toBe(
+            execFileSync('git', ['-C', join(root, 'docs.git'), 'rev-parse', 'main'])
+                .toString()
+                .trim(),
+        )
 
         const preview = await git.previewMerge(pcA(), draft, 'main')
         expect(preview.upToDate).toBe(false)

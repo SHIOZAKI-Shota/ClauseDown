@@ -36,10 +36,7 @@ async function loadTexts() {
 
 onMounted(async () => {
     const before = [oldOid.value, newOid.value]
-        ;[commits.value, effective.value] = await Promise.all([
-            window.api.log(app.repoDir!, path, true),
-            window.api.listEffective(app.repoDir!, path),
-        ])
+    ;[commits.value, effective.value] = await Promise.all([window.api.log(app.repoDir!, path, true), window.api.listEffective(app.repoDir!, path)])
     if (app.compareTarget) {
         oldOid.value = app.compareTarget.oldOid
         newOid.value = app.compareTarget.newOid
@@ -107,12 +104,23 @@ async function exportAs(format: 'pdf' | 'docx') {
                 <section class="list">
                     <div class="list-head">
                         <span class="badge old">改正前</span>
-                        <UButton label="空の文書" size="xs" :color="oldOid === 'empty' ? 'primary' : 'neutral'"
-                            :variant="oldOid === 'empty' ? 'soft' : 'ghost'" @click="oldOid = 'empty'" />
+                        <UButton
+                            label="空の文書"
+                            size="xs"
+                            :color="oldOid === 'empty' ? 'primary' : 'neutral'"
+                            :variant="oldOid === 'empty' ? 'soft' : 'ghost'"
+                            @click="oldOid = 'empty'"
+                        />
                     </div>
                     <div ref="oldList" class="list-body">
-                        <HistoryGraph :commits="commits" :selected="shown(oldOid)" :pending="pending" pick-work
-                            :current-label="app.currentBranch?.label" @select="oldOid = $event" />
+                        <HistoryGraph
+                            :commits="commits"
+                            :selected="shown(oldOid)"
+                            :pending="pending"
+                            pick-work
+                            :current-label="app.currentBranch?.label"
+                            @select="oldOid = $event"
+                        />
                     </div>
                 </section>
                 <section class="list">
@@ -120,8 +128,14 @@ async function exportAs(format: 'pdf' | 'docx') {
                         <span class="badge new">改正後</span>
                     </div>
                     <div ref="newList" class="list-body">
-                        <HistoryGraph :commits="commits" :selected="shown(newOid)" :pending="pending" pick-work
-                            :current-label="app.currentBranch?.label" @select="newOid = $event" />
+                        <HistoryGraph
+                            :commits="commits"
+                            :selected="shown(newOid)"
+                            :pending="pending"
+                            pick-work
+                            :current-label="app.currentBranch?.label"
+                            @select="newOid = $event"
+                        />
                     </div>
                 </section>
             </div>
@@ -132,10 +146,8 @@ async function exportAs(format: 'pdf' | 'docx') {
                 <UCheckbox v-model="omit" label="変更のない条は（略）にする" />
                 <span class="cd-grow" />
                 <UBadge :label="`変更 ${changes} か所`" color="neutral" variant="subtle" />
-                <UButton label="PDF" icon="i-lucide-file-down" size="sm" color="neutral" variant="outline"
-                    @click="exportAs('pdf')" />
-                <UButton label="Word" icon="i-lucide-file-down" size="sm" color="neutral" variant="outline"
-                    @click="exportAs('docx')" />
+                <UButton label="PDF" icon="i-lucide-file-down" size="sm" color="neutral" variant="outline" @click="exportAs('pdf')" />
+                <UButton label="Word" icon="i-lucide-file-down" size="sm" color="neutral" variant="outline" @click="exportAs('docx')" />
             </div>
             <div class="cd-preview cd-canvas">
                 <div class="paper cd-paper">
@@ -235,7 +247,7 @@ async function exportAs(format: 'pdf' | 'docx') {
 
 .title {
     text-align: center;
-    font-family: "Yu Mincho", serif;
+    font-family: 'Yu Mincho', serif;
     font-size: 12pt;
     margin: 0 0 10px;
 }

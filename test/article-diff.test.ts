@@ -16,8 +16,18 @@ describe('compareSources', () => {
         const rows = compareSources(OLD, NEW)
         expect(rows.map((r) => r.status)).toEqual(['same', 'added', 'changed', 'changed'])
         const holiday = rows[2]
-        expect(holiday.oldParts.filter((p) => p.changed).map((p) => p.text).join('')).toBe('2')
-        expect(holiday.newParts.filter((p) => p.changed).map((p) => p.text).join('')).toBe('3土曜及び')
+        expect(
+            holiday.oldParts
+                .filter((p) => p.changed)
+                .map((p) => p.text)
+                .join(''),
+        ).toBe('2')
+        expect(
+            holiday.newParts
+                .filter((p) => p.changed)
+                .map((p) => p.text)
+                .join(''),
+        ).toBe('3土曜及び')
     })
 
     it('見出しを変えた条は隣同士で「変更」にする', () => {
@@ -37,7 +47,12 @@ describe('条を立てない附則', () => {
         const a = '# t\n### 目的\n- x\n## 附則 {supplement}\n- 令和7年4月1日から施行する。\n'
         const rows = compareSources(a, a.replace('令和7年', '令和8年'))
         expect(rows.map((r) => r.status)).toEqual(['same', 'changed'])
-        expect(rows[1].newParts.filter((p) => p.changed).map((p) => p.text).join('')).toBe('8')
+        expect(
+            rows[1].newParts
+                .filter((p) => p.changed)
+                .map((p) => p.text)
+                .join(''),
+        ).toBe('8')
     })
 })
 
@@ -52,7 +67,12 @@ describe('大きな変更と無関係な条', () => {
         const a = '# t\n###\n- 甲とする。\n###\n- 乙とする。\n'
         const rows = compareSources(a, a.replace('乙', '丙'))
         expect(rows.map((r) => r.status)).toEqual(['same', 'changed'])
-        expect(rows[1].newParts.filter((p) => p.changed).map((p) => p.text).join('')).toBe('丙')
+        expect(
+            rows[1].newParts
+                .filter((p) => p.changed)
+                .map((p) => p.text)
+                .join(''),
+        ).toBe('丙')
     })
 
     it('行ごとに比べ、変わった行だけ文字単位で示す', () => {
@@ -90,8 +110,18 @@ describe('変更箇所の並び（赤・青の表示）', () => {
         const rows = compareSources('# t\n\n### 目的\n- 期間は一年とする。\n', '# t\n\n### 目的\n- 期間は二年とする。\n\n### 新しい条\n- 足した。\n')
         const changed = rows.find((r) => r.status === 'changed')!
         expect(changed.inline.map((p) => p.op)).toEqual(['same', 'del', 'add', 'same'])
-        expect(changed.inline.filter((p) => p.op === 'del').map((p) => p.text).join('')).toBe('一')
-        expect(changed.inline.filter((p) => p.op === 'add').map((p) => p.text).join('')).toBe('二')
+        expect(
+            changed.inline
+                .filter((p) => p.op === 'del')
+                .map((p) => p.text)
+                .join(''),
+        ).toBe('一')
+        expect(
+            changed.inline
+                .filter((p) => p.op === 'add')
+                .map((p) => p.text)
+                .join(''),
+        ).toBe('二')
         expect(rows.find((r) => r.status === 'added')!.inline).toEqual([{ text: expect.stringContaining('足した。'), op: 'add' }])
     })
 })

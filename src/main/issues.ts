@@ -56,7 +56,9 @@ async function localComments(dir: string, issueId: string): Promise<LocalComment
 const pad = (v: number) => String(v).padStart(2, '0')
 function movedCommentNote(c: LocalComment): string {
     const d = new Date(c.at)
-    const when = Number.isNaN(d.getTime()) ? c.at : `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+    const when = Number.isNaN(d.getTime())
+        ? c.at
+        : `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
     return `（${c.by ? `${c.by}・` : ''}${when} のコメント）`
 }
 
@@ -271,7 +273,7 @@ export async function afterMain(dir: string, commits: { oid: string; message: st
     if (forge) {
         if (!head) return closed
         for (const n of linked) {
-            await closeOnForge(forge, n, head.oid, head.message).catch(() => { })
+            await closeOnForge(forge, n, head.oid, head.message).catch(() => {})
             closed.push(n)
         }
         return closed
@@ -314,10 +316,10 @@ export async function moveIssuesToForge(dir: string): Promise<{ moved: number; r
             renumbered.push({ from: i.n, to: created.n })
             created = await forge.updateIssue(created.n, { body: `${i.body.replace(/\s+$/, '')}\n\n（ClauseDown での旧番号 #${i.n}）` })
         }
-        for (const l of i.links ?? []) await forge.comment(created.n, linkComment(l.oid, await commitMessage(dir, l.oid).catch(() => ''))).catch(() => { })
+        for (const l of i.links ?? []) await forge.comment(created.n, linkComment(l.oid, await commitMessage(dir, l.oid).catch(() => ''))).catch(() => {})
         for (const c of await localComments(dir, i.id)) await forge.comment(created.n, `${movedCommentNote(c)}\n\n${c.body}`)
         if (i.state === 'closed') {
-            if (i.closedBy) await forge.comment(created.n, closeComment(i.closedBy, await commitMessage(dir, i.closedBy).catch(() => ''))).catch(() => { })
+            if (i.closedBy) await forge.comment(created.n, closeComment(i.closedBy, await commitMessage(dir, i.closedBy).catch(() => ''))).catch(() => {})
             await forge.updateIssue(created.n, { state: 'closed' })
         }
         i.movedTo = created.n

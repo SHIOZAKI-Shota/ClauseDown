@@ -29,11 +29,9 @@ const pick = (v: DateValue | undefined) => {
     <UInputDate v-model="value" :min-value="minValue" :size="size" class="date-field">
         <template #trailing>
             <UPopover :content="{ align: 'end' }">
-                <UButton icon="i-lucide-calendar" size="xs" color="neutral" variant="link" square
-                    aria-label="カレンダーから選ぶ" />
+                <UButton icon="i-lucide-calendar" size="xs" color="neutral" variant="link" square aria-label="カレンダーから選ぶ" />
                 <template #content>
-                    <UCalendar :model-value="value" :min-value="minValue" class="cal"
-                        @update:model-value="(v) => pick(v as DateValue | undefined)" />
+                    <UCalendar :model-value="value" :min-value="minValue" class="cal" @update:model-value="(v) => pick(v as DateValue | undefined)" />
                 </template>
             </UPopover>
         </template>

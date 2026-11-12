@@ -97,7 +97,12 @@ export async function runAnthropic(
             if (uses.length) {
                 history.push({
                     role: 'user',
-                    content: uses.map((u) => ({ type: 'tool_result' as const, tool_use_id: u.id, is_error: true, content: '途中で止まったため実行していません' })),
+                    content: uses.map((u) => ({
+                        type: 'tool_result' as const,
+                        tool_use_id: u.id,
+                        is_error: true,
+                        content: '途中で止まったため実行していません',
+                    })),
                 })
             }
             throw new Error(
@@ -127,11 +132,17 @@ export async function runAnthropic(
 export async function testAnthropic(key: string, model: string): Promise<string> {
     const client = new Anthropic({ apiKey: key })
     const m = await client.messages.create({ model, max_tokens: 200, messages: [{ role: 'user', content: '「接続できました」とだけ答えてください。' }] })
-    return m.content.map((b) => (b.type === 'text' ? b.text : '')).join('').trim()
+    return m.content
+        .map((b) => (b.type === 'text' ? b.text : ''))
+        .join('')
+        .trim()
 }
 
 export async function askAnthropic(key: string, model: string, system: string, prompt: string): Promise<string> {
     const client = new Anthropic({ apiKey: key })
     const m = await client.messages.create({ model, max_tokens: 400, system, messages: [{ role: 'user', content: prompt }] })
-    return m.content.map((b) => (b.type === 'text' ? b.text : '')).join('').trim()
+    return m.content
+        .map((b) => (b.type === 'text' ? b.text : ''))
+        .join('')
+        .trim()
 }

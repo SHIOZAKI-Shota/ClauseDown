@@ -25,10 +25,13 @@ function reporter(context: Context) {
             for (const m of getSource(node).matchAll(HANKAKU)) {
                 const range: [number, number] = [m.index, m.index + m[0].length]
                 const zenkaku = m[0].normalize('NFKC')
-                report(node, new RuleError(`「${m[0]}」は半角のカタカナです。全角の「${zenkaku}」にしてください`, {
-                    padding: locator.range(range),
-                    fix: fixer.replaceTextRange(range, zenkaku),
-                }))
+                report(
+                    node,
+                    new RuleError(`「${m[0]}」は半角のカタカナです。全角の「${zenkaku}」にしてください`, {
+                        padding: locator.range(range),
+                        fix: fixer.replaceTextRange(range, zenkaku),
+                    }),
+                )
             }
         },
     }

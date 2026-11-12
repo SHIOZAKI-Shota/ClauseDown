@@ -20,7 +20,9 @@ onMounted(async () => {
 
 const shown = computed(() => {
     const w = q.value.trim().toLowerCase()
-    return issues.value.filter((i) => (props.branch ? i.state === 'open' || picked.value.includes(i.n) : true) && (!w || `#${i.n} ${i.title}`.toLowerCase().includes(w)))
+    return issues.value.filter(
+        (i) => (props.branch ? i.state === 'open' || picked.value.includes(i.n) : true) && (!w || `#${i.n} ${i.title}`.toLowerCase().includes(w)),
+    )
 })
 
 function toggle(n: number) {
@@ -39,18 +41,21 @@ async function save() {
 </script>
 
 <template>
-    <UModal :open="true" :title="oid ? '版を課題に紐付ける' : `「${branchLabel}」で解決する課題`"
+    <UModal
+        :open="true"
+        :title="oid ? '版を課題に紐付ける' : `「${branchLabel}」で解決する課題`"
         :description="oid ? `版 ${oid.slice(0, 7)} を紐付ける課題を選びます。` : '選んだ課題は、この改定案を現行版に反映したときに閉じます。'"
-        @update:open="(v) => !v && emit('close')">
+        @update:open="(v) => !v && emit('close')"
+    >
         <template #body>
             <UInput v-model="q" icon="i-lucide-search" placeholder="番号・題名で探す" size="sm" class="w-full" />
             <p v-if="loading" class="cd-muted pad">読み込んでいます…</p>
             <p v-else-if="!shown.length" class="cd-muted pad">課題がありません。課題の画面から作れます。</p>
             <div class="list">
-                <button v-for="i in shown" :key="i.n" type="button" class="row" :class="{ on: picked.includes(i.n) }"
-                    @click="toggle(i.n)">
+                <button v-for="i in shown" :key="i.n" type="button" class="row" :class="{ on: picked.includes(i.n) }" @click="toggle(i.n)">
                     <UIcon
-                        :name="picked.includes(i.n) ? (oid ? 'i-lucide-circle-dot' : 'i-lucide-square-check') : (oid ? 'i-lucide-circle' : 'i-lucide-square')" />
+                        :name="picked.includes(i.n) ? (oid ? 'i-lucide-circle-dot' : 'i-lucide-square-check') : oid ? 'i-lucide-circle' : 'i-lucide-square'"
+                    />
                     <span class="num">#{{ i.n }}</span>
                     <span class="ttl">{{ i.title }}</span>
                     <UBadge v-if="i.state === 'closed'" label="完了" size="sm" color="neutral" variant="subtle" />

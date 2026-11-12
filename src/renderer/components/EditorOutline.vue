@@ -22,7 +22,8 @@ const entries = computed<Entry[]>(() => {
         if (ch.kind === 'closing') return
         const head = chapterHeading(ch)
         if (head && ch.line >= 0) out.push({ key: `c${ci}`, line: ch.line, label: ch.label || head, title: ch.label ? ch.title : '', kind: 'chapter' })
-        for (const a of ch.articles) out.push({ key: `a${n++}`, line: a.line, label: a.label, title: articleTitle(a, props.legal), kind: 'article', deleted: a.deleted })
+        for (const a of ch.articles)
+            out.push({ key: `a${n++}`, line: a.line, label: a.label, title: articleTitle(a, props.legal), kind: 'article', deleted: a.deleted })
     })
     return out
 })
@@ -48,13 +49,11 @@ watch(active, async () => {
 <template>
     <aside class="ed-outline">
         <div class="cd-pane-bar">
-            <span class="cd-pane-title">目次 <span class="count">{{ articleLines.length }}
-                    条</span></span>
+            <span class="cd-pane-title">目次 <span class="count">{{ articleLines.length }} 条</span></span>
         </div>
         <UInput v-model="q" icon="i-lucide-search" size="xs" placeholder="条を探す" class="search" />
         <div ref="list" class="list">
-            <button v-for="e in filtered" :key="e.key"
-                :class="[e.kind, { on: e.line === active, deleted: e.deleted }]" @click="emit('jump', e.line)">
+            <button v-for="e in filtered" :key="e.key" :class="[e.kind, { on: e.line === active, deleted: e.deleted }]" @click="emit('jump', e.line)">
                 <span class="label">{{ e.label }}</span>
                 <span class="title">{{ e.deleted ? '削除' : e.title }}</span>
             </button>

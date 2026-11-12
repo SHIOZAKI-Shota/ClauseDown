@@ -26,9 +26,11 @@ async function add() {
 
 <template>
     <h3>社内のGitLab</h3>
-    <SettingRow label="GitLab の URL"
+    <SettingRow
+        label="GitLab の URL"
         description="例：https://gitlab.example.co.jp（https のみ）。追加すると、そのサーバーのリポジトリを取得したり、リモートとして使ったりできます。Application ID は、管理者が OAuth アプリを登録していれば入力します。"
-        stacked>
+        stacked
+    >
         <div class="row">
             <UInput v-model="host" placeholder="https://gitlab.example.co.jp" class="cd-grow" />
             <UInput v-model="appId" placeholder="Application ID（任意）" class="cd-w-input" />

@@ -3,8 +3,7 @@ import { mermaidSvg, parseFence } from './blocks'
 import { checkDefinitions } from './definitions'
 import { formatNumber, type NumeralStyle } from './numerals'
 
-const branchSuffix = (path: number[] | undefined, style: NumeralStyle) =>
-    (path ?? []).map((b) => `の${formatNumber(b, style)}`).join('')
+const branchSuffix = (path: number[] | undefined, style: NumeralStyle) => (path ?? []).map((b) => `の${formatNumber(b, style)}`).join('')
 
 export function lineLabels(doc: LegalDoc): Map<number, string> {
     const out = new Map<number, string>()
@@ -75,7 +74,8 @@ export function checkDoc(input: string): DocIssue[] {
         return lo + 1
     }
     for (const r of source.matchAll(REF_RE)) {
-        if (!doc.refs[r[1].trim()]) out.push({ line: lineOf(r.index!), severity: 'error', message: `条参照「${r[0]}」の参照先（{#${r[1].trim()}}）がありません` })
+        if (!doc.refs[r[1].trim()])
+            out.push({ line: lineOf(r.index!), severity: 'error', message: `条参照「${r[0]}」の参照先（{#${r[1].trim()}}）がありません` })
     }
     for (const f of source.matchAll(/^[ \t]*(`{3,}|~{3,})\s*mermaid[^\n]*\n([\s\S]*?)\n[ \t]*\1[ \t]*$/gm)) {
         const fence = parseFence(f[0].replace(/^[ \t]+/gm, ''))

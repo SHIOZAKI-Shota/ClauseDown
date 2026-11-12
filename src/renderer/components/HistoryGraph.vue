@@ -17,7 +17,18 @@ const rows = computed<(CommitInfo & { work?: boolean })[]>(() => {
     const head = props.commits.find((c) => c.head)
     if (!props.pending || !head) return props.commits
     return [
-        { oid: WORK, parents: [head.oid], message: '保存していない変更', author: '', timestamp: 0, tags: [], branches: [], onCurrent: true, onMain: head.onMain, work: true },
+        {
+            oid: WORK,
+            parents: [head.oid],
+            message: '保存していない変更',
+            author: '',
+            timestamp: 0,
+            tags: [],
+            branches: [],
+            onCurrent: true,
+            onMain: head.onMain,
+            work: true,
+        },
         ...props.commits,
     ]
 })
@@ -29,7 +40,10 @@ const y = (row: number) => row * ROW + ROW / 2
 
 const paths = computed(() =>
     layout.value.edges.map((e) => {
-        const x1 = x(e.fromLane), y1 = y(e.fromRow), x2 = x(e.toLane), y2 = y(e.toRow)
+        const x1 = x(e.fromLane),
+            y1 = y(e.fromRow),
+            x2 = x(e.toLane),
+            y2 = y(e.toRow)
         let d: string
         if (x1 === x2) d = `M${x1} ${y1}L${x2} ${y2}`
         else if (e.curve === 'top') d = `M${x1} ${y1}C${x1} ${y1 + ROW * 0.6},${x2} ${y1 + ROW * 0.4},${x2} ${y1 + ROW}L${x2} ${y2}`
@@ -69,32 +83,52 @@ function chipsOf(c: CommitInfo): Chip[] {
 <template>
     <div class="graph" :style="{ height: rows.length * ROW + 'px' }">
         <svg :width="graphWidth" :height="rows.length * ROW" class="svg">
-            <path v-for="(p, i) in paths" :key="i" :d="p.d" fill="none"
-                :style="{ stroke: p.color, strokeWidth: p.strong ? 2.6 : 1.6, opacity: p.strong ? 1 : 0.4, strokeDasharray: p.work ? '4 3' : undefined }" />
+            <path
+                v-for="(p, i) in paths"
+                :key="i"
+                :d="p.d"
+                fill="none"
+                :style="{ stroke: p.color, strokeWidth: p.strong ? 2.6 : 1.6, opacity: p.strong ? 1 : 0.4, strokeDasharray: p.work ? '4 3' : undefined }"
+            />
             <g v-for="(c, r) in rows" :key="c.oid">
-                <circle v-if="c.head" :cx="x(layout.lanes[r])" :cy="y(r)" r="9" fill="none"
-                    :style="{ stroke: laneColor(layout.lanes[r]), opacity: 0.35 }" stroke-width="3" />
-                <circle :cx="x(layout.lanes[r])" :cy="y(r)" :r="c.work ? 5 : c.parents.length > 1 ? 4.5 : 5.5" :style="{
-                    fill: c.work || c.parents.length > 1 ? 'var(--ui-bg)' : laneColor(layout.lanes[r]),
-                    stroke: laneColor(layout.lanes[r]),
-                    strokeDasharray: c.work ? '2 2' : undefined,
-                    opacity: c.onCurrent || c.work ? 1 : 0.55,
-                }" stroke-width="2" />
+                <circle
+                    v-if="c.head"
+                    :cx="x(layout.lanes[r])"
+                    :cy="y(r)"
+                    r="9"
+                    fill="none"
+                    :style="{ stroke: laneColor(layout.lanes[r]), opacity: 0.35 }"
+                    stroke-width="3"
+                />
+                <circle
+                    :cx="x(layout.lanes[r])"
+                    :cy="y(r)"
+                    :r="c.work ? 5 : c.parents.length > 1 ? 4.5 : 5.5"
+                    :style="{
+                        fill: c.work || c.parents.length > 1 ? 'var(--ui-bg)' : laneColor(layout.lanes[r]),
+                        stroke: laneColor(layout.lanes[r]),
+                        strokeDasharray: c.work ? '2 2' : undefined,
+                        opacity: c.onCurrent || c.work ? 1 : 0.55,
+                    }"
+                    stroke-width="2"
+                />
             </g>
         </svg>
-        <div v-for="c in rows" :key="c.oid" class="row"
+        <div
+            v-for="c in rows"
+            :key="c.oid"
+            class="row"
             :class="{ on: c.work ? selected === 'work' : c.oid === selected, dim: !c.onCurrent && !c.work, work: c.work && !pickWork }"
             :style="{ height: ROW + 'px', paddingLeft: graphWidth + 8 + 'px' }"
-            @click="c.work ? pickWork && emit('select', 'work') : emit('select', c.oid)">
+            @click="c.work ? pickWork && emit('select', 'work') : emit('select', c.oid)"
+        >
             <div class="msg">
                 <span class="text">{{ firstLine(c.message) }}</span>
                 <span v-if="c.head" class="here">いまここ</span>
             </div>
             <div class="meta">
                 <template v-if="c.work">{{ currentLabel ? `${currentLabel} で編集中` : '編集中' }}</template>
-                <template v-else>
-                    <span class="avatar">{{ initial(c.author) }}</span>{{ c.author }}・{{ relTime(c.timestamp) }}
-                </template>
+                <template v-else> <span class="avatar">{{ initial(c.author) }}</span>{{ c.author }}・{{ relTime(c.timestamp) }} </template>
                 <span v-for="(ch, k) in chipsOf(c)" :key="k" :class="ch.cls" :title="ch.title">{{ ch.label }}</span>
             </div>
         </div>
@@ -181,7 +215,7 @@ function chipsOf(c: CommitInfo): Chip[] {
     min-width: 0;
 }
 
-.meta>* {
+.meta > * {
     flex-shrink: 0;
 }
 

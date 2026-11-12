@@ -8,5 +8,4 @@ export const EXPERIMENTS = [
 
 export type ExperimentId = (typeof EXPERIMENTS)[number]['id']
 
-export const isEnabled = (s: { experiments?: Partial<Record<ExperimentId, boolean>> } | null | undefined, id: ExperimentId): boolean =>
-    !!s?.experiments?.[id]
+export const isEnabled = (s: { experiments?: Partial<Record<ExperimentId, boolean>> } | null | undefined, id: ExperimentId): boolean => !!s?.experiments?.[id]

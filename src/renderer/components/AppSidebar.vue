@@ -31,9 +31,22 @@ const toggle = (to: 'setup' | 'about') => (app.view === to ? app.goBack() : (app
 </script>
 
 <template>
-    <UDashboardSidebar id="side" v-model:collapsed="collapsed" class="cd-side"
-        :ui="collapsed ? { root: 'min-w-0', header: 'h-auto p-0', body: 'p-0 gap-0 overflow-hidden', footer: FOOTER } : { header: 'h-auto p-0', body: 'cd-side-body', footer: FOOTER }"
-        resizable collapsible :collapsed-size="28" :default-size="OPTS.size" :min-size="OPTS.min" :max-size="OPTS.max">
+    <UDashboardSidebar
+        id="side"
+        v-model:collapsed="collapsed"
+        class="cd-side"
+        :ui="
+            collapsed
+                ? { root: 'min-w-0', header: 'h-auto p-0', body: 'p-0 gap-0 overflow-hidden', footer: FOOTER }
+                : { header: 'h-auto p-0', body: 'cd-side-body', footer: FOOTER }
+        "
+        resizable
+        collapsible
+        :collapsed-size="28"
+        :default-size="OPTS.size"
+        :min-size="OPTS.min"
+        :max-size="OPTS.max"
+    >
         <template #header>
             <div v-if="!collapsed" class="cd-pane-bar side-bar">
                 <span class="cd-pane-title">リポジトリ</span>
@@ -51,14 +64,22 @@ const toggle = (to: 'setup' | 'about') => (app.view === to ? app.goBack() : (app
         <template #footer>
             <template v-if="collapsed">
                 <UTooltip :text="app.view === 'about' ? 'このソフトについてを閉じる' : 'このソフトについて'">
-                    <button class="rail-btn" :class="{ on: app.view === 'about' }"
-                        :aria-label="app.view === 'about' ? 'このソフトについてを閉じる' : 'このソフトについて'" @click="toggle('about')">
+                    <button
+                        class="rail-btn"
+                        :class="{ on: app.view === 'about' }"
+                        :aria-label="app.view === 'about' ? 'このソフトについてを閉じる' : 'このソフトについて'"
+                        @click="toggle('about')"
+                    >
                         <UIcon :name="app.view === 'about' ? 'i-lucide-x' : 'i-lucide-info'" />
                     </button>
                 </UTooltip>
                 <UTooltip :text="app.view === 'setup' ? '設定を閉じる' : '設定'">
-                    <button class="rail-btn" :class="{ on: app.view === 'setup' }"
-                        :aria-label="app.view === 'setup' ? '設定を閉じる' : '設定'" @click="toggle('setup')">
+                    <button
+                        class="rail-btn"
+                        :class="{ on: app.view === 'setup' }"
+                        :aria-label="app.view === 'setup' ? '設定を閉じる' : '設定'"
+                        @click="toggle('setup')"
+                    >
                         <UIcon :name="app.view === 'setup' ? 'i-lucide-x' : 'i-lucide-settings'" />
                     </button>
                 </UTooltip>

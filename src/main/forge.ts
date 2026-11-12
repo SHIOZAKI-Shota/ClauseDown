@@ -147,9 +147,7 @@ function gitlabForge(r: gl.GitLabRepo): Forge {
             const [approvers, notes, versions] = await Promise.all([gl.listApprovals(r, n), gl.listNotes(r, n), gl.listVersions(r, n)])
             const time = (s: string) => Date.parse(s) || 0
             const shaAt = (at: string) =>
-                versions
-                    .filter((v) => time(v.created_at) <= time(at))
-                    .sort((a, b) => time(b.created_at) - time(a.created_at))[0]?.head_commit_sha ?? ''
+                versions.filter((v) => time(v.created_at) <= time(at)).sort((a, b) => time(b.created_at) - time(a.created_at))[0]?.head_commit_sha ?? ''
             const base = { branch: req.branch, source: 'gitlab' as const, pr: n, forge: 'gitlab' as const }
             const out: ReviewEvent[] = []
             for (const user of approvers) {
@@ -195,7 +193,7 @@ function gitlabForge(r: gl.GitLabRepo): Forge {
                 }
                 if (text) await gl.addNote(r, n, text)
             } else if (action === 'changes') {
-                await gl.unapprove(r, n).catch(() => { })
+                await gl.unapprove(r, n).catch(() => {})
                 await gl.addNote(r, n, `${CHANGES_MARK}\n\n${text ?? ''}`.trim())
             } else if (text) {
                 await gl.addNote(r, n, text)

@@ -30,17 +30,26 @@ let asked = false
 function useInstalledFonts() {
     if (!asked) {
         asked = true
-        window.api.listFonts().then((r) => (fonts.value = r)).catch(() => { })
+        window.api
+            .listFonts()
+            .then((r) => (fonts.value = r))
+            .catch(() => {})
     }
     return fonts
 }
 </script>
 
 <template>
-    <UInputMenu :model-value="modelValue" :items="items" create-item open-on-click
-        :style="{ fontFamily: family(modelValue) }" :ui="{ content: 'cd-font-menu' }"
+    <UInputMenu
+        :model-value="modelValue"
+        :items="items"
+        create-item
+        open-on-click
+        :style="{ fontFamily: family(modelValue) }"
+        :ui="{ content: 'cd-font-menu' }"
         @update:model-value="(v: string) => v && emit('update:modelValue', v)"
-        @create="(v: string) => emit('update:modelValue', v)">
+        @create="(v: string) => emit('update:modelValue', v)"
+    >
         <template #item-label="{ item }">
             <span :style="{ fontFamily: family(String(item)) }">{{ item }}</span>
         </template>

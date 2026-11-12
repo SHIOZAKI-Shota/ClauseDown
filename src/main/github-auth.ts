@@ -78,8 +78,7 @@ export async function waitLogin(): Promise<GitHubAccount> {
 }
 
 export async function whoAmI(token: string): Promise<Profile | null> {
-    const get = (path: string) =>
-        fetch(apiBase() + path, { headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}` } })
+    const get = (path: string) => fetch(apiBase() + path, { headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}` } })
     try {
         const res = await get('/user')
         if (!res.ok) return null

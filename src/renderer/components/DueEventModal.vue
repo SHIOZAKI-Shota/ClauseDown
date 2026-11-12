@@ -65,23 +65,31 @@ const error = computed(() => {
 
 function save() {
     if (error.value) return
-    emit('save', {
-        ...(e ? { id: e.id } : {}),
-        kind: kind.value,
-        docPath: docPath.value === ALL ? '' : docPath.value,
-        date: date.value,
-        ...(isRange.value && end.value > date.value ? { end: end.value } : {}),
-        ...(repeat.value !== 'none' ? { repeat: { every: repeat.value, ...(until.value ? { until: until.value } : {}) } } : {}),
-        ...(remind.value !== 'kind' ? { remind: Number(remind.value) } : {}),
-        ...(title.value.trim() ? { title: title.value.trim() } : {}),
-        ...(note.value.trim() ? { note: note.value.trim() } : {}),
-    }, dir.value)
+    emit(
+        'save',
+        {
+            ...(e ? { id: e.id } : {}),
+            kind: kind.value,
+            docPath: docPath.value === ALL ? '' : docPath.value,
+            date: date.value,
+            ...(isRange.value && end.value > date.value ? { end: end.value } : {}),
+            ...(repeat.value !== 'none' ? { repeat: { every: repeat.value, ...(until.value ? { until: until.value } : {}) } } : {}),
+            ...(remind.value !== 'kind' ? { remind: Number(remind.value) } : {}),
+            ...(title.value.trim() ? { title: title.value.trim() } : {}),
+            ...(note.value.trim() ? { note: note.value.trim() } : {}),
+        },
+        dir.value,
+    )
 }
 </script>
 
 <template>
-    <UModal :open="true" :title="event ? '期日を直す' : '期日を足す'"
-        description="施行・公布・提出・届出・契約の開始や更新などの日付を記録します。リポジトリを使う全員に共有されます。" @update:open="(v) => !v && emit('close')">
+    <UModal
+        :open="true"
+        :title="event ? '期日を直す' : '期日を足す'"
+        description="施行・公布・提出・届出・契約の開始や更新などの日付を記録します。リポジトリを使う全員に共有されます。"
+        @update:open="(v) => !v && emit('close')"
+    >
         <template #body>
             <div class="cd-form">
                 <UFormField v-if="repoChoices && !event" label="リポジトリ">
@@ -89,17 +97,26 @@ function save() {
                 </UFormField>
                 <UFormField label="種類">
                     <div class="kinds" role="radiogroup" aria-label="種類">
-                        <button v-for="k in kindList" :key="k.id" type="button" role="radio" class="kind"
-                            :class="{ on: kind === k.id }" :aria-checked="kind === k.id"
-                            :style="{ '--k': KIND_COLORS[k.color] }" @click="kind = k.id">{{ k.label }}</button>
+                        <button
+                            v-for="k in kindList"
+                            :key="k.id"
+                            type="button"
+                            role="radio"
+                            class="kind"
+                            :class="{ on: kind === k.id }"
+                            :aria-checked="kind === k.id"
+                            :style="{ '--k': KIND_COLORS[k.color] }"
+                            @click="kind = k.id"
+                        >
+                            {{ k.label }}
+                        </button>
                     </div>
                 </UFormField>
                 <UFormField label="名前" description="空欄なら種類の名前（例：更新）を使います">
                     <UInput v-model="title" class="cd-full" :placeholder="kindNow ? `例：${kindNow.label}（〇〇宛て）` : ''" />
                 </UFormField>
                 <UFormField label="対象">
-                    <USelectMenu v-model="docPath" :items="docItems" value-key="value" :disabled="fixedDoc"
-                        class="cd-full" />
+                    <USelectMenu v-model="docPath" :items="docItems" value-key="value" :disabled="fixedDoc" class="cd-full" />
                 </UFormField>
 
                 <div class="dates">
@@ -114,11 +131,15 @@ function save() {
 
                 <UFormField label="繰り返し">
                     <div class="dates">
-                        <SegmentSwitch v-model="repeat" aria-label="繰り返し" :items="[
-                            { value: 'none', label: 'なし' },
-                            { value: 'year', label: '毎年' },
-                            { value: 'month', label: '毎月' },
-                        ]" />
+                        <SegmentSwitch
+                            v-model="repeat"
+                            aria-label="繰り返し"
+                            :items="[
+                                { value: 'none', label: 'なし' },
+                                { value: 'year', label: '毎年' },
+                                { value: 'month', label: '毎月' },
+                            ]"
+                        />
                         <template v-if="repeat !== 'none'">
                             <span class="cd-muted">終わり</span>
                             <DateField v-model="until" :min="date" />
@@ -138,8 +159,7 @@ function save() {
         </template>
         <template #footer>
             <div class="cd-modal-foot foot">
-                <UButton v-if="event" label="消す" icon="i-lucide-trash-2" color="error" variant="ghost" class="del"
-                    @click="emit('remove', event.id, dir)" />
+                <UButton v-if="event" label="消す" icon="i-lucide-trash-2" color="error" variant="ghost" class="del" @click="emit('remove', event.id, dir)" />
                 <UButton label="やめる" color="neutral" variant="outline" @click="emit('close')" />
                 <UButton :label="event ? '保存' : '足す'" :disabled="!!error" :loading="app.busy" @click="save" />
             </div>
@@ -191,7 +211,7 @@ function save() {
     flex-wrap: wrap;
 }
 
-.dates>.cd-muted {
+.dates > .cd-muted {
     align-self: center;
 }
 

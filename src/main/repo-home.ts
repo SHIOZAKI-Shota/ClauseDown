@@ -111,8 +111,7 @@ export async function allEffective(dir: string): Promise<RepoActivity['effective
             let oid = tagOid
             try {
                 oid = (await git.readTag({ fs, dir, oid })).tag.object
-            } catch {
-            }
+            } catch {}
             const { commit } = await git.readCommit({ fs, dir, oid }).catch(() => ({ commit: null }))
             if (!commit) continue
             if (tagMemo.size > 5000) tagMemo.clear()

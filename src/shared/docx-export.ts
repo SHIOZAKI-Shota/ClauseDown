@@ -74,9 +74,11 @@ function runs(text: string, opts: { bold?: boolean; props?: CdProps } = {}): Tex
     const out: TextRun[] = []
     for (const r of inlineRuns(text)) {
         const p = mergeProps(opts.props, r.props)
-        r.text.split('\n').forEach((t, i) =>
-            out.push(new TextRun({ text: t, bold: opts.bold, break: i ? 1 : undefined, size: halfPoints(p?.fontSize), font: p?.fontFamily })),
-        )
+        r.text
+            .split('\n')
+            .forEach((t, i) =>
+                out.push(new TextRun({ text: t, bold: opts.bold, break: i ? 1 : undefined, size: halfPoints(p?.fontSize), font: p?.fontFamily })),
+            )
     }
     return out
 }
@@ -99,7 +101,9 @@ function imagePara(src: string, alt: string, indent: number, ctx: Ctx): DocxPara
     const scale = Math.min(1, maxPx / img.width)
     return new DocxParagraph({
         indent: { left: indent * EM },
-        children: [new ImageRun({ type: img.type, data: img.data, transformation: { width: Math.round(img.width * scale), height: Math.round(img.height * scale) } })],
+        children: [
+            new ImageRun({ type: img.type, data: img.data, transformation: { width: Math.round(img.width * scale), height: Math.round(img.height * scale) } }),
+        ],
     })
 }
 
@@ -109,7 +113,9 @@ function figurePara(fig: { png: Uint8Array; width: number; height: number }, ind
     return new DocxParagraph({
         alignment: center ? AlignmentType.CENTER : undefined,
         indent: { left: indent * EM },
-        children: [new ImageRun({ type: 'png', data: fig.png, transformation: { width: Math.round(fig.width * scale), height: Math.round(fig.height * scale) } })],
+        children: [
+            new ImageRun({ type: 'png', data: fig.png, transformation: { width: Math.round(fig.width * scale), height: Math.round(fig.height * scale) } }),
+        ],
     })
 }
 
@@ -310,9 +316,7 @@ function build(children: (DocxParagraph | Table)[], landscape = false, style?: D
     const section: ISectionOptions = {
         properties: {
             page: {
-                size: landscape
-                    ? { width: A4_LONG, height: A4_SHORT, orientation: 'landscape' as any }
-                    : { width: A4_SHORT, height: A4_LONG },
+                size: landscape ? { width: A4_LONG, height: A4_SHORT, orientation: 'landscape' as any } : { width: A4_SHORT, height: A4_LONG },
                 margin: { top: m, bottom: m, left: m, right: m },
             },
         },
@@ -391,10 +395,7 @@ function cell(children: DocxParagraph[], shade = false) {
     })
 }
 
-export function compareToDocx(
-    rows: CompareRow[],
-    opts: { title?: string; omitUnchanged?: boolean; style?: DocStyle } = {},
-): Promise<Buffer> {
+export function compareToDocx(rows: CompareRow[], opts: { title?: string; omitUnchanged?: boolean; style?: DocStyle } = {}): Promise<Buffer> {
     const list = opts.omitUnchanged ? collapseUnchanged(rows) : rows
     const center = (t: string) => [new DocxParagraph({ alignment: AlignmentType.CENTER, children: [new TextRun(t)] })]
     const tableRows = [
@@ -403,12 +404,12 @@ export function compareToDocx(
             r.status === 'omitted'
                 ? new TableRow({ children: [cell(center('（略）')), cell(center('（略）'))] })
                 : new TableRow({
-                    cantSplit: true,
-                    children: [
-                        cell(cellParas(r.newParts, r.status === 'removed' ? '（削る）' : undefined)),
-                        cell(cellParas(r.oldParts, r.status === 'added' ? '（新設）' : undefined)),
-                    ],
-                }),
+                      cantSplit: true,
+                      children: [
+                          cell(cellParas(r.newParts, r.status === 'removed' ? '（削る）' : undefined)),
+                          cell(cellParas(r.oldParts, r.status === 'added' ? '（新設）' : undefined)),
+                      ],
+                  }),
         ),
     ]
     const children: (DocxParagraph | Table)[] = []
@@ -427,8 +428,8 @@ function inlineParas(r: CompareRow): DocxParagraph[] {
                 p.op === 'add'
                     ? new TextRun({ text: s, color: '1D4ED8', underline: {} })
                     : p.op === 'del'
-                        ? new TextRun({ text: s, color: 'C02626', strike: true })
-                        : new TextRun(s)
+                      ? new TextRun({ text: s, color: 'C02626', strike: true })
+                      : new TextRun(s)
             lines[lines.length - 1].push(run)
         })
     }
@@ -449,7 +450,11 @@ export function inlineToDocx(rows: CompareRow[], opts: { title?: string; omitUnc
     children.push(
         new DocxParagraph({
             alignment: AlignmentType.CENTER,
-            children: [new TextRun({ text: '削除文字', color: 'C02626', strike: true }), new TextRun('　'), new TextRun({ text: '追加文字', color: '1D4ED8', underline: {} })],
+            children: [
+                new TextRun({ text: '削除文字', color: 'C02626', strike: true }),
+                new TextRun('　'),
+                new TextRun({ text: '追加文字', color: '1D4ED8', underline: {} }),
+            ],
         }),
     )
     list.forEach((r, i) => {

@@ -9,9 +9,7 @@ const app = useApp()
 const choices = ref<Record<string, ConflictChoice>>({})
 const unresolved = computed(() => props.state.conflicts.filter((c) => !choices.value[c.path]).length)
 const auto = computed(() => props.state.autoMerged ?? [])
-const summary = computed(
-    () => `同じ箇所の重なり ${props.state.conflicts.length} 件${auto.value.length ? `・自動で統合 ${auto.value.length} 件` : ''}`,
-)
+const summary = computed(() => `同じ箇所の重なり ${props.state.conflicts.length} 件${auto.value.length ? `・自動で統合 ${auto.value.length} 件` : ''}`)
 
 async function apply() {
     await app.flushEditor()

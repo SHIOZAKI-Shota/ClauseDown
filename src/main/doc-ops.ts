@@ -23,7 +23,10 @@ async function titleOf(dir: string, path: string): Promise<string> {
 async function inHead(dir: string, path: string): Promise<boolean> {
     const head = await tryResolve(dir, 'HEAD')
     if (!head) return false
-    return git.readBlob({ fs, dir, oid: head, filepath: path }).then(() => true, () => false)
+    return git.readBlob({ fs, dir, oid: head, filepath: path }).then(
+        () => true,
+        () => false,
+    )
 }
 
 function copyName(dir: string, folder: string, stem: string): string {

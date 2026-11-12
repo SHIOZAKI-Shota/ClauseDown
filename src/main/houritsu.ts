@@ -43,9 +43,7 @@ export async function convertHouritsu(dir: string, paths: string[]): Promise<Hou
     const who = await author(dir)
     const head = await git.resolveRef({ fs, dir, ref: 'HEAD' })
     const clean = new Set(
-        (await git.statusMatrix({ fs, dir }))
-            .filter(([path, h, w, s]) => wanted.has(path) && h === 1 && w === 1 && s === 1)
-            .map(([path]) => path),
+        (await git.statusMatrix({ fs, dir })).filter(([path, h, w, s]) => wanted.has(path) && h === 1 && w === 1 && s === 1).map(([path]) => path),
     )
 
     const done: string[] = []
@@ -73,7 +71,7 @@ export async function convertHouritsu(dir: string, paths: string[]): Promise<Hou
         for (const path of done) {
             const { blob } = await git.readBlob({ fs, dir, oid: head, filepath: path })
             await fsp.writeFile(safeJoin(dir, path), blob)
-            await git.resetIndex({ fs, dir, filepath: path }).catch(() => { })
+            await git.resetIndex({ fs, dir, filepath: path }).catch(() => {})
         }
         throw e
     }

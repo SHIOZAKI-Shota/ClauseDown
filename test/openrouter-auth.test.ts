@@ -52,6 +52,6 @@ describe('OpenRouter のログイン', () => {
 
     it('戻ってこなければ時間切れにする', async () => {
         process.env.CLAUSEDOWN_OPENROUTER_TIMEOUT_MS = '100'
-        await expect(loginOpenRouter(async () => { })).rejects.toThrow('時間が切れました')
+        await expect(loginOpenRouter(async () => {})).rejects.toThrow('時間が切れました')
     })
 })

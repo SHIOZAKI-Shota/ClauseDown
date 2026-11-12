@@ -24,8 +24,15 @@ const mine = (b: BranchInfo) => app.toReview.includes(b)
     <section class="cd-side-sec">
         <SectionHead label="改定案" icon="i-lucide-git-branch" :count="drafts.length">
             <UTooltip text="新しい改定案">
-                <UButton icon="i-lucide-plus" size="xs" square color="neutral" variant="ghost" aria-label="新しい改定案"
-                    @click="app.dialog = { kind: 'newBranch' }" />
+                <UButton
+                    icon="i-lucide-plus"
+                    size="xs"
+                    square
+                    color="neutral"
+                    variant="ghost"
+                    aria-label="新しい改定案"
+                    @click="app.dialog = { kind: 'newBranch' }"
+                />
             </UTooltip>
         </SectionHead>
         <p v-if="!drafts.length" class="cd-muted empty">進行中の改定案はありません。大きな改定は「＋」から改定案を作ると、現行版を変えずに進められます。</p>
@@ -37,21 +44,26 @@ const mine = (b: BranchInfo) => app.toReview.includes(b)
                         <span v-if="b.current" class="here">作業中</span>
                     </div>
                     <div class="cd-muted meta">
-                        <UBadge :label="mine(b) ? 'あなたの確認待ち' : STATE_LABEL[app.statusOf(b).state]"
-                            :color="mine(b) ? 'primary' : STATE_COLOR[app.statusOf(b).state]" variant="subtle"
-                            size="sm" />
+                        <UBadge
+                            :label="mine(b) ? 'あなたの確認待ち' : STATE_LABEL[app.statusOf(b).state]"
+                            :color="mine(b) ? 'primary' : STATE_COLOR[app.statusOf(b).state]"
+                            variant="subtle"
+                            size="sm"
+                        />
                         <span :title="fmtDate(b.timestamp, 'ymdhm')">{{ b.author }}・{{ relTime(b.timestamp) }}</span>
                     </div>
-                    <div v-if="b.mainMoved" class="warn">
-                        <UIcon name="i-lucide-triangle-alert" />現行版のほうが先に更新されています
-                    </div>
+                    <div v-if="b.mainMoved" class="warn"><UIcon name="i-lucide-triangle-alert" />現行版のほうが先に更新されています</div>
                 </div>
                 <div class="side">
-                    <UButton v-if="waiting(b)" label="確認" size="xs" :color="mine(b) ? 'primary' : 'neutral'"
+                    <UButton
+                        v-if="waiting(b)"
+                        label="確認"
+                        size="xs"
+                        :color="mine(b) ? 'primary' : 'neutral'"
                         :variant="mine(b) ? 'solid' : 'outline'"
-                        @click="app.dialog = { kind: 'review', branch: b.name }" />
-                    <UButton v-if="!b.current" label="切り替え" size="xs" color="neutral" variant="ghost" class="switch"
-                        @click="app.switchBranch(b.name)" />
+                        @click="app.dialog = { kind: 'review', branch: b.name }"
+                    />
+                    <UButton v-if="!b.current" label="切り替え" size="xs" color="neutral" variant="ghost" class="switch" @click="app.switchBranch(b.name)" />
                 </div>
             </li>
         </ul>

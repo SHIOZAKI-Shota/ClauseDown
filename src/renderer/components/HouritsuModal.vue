@@ -33,8 +33,8 @@ async function convert() {
         <template #body>
             <div v-if="!result" class="body">
                 <p>
-                    「{{ repoName }}」に、houritsu（e-Gov の法令を Markdown にしたもの）の形式の文書が {{ paths.length }} 件あります。
-                    ClauseDown の形に変えて、1 つの版として保存しますか？
+                    「{{ repoName }}」に、houritsu（e-Gov の法令を Markdown にしたもの）の形式の文書が {{ paths.length }} 件あります。 ClauseDown
+                    の形に変えて、1 つの版として保存しますか？
                 </p>
                 <ul class="cd-muted notes">
                     <li>条・項・号の番号と本文は、そのまま残ります。</li>

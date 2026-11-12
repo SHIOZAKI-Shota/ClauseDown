@@ -13,10 +13,10 @@ const isogit = (await import('isomorphic-git')).default
 
 let root = ''
 let base = ''
-let close = () => { }
+let close = () => {}
 beforeAll(async () => {
     let url = ''
-    ; ({ root, url, close } = await startGitServer())
+    ;({ root, url, close } = await startGitServer())
     base = url.replace(/docs\.git$/, '')
 })
 afterAll(() => close())

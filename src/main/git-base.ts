@@ -43,7 +43,9 @@ export const onAuth: AuthCallback = async (url) => {
 
 export async function identity(dir?: string | null): Promise<Identity | null> {
     const settings = await loadSettings()
-    const creds = await Promise.resolve().then(() => listCredentials()).catch(() => ({}) as Awaited<ReturnType<typeof listCredentials>>)
+    const creds = await Promise.resolve()
+        .then(() => listCredentials())
+        .catch(() => ({}) as Awaited<ReturnType<typeof listCredentials>>)
     const bases = knownBases(settings)
     const fromLogin = (base: string): Identity | null => {
         const b = bases.find((x) => x.base === base)
@@ -80,7 +82,11 @@ export async function author(dir?: string | null): Promise<{ name: string; email
     return { name: who.name, email: who.email }
 }
 
-export const hasHead = (dir: string) => git.resolveRef({ fs, dir, ref: 'HEAD' }).then(() => true, () => false)
+export const hasHead = (dir: string) =>
+    git.resolveRef({ fs, dir, ref: 'HEAD' }).then(
+        () => true,
+        () => false,
+    )
 export const tryResolve = (dir: string, ref: string) => git.resolveRef({ fs, dir, ref }).catch(() => null)
 
 export async function hasRemote(dir: string) {

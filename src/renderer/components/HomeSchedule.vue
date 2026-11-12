@@ -9,18 +9,20 @@ const app = useApp()
 const s = useSchedule()
 const LIMIT = 8
 
-const titleOf = (path: string) =>
-    !path ? 'リポジトリ全体' : (app.docs.find((d) => d.path === path)?.title ?? baseName(path).replace(/\.md$/i, ''))
+const titleOf = (path: string) => (!path ? 'リポジトリ全体' : (app.docs.find((d) => d.path === path)?.title ?? baseName(path).replace(/\.md$/i, '')))
 const exists = (path: string) => !!path && app.docs.some((d) => d.path === path)
 
 const upcoming = computed(() => {
     const until = addDays(s.today, 60)
-    return s.items.value.filter(
-        (o) => o.source !== 'delivery' && (o.overdue || (!o.done && (o.end ?? o.date) >= s.today && o.date <= until)),
-    )
+    return s.items.value.filter((o) => o.source !== 'delivery' && (o.overdue || (!o.done && (o.end ?? o.date) >= s.today && o.date <= until)))
 })
 const overdueCount = computed(() => upcoming.value.filter((o) => o.overdue).length)
-const deliveries = computed(() => s.items.value.filter((o) => o.source === 'delivery').slice(-3).reverse())
+const deliveries = computed(() =>
+    s.items.value
+        .filter((o) => o.source === 'delivery')
+        .slice(-3)
+        .reverse(),
+)
 const thisYear = s.today.slice(0, 4)
 const shortDate = (d: string) => fmtDate(`${d}T00:00:00`, d.startsWith(thisYear) ? 'md' : 'ymd')
 </script>
@@ -29,35 +31,52 @@ const shortDate = (d: string) => fmtDate(`${d}T00:00:00`, d.startsWith(thisYear)
     <section class="cd-side-sec">
         <SectionHead label="期日" icon="i-lucide-calendar-clock" :count="upcoming.length">
             <UTooltip text="期日を足す">
-                <UButton icon="i-lucide-calendar-plus" size="xs" square color="neutral" variant="ghost"
-                    aria-label="期日を足す" @click="app.dialog = { kind: 'newEvent', docPath: '' }" />
+                <UButton
+                    icon="i-lucide-calendar-plus"
+                    size="xs"
+                    square
+                    color="neutral"
+                    variant="ghost"
+                    aria-label="期日を足す"
+                    @click="app.dialog = { kind: 'newEvent', docPath: '' }"
+                />
             </UTooltip>
             <UTooltip text="タイムラインで見る">
-                <UButton icon="i-lucide-calendar-range" size="xs" square color="neutral" variant="ghost"
-                    aria-label="タイムラインで見る" @click="app.openSchedule()" />
+                <UButton
+                    icon="i-lucide-calendar-range"
+                    size="xs"
+                    square
+                    color="neutral"
+                    variant="ghost"
+                    aria-label="タイムラインで見る"
+                    @click="app.openSchedule()"
+                />
             </UTooltip>
         </SectionHead>
-        <p v-if="overdueCount" class="over">
-            <UIcon name="i-lucide-alarm-clock-off" />期限切れが {{ overdueCount }} 件あります
-        </p>
+        <p v-if="overdueCount" class="over"><UIcon name="i-lucide-alarm-clock-off" />期限切れが {{ overdueCount }} 件あります</p>
         <p v-if="!s.loaded.value" class="cd-muted">読み込み中…</p>
         <p v-else-if="!upcoming.length" class="cd-muted">
             これから 60 日の期日はありません。施行・公布・提出・届出・契約の更新などの日付を足すと、ここに出ます。
         </p>
         <div v-else class="rows">
-            <OccurrenceRow v-for="o in upcoming.slice(0, LIMIT)" :key="o.key" :o="o" :kind="s.kindOf.value(o.kind)"
-                :where="titleOf(o.docPath)" @click="app.openSchedule()" @toggle="s.toggleDone(o)" />
+            <OccurrenceRow
+                v-for="o in upcoming.slice(0, LIMIT)"
+                :key="o.key"
+                :o="o"
+                :kind="s.kindOf.value(o.kind)"
+                :where="titleOf(o.docPath)"
+                @click="app.openSchedule()"
+                @toggle="s.toggleDone(o)"
+            />
         </div>
-        <button v-if="upcoming.length > LIMIT" class="more" @click="app.openSchedule()">ほか {{ upcoming.length - LIMIT }}
-            件をタイムラインで見る</button>
+        <button v-if="upcoming.length > LIMIT" class="more" @click="app.openSchedule()">ほか {{ upcoming.length - LIMIT }} 件をタイムラインで見る</button>
 
         <template v-if="deliveries.length">
             <SectionHead label="最近の納品" icon="i-lucide-package-check" class="sub" />
             <ul class="deliv">
                 <li v-for="d in deliveries" :key="d.key">
                     <span class="cd-muted when">{{ shortDate(d.date) }}</span>
-                    <button v-if="exists(d.docPath)" class="name" :title="d.title"
-                        @click="app.openDoc(d.docPath, 'releases')">{{ d.title }}</button>
+                    <button v-if="exists(d.docPath)" class="name" :title="d.title" @click="app.openDoc(d.docPath, 'releases')">{{ d.title }}</button>
                     <span v-else class="name">{{ d.title }}</span>
                 </li>
             </ul>

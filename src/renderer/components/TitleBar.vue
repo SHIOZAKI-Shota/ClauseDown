@@ -7,7 +7,6 @@ const inDoc = computed(() => ['editor', 'history', 'compare', 'releases'].includ
 function backToDoc() {
     if (app.currentDoc && !inDoc.value) app.openDoc(app.currentDoc.path, app.lastDocView)
 }
-
 </script>
 
 <template>
@@ -24,8 +23,13 @@ function backToDoc() {
             </template>
             <template v-if="app.repoDir && app.currentDoc">
                 <UIcon name="i-lucide-chevron-right" class="sep" />
-                <button class="cd-crumb-btn doc" :class="{ here: inDoc }" :aria-current="inDoc ? 'page' : undefined"
-                    :title="inDoc ? app.currentDoc.path : `「${app.currentDoc.title}」に戻る`" @click="backToDoc">
+                <button
+                    class="cd-crumb-btn doc"
+                    :class="{ here: inDoc }"
+                    :aria-current="inDoc ? 'page' : undefined"
+                    :title="inDoc ? app.currentDoc.path : `「${app.currentDoc.title}」に戻る`"
+                    @click="backToDoc"
+                >
                     <UIcon name="i-lucide-file-text" class="ci" />
                     <span class="nm">{{ app.currentDoc.title }}</span>
                 </button>

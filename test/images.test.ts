@@ -83,7 +83,12 @@ describe('画像の保存と版', () => {
         expect(img?.ext).toBe('png')
         expect(await images.readImage(dir, '規程/就業規則.md', '../../x.png')).toBeNull()
 
-        const docx = await docToDocx(parseLegal(text), undefined, undefined, new Map([[saved.src, { data: new Uint8Array(PNG), type: 'png', width: 1, height: 1 }]]))
+        const docx = await docToDocx(
+            parseLegal(text),
+            undefined,
+            undefined,
+            new Map([[saved.src, { data: new Uint8Array(PNG), type: 'png', width: 1, height: 1 }]]),
+        )
         expect(docx.length).toBeGreaterThan(1000)
         await expect(images.saveImage(dir, '規程/就業規則.md', new Uint8Array([1, 2, 3, 4]), 'png')).rejects.toThrow('PNG・JPEG')
         fs.rmSync(dir, { recursive: true, force: true })

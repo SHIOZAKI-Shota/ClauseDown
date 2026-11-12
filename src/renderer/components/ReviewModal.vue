@@ -34,9 +34,7 @@ const ACTION_ICON: Record<ReviewAction, string> = {
     withdraw: 'i-lucide-undo-2',
 }
 
-const mayApprove = computed(
-    () => open.value && canApprove(app.reviewer, status.value?.request, app.rules) && status.value?.state !== 'approved',
-)
+const mayApprove = computed(() => open.value && canApprove(app.reviewer, status.value?.request, app.rules) && status.value?.state !== 'approved')
 const unsavedHere = computed(() => b.value?.current && app.hasUnsaved)
 
 onMounted(async () => {
@@ -50,10 +48,7 @@ onMounted(async () => {
 
 watch(file, async (f) => {
     if (!f || !b.value || !app.mainBranch) return (table.value = '')
-    const [oldSrc, newSrc] = await Promise.all([
-        window.api.readAt(app.repoDir!, app.mainBranch.oid, f),
-        window.api.readAt(app.repoDir!, b.value.oid, f),
-    ])
+    const [oldSrc, newSrc] = await Promise.all([window.api.readAt(app.repoDir!, app.mainBranch.oid, f), window.api.readAt(app.repoDir!, b.value.oid, f)])
     table.value = withImages(renderCompareTable(compareSources(oldSrc ?? '', newSrc ?? ''), { omitUnchanged: true }), app.repoDir, f).replace(
         '<th>改正後</th><th>改正前</th>',
         `<th>改定案</th><th>現行版</th>`,
@@ -71,30 +66,38 @@ async function act(action: ReviewAction) {
 </script>
 
 <template>
-    <UModal :open="true" :title="`確認依頼：${b?.label ?? branch}`"
-        :ui="{ content: 'cd-wide cd-modal-tall', body: 'cd-modal-split' }" @update:open="(v) => !v && emit('close')">
+    <UModal
+        :open="true"
+        :title="`確認依頼：${b?.label ?? branch}`"
+        :ui="{ content: 'cd-wide cd-modal-tall', body: 'cd-modal-split' }"
+        @update:open="(v) => !v && emit('close')"
+    >
         <template #body>
             <div v-if="b && status" class="grid">
                 <div class="side">
                     <div class="state">
-                        <UBadge :label="STATE_LABEL[status.state]" :color="STATE_COLOR[status.state]" size="lg"
-                            variant="subtle" />
-                        <span v-if="prOf(status.request)" class="muted">{{ reviewRefLabel(status.request?.forge ?? 'github',
-                            prOf(status.request)!) }}</span>
+                        <UBadge :label="STATE_LABEL[status.state]" :color="STATE_COLOR[status.state]" size="lg" variant="subtle" />
+                        <span v-if="prOf(status.request)" class="muted">{{ reviewRefLabel(status.request?.forge ?? 'github', prOf(status.request)!) }}</span>
                     </div>
                     <p class="cd-muted">
-                        承認：{{ app.rules.requireApproval ? '現行版に反映するには必要' : '任意' }}
-                        ／ 承認できる人：{{ app.rules.approvers.length ? app.rules.approvers.join('、') : '依頼した人以外の誰でも' }}
+                        承認：{{ app.rules.requireApproval ? '現行版に反映するには必要' : '任意' }} ／ 承認できる人：{{
+                            app.rules.approvers.length ? app.rules.approvers.join('、') : '依頼した人以外の誰でも'
+                        }}
                     </p>
 
                     <ol class="timeline">
                         <li v-for="e in status.events" :key="e.id">
                             <UIcon :name="ACTION_ICON[e.action]" class="ev-icon" :class="e.action" />
                             <div>
-                                <div><strong>{{ e.by }}</strong> が{{ ACTION_LABEL[e.action] }}<span class="cd-muted">　{{
-                                        fmtDate(e.at, 'mdhm') }}</span>
-                                    <UBadge v-if="e.source === 'github' || e.source === 'gitlab'" :label="FORGE_LABEL[e.source]" size="sm" color="neutral"
-                                        variant="outline" />
+                                <div>
+                                    <strong>{{ e.by }}</strong> が{{ ACTION_LABEL[e.action] }}<span class="cd-muted">　{{ fmtDate(e.at, 'mdhm') }}</span>
+                                    <UBadge
+                                        v-if="e.source === 'github' || e.source === 'gitlab'"
+                                        :label="FORGE_LABEL[e.source]"
+                                        size="sm"
+                                        color="neutral"
+                                        variant="outline"
+                                    />
                                 </div>
                                 <div v-if="e.text" class="text">{{ e.text }}</div>
                             </div>
@@ -102,24 +105,36 @@ async function act(action: ReviewAction) {
                         <li v-if="status.events.length === 0" class="muted">まだ記録はありません。</li>
                     </ol>
 
-                    <UAlert v-if="unsavedHere" color="warning" variant="subtle" title="保存していない変更があります"
-                        description="確認してもらうのは保存した版です。先に「版を保存」してください。" />
-                    <UTextarea v-model="text" :rows="3" class="cd-full"
-                        :placeholder="open ? 'コメント（修正の依頼では必須）' : '確認してほしい点など（任意）'" />
+                    <UAlert
+                        v-if="unsavedHere"
+                        color="warning"
+                        variant="subtle"
+                        title="保存していない変更があります"
+                        description="確認してもらうのは保存した版です。先に「版を保存」してください。"
+                    />
+                    <UTextarea
+                        v-model="text"
+                        :rows="3"
+                        class="cd-full"
+                        :placeholder="open ? 'コメント（修正の依頼では必須）' : '確認してほしい点など（任意）'"
+                    />
                     <div class="actions">
                         <template v-if="!open || status.state === 'changes'">
-                            <UButton :label="open ? '直したので再度依頼' : '確認を依頼'" icon="i-lucide-send" :loading="app.busy"
-                                @click="act('request')" />
+                            <UButton :label="open ? '直したので再度依頼' : '確認を依頼'" icon="i-lucide-send" :loading="app.busy" @click="act('request')" />
                         </template>
                         <template v-if="open">
-                            <UButton v-if="mayApprove" label="承認" icon="i-lucide-badge-check" color="success"
-                                :loading="app.busy" @click="act('approve')" />
-                            <UButton v-if="mayApprove" label="修正を依頼" icon="i-lucide-pencil-line" color="warning"
-                                variant="soft" :disabled="!text.trim()" @click="act('changes')" />
-                            <UButton label="コメント" icon="i-lucide-message-square" color="neutral" variant="outline"
-                                @click="act('comment')" />
-                            <UButton label="依頼を取り下げ" icon="i-lucide-undo-2" color="neutral" variant="ghost"
-                                @click="act('withdraw')" />
+                            <UButton v-if="mayApprove" label="承認" icon="i-lucide-badge-check" color="success" :loading="app.busy" @click="act('approve')" />
+                            <UButton
+                                v-if="mayApprove"
+                                label="修正を依頼"
+                                icon="i-lucide-pencil-line"
+                                color="warning"
+                                variant="soft"
+                                :disabled="!text.trim()"
+                                @click="act('changes')"
+                            />
+                            <UButton label="コメント" icon="i-lucide-message-square" color="neutral" variant="outline" @click="act('comment')" />
+                            <UButton label="依頼を取り下げ" icon="i-lucide-undo-2" color="neutral" variant="ghost" @click="act('withdraw')" />
                         </template>
                     </div>
                 </div>
@@ -244,6 +259,9 @@ async function act(action: ReviewAction) {
     position: sticky;
     top: 0;
     z-index: 1;
-    box-shadow: inset 0 -1px 0 var(--cd-rule), inset 0 1px 0 var(--cd-rule), 0 -8px 0 var(--cd-paper);
+    box-shadow:
+        inset 0 -1px 0 var(--cd-rule),
+        inset 0 1px 0 var(--cd-rule),
+        0 -8px 0 var(--cd-paper);
 }
 </style>

@@ -233,7 +233,9 @@ describe('変換の途中で失敗したとき', () => {
 describe('崩れやすい行', () => {
     const wrap = (body: string) => `${FM}\n# 見本法\n\n#### 第一条（目的）\n\n${body}\n`
     it('図の行は項にせず、前の項に付ける', () => {
-        const r = fromHouritsu(wrap('次の図のとおりとする。\n\n（図：e-Gov に画像なし）\n\n[様式第一](https://laws.e-gov.go.jp/x.pdf)\n\n２ 前項の図は、例とする。'))
+        const r = fromHouritsu(
+            wrap('次の図のとおりとする。\n\n（図：e-Gov に画像なし）\n\n[様式第一](https://laws.e-gov.go.jp/x.pdf)\n\n２ 前項の図は、例とする。'),
+        )
         const ps = parseLegal(r.text).chapters[0].articles[0].paragraphs
         expect(ps.map((p) => p.label)).toEqual(['', '２'])
         expect(ps[0].text).toContain('（図：e-Gov に画像なし）')

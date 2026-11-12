@@ -5,7 +5,7 @@ import type { UpdateState } from '../shared/api'
 const { autoUpdater } = electronUpdater
 
 let state: UpdateState = { state: 'idle', current: app.getVersion() }
-let notify: (s: UpdateState) => void = () => { }
+let notify: (s: UpdateState) => void = () => {}
 let ready = false
 
 const MANUAL = process.platform === 'darwin'

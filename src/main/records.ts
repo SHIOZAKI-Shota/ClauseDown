@@ -91,8 +91,7 @@ async function readJson(dir: string, oid: string): Promise<unknown> {
         let v: unknown = null
         try {
             v = JSON.parse(new TextDecoder().decode((await git.readBlob({ fs, dir, oid })).blob))
-        } catch {
-        }
+        } catch {}
         jsonMemo.set(oid, v)
     }
     const v = jsonMemo.get(oid)
@@ -124,7 +123,10 @@ export async function writeRecord(dir: string, name: string, data: unknown): Pro
 }
 
 export const newId = () =>
-    `${new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 8)}`
+    `${new Date()
+        .toISOString()
+        .replace(/[-:.TZ]/g, '')
+        .slice(0, 14)}-${Math.random().toString(36).slice(2, 8)}`
 
 export async function pushRecords(dir: string): Promise<void> {
     if (!(await hasRemote(dir))) return

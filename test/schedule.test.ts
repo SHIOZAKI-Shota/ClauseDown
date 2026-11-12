@@ -2,15 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import { join } from 'node:path'
-import {
-    addMonths,
-    cleanEventInput,
-    cleanKinds,
-    DEFAULT_KINDS,
-    dueReminders,
-    expand,
-    type DueEvent,
-} from '../src/shared/schedule'
+import { addMonths, cleanEventInput, cleanKinds, DEFAULT_KINDS, dueReminders, expand, type DueEvent } from '../src/shared/schedule'
 
 const repos: { name: string; dir: string }[] = []
 vi.mock('../src/main/settings', () => ({
@@ -21,7 +13,15 @@ const git = await import('../src/main/git')
 const sch = await import('../src/main/schedule')
 
 const ev = (p: Partial<DueEvent>): DueEvent => ({
-    id: 'x', kind: 'submit', docPath: '', date: '2026-01-31', done: [], by: '', at: '', updatedAt: '', ...p,
+    id: 'x',
+    kind: 'submit',
+    docPath: '',
+    date: '2026-01-31',
+    done: [],
+    by: '',
+    at: '',
+    updatedAt: '',
+    ...p,
 })
 
 describe('日付の計算', () => {
@@ -84,12 +84,18 @@ describe('期日の展開', () => {
             ev({ id: 'done', kind: 'submit', date: '2026-11-08', done: ['2026-11-08'] }),
         ]
         const occ = expand(list, DEFAULT_KINDS, '2026-01-01', '2027-01-01', '2026-11-06')
-        expect(dueReminders(occ, '2026-11-06').map((o) => o.id).sort()).toEqual(['near', 'over'])
+        expect(
+            dueReminders(occ, '2026-11-06')
+                .map((o) => o.id)
+                .sort(),
+        ).toEqual(['near', 'over'])
     })
 
     it('入力の確認', () => {
         expect(cleanEventInput({ kind: 'submit', docPath: 'a.md', date: '2026-01-01', end: '2026-01-01', title: '  ' })).toEqual({
-            kind: 'submit', docPath: 'a.md', date: '2026-01-01',
+            kind: 'submit',
+            docPath: 'a.md',
+            date: '2026-01-01',
         })
         expect(() => cleanEventInput({ kind: 'submit', docPath: '', date: '2026-02-30x' })).toThrow('日付')
         expect(() => cleanEventInput({ kind: 'submit', docPath: '', date: '2026-02-01', end: '2026-01-01' })).toThrow('終了日')
@@ -127,7 +133,12 @@ describe('期日の記録と集計', () => {
         expect((await sch.listEvents(dir)).map((e) => e.id)).toEqual([a.id])
         await expect(sch.setEventDone(dir, b.id, '2026-11-01', true)).rejects.toThrow('見つかりません')
 
-        await expect(sch.saveEventKinds(dir, DEFAULT_KINDS.filter((k) => k.id !== 'renew'))).rejects.toThrow('更新')
+        await expect(
+            sch.saveEventKinds(
+                dir,
+                DEFAULT_KINDS.filter((k) => k.id !== 'renew'),
+            ),
+        ).rejects.toThrow('更新')
         await sch.saveEventKinds(dir, [...DEFAULT_KINDS, { id: 'k1', label: '検査', color: 'teal', task: true, remind: 3 }])
         expect((await sch.getEventKinds(dir)).at(-1)?.label).toBe('検査')
         expect((await git.listDocs(dir)).map((d) => d.path)).toEqual(['契約書.md'])
@@ -145,7 +156,7 @@ describe('期日の記録と集計', () => {
         repos.push({ name: '消えた', dir: join(os.tmpdir(), 'clausedown-none-xyz') })
         await git.createDoc(a, '規程.md', '規程')
         await git.saveVersion(a, { message: '改定', effectiveDate: '2027-04-01', docPath: '規程.md' })
-        await git.saveVersion(a, { message: '前', effectiveDate: '2025-04-01', docPath: '規程.md' }).catch(() => { })
+        await git.saveVersion(a, { message: '前', effectiveDate: '2025-04-01', docPath: '規程.md' }).catch(() => {})
         await sch.saveEvent(a, { kind: 'submit', docPath: '規程.md', date: '2026-10-01' })
         await sch.saveEvent(b, { kind: 'start', docPath: '', date: '2026-12-01' })
         await sch.saveEvent(b, { kind: 'start', docPath: '', date: '2026-01-01' })
@@ -166,7 +177,10 @@ describe('期日の記録と集計', () => {
         await expect(sch.scheduleAll('x')).rejects.toThrow()
 
         const all = await sch.occurrencesAll('2026-11-01', '2027-04-30', '2026-11-06')
-        expect(all.repos.map((r) => [r.name, r.docs.map((d) => d.path)])).toEqual([['A社', ['規程.md']], ['B社', []]])
+        expect(all.repos.map((r) => [r.name, r.docs.map((d) => d.path)])).toEqual([
+            ['A社', ['規程.md']],
+            ['B社', []],
+        ])
         expect(new Set(all.items.map((o) => o.key)).size).toBe(all.items.length)
         expect(all.items.filter((o) => o.repo === 'A社').map((o) => [o.source, o.date])).toEqual([['tag', '2027-04-01']])
         expect(all.items.every((o) => o.key.startsWith(`${o.dir}|`))).toBe(true)

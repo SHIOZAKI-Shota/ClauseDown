@@ -8,9 +8,15 @@ const msgs = (src: string) => checkDefinitions(src).map((i) => `${i.line}:${i.me
 
 describe('定義語のチェック', () => {
     it('「以下「X」という。」と「「X」とは、」の定義を拾う。括弧の中の複数の語も', () => {
-        const src = '# 契約\n\n- 株式会社A（以下「甲」という。）と株式会社B（以下「乙」という。）は、次のとおり契約（以下「本契約」という。）を結ぶ。\n- この契約において「成果物」とは、乙が納める物をいう。\n- 甲及び乙（以下「当事者」又は「両者」と総称する。）\n'
+        const src =
+            '# 契約\n\n- 株式会社A（以下「甲」という。）と株式会社B（以下「乙」という。）は、次のとおり契約（以下「本契約」という。）を結ぶ。\n- この契約において「成果物」とは、乙が納める物をいう。\n- 甲及び乙（以下「当事者」又は「両者」と総称する。）\n'
         expect(findDefinitions(src).map((d) => [d.term, d.kind])).toEqual([
-            ['甲', 'hereinafter'], ['乙', 'hereinafter'], ['本契約', 'hereinafter'], ['成果物', 'means'], ['当事者', 'hereinafter'], ['両者', 'hereinafter'],
+            ['甲', 'hereinafter'],
+            ['乙', 'hereinafter'],
+            ['本契約', 'hereinafter'],
+            ['成果物', 'means'],
+            ['当事者', 'hereinafter'],
+            ['両者', 'hereinafter'],
         ])
     })
 
@@ -53,7 +59,8 @@ describe('定義語のチェック', () => {
     it('「以下この項において」のように範囲を限った定義は対象にしない。附則はそれぞれ別に扱う', () => {
         const scoped = '# 法\n- 物の分量（以下この項において「分量等」という。）を定める。\n'
         expect(findDefinitions(scoped)).toEqual([])
-        const supp = '# 法\n### 目的\n- 定める。\n## 附則 {supplement}\n- 旧法（以下「新法」という。）の新法による。\n## 附則 {supplement}\n- 別の法（以下「新法」という。）の新法による。\n'
+        const supp =
+            '# 法\n### 目的\n- 定める。\n## 附則 {supplement}\n- 旧法（以下「新法」という。）の新法による。\n## 附則 {supplement}\n- 別の法（以下「新法」という。）の新法による。\n'
         expect(msgs(supp)).toEqual([])
     })
 
@@ -63,7 +70,12 @@ describe('定義語のチェック', () => {
     })
 
     it('見本の契約書・就業規則・条例では指摘が出ない', () => {
-        for (const f of ['契約書/業務委託契約書.md', '契約書/著作権譲渡契約書.md', '社内規程/就業規則.md', '条例・要綱/見本市空き家等の適正管理に関する条例.md']) {
+        for (const f of [
+            '契約書/業務委託契約書.md',
+            '契約書/著作権譲渡契約書.md',
+            '社内規程/就業規則.md',
+            '条例・要綱/見本市空き家等の適正管理に関する条例.md',
+        ]) {
             expect(checkDefinitions(fs.readFileSync(join('example_repository', f), 'utf8')), f).toEqual([])
         }
     })

@@ -33,7 +33,10 @@ describe('数式', () => {
         expect(findMath('$と$')).toEqual([])
         expect(findMath('\\$5 と $x$').map((m) => m.tex)).toEqual(['x'])
         expect(findMath('$\\text{月額} \\times 12$').map((m) => m.tex)).toEqual(['\\text{月額} \\times 12'])
-        expect(findMath('$$a$$ と $b$').map((m) => [m.tex, m.display])).toEqual([['a', true], ['b', false]])
+        expect(findMath('$$a$$ と $b$').map((m) => [m.tex, m.display])).toEqual([
+            ['a', true],
+            ['b', false],
+        ])
         expect(renderDoc(parseLegal(SRC))).toContain('US$1,000及びUS$2,000')
     })
 
@@ -51,8 +54,14 @@ describe('数式', () => {
     })
 
     it('Word では独立した数式を画像に、文中の数式は式の文字にする', async () => {
-        const png = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 13, 73, 68, 65, 84, 120, 218, 99, 252, 207, 192, 80, 15, 0, 4, 133, 1, 128, 132, 169, 140, 33, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130])
-        const figures = new Map([[mathKey('\\min\\left( S,\\ 1{,}000{,}000 \\right)'), { png, width: 120, height: 30 }], [mathKey('\\lfloor S \\rfloor'), { png, width: 40, height: 20 }]])
+        const png = new Uint8Array([
+            137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 13, 73, 68, 65, 84,
+            120, 218, 99, 252, 207, 192, 80, 15, 0, 4, 133, 1, 128, 132, 169, 140, 33, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130,
+        ])
+        const figures = new Map([
+            [mathKey('\\min\\left( S,\\ 1{,}000{,}000 \\right)'), { png, width: 120, height: 30 }],
+            [mathKey('\\lfloor S \\rfloor'), { png, width: 40, height: 20 }],
+        ])
         const zip = unzipSync(new Uint8Array(await docToDocx(parseLegal(SRC), figures)))
         const xml = strFromU8(zip['word/document.xml'])
         expect(Object.keys(zip).filter((k) => k.startsWith('word/media/')).length).toBeGreaterThanOrEqual(1)

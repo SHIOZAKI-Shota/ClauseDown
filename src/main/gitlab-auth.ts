@@ -36,7 +36,9 @@ export async function startLogin(base: string): Promise<ForgeLogin> {
     if (!id) throw new Error('この GitLab の OAuth アプリの Application ID が設定されていません。管理者に登録してもらうか、アクセストークンを入力してください')
     const j = await post(base, '/oauth/authorize_device', { client_id: id, scope: SCOPE })
     if (!j.device_code) {
-        throw new Error(`GitLab にログインできません（${String(j.error_description ?? j.error ?? '不明なエラー')}）。GitLab が古い場合は、アクセストークンを入力してください`)
+        throw new Error(
+            `GitLab にログインできません（${String(j.error_description ?? j.error ?? '不明なエラー')}）。GitLab が古い場合は、アクセストークンを入力してください`,
+        )
     }
     pending.set(base, {
         deviceCode: String(j.device_code),

@@ -54,12 +54,22 @@ export async function forkRepo(dir: string): Promise<string> {
     if (m.kind === 'github') {
         const [owner, repo] = m.path.split('/')
         const f = await gh.forkRepo({ owner, repo })
-        await waitUntil(() => gh.getRepo(f.full_name).then(() => true, () => false))
+        await waitUntil(() =>
+            gh.getRepo(f.full_name).then(
+                () => true,
+                () => false,
+            ),
+        )
         forkUrl = f.clone_url
     } else {
         const r = { base: m.base, path: m.path }
         const p = await gl.forkProject(r)
-        await waitUntil(() => gl.getProject(r, p.id).then((x) => !x.import_status || x.import_status === 'finished' || x.import_status === 'none', () => false))
+        await waitUntil(() =>
+            gl.getProject(r, p.id).then(
+                (x) => !x.import_status || x.import_status === 'finished' || x.import_status === 'none',
+                () => false,
+            ),
+        )
         forkUrl = p.http_url_to_repo
     }
     if (forkUrl.replace(/\.git$/i, '') === url.replace(/\.git$/i, '')) throw new Error('自分のリポジトリはフォークできません')

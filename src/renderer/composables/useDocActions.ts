@@ -94,7 +94,13 @@ export function useDocActions() {
                     })),
                 },
             ],
-            [{ label: IS_MAC ? 'Finder で表示' : 'エクスプローラーで表示', icon: 'i-lucide-folder-open', onSelect: () => app.run(() => window.api.showDocInFolder(app.repoDir!, d.path)) }],
+            [
+                {
+                    label: IS_MAC ? 'Finder で表示' : 'エクスプローラーで表示',
+                    icon: 'i-lucide-folder-open',
+                    onSelect: () => app.run(() => window.api.showDocInFolder(app.repoDir!, d.path)),
+                },
+            ],
             [{ label: '削除', icon: 'i-lucide-trash-2', color: 'error', onSelect: () => (pendingDelete.value = d) }],
         ]
     }

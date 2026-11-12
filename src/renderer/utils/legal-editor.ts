@@ -38,7 +38,14 @@ export const legalTheme = EditorView.theme({
         backgroundColor: 'var(--cd-selected)',
         color: 'var(--ui-text)',
     },
-    '.cm-panel-lint .cm-diagnostic': { display: 'flex', alignItems: 'baseline', gap: '10px', padding: '5px 28px 5px 10px', whiteSpace: 'normal', cursor: 'pointer' },
+    '.cm-panel-lint .cm-diagnostic': {
+        display: 'flex',
+        alignItems: 'baseline',
+        gap: '10px',
+        padding: '5px 28px 5px 10px',
+        whiteSpace: 'normal',
+        cursor: 'pointer',
+    },
     '.cm-panel-lint .cm-diagnostic:hover': { backgroundColor: 'var(--ui-bg-elevated)' },
     '.cm-panel-lint .cm-diagnosticText': { flex: '1', minWidth: '0' },
     '.cm-panel-lint .cm-diagnosticSource': { flexShrink: '0', fontSize: '11px', color: 'var(--ui-text-muted)', opacity: '1' },
@@ -47,7 +54,12 @@ export const legalTheme = EditorView.theme({
     '.cm-panel.cm-panel-lint [name=close]': { top: '4px', right: '8px', color: 'var(--ui-text-muted)', cursor: 'pointer' },
     '.cd-hint': { marginRight: '6px' },
     '.cd-attr': { color: 'var(--cd-syn-mark)' },
-    '.cd-prop': { color: 'var(--cd-syn-mark)', backgroundColor: 'color-mix(in srgb, var(--cd-syn-mark) 10%, transparent)', borderRadius: '3px', fontSize: '0.92em' },
+    '.cd-prop': {
+        color: 'var(--cd-syn-mark)',
+        backgroundColor: 'color-mix(in srgb, var(--cd-syn-mark) 10%, transparent)',
+        borderRadius: '3px',
+        fontSize: '0.92em',
+    },
     '.cd-ref': { color: 'var(--cd-syn-ref)', borderBottom: '1px dotted var(--cd-syn-ref)' },
     '.cd-math-src': { color: 'var(--cd-syn-code)' },
     '.cd-ref-bad': { color: 'var(--cd-syn-ref-bad)', borderBottom: '1px dotted var(--cd-syn-ref-bad)' },
@@ -157,18 +169,28 @@ function buildDecorations(view: EditorView): DecorationSet {
             const marks: { from: number; to: number; deco: Decoration }[] = []
             if (h) {
                 const m = /^(\s*(?:#{1,6}\s+|[-*+]\s+|\d+[.)]\s+)?)/.exec(line.text)!
-                marks.push({ from: line.from + m[1].length, to: line.from + m[1].length, deco: Decoration.widget({ widget: new HintWidget(h.label, h.kind), side: -1 }) })
+                marks.push({
+                    from: line.from + m[1].length,
+                    to: line.from + m[1].length,
+                    deco: Decoration.widget({ widget: new HintWidget(h.label, h.kind), side: -1 }),
+                })
             }
             if (/^#{1,6}\s/.test(line.text)) {
                 const a = ATTR_RE.exec(line.text)
                 if (a) marks.push({ from: line.from + a.index, to: line.to, deco: Decoration.mark({ class: 'cd-attr' }) })
             }
             if (PROP_LINE_RE.test(line.text)) marks.push({ from: line.from, to: line.to, deco: Decoration.mark({ class: 'cd-prop' }) })
-            else for (const r of line.text.matchAll(PROP_INLINE_RE)) marks.push({ from: line.from + r.index! + 1, to: line.from + r.index! + r[0].length, deco: Decoration.mark({ class: 'cd-prop' }) })
+            else
+                for (const r of line.text.matchAll(PROP_INLINE_RE))
+                    marks.push({ from: line.from + r.index! + 1, to: line.from + r.index! + r[0].length, deco: Decoration.mark({ class: 'cd-prop' }) })
             for (const m of findMath(line.text)) marks.push({ from: line.from + m.from, to: line.from + m.to, deco: Decoration.mark({ class: 'cd-math-src' }) })
             for (const r of line.text.matchAll(REF_RE)) {
                 const ok = !!ld?.refs[r[1].trim()]
-                marks.push({ from: line.from + r.index!, to: line.from + r.index! + r[0].length, deco: Decoration.mark({ class: ok ? 'cd-ref' : 'cd-ref-bad' }) })
+                marks.push({
+                    from: line.from + r.index!,
+                    to: line.from + r.index! + r[0].length,
+                    deco: Decoration.mark({ class: ok ? 'cd-ref' : 'cd-ref-bad' }),
+                })
             }
             marks.sort((x, y) => x.from - y.from)
             for (const mk of marks) builder.add(mk.from, mk.to, mk.deco)
@@ -218,7 +240,12 @@ function refCompletions(ctx: CompletionContext) {
                     if (!a.id) {
                         const line = view.state.doc.line(a.line + 1)
                         const attr = ATTR_RE.exec(line.text)
-                        if (attr) changes.push({ from: line.from + attr.index + attr[0].indexOf('{') + 1, to: line.from + attr.index + attr[0].indexOf('{') + 1, insert: `#${id} ` })
+                        if (attr)
+                            changes.push({
+                                from: line.from + attr.index + attr[0].indexOf('{') + 1,
+                                to: line.from + attr.index + attr[0].indexOf('{') + 1,
+                                insert: `#${id} `,
+                            })
                         else changes.push({ from: line.to, to: line.to, insert: ` {#${id}}` })
                     }
                     const shift = changes.slice(1).reduce((n, c) => (c.from < from ? n + c.insert.length : n), 0)
@@ -277,18 +304,19 @@ const legalLinter = linter(
 
 const PROOFREAD_MAX = 200_000
 
-export const proofreadLinter = (proofread: (text: string) => Promise<ProofreadIssue[]>) => linter(
-    async (view) => {
-        const text = view.state.doc.toString()
-        if (!text.trim() || text.length > PROOFREAD_MAX) return []
-        const issues = await proofread(text).catch((): ProofreadIssue[] => [])
-        const len = view.state.doc.length
-        return issues
-            .filter((i) => i.from < len)
-            .map((i): Diagnostic => ({ from: i.from, to: Math.min(i.to, len), severity: 'warning', source: `校閲：${i.rule}`, message: i.message }))
-    },
-    { delay: 1200 },
-)
+export const proofreadLinter = (proofread: (text: string) => Promise<ProofreadIssue[]>) =>
+    linter(
+        async (view) => {
+            const text = view.state.doc.toString()
+            if (!text.trim() || text.length > PROOFREAD_MAX) return []
+            const issues = await proofread(text).catch((): ProofreadIssue[] => [])
+            const len = view.state.doc.length
+            return issues
+                .filter((i) => i.from < len)
+                .map((i): Diagnostic => ({ from: i.from, to: Math.min(i.to, len), severity: 'warning', source: `校閲：${i.rule}`, message: i.message }))
+        },
+        { delay: 1200 },
+    )
 
 function shiftList(dir: 1 | -1) {
     return (view: EditorView) => {

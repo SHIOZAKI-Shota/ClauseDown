@@ -90,9 +90,7 @@ async function draftMessage() {
     if (text) message.value = text
 }
 
-const canSave = computed(
-    () => !!message.value.trim() && !props.busy && (target.value === 'here' || !!draftName.value.trim()),
-)
+const canSave = computed(() => !!message.value.trim() && !props.busy && (target.value === 'here' || !!draftName.value.trim()))
 
 function save() {
     if (!canSave.value) return
@@ -109,55 +107,114 @@ function save() {
 </script>
 
 <template>
-    <UModal :open="true" title="版を保存"
+    <UModal
+        :open="true"
+        title="版を保存"
         description="今の内容を一つの版として記録します（リモートがあれば、設定に従って送信します）。あとから改定履歴で見返したり、新旧対照表を作ったりできます。"
-        @update:open="(v) => !v && emit('close')">
+        @update:open="(v) => !v && emit('close')"
+    >
         <template #body>
             <div class="cd-form">
                 <UFormField v-if="onMain" label="保存先">
-                    <SegmentSwitch v-model="target" aria-label="保存先" :items="!newDoc ? [
-                        { value: 'here', label: '現行版に保存', icon: 'i-lucide-badge-check', description: 'すぐに正式な版になります。誤字の修正など、確認がいらない変更に' },
-                        { value: 'draft', label: '新しい改定案として保存', icon: 'i-lucide-git-branch', description: '現行版はそのまま。確認が済んだら「現行版に反映」します' },
-                    ] : [
-                        { value: 'draft', label: '改定案として保存', icon: 'i-lucide-git-branch', description: '書きかけのまま区切りごとに保存できます。完成して確認が済んだら「現行版に反映」します' },
-                        { value: 'here', label: hasHistory ? '現行版に保存' : '現行版として保存', icon: 'i-lucide-badge-check', description: 'すでに完成している内容を、そのまま現行版に入れます' },
-                    ]" />
+                    <SegmentSwitch
+                        v-model="target"
+                        aria-label="保存先"
+                        :items="
+                            !newDoc
+                                ? [
+                                      {
+                                          value: 'here',
+                                          label: '現行版に保存',
+                                          icon: 'i-lucide-badge-check',
+                                          description: 'すぐに正式な版になります。誤字の修正など、確認がいらない変更に',
+                                      },
+                                      {
+                                          value: 'draft',
+                                          label: '新しい改定案として保存',
+                                          icon: 'i-lucide-git-branch',
+                                          description: '現行版はそのまま。確認が済んだら「現行版に反映」します',
+                                      },
+                                  ]
+                                : [
+                                      {
+                                          value: 'draft',
+                                          label: '改定案として保存',
+                                          icon: 'i-lucide-git-branch',
+                                          description: '書きかけのまま区切りごとに保存できます。完成して確認が済んだら「現行版に反映」します',
+                                      },
+                                      {
+                                          value: 'here',
+                                          label: hasHistory ? '現行版に保存' : '現行版として保存',
+                                          icon: 'i-lucide-badge-check',
+                                          description: 'すでに完成している内容を、そのまま現行版に入れます',
+                                      },
+                                  ]
+                        "
+                    />
                 </UFormField>
                 <UFormField v-if="target === 'draft'" label="改定案の名前" description="例：2026年4月改定">
                     <UInput v-model="draftName" class="cd-full" />
                 </UFormField>
-                <UAlert v-if="!onMain" color="warning" variant="subtle" icon="i-lucide-file-pen-line"
-                    :title="`保存先：改定案「${branchLabel}」（現行版には影響しません）`" />
+                <UAlert
+                    v-if="!onMain"
+                    color="warning"
+                    variant="subtle"
+                    icon="i-lucide-file-pen-line"
+                    :title="`保存先：改定案「${branchLabel}」（現行版には影響しません）`"
+                />
                 <UFormField label="何を変えたか" description="例：第12条 契約期間を2年に変更">
                     <template v-if="aiReady" #hint>
-                        <UButton label="AI で下書き" icon="i-lucide-sparkles" size="xs" color="neutral" variant="ghost"
-                            :loading="drafting" title="保存していない変更を AI に渡して、説明を作ります" @click="draftMessage" />
+                        <UButton
+                            label="AI で下書き"
+                            icon="i-lucide-sparkles"
+                            size="xs"
+                            color="neutral"
+                            variant="ghost"
+                            :loading="drafting"
+                            title="保存していない変更を AI に渡して、説明を作ります"
+                            @click="draftMessage"
+                        />
                     </template>
                     <div ref="box" class="msg-box" @keydown.capture="onKey">
-                        <UTextarea v-model="message" :rows="3" class="cd-full" autofocus @input="onType" @click="onType"
-                            @blur="hint = null" />
+                        <UTextarea v-model="message" :rows="3" class="cd-full" autofocus @input="onType" @click="onType" @blur="hint = null" />
                         <div v-if="hints.length" class="hints" role="listbox">
-                            <button v-for="(i, k) in hints" :key="i.n" type="button" class="hint"
-                                :class="{ on: k === hintAt }" @mousedown.prevent="useHint(i)">
+                            <button v-for="(i, k) in hints" :key="i.n" type="button" class="hint" :class="{ on: k === hintAt }" @mousedown.prevent="useHint(i)">
                                 <span class="num">#{{ i.n }}</span>{{ i.title }}
                             </button>
                         </div>
                     </div>
                 </UFormField>
-                <UFormField v-if="openIssues.length" label="課題"
-                    :description="toDraft ? '「解決する」課題は、この改定案を現行版に反映したときに閉じます。' : '「解決する」課題は、保存すると閉じます。'">
+                <UFormField
+                    v-if="openIssues.length"
+                    label="課題"
+                    :description="toDraft ? '「解決する」課題は、この改定案を現行版に反映したときに閉じます。' : '「解決する」課題は、保存すると閉じます。'"
+                >
                     <div class="issues">
                         <div v-for="p in picked" :key="p.n" class="chip">
-                            <UButton :label="p.how === 'close' ? '解決する' : '関連する'" size="xs"
-                                :color="p.how === 'close' ? 'primary' : 'neutral'" variant="soft"
-                                title="押すと「解決する」と「関連する」を切り替えます" @click="flip(p)" />
+                            <UButton
+                                :label="p.how === 'close' ? '解決する' : '関連する'"
+                                size="xs"
+                                :color="p.how === 'close' ? 'primary' : 'neutral'"
+                                variant="soft"
+                                title="押すと「解決する」と「関連する」を切り替えます"
+                                @click="flip(p)"
+                            />
                             <span class="num">#{{ p.n }}</span><span class="ttl">{{ titleOf(p.n) }}</span>
-                            <UButton icon="i-lucide-x" size="xs" color="neutral" variant="ghost" aria-label="外す"
-                                @click="unpick(p.n)" />
+                            <UButton icon="i-lucide-x" size="xs" color="neutral" variant="ghost" aria-label="外す" @click="unpick(p.n)" />
                         </div>
-                        <USelectMenu v-if="pickable.length" :key="picked.length" :model-value="undefined"
-                            :items="pickable" value-key="value" size="sm" placeholder="課題を選ぶ…" icon="i-lucide-list-todo"
-                            class="cd-full" :search-input="{ placeholder: '番号・題名で探す' }" @update:model-value="pick" />
+                        <USelectMenu
+                            v-if="pickable.length"
+                            :key="picked.length"
+                            :model-value="undefined"
+                            :items="pickable"
+                            value-key="value"
+                            size="sm"
+                            placeholder="課題を選ぶ…"
+                            icon="i-lucide-list-todo"
+                            class="cd-full"
+                            :search-input="{ placeholder: '番号・題名で探す' }"
+                            @update:model-value="pick"
+                        />
                     </div>
                 </UFormField>
                 <div v-if="target === 'here'" class="row">

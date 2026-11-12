@@ -5,8 +5,7 @@ const props = defineProps<{ config: DocConfig; warnings: string[] }>()
 const emit = defineEmits<{ change: [DocConfig]; preset: ['law' | 'contract'] }>()
 
 const keys = Object.keys(CONFIG_CHOICES) as ConfigKey[]
-const itemsOf = (key: ConfigKey) =>
-    Object.entries(CONFIG_CHOICES[key].options).map(([value, label]) => ({ value, label: label as string }))
+const itemsOf = (key: ConfigKey) => Object.entries(CONFIG_CHOICES[key].options).map(([value, label]) => ({ value, label: label as string }))
 
 function update(key: ConfigKey, value: string) {
     emit('change', setConfigValue(props.config, key, value))
@@ -22,12 +21,16 @@ function update(key: ConfigKey, value: string) {
         </div>
         <div class="grid">
             <UFormField v-for="key in keys" :key="key" :label="CONFIG_CHOICES[key].label" size="sm">
-                <USelect :model-value="getConfigValue(config, key)" :items="itemsOf(key)" size="sm" class="cd-full"
-                    @update:model-value="(v: string) => update(key, v)" />
+                <USelect
+                    :model-value="getConfigValue(config, key)"
+                    :items="itemsOf(key)"
+                    size="sm"
+                    class="cd-full"
+                    @update:model-value="(v: string) => update(key, v)"
+                />
             </UFormField>
         </div>
-        <UAlert v-if="warnings.length" color="error" variant="subtle" :description="warnings.join(' ／ ')"
-            title="設定に誤りがあります" />
+        <UAlert v-if="warnings.length" color="error" variant="subtle" :description="warnings.join(' ／ ')" title="設定に誤りがあります" />
     </div>
 </template>
 

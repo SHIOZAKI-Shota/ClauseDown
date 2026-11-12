@@ -86,9 +86,7 @@ export function isRepoUrlFor(url: string, base: ForgeBase): boolean {
 }
 
 export function newRepoUrl(b: ForgeBase, name: string): string {
-    return b.kind === 'github'
-        ? `${b.base}/new?name=${encodeURIComponent(name)}&visibility=private`
-        : `${b.base}/projects/new#blank_project`
+    return b.kind === 'github' ? `${b.base}/new?name=${encodeURIComponent(name)}&visibility=private` : `${b.base}/projects/new#blank_project`
 }
 
 export function baseLabel(b: ForgeBase): string {

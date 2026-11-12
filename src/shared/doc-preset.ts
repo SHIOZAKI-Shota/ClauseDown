@@ -1,6 +1,7 @@
 export type DocPreset = 'law' | 'contract'
 
-const CONTRACT_CONFIG = '<!-- clausedown\nchapter: { numeral: arabic }\narticle: { title: inline }\nparagraph: { numeral: arabic }\nitem: { style: paren }\n-->\n'
+const CONTRACT_CONFIG =
+    '<!-- clausedown\nchapter: { numeral: arabic }\narticle: { title: inline }\nparagraph: { numeral: arabic }\nitem: { style: paren }\n-->\n'
 
 export function newDocText(title: string, preset: DocPreset = 'law', body?: string): string {
     const config = preset === 'contract' ? CONTRACT_CONFIG : ''

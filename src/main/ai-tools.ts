@@ -148,7 +148,11 @@ export const TOOLS: AiTool[] = [
             const count = src.split(from).length - 1
             if (count === 0) throw new Error('old_text が文書に見つかりません。read_doc で今の本文を読み直してください')
             if (count > 1) throw new Error(`old_text が文書に${count}回現れます。前後の文を含めて1回だけ現れるようにしてください`)
-            await g.writeDoc(r.dir, path, src.replace(from, () => norm(new_text)))
+            await g.writeDoc(
+                r.dir,
+                path,
+                src.replace(from, () => norm(new_text)),
+            )
             ctx.changed(r.dir, path)
             return `書き換えました（${await currentBranchLabel(r.dir)}の作業フォルダ。版は保存していません）`
         },
@@ -224,7 +228,11 @@ export const TOOLS: AiTool[] = [
             if (!rows.length) return '違いはありません'
             const kind = { changed: '改正', added: '新設', removed: '削除', same: '' }
             return rows
-                .map((x) => [`### ${kind[x.status]}`, `改正前：\n${partsText(x.oldParts) || '（なし）'}`, `改正後：\n${partsText(x.newParts) || '（なし）'}`].join('\n'))
+                .map((x) =>
+                    [`### ${kind[x.status]}`, `改正前：\n${partsText(x.oldParts) || '（なし）'}`, `改正後：\n${partsText(x.newParts) || '（なし）'}`].join(
+                        '\n',
+                    ),
+                )
                 .join('\n\n')
         },
     }),

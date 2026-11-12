@@ -63,24 +63,34 @@ async function install() {
             <p class="cd-muted">バージョン {{ data?.app.version ?? '—' }}　© 2026</p>
         </div>
         <SettingRow label="更新" :description="status">
-            <UButton v-if="update?.state === 'available' || (update?.state === 'error' && update.version)" :label="IS_MAC ? '配布ページを開く' : 'ダウンロード'"
-                icon="i-lucide-download" size="sm" @click="download" />
-            <UButton v-else-if="update?.state === 'ready'" label="再起動して更新" icon="i-lucide-rotate-cw" size="sm"
-                @click="install" />
-            <UButton v-else label="更新を確認" icon="i-lucide-refresh-cw" size="sm" color="neutral" variant="outline"
-                :loading="busy" :disabled="busy || update?.state === 'dev'" @click="check" />
+            <UButton
+                v-if="update?.state === 'available' || (update?.state === 'error' && update.version)"
+                :label="IS_MAC ? '配布ページを開く' : 'ダウンロード'"
+                icon="i-lucide-download"
+                size="sm"
+                @click="download"
+            />
+            <UButton v-else-if="update?.state === 'ready'" label="再起動して更新" icon="i-lucide-rotate-cw" size="sm" @click="install" />
+            <UButton
+                v-else
+                label="更新を確認"
+                icon="i-lucide-refresh-cw"
+                size="sm"
+                color="neutral"
+                variant="outline"
+                :loading="busy"
+                :disabled="busy || update?.state === 'dev'"
+                @click="check"
+            />
         </SettingRow>
         <UProgress v-if="update?.state === 'downloading'" :model-value="update.percent ?? 0" size="sm" class="progress" />
-        <div v-if="update?.notes && (update.state === 'available' || update.state === 'downloading' || update.state === 'ready')"
-            class="notes">
+        <div v-if="update?.notes && (update.state === 'available' || update.state === 'downloading' || update.state === 'ready')" class="notes">
             <p class="notes-head">バージョン {{ update.version }} の変更点</p>
             <pre>{{ update.notes }}</pre>
         </div>
         <SettingRow label="" :description="authorName">
-            <UButton :label="site" icon="i-lucide-globe" size="sm" color="neutral" variant="outline"
-                @click="openSite" />
-            <UButton :label="email" icon="i-lucide-mail" size="sm" color="neutral" variant="outline"
-                @click="openMail" />
+            <UButton :label="site" icon="i-lucide-globe" size="sm" color="neutral" variant="outline" @click="openSite" />
+            <UButton :label="email" icon="i-lucide-mail" size="sm" color="neutral" variant="outline" @click="openMail" />
         </SettingRow>
         <LicenseList />
     </SettingsSection>

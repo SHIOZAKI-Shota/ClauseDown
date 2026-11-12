@@ -117,63 +117,87 @@ async function test() {
 
 <template>
     <SettingRow label="使う AI" :description="info.description">
-        <USelect :model-value="provider" :items="providerItems" class="cd-w-input"
-            @update:model-value="(v) => onProvider(v as AiProvider)" />
+        <USelect :model-value="provider" :items="providerItems" class="cd-w-input" @update:model-value="(v) => onProvider(v as AiProvider)" />
     </SettingRow>
 
     <template v-if="provider === 'openai'">
         <SettingRow label="接続先" description="Gemini は Google AI Studio、DeepSeek は DeepSeek のサイトで発行したキーを使用します。">
-            <USelect :model-value="preset" :items="presetItems" class="cd-w-small"
-                @update:model-value="(v) => onPreset(String(v))" />
-            <UInput v-if="preset === OTHER" v-model="baseUrl" placeholder="https://…/v1" class="cd-w-input"
-                @change="save" />
+            <USelect :model-value="preset" :items="presetItems" class="cd-w-small" @update:model-value="(v) => onPreset(String(v))" />
+            <UInput v-if="preset === OTHER" v-model="baseUrl" placeholder="https://…/v1" class="cd-w-input" @change="save" />
         </SettingRow>
     </template>
-    <SettingRow v-if="provider === 'ollama'" label="Ollama の場所"
-        description="空欄なら http://127.0.0.1:11434 を使います。ふつうは空欄のままで構いません。">
+    <SettingRow v-if="provider === 'ollama'" label="Ollama の場所" description="空欄なら http://127.0.0.1:11434 を使います。ふつうは空欄のままで構いません。">
         <UInput v-model="baseUrl" placeholder="http://127.0.0.1:11434/v1" class="cd-w-input" @change="save" />
     </SettingRow>
 
-    <SettingRow v-if="info.auth === 'key'" :label="provider === 'anthropic' ? 'Claude API キー' : 'API キー'"
-        :description="status?.hasKey ? '保存してあります（ローカル の中で暗号化しています）。このキーは、この接続先にだけ送ります。' : provider === 'anthropic' ? 'Anthropic の Console で発行したキーを入力してください。' : 'その接続先で発行したキーを入力してください。'">
-        <UInput v-model="key" :type="showKey ? 'text' : 'password'" class="cd-w-input" autocomplete="off"
-            :placeholder="status?.hasKey ? '入力すると上書きします' : provider === 'anthropic' ? 'sk-ant-…' : ''">
+    <SettingRow
+        v-if="info.auth === 'key'"
+        :label="provider === 'anthropic' ? 'Claude API キー' : 'API キー'"
+        :description="
+            status?.hasKey
+                ? '保存してあります（ローカル の中で暗号化しています）。このキーは、この接続先にだけ送ります。'
+                : provider === 'anthropic'
+                  ? 'Anthropic の Console で発行したキーを入力してください。'
+                  : 'その接続先で発行したキーを入力してください。'
+        "
+    >
+        <UInput
+            v-model="key"
+            :type="showKey ? 'text' : 'password'"
+            class="cd-w-input"
+            autocomplete="off"
+            :placeholder="status?.hasKey ? '入力すると上書きします' : provider === 'anthropic' ? 'sk-ant-…' : ''"
+        >
             <template #trailing>
-                <UButton :icon="showKey ? 'i-lucide-eye-off' : 'i-lucide-eye'" size="xs" color="neutral" variant="link"
-                    @click="showKey = !showKey" />
+                <UButton :icon="showKey ? 'i-lucide-eye-off' : 'i-lucide-eye'" size="xs" color="neutral" variant="link" @click="showKey = !showKey" />
             </template>
         </UInput>
         <UButton label="保存" size="sm" color="neutral" variant="outline" :disabled="!key.trim()" @click="saveKey()" />
         <UButton v-if="status?.hasKey" label="消す" size="sm" color="error" variant="ghost" @click="saveKey(true)" />
     </SettingRow>
-    <SettingRow v-if="info.auth === 'oauth'" label="OpenRouter のアカウント"
-        :description="status?.hasKey ? 'ログインしてあります（受け取ったキーを、ローカル の中で暗号化しています）。' : 'ブラウザで OpenRouter にログインすると、このアプリ用のキーが発行されます。'">
-        <UButton v-if="status?.hasKey" label="ログアウト" size="sm" color="neutral" variant="outline"
-            @click="saveKey(true)" />
-        <UButton v-else label="OpenRouter でログイン" icon="i-lucide-log-in" size="sm" :loading="loggingIn"
-            @click="loginOpenRouter" />
+    <SettingRow
+        v-if="info.auth === 'oauth'"
+        label="OpenRouter のアカウント"
+        :description="
+            status?.hasKey
+                ? 'ログインしてあります（受け取ったキーを、ローカル の中で暗号化しています）。'
+                : 'ブラウザで OpenRouter にログインすると、このアプリ用のキーが発行されます。'
+        "
+    >
+        <UButton v-if="status?.hasKey" label="ログアウト" size="sm" color="neutral" variant="outline" @click="saveKey(true)" />
+        <UButton v-else label="OpenRouter でログイン" icon="i-lucide-log-in" size="sm" :loading="loggingIn" @click="loginOpenRouter" />
     </SettingRow>
-    <SettingRow v-if="info.auth === 'github'" label="GitHub のアカウント"
-        :description="githubLogin ? `${githubLogin} のログインを使用します。` : '設定の「GitHub/GitLab」で GitHub にログインしてください。'">
-        <UButton v-if="!githubLogin" label="ログインの設定を開く" icon="i-lucide-github" size="sm" color="neutral"
-            variant="outline" @click="goLogin" />
+    <SettingRow
+        v-if="info.auth === 'github'"
+        label="GitHub のアカウント"
+        :description="githubLogin ? `${githubLogin} のログインを使用します。` : '設定の「GitHub/GitLab」で GitHub にログインしてください。'"
+    >
+        <UButton v-if="!githubLogin" label="ログインの設定を開く" icon="i-lucide-github" size="sm" color="neutral" variant="outline" @click="goLogin" />
     </SettingRow>
 
-    <SettingRow label="モデル"
-        :description="provider === 'ollama' ? 'インストール済みのモデルから選びます（インストールは ollama pull qwen3 など）。ツール呼び出し（tools）に対応したモデルが必要です。' : '一覧から選ぶか、名前を直接入力します。空欄なら既定のモデルを使用します。'">
-        <USelect v-if="modelItems.length" :model-value="model" :items="modelItems" placeholder="一覧から選ぶ"
-            class="cd-w-input" @update:model-value="(v) => pickModel(String(v))" />
+    <SettingRow
+        label="モデル"
+        :description="
+            provider === 'ollama'
+                ? 'インストール済みのモデルから選びます（インストールは ollama pull qwen3 など）。ツール呼び出し（tools）に対応したモデルが必要です。'
+                : '一覧から選ぶか、名前を直接入力します。空欄なら既定のモデルを使用します。'
+        "
+    >
+        <USelect
+            v-if="modelItems.length"
+            :model-value="model"
+            :items="modelItems"
+            placeholder="一覧から選ぶ"
+            class="cd-w-input"
+            @update:model-value="(v) => pickModel(String(v))"
+        />
         <UInput v-model="model" :placeholder="info.model ?? 'モデル名'" class="cd-w-small" @change="save" />
-        <UButton icon="i-lucide-refresh-cw" size="sm" color="neutral" variant="ghost" :loading="loadingModels"
-            title="一覧を更新" @click="loadModels" />
+        <UButton icon="i-lucide-refresh-cw" size="sm" color="neutral" variant="ghost" :loading="loadingModels" title="一覧を更新" @click="loadModels" />
     </SettingRow>
 
     <SettingRow label="状態" :description="status?.ready ? `${status.label} を使用します。` : (status?.reason ?? '')">
-        <UBadge v-if="status?.local" label="文書を PC の外に送信しません" color="success" variant="subtle"
-            icon="i-lucide-shield-check" />
-        <UBadge v-if="status && !status.ready" label="まだ使えません" color="warning" variant="subtle"
-            icon="i-lucide-circle-alert" />
-        <UButton label="接続を試す" size="sm" color="neutral" variant="outline" :disabled="!status?.ready" :loading="testing"
-            @click="test" />
+        <UBadge v-if="status?.local" label="文書を PC の外に送信しません" color="success" variant="subtle" icon="i-lucide-shield-check" />
+        <UBadge v-if="status && !status.ready" label="まだ使えません" color="warning" variant="subtle" icon="i-lucide-circle-alert" />
+        <UButton label="接続を試す" size="sm" color="neutral" variant="outline" :disabled="!status?.ready" :loading="testing" @click="test" />
     </SettingRow>
 </template>

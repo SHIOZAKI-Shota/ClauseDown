@@ -18,9 +18,7 @@ export function groupByFolder(docs: DocFile[], query = ''): FolderGroup[] {
         if (!words.every((w) => hay.includes(w))) continue
         map.set(folder, [...(map.get(folder) ?? []), d])
     }
-    return [...map.entries()]
-        .sort(([a], [b]) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b, 'ja')))
-        .map(([folder, docs]) => ({ folder, docs }))
+    return [...map.entries()].sort(([a], [b]) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b, 'ja'))).map(([folder, docs]) => ({ folder, docs }))
 }
 
 export function allFolders(docs: DocFile[]): string[] {

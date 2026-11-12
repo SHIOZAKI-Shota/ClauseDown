@@ -5,11 +5,7 @@ export function setAppMenu(): void {
     const name = app.name
     const dev: MenuItemConstructorOptions[] = app.isPackaged
         ? []
-        : [
-            { type: 'separator' },
-            { role: 'reload', label: '再読み込み' },
-            { role: 'toggleDevTools', label: '開発者ツール' },
-        ]
+        : [{ type: 'separator' }, { role: 'reload', label: '再読み込み' }, { role: 'toggleDevTools', label: '開発者ツール' }]
     const template: MenuItemConstructorOptions[] = [
         {
             label: name,
@@ -44,12 +40,7 @@ export function setAppMenu(): void {
         {
             role: 'window',
             label: 'ウインドウ',
-            submenu: [
-                { role: 'minimize', label: 'しまう' },
-                { role: 'zoom', label: '拡大／縮小' },
-                { type: 'separator' },
-                { role: 'close', label: '閉じる' },
-            ],
+            submenu: [{ role: 'minimize', label: 'しまう' }, { role: 'zoom', label: '拡大／縮小' }, { type: 'separator' }, { role: 'close', label: '閉じる' }],
         },
     ]
     Menu.setApplicationMenu(Menu.buildFromTemplate(template))

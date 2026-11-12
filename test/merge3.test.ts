@@ -63,9 +63,7 @@ describe('3方向マージ', () => {
         const r = merge3(BASE, ours, theirs)
         expect(r.hunks).toHaveLength(1)
         expect(r.hunks[0]).toMatchObject({ base: [], ours: ['### 定義', '- 甲'], theirs: ['### 賞与', '- 乙'], oursLine: 6 })
-        expect(applyResolutions(r, { 0: { choice: 'theirsThenOurs' } })).toBe(
-            BASE.replace('### 退職', '### 賞与\n- 乙\n### 定義\n- 甲\n### 退職'),
-        )
+        expect(applyResolutions(r, { 0: { choice: 'theirsThenOurs' } })).toBe(BASE.replace('### 退職', '### 賞与\n- 乙\n### 定義\n- 甲\n### 退職'))
         expect(merge3(BASE, BASE.replace('### 休日', '### 休暇'), BASE.replace('日曜', '土曜')).clean).toBe(false)
     })
 

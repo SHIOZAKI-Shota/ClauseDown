@@ -271,16 +271,16 @@ export interface DocBase {
 export type ExportRequest =
     | ({ kind: 'doc'; format: 'pdf' | 'docx' | 'md'; source: string; name: string; style?: DocStyle } & Partial<DocBase>)
     | ({
-        kind: 'compare'
-        format: 'pdf' | 'docx'
-        oldSource: string
-        newSource: string
-        title: string
-        name: string
-        omitUnchanged: boolean
-        compareStyle?: 'table' | 'inline'
-        style?: DocStyle
-    } & Partial<DocBase>)
+          kind: 'compare'
+          format: 'pdf' | 'docx'
+          oldSource: string
+          newSource: string
+          title: string
+          name: string
+          omitUnchanged: boolean
+          compareStyle?: 'table' | 'inline'
+          style?: DocStyle
+      } & Partial<DocBase>)
 
 export interface IssueLink {
     oid: string

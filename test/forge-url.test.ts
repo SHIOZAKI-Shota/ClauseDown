@@ -8,7 +8,11 @@ describe('リモートの URL', () => {
         expect(matchRemote('https://github.com/office/docs.git', bases)).toMatchObject({ kind: 'github', path: 'office/docs' })
         expect(matchRemote('https://x-access-token@github.com/office/docs', bases)).toMatchObject({ kind: 'github', path: 'office/docs' })
         expect(matchRemote('https://github.com/office/sub/docs', bases)).toBeNull()
-        expect(matchRemote('https://gitlab.com/office/sub/docs.git/', bases)).toMatchObject({ kind: 'gitlab', base: 'https://gitlab.com', path: 'office/sub/docs' })
+        expect(matchRemote('https://gitlab.com/office/sub/docs.git/', bases)).toMatchObject({
+            kind: 'gitlab',
+            base: 'https://gitlab.com',
+            path: 'office/sub/docs',
+        })
         expect(matchRemote('https://GitLab.Example.co.jp/a/b', bases)).toMatchObject({ base: 'https://gitlab.example.co.jp', path: 'a/b' })
     })
 
@@ -31,10 +35,15 @@ describe('リモートの URL', () => {
         expect(normalizeBase('http://gitlab.example.co.jp')).toBeNull()
         expect(normalizeBase('https://user@gitlab.example.co.jp')).toBeNull()
         expect(normalizeBase('https://gitlab.example.co.jp/?x=1')).toBeNull()
-        expect(cleanGitLabHosts([{ url: 'https://a.jp/' }, { url: 'https://a.jp' }, { url: 'https://gitlab.com' }, { url: 'ftp://b' }, { url: 'https://c.jp', clientId: 'id<script>' }])).toEqual([
-            { url: 'https://a.jp' },
-            { url: 'https://c.jp' },
-        ])
+        expect(
+            cleanGitLabHosts([
+                { url: 'https://a.jp/' },
+                { url: 'https://a.jp' },
+                { url: 'https://gitlab.com' },
+                { url: 'ftp://b' },
+                { url: 'https://c.jp', clientId: 'id<script>' },
+            ]),
+        ).toEqual([{ url: 'https://a.jp' }, { url: 'https://c.jp' }])
     })
 
     it('共有を始めるときの URL の確認と、新しいリポジトリを作る画面', () => {

@@ -47,8 +47,7 @@ export function useTableSpans(m: Md): Md {
 const md = useMath(useTableSpans(new MarkdownIt({ html: false, linkify: false, breaks: true })))
 const plainMd = new MarkdownIt({ html: false, linkify: false, breaks: true })
 
-const esc = (s: string) =>
-    s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
+const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
 
 const FENCE_RE = /^(`{3,}|~{3,})\s*([\w-]*)[^\n]*\n([\s\S]*?)\n?\1\s*$/
 
@@ -145,7 +144,13 @@ export function blockLines(raw: string): string[] {
     const fence = parseFence(raw)
     if (fence) {
         const head = fence.lang === 'mermaid' ? '［図］' : fence.lang === 'math' ? '［数式］' : '［囲み］'
-        return [head, ...fence.body.split('\n').map((l) => `　${l.trim()}`).filter((l) => l.trim())]
+        return [
+            head,
+            ...fence.body
+                .split('\n')
+                .map((l) => `　${l.trim()}`)
+                .filter((l) => l.trim()),
+        ]
     }
     const rows = parseTable(raw)
     if (rows) return ['［表］', ...visibleCells(rows).map((r) => `　${r.join('｜')}`)]
@@ -157,10 +162,20 @@ export function appendixLines(raw: string): string[] {
     const re = /^(`{3,}|~{3,})[^\n]*\n[\s\S]*?\n\1\s*$|^(?:\|.*\|\s*\n?)+/gm
     let last = 0
     for (const m of raw.matchAll(re)) {
-        out.push(...raw.slice(last, m.index).split('\n').filter((l) => l.trim()))
+        out.push(
+            ...raw
+                .slice(last, m.index)
+                .split('\n')
+                .filter((l) => l.trim()),
+        )
         out.push(...blockLines(m[0]))
         last = m.index! + m[0].length
     }
-    out.push(...raw.slice(last).split('\n').filter((l) => l.trim()))
+    out.push(
+        ...raw
+            .slice(last)
+            .split('\n')
+            .filter((l) => l.trim()),
+    )
     return out
 }

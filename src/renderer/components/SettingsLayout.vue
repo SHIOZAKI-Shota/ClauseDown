@@ -37,14 +37,10 @@ watch(active, () => body.value?.scrollTo({ top: 0 }))
 <template>
     <div class="settings">
         <aside class="index">
-            <button class="back" @click="app.goBack()">
-                <UIcon name="i-lucide-arrow-left" />{{ app.returnLabel }}
-            </button>
-            <div class="index-head" :class="{ stacked: stackedHead }">{{ title }}<span class="scope">{{ scope }}</span>
-            </div>
+            <button class="back" @click="app.goBack()"><UIcon name="i-lucide-arrow-left" />{{ app.returnLabel }}</button>
+            <div class="index-head" :class="{ stacked: stackedHead }">{{ title }}<span class="scope">{{ scope }}</span></div>
             <div role="tablist" aria-orientation="vertical" class="tabs">
-                <button v-for="s in sections" :key="s.id" role="tab" :aria-selected="active === s.id"
-                    :class="{ on: active === s.id }" @click="active = s.id">
+                <button v-for="s in sections" :key="s.id" role="tab" :aria-selected="active === s.id" :class="{ on: active === s.id }" @click="active = s.id">
                     <UIcon :name="s.icon" />{{ s.label }}
                 </button>
             </div>
@@ -53,9 +49,7 @@ watch(active, () => body.value?.scrollTo({ top: 0 }))
 
         <div ref="body" class="body" role="tabpanel">
             <div class="inner">
-                <div class="saved" :class="{ show: saved }">
-                    <UIcon name="i-lucide-check" />保存しました
-                </div>
+                <div class="saved" :class="{ show: saved }"><UIcon name="i-lucide-check" />保存しました</div>
                 <slot />
             </div>
         </div>
