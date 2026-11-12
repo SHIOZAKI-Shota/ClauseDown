@@ -48,20 +48,16 @@ defineShortcuts({
                         <HomeView v-if="app.view === 'home'" />
                         <SetupView v-else-if="app.view === 'setup'" />
                         <AboutView v-else-if="app.view === 'about'" />
-                        <RepoMissing v-else-if="app.repoProblem && app.repo" :repo="app.repo"
-                            :state="app.repoProblem" />
+                        <RepoMissing v-else-if="app.repoProblem && app.repo" :repo="app.repo" :state="app.repoProblem" />
                         <RepoSettingsView v-else-if="app.view === 'repo'" />
                         <DocListView v-else-if="app.view === 'docs'" />
                         <ScheduleView v-else-if="app.view === 'schedule'" :key="'s' + app.repoDir" />
                         <IssuesView v-else-if="app.view === 'issues'" :key="'i' + app.repoDir" />
                         <template v-else-if="app.currentPath">
                             <EditorView v-if="app.view === 'editor'" :key="app.currentPath + '@' + app.reloadKey" />
-                            <HistoryView v-else-if="app.view === 'history'"
-                                :key="'h' + app.currentPath + '@' + app.reloadKey" />
-                            <CompareView v-else-if="app.view === 'compare'"
-                                :key="'c' + app.currentPath + '@' + app.reloadKey" />
-                            <ReleasesView v-else-if="app.view === 'releases'"
-                                :key="'r' + app.currentPath + '@' + app.reloadKey" />
+                            <HistoryView v-else-if="app.view === 'history'" :key="'h' + app.currentPath + '@' + app.reloadKey" />
+                            <CompareView v-else-if="app.view === 'compare'" :key="'c' + app.currentPath + '@' + app.reloadKey" />
+                            <ReleasesView v-else-if="app.view === 'releases'" :key="'r' + app.currentPath + '@' + app.reloadKey" />
                         </template>
                     </div>
                 </div>
@@ -71,14 +67,11 @@ defineShortcuts({
         <CommandPalette v-model:open="app.paletteOpen" />
         <NewDocModal v-if="app.dialog?.kind === 'newDoc'" :folder="app.dialog.folder" @close="app.dialog = null" />
         <NewBranchModal v-if="app.dialog?.kind === 'newBranch'" :from="app.dialog.from" @close="app.dialog = null" />
-        <MergeModal v-if="app.dialog?.kind === 'merge'" :from="app.dialog.from" :into="app.dialog.into"
-            @close="app.dialog = null" />
-        <NewEventModal v-if="app.dialog?.kind === 'newEvent'" :doc-path="app.dialog.docPath" :date="app.dialog.date"
-            @close="app.dialog = null" />
+        <MergeModal v-if="app.dialog?.kind === 'merge'" :from="app.dialog.from" :into="app.dialog.into" @close="app.dialog = null" />
+        <NewEventModal v-if="app.dialog?.kind === 'newEvent'" :doc-path="app.dialog.docPath" :date="app.dialog.date" @close="app.dialog = null" />
         <ReviewModal v-if="app.dialog?.kind === 'review'" :branch="app.dialog.branch" @close="app.dialog = null" />
         <OpeningSplash v-if="opening" @done="opening = false" />
-        <HouritsuModal v-if="app.dialog?.kind === 'houritsu'" :dir="app.dialog.dir" :paths="app.dialog.paths"
-            @close="app.dialog = null" />
+        <HouritsuModal v-if="app.dialog?.kind === 'houritsu'" :dir="app.dialog.dir" :paths="app.dialog.paths" @close="app.dialog = null" />
     </UApp>
 </template>
 
@@ -104,7 +97,7 @@ defineShortcuts({
 }
 
 /* Nuxt UI の枠は min-h-svh なので、そのままではタイトルバーの分だけはみ出す */
-.cd-group>* {
+.cd-group > * {
     min-height: 0 !important;
     height: 100%;
 }

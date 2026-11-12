@@ -23,8 +23,7 @@ export interface DueEvent {
     updatedAt: string
 }
 
-export type DueEventInput = Pick<DueEvent, 'kind' | 'docPath' | 'date'> &
-    Partial<Pick<DueEvent, 'id' | 'title' | 'note' | 'end' | 'repeat' | 'remind'>>
+export type DueEventInput = Pick<DueEvent, 'kind' | 'docPath' | 'date'> & Partial<Pick<DueEvent, 'id' | 'title' | 'note' | 'end' | 'repeat' | 'remind'>>
 
 export interface Occurrence {
     key: string
@@ -73,7 +72,16 @@ export const KIND_COLORS = {
 } as const
 export type KindColor = keyof typeof KIND_COLORS
 export const COLOR_LABEL: Record<KindColor, string> = {
-    blue: '青', sky: '空', teal: '青緑', green: '緑', amber: '黄', orange: '橙', red: '赤', pink: '桃', violet: '紫', slate: '灰',
+    blue: '青',
+    sky: '空',
+    teal: '青緑',
+    green: '緑',
+    amber: '黄',
+    orange: '橙',
+    red: '赤',
+    pink: '桃',
+    violet: '紫',
+    slate: '灰',
 }
 
 export const EFFECTIVE_KIND = 'effective'
@@ -98,7 +106,9 @@ export function cleanKinds(v: unknown): EventKind[] {
     const seen = new Set<string>()
     for (const k of v as Partial<EventKind>[]) {
         if (!k || typeof k.id !== 'string' || !k.id || seen.has(k.id) || k.id === DELIVERY_KIND) continue
-        const label = String(k.label ?? '').trim().slice(0, 20)
+        const label = String(k.label ?? '')
+            .trim()
+            .slice(0, 20)
         if (!label) continue
         seen.add(k.id)
         out.push({

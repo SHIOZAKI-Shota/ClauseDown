@@ -52,14 +52,19 @@ export async function checkReminders(open: (e: OpenScheduleEvent) => void): Prom
         const overdue = fresh.filter((o) => o.overdue).length
         const n = new Notification({
             title: `近づいている期日が ${fresh.length} 件あります`,
-            body: overdue ? `うち ${overdue} 件は期限切れです` : fresh.slice(0, 3).map((o) => `${o.date} ${o.title}`).join('\n'),
+            body: overdue
+                ? `うち ${overdue} 件は期限切れです`
+                : fresh
+                      .slice(0, 3)
+                      .map((o) => `${o.date} ${o.title}`)
+                      .join('\n'),
         })
         n.on('click', () => open({ dir: new Set(fresh.map((o) => o.dir)).size > 1 ? '' : fresh[0].dir, docPath: '' }))
         n.show()
     }
     const now = new Date().toISOString()
     for (const o of fresh) notified[keyOf(o)] = now
-    await fsp.writeFile(notifiedPath(), JSON.stringify(notified), 'utf8').catch(() => { })
+    await fsp.writeFile(notifiedPath(), JSON.stringify(notified), 'utf8').catch(() => {})
 }
 
 export function startReminders(open: (e: OpenScheduleEvent) => void): void {

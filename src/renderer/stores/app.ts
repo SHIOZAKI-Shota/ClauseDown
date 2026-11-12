@@ -1,17 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref, shallowRef, watch } from 'vue'
-import type {
-    AppSettings,
-    Identity,
-    BranchInfo,
-    DocChangedEvent,
-    RepoState,
-    DocFile,
-    ForgeAccount,
-    RepoRules,
-    ReviewEvent,
-    SyncState,
-} from '@shared/api'
+import type { AppSettings, Identity, BranchInfo, DocChangedEvent, RepoState, DocFile, ForgeAccount, RepoRules, ReviewEvent, SyncState } from '@shared/api'
 import { canApprove, DEFAULT_RULES, reviewStatus, type Reviewer, type ReviewStatus } from '@shared/review'
 import { FORGE_LABEL, type ForgeKind } from '@shared/forge'
 import { DEFAULT_PREFS, type AppPrefs, type DocStyle, type RecentDoc } from '@shared/prefs'
@@ -86,7 +75,7 @@ export const useApp = defineStore('app', () => {
     )
     const me = computed(() => identity.value?.name ?? '')
     const reviewer = computed<Reviewer>(() => ({ name: me.value || undefined, login: identity.value?.login }))
-    const prefs = computed<AppPrefs>(() => ({ ...DEFAULT_PREFS, ...(settings.value?.prefs ?? {}) }))
+    const prefs = computed<AppPrefs>(() => ({ ...DEFAULT_PREFS, ...settings.value?.prefs }))
     const styleFor = (path: string) => resolveStyle(prefs.value.docStyle, styleLayers.value, path).style
     const style = computed<DocStyle>(() => styleFor(currentPath.value ?? ''))
 
@@ -343,8 +332,11 @@ export const useApp = defineStore('app', () => {
         if (repoDir.value) {
             const dir = repoDir.value
             const title = docs.value.find((d) => d.path === path)?.title ?? path
-            const recentDocs = [{ dir, path, title, at: Date.now() }, ...(prefs.value.recentDocs ?? []).filter((d) => !(d.dir === dir && d.path === path))].slice(0, 12)
-            setPrefs({ lastDoc: { dir, path }, recentDocs })
+            const recentDocs = [
+                { dir, path, title, at: Date.now() },
+                ...(prefs.value.recentDocs ?? []).filter((d) => !(d.dir === dir && d.path === path)),
+            ].slice(0, 12)
+            void setPrefs({ lastDoc: { dir, path }, recentDocs })
         }
     }
 
@@ -530,12 +522,92 @@ export const useApp = defineStore('app', () => {
     }
 
     return {
-        settings, view, settingsTab, openSettings, paletteOpen, docs, currentPath, currentDoc, syncState, busy, compareTarget, historySelect, dialog,
-        branches, currentBranch, mainBranch, onDraft, hasUnsaved, reloadKey, reviews, rules, style, styleLayers, styleFor, forge, forgeLabel, accounts, refreshAccounts, me, identity, refreshIdentity, reviewer,
-        prefs, setPrefs, setPrefsLive, resetPrefs,
-        statusOf, currentStatus, toReview,
-        repoDir, repo, repoStates, repoProblem, checkRepos, relocateRepo, forgetRepo, openRecent,
-        load, saveSettings, refreshDocs, onDocChanged, publishRepo, changeRemote, disconnectRemote, setEditorFlush, flushEditor, markChanged, setRepoUrl, switchRepo, switchBranch,
-        afterBranchChange, openDoc, openCompare, returnLabel, goBack, pageReturnLabel, leavePage, openIssueCount, refreshIssueCount, dueCount, refreshDueCount, goRepoHome, lastDocView, jumpTo, openSchedule, openScheduleAll, openIssues, issueTarget, homeTab, scheduleDoc, scheduleKey, scheduleDir, touchSchedule, run, runOk, notify, sync,
+        settings,
+        view,
+        settingsTab,
+        openSettings,
+        paletteOpen,
+        docs,
+        currentPath,
+        currentDoc,
+        syncState,
+        busy,
+        compareTarget,
+        historySelect,
+        dialog,
+        branches,
+        currentBranch,
+        mainBranch,
+        onDraft,
+        hasUnsaved,
+        reloadKey,
+        reviews,
+        rules,
+        style,
+        styleLayers,
+        styleFor,
+        forge,
+        forgeLabel,
+        accounts,
+        refreshAccounts,
+        me,
+        identity,
+        refreshIdentity,
+        reviewer,
+        prefs,
+        setPrefs,
+        setPrefsLive,
+        resetPrefs,
+        statusOf,
+        currentStatus,
+        toReview,
+        repoDir,
+        repo,
+        repoStates,
+        repoProblem,
+        checkRepos,
+        relocateRepo,
+        forgetRepo,
+        openRecent,
+        load,
+        saveSettings,
+        refreshDocs,
+        onDocChanged,
+        publishRepo,
+        changeRemote,
+        disconnectRemote,
+        setEditorFlush,
+        flushEditor,
+        markChanged,
+        setRepoUrl,
+        switchRepo,
+        switchBranch,
+        afterBranchChange,
+        openDoc,
+        openCompare,
+        returnLabel,
+        goBack,
+        pageReturnLabel,
+        leavePage,
+        openIssueCount,
+        refreshIssueCount,
+        dueCount,
+        refreshDueCount,
+        goRepoHome,
+        lastDocView,
+        jumpTo,
+        openSchedule,
+        openScheduleAll,
+        openIssues,
+        issueTarget,
+        homeTab,
+        scheduleDoc,
+        scheduleKey,
+        scheduleDir,
+        touchSchedule,
+        run,
+        runOk,
+        notify,
+        sync,
     }
 })

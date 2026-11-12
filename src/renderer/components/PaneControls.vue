@@ -12,7 +12,15 @@ const collapseIcon = computed(() => (props.side === 'left' ? 'i-lucide-panel-lef
 
 <template>
     <UTooltip :text="`${label}を折りたたむ`">
-        <UButton :icon="collapseIcon" size="xs" square color="neutral" variant="ghost" class="shrink-0"
-            :aria-label="`${label}を折りたたむ`" @click="pane.collapse()" />
+        <UButton
+            :icon="collapseIcon"
+            size="xs"
+            square
+            color="neutral"
+            variant="ghost"
+            class="shrink-0"
+            :aria-label="`${label}を折りたたむ`"
+            @click="pane.collapse()"
+        />
     </UTooltip>
 </template>

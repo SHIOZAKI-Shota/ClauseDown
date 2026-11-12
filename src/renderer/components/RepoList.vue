@@ -15,18 +15,33 @@ function open(dir: string) {
     <div class="repos">
         <div class="head">
             <span>リポジトリ</span>
-            <UButton icon="i-lucide-plus" size="xs" color="neutral" variant="ghost" title="リポジトリの追加・管理"
-                @click="app.openSettings('setup', 'repos')" />
+            <UButton
+                icon="i-lucide-plus"
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                title="リポジトリの追加・管理"
+                @click="app.openSettings('setup', 'repos')"
+            />
         </div>
         <div class="scroll">
-            <button v-for="r in app.settings?.repos ?? []" :key="r.dir" class="repo"
+            <button
+                v-for="r in app.settings?.repos ?? []"
+                :key="r.dir"
+                class="repo"
                 :class="{ on: r.dir === app.repoDir, missing: missing(r.dir) }"
-                :title="[r.name, missing(r.dir) ? '見つかりません' : r.url || r.dir].join('\n')" @click="open(r.dir)">
-                <UIcon
-                    :name="missing(r.dir) ? 'i-lucide-folder-x' : r.url ? 'i-lucide-cloud' : 'i-lucide-hard-drive'" />
+                :title="[r.name, missing(r.dir) ? '見つかりません' : r.url || r.dir].join('\n')"
+                @click="open(r.dir)"
+            >
+                <UIcon :name="missing(r.dir) ? 'i-lucide-folder-x' : r.url ? 'i-lucide-cloud' : 'i-lucide-hard-drive'" />
                 <span class="nm">{{ r.name }}</span>
-                <UBadge v-if="r.dir === app.repoDir && app.toReview.length" :label="`確認待ち ${app.toReview.length}`"
-                    color="warning" variant="subtle" size="sm" />
+                <UBadge
+                    v-if="r.dir === app.repoDir && app.toReview.length"
+                    :label="`確認待ち ${app.toReview.length}`"
+                    color="warning"
+                    variant="subtle"
+                    size="sm"
+                />
             </button>
             <p v-if="!app.settings?.repos.length" class="empty">まだリポジトリがありません</p>
         </div>

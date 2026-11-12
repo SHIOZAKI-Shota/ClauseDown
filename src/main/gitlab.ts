@@ -33,8 +33,7 @@ async function call<T>(r: GitLabRepo, method: string, path: string, body?: unkno
             const j = (await res.json()) as { message?: unknown; error?: unknown }
             const m = j.message ?? j.error
             if (m) msg = typeof m === 'string' ? m : JSON.stringify(m)
-        } catch {
-        }
+        } catch {}
         throw new GitLabError(res.status, gitlabMessage(res.status, msg))
     }
     if (res.status === 204) return undefined as T
@@ -78,11 +77,7 @@ export interface MrVersion {
 }
 
 export async function findOpenMr(r: GitLabRepo, source: string, target: string): Promise<MergeRequest | null> {
-    const list = await call<MergeRequest[]>(
-        r,
-        'GET',
-        `${proj(r)}/merge_requests?state=opened&source_branch=${enc(source)}&target_branch=${enc(target)}`,
-    )
+    const list = await call<MergeRequest[]>(r, 'GET', `${proj(r)}/merge_requests?state=opened&source_branch=${enc(source)}&target_branch=${enc(target)}`)
     return list[0] ?? null
 }
 
@@ -120,11 +115,7 @@ export function unapprove(r: GitLabRepo, iid: number) {
 export async function listNotes(r: GitLabRepo, iid: number): Promise<Note[]> {
     const out: Note[] = []
     for (let page = 1; page <= 20; page++) {
-        const list = await call<Note[]>(
-            r,
-            'GET',
-            `${proj(r)}/merge_requests/${iid}/notes?sort=asc&order_by=created_at&per_page=100&page=${page}`,
-        )
+        const list = await call<Note[]>(r, 'GET', `${proj(r)}/merge_requests/${iid}/notes?sort=asc&order_by=created_at&per_page=100&page=${page}`)
         out.push(...list)
         if (list.length < 100) break
     }
@@ -235,7 +226,10 @@ export function commentIssue(r: GitLabRepo, iid: number, body: string) {
     return call<unknown>(r, 'POST', `${proj(r)}/issues/${iid}/notes`, { body })
 }
 
-export async function issueComments(r: GitLabRepo, iid: number): Promise<{ id: number; body: string; system?: boolean; author?: { username: string }; created_at: string }[]> {
+export async function issueComments(
+    r: GitLabRepo,
+    iid: number,
+): Promise<{ id: number; body: string; system?: boolean; author?: { username: string }; created_at: string }[]> {
     const out: { id: number; body: string; system?: boolean; author?: { username: string }; created_at: string }[] = []
     for (let page = 1; page <= 20; page++) {
         const list = await call<typeof out>(r, 'GET', `${proj(r)}/issues/${iid}/notes?per_page=100&sort=asc&order_by=created_at&page=${page}`)

@@ -3,7 +3,14 @@ import { reviewStatus, type ReviewEvent } from '../src/shared/review'
 
 let n = 0
 const ev = (action: ReviewEvent['action'], by: string, oid = 'tip', extra: Partial<ReviewEvent> = {}): ReviewEvent => ({
-    id: String(++n), branch: '案/x', action, oid, by, at: `2026-01-01T00:00:${String(n).padStart(2, '0')}Z`, text: '', ...extra,
+    id: String(++n),
+    branch: '案/x',
+    action,
+    oid,
+    by,
+    at: `2026-01-01T00:00:${String(n).padStart(2, '0')}Z`,
+    text: '',
+    ...extra,
 })
 const RULES = { requireApproval: true, approvers: [] as string[] }
 

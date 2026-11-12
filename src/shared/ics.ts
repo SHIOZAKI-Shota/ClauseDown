@@ -1,6 +1,10 @@
 import { addDays, type ScheduleItem } from './schedule'
 
-const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/[;,]/g, (c) => `\\${c}`)
+const esc = (s: string) =>
+    s
+        .replace(/\\/g, '\\\\')
+        .replace(/\r?\n/g, '\\n')
+        .replace(/[;,]/g, (c) => `\\${c}`)
 const ymd = (d: string) => d.replace(/-/g, '')
 const enc = new TextEncoder()
 
@@ -36,7 +40,11 @@ function uidOf(key: string): string {
     return `${hex(h2)}${hex(h1)}@clausedown`
 }
 
-const stamp = (d: Date) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z')
+const stamp = (d: Date) =>
+    d
+        .toISOString()
+        .replace(/[-:]/g, '')
+        .replace(/\.\d+Z$/, 'Z')
 
 const trigger = (days: number) => (days === 0 ? 'PT9H' : `-PT${days * 24 - 9}H`)
 

@@ -76,9 +76,32 @@ export const DEFAULT_PREFS: AppPrefs = {
     previewKind: 'normal',
 }
 
-
-export const BODY_FONTS = ['游明朝', 'BIZ UD明朝 Medium', 'ＭＳ 明朝', 'ＭＳ Ｐ明朝', 'ヒラギノ明朝 ProN', 'Noto Serif JP', '游ゴシック', 'BIZ UDゴシック', 'メイリオ', 'ＭＳ ゴシック', 'ヒラギノ角ゴシック']
-export const EDITOR_FONTS = ['BIZ UDゴシック', 'ＭＳ ゴシック', 'Cascadia Mono', 'Consolas', 'Noto Sans Mono CJK JP', 'HackGen', 'HackGen Console NF', 'UDEV Gothic', 'メイリオ', '游ゴシック', 'ヒラギノ角ゴシック']
+export const BODY_FONTS = [
+    '游明朝',
+    'BIZ UD明朝 Medium',
+    'ＭＳ 明朝',
+    'ＭＳ Ｐ明朝',
+    'ヒラギノ明朝 ProN',
+    'Noto Serif JP',
+    '游ゴシック',
+    'BIZ UDゴシック',
+    'メイリオ',
+    'ＭＳ ゴシック',
+    'ヒラギノ角ゴシック',
+]
+export const EDITOR_FONTS = [
+    'BIZ UDゴシック',
+    'ＭＳ ゴシック',
+    'Cascadia Mono',
+    'Consolas',
+    'Noto Sans Mono CJK JP',
+    'HackGen',
+    'HackGen Console NF',
+    'UDEV Gothic',
+    'メイリオ',
+    '游ゴシック',
+    'ヒラギノ角ゴシック',
+]
 
 const num = (v: unknown, min: number, max: number, d: number) => {
     const x = Number(v)
@@ -86,7 +109,10 @@ const num = (v: unknown, min: number, max: number, d: number) => {
 }
 
 export function cleanStyle(s: Partial<DocStyle> | null | undefined): DocStyle {
-    const font = String(s?.font ?? '').replace(/[^\p{L}\p{N} _\-・]/gu, '').trim().slice(0, 64)
+    const font = String(s?.font ?? '')
+        .replace(/[^\p{L}\p{N} _\-・]/gu, '')
+        .trim()
+        .slice(0, 64)
     return {
         font: font || DEFAULT_STYLE.font,
         fontSize: num(s?.fontSize, 6, 30, DEFAULT_STYLE.fontSize),
@@ -108,5 +134,5 @@ export function styleVars(s: DocStyle): string {
 }
 
 export function withDefaults<T extends object>(defaults: T, value: Partial<T> | null | undefined): T {
-    return { ...defaults, ...(value ?? {}) }
+    return { ...defaults, ...value }
 }

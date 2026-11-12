@@ -25,25 +25,29 @@ export const AI_PROVIDERS: Record<AiProvider, AiProviderInfo> = {
     },
     openai: {
         label: 'OpenAI・Gemini など（OpenAI 互換）',
-        description: 'OpenAI、Google Gemini、DeepSeek、LM Studio など、OpenAI 互換の API を持つサービスを、URL と API キーを指定して使用します。文書の内容はその接続先に送られます。',
+        description:
+            'OpenAI、Google Gemini、DeepSeek、LM Studio など、OpenAI 互換の API を持つサービスを、URL と API キーを指定して使用します。文書の内容はその接続先に送られます。',
         base: 'https://api.openai.com/v1',
         auth: 'key',
     },
     ollama: {
         label: 'Ollama（ローカル の中）',
-        description: 'ローカル で動いている Ollama を使用します。API キーは不要で、文書は PC の外に送られません。道具（tools）に対応したモデル（qwen3、llama3.1、gpt-oss など）が必要です。',
+        description:
+            'ローカル で動いている Ollama を使用します。API キーは不要で、文書は PC の外に送られません。道具（tools）に対応したモデル（qwen3、llama3.1、gpt-oss など）が必要です。',
         base: 'http://127.0.0.1:11434/v1',
         auth: 'none',
     },
     openrouter: {
         label: 'OpenRouter（ブラウザでログイン）',
-        description: 'OpenRouter にブラウザでログインして使用します（API キーの入力は不要です）。Claude・GPT・Gemini などを選べます。料金は OpenRouter に支払います。文書の内容は OpenRouter と、選んだモデルの会社に送られます。',
+        description:
+            'OpenRouter にブラウザでログインして使用します（API キーの入力は不要です）。Claude・GPT・Gemini などを選べます。料金は OpenRouter に支払います。文書の内容は OpenRouter と、選んだモデルの会社に送られます。',
         base: 'https://openrouter.ai/api/v1',
         auth: 'oauth',
     },
     github: {
         label: 'GitHub Models（GitHub のログイン）',
-        description: '設定の「GitHub/GitLab」でログインした GitHub アカウントで使用します。無料枠があり、回数に制限があります。文書の内容は GitHub（Microsoft）に送られます。',
+        description:
+            '設定の「GitHub/GitLab」でログインした GitHub アカウントで使用します。無料枠があり、回数に制限があります。文書の内容は GitHub（Microsoft）に送られます。',
         base: 'https://models.github.ai/inference',
         model: 'openai/gpt-4.1',
         auth: 'github',

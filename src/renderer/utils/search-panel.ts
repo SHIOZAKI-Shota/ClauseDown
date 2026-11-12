@@ -1,14 +1,4 @@
-import {
-    closeSearchPanel,
-    findNext,
-    findPrevious,
-    getSearchQuery,
-    replaceAll,
-    replaceNext,
-    search,
-    SearchQuery,
-    setSearchQuery,
-} from '@codemirror/search'
+import { closeSearchPanel, findNext, findPrevious, getSearchQuery, replaceAll, replaceNext, search, SearchQuery, setSearchQuery } from '@codemirror/search'
 import type { EditorState, Extension } from '@codemirror/state'
 import { EditorView, type Panel, type ViewUpdate } from '@codemirror/view'
 import { keys } from './platform'
@@ -133,7 +123,13 @@ function createPanel(view: EditorView): Panel {
         const { total, current } = countOf(view.state, query)
         dom.classList.toggle('none', !!query.search && total === 0)
         dom.classList.toggle('bad', !!query.search && !query.valid)
-        count.textContent = !query.search ? '' : !query.valid ? '正規表現の誤り' : total === 0 ? '0 件' : `${current || '-'} / ${total >= MAX_COUNT ? `${MAX_COUNT}+` : total}`
+        count.textContent = !query.search
+            ? ''
+            : !query.valid
+              ? '正規表現の誤り'
+              : total === 0
+                ? '0 件'
+                : `${current || '-'} / ${total >= MAX_COUNT ? `${MAX_COUNT}+` : total}`
     }
     function commit(patch: Partial<ConstructorParameters<typeof SearchQuery>[0]>) {
         const q = new SearchQuery({
@@ -261,7 +257,15 @@ const theme = EditorView.theme({
         cursor: 'pointer',
     },
     '.cd-find-btn:hover': { backgroundColor: 'var(--ui-bg-accented)', color: 'var(--ui-text-highlighted)' },
-    '.cd-find-btn svg': { width: '16px', height: '16px', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round' },
+    '.cd-find-btn svg': {
+        width: '16px',
+        height: '16px',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: '2',
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+    },
     '.cd-find-expand svg': { transition: 'transform 0.15s' },
     '.cd-find.open .cd-find-expand svg': { transform: 'rotate(90deg)' },
     '.cd-find-text': {

@@ -3,7 +3,11 @@ export const IS_MAC = typeof navigator !== 'undefined' && navigator.userAgent.in
 /** Ctrl にあたるキーの名前。「Ctrl＋ホイール」のように、キー以外と組み合わせて書くときに使う */
 export const MOD_KEY = IS_MAC ? '⌘' : 'Ctrl'
 
-const MAC_MODS: [string, string][] = [['Alt', '⌥'], ['Shift', '⇧'], ['Ctrl', '⌘']]
+const MAC_MODS: [string, string][] = [
+    ['Alt', '⌥'],
+    ['Shift', '⇧'],
+    ['Ctrl', '⌘'],
+]
 
 /** ショートカットの表記。'Ctrl+Alt+A' のように Windows の書き方で渡すと、macOS では '⌥⌘A' に直す */
 export function keys(combo: string): string {

@@ -78,10 +78,11 @@ function mermaidBodies(doc: LegalDoc): string[] {
 
 function mathBodies(doc: LegalDoc): string[] {
     const out: string[] = []
-    const fromText = (t: string) => t.split('\n').forEach((l) => {
-        const tex = displayLine(l)
-        if (tex) out.push(tex)
-    })
+    const fromText = (t: string) =>
+        t.split('\n').forEach((l) => {
+            const tex = displayLine(l)
+            if (tex) out.push(tex)
+        })
     const fromBlocks = (blocks: string[]) => {
         for (const b of blocks) {
             const f = parseFence(b)
@@ -166,7 +167,8 @@ async function loadImages(source: string, base: DocBase | undefined): Promise<Im
         const im = imageLine(line)
         if (!im || images.has(im.src)) continue
         const img = await readImage(base.dir, base.docPath, im.src)
-        if (img && img.width && img.height && img.ext !== 'webp') images.set(im.src, { data: img.data, type: img.ext === 'jpeg' ? 'jpg' : img.ext, width: img.width, height: img.height })
+        if (img && img.width && img.height && img.ext !== 'webp')
+            images.set(im.src, { data: img.data, type: img.ext === 'jpeg' ? 'jpg' : img.ext, width: img.width, height: img.height })
     }
     return images
 }
@@ -182,7 +184,11 @@ export function makeBuilders(style: DocStyle, css = '', base?: DocBase): Builder
             return docToDocx(doc, await rasterizeFigures(doc), style, await loadImages(src, base))
         },
         cmpPdf: async (o, n, title) =>
-            toPdf(await inlineImages(page(renderCompareTable(compareSources(o, n), { title, omitUnchanged: true }), title, style, true, css), base), true, style),
+            toPdf(
+                await inlineImages(page(renderCompareTable(compareSources(o, n), { title, omitUnchanged: true }), title, style, true, css), base),
+                true,
+                style,
+            ),
         cmpDocx: (o, n, title) => compareToDocx(compareSources(o, n), { title, omitUnchanged: true, style }),
     }
 }
@@ -246,7 +252,7 @@ export async function deliverWithDialog(parent: BrowserWindow | null, dir: strin
 export async function exportScheduleIcs(parent: BrowserWindow | null, dir: string, today: string): Promise<{ path: string; count: number } | null> {
     const { prefs } = await loadSettings()
     const { name, text, count } = await scheduleIcs(dir, today)
-    const file = `${name.replace(/[\/:*?"<>|]/g, '_')}.ics`
+    const file = `${name.replace(/[/:*?"<>|]/g, '_')}.ics`
     const opts = {
         title: '期日をカレンダーの形式で書き出す',
         defaultPath: prefs.exportDir ? join(prefs.exportDir, file) : file,

@@ -70,9 +70,17 @@ function finish() {
 </script>
 
 <template>
-    <UModal :open="true" :title="step === 'pick' ? '条項ライブラリから入れる' : '条参照の対応づけ'"
-        :description="step === 'pick' ? `ライブラリ「${libraryName}」の条を選びます。カーソルのある条の後に入ります。` : `「${selected?.title}」には、ほかの条への参照があります。入れる先の文書のどの条を指すかを選んでください。`"
-        :ui="{ content: 'cd-wide' }" @update:open="(v) => !v && emit('close')">
+    <UModal
+        :open="true"
+        :title="step === 'pick' ? '条項ライブラリから入れる' : '条参照の対応づけ'"
+        :description="
+            step === 'pick'
+                ? `ライブラリ「${libraryName}」の条を選びます。カーソルのある条の後に入ります。`
+                : `「${selected?.title}」には、ほかの条への参照があります。入れる先の文書のどの条を指すかを選んでください。`
+        "
+        :ui="{ content: 'cd-wide' }"
+        @update:open="(v) => !v && emit('close')"
+    >
         <template #body>
             <div v-if="step === 'pick'" class="pick">
                 <div class="list">
@@ -83,11 +91,9 @@ function finish() {
                     <p v-else-if="!filtered.length" class="cd-muted">合う条がありません。</p>
                     <div v-for="[title, list] in groups" :key="title" class="group">
                         <p class="group-head">{{ title }}</p>
-                        <button v-for="c in list" :key="c.key" class="item" :class="{ on: selected?.key === c.key }"
-                            @click="selected = c" @dblclick="next">
+                        <button v-for="c in list" :key="c.key" class="item" :class="{ on: selected?.key === c.key }" @click="selected = c" @dblclick="next">
                             <span class="nm">{{ c.title || c.label }}</span>
-                            <UBadge v-if="c.refs.length" :label="`参照 ${c.refs.length}`" size="sm" color="neutral"
-                                variant="subtle" />
+                            <UBadge v-if="c.refs.length" :label="`参照 ${c.refs.length}`" size="sm" color="neutral" variant="subtle" />
                         </button>
                     </div>
                 </div>
@@ -110,8 +116,7 @@ function finish() {
             <div class="cd-modal-foot">
                 <UButton v-if="step === 'map'" label="戻る" color="neutral" variant="ghost" @click="step = 'pick'" />
                 <UButton label="やめる" color="neutral" variant="outline" @click="emit('close')" />
-                <UButton v-if="step === 'pick'" :label="selected?.refs.length ? '次へ' : '挿入する'" :disabled="!selected"
-                    @click="next" />
+                <UButton v-if="step === 'pick'" :label="selected?.refs.length ? '次へ' : '挿入する'" :disabled="!selected" @click="next" />
                 <UButton v-else label="挿入する" @click="finish" />
             </div>
         </template>

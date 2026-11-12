@@ -20,7 +20,7 @@ const records = await import('../src/main/records')
 const BASE = 'https://gitlab.example.co.jp'
 let root = ''
 let url = ''
-let closeGit = () => { }
+let closeGit = () => {}
 let api: http.Server
 const state = {
     login: 'staff-a',
@@ -35,7 +35,9 @@ const state = {
 const bare = () => join(root, 'docs.git')
 const headOf = (branch: string) => {
     try {
-        return execFileSync('git', ['-C', bare(), 'rev-parse', `refs/heads/${branch}`], { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim()
+        return execFileSync('git', ['-C', bare(), 'rev-parse', `refs/heads/${branch}`], { stdio: ['ignore', 'pipe', 'ignore'] })
+            .toString()
+            .trim()
     } catch {
         return ''
     }
@@ -54,7 +56,10 @@ const note = (iid: number, body: string, system: boolean) =>
 
 function mergeOnServer(head: string, title: string): string {
     const work = fs.mkdtempSync(join(os.tmpdir(), 'clausedown-gl-'))
-    const g = (...args: string[]) => execFileSync('git', ['-C', work, '-c', 'user.name=GitLab', '-c', 'user.email=gl@example.com', ...args]).toString().trim()
+    const g = (...args: string[]) =>
+        execFileSync('git', ['-C', work, '-c', 'user.name=GitLab', '-c', 'user.email=gl@example.com', ...args])
+            .toString()
+            .trim()
     execFileSync('git', ['clone', '-q', bare(), work])
     g('merge', '--no-ff', '-q', '-m', title, `origin/${head}`)
     g('push', '-q', 'origin', 'HEAD:main')
@@ -62,7 +67,7 @@ function mergeOnServer(head: string, title: string): string {
 }
 
 beforeAll(async () => {
-    ; ({ root, url, close: closeGit } = await startGitServer())
+    ;({ root, url, close: closeGit } = await startGitServer())
     api = http.createServer(async (req, res) => {
         const chunks: Buffer[] = []
         for await (const c of req) chunks.push(c as Buffer)
@@ -78,16 +83,31 @@ beforeAll(async () => {
         if (!p.startsWith(proj)) return send(404, { message: '404 Project Not Found' })
         const rest = p.slice(proj.length)
         const toJson = (m: (typeof state.mrs)[number]) => ({
-            iid: m.iid, web_url: `${BASE}/office/sub/docs/-/merge_requests/${m.iid}`, state: m.state, sha: headOf(m.source),
-            author: { username: m.author }, detailed_merge_status: m.checks > 0 ? 'checking' : 'mergeable', merge_commit_sha: m.merge_commit_sha ?? null,
+            iid: m.iid,
+            web_url: `${BASE}/office/sub/docs/-/merge_requests/${m.iid}`,
+            state: m.state,
+            sha: headOf(m.source),
+            author: { username: m.author },
+            detailed_merge_status: m.checks > 0 ? 'checking' : 'mergeable',
+            merge_commit_sha: m.merge_commit_sha ?? null,
         })
         let m: RegExpExecArray | null
         if (rest === '/merge_requests' && req.method === 'GET') {
-            const list = state.mrs.filter((x) => x.state === 'opened' && x.source === u.searchParams.get('source_branch') && x.target === u.searchParams.get('target_branch'))
+            const list = state.mrs.filter(
+                (x) => x.state === 'opened' && x.source === u.searchParams.get('source_branch') && x.target === u.searchParams.get('target_branch'),
+            )
             return send(200, list.map(toJson))
         }
         if (rest === '/merge_requests' && req.method === 'POST') {
-            const mr = { iid: state.mrs.length + 1, source: body.source_branch, target: body.target_branch, title: body.title, author: state.login, state: 'opened', checks: 2 }
+            const mr = {
+                iid: state.mrs.length + 1,
+                source: body.source_branch,
+                target: body.target_branch,
+                title: body.title,
+                author: state.login,
+                state: 'opened',
+                checks: 2,
+            }
             state.mrs.push(mr)
             syncVersion(mr.iid)
             return send(201, toJson(mr))
@@ -120,7 +140,11 @@ beforeAll(async () => {
                 note(iid, 'unapproved this merge request', true)
                 return send(201, {})
             }
-            if (sub === '/notes' && req.method === 'GET') return send(200, state.notes.filter((n) => n.iid === iid))
+            if (sub === '/notes' && req.method === 'GET')
+                return send(
+                    200,
+                    state.notes.filter((n) => n.iid === iid),
+                )
             if (sub === '/notes' && req.method === 'POST') {
                 note(iid, body.body, false)
                 return send(201, state.notes.at(-1))
@@ -242,7 +266,12 @@ describe('GitLab 連携', () => {
 
     it('GitLab でマージして取り込む（マージできるかの確認を待つ）', async () => {
         const s = await wf.adoptOrMerge(pc(), {
-            from: draft, into: 'main', choices: {}, message: '2026年改定を反映', effectiveDate: '2026-04-01', deleteAfter: true,
+            from: draft,
+            into: 'main',
+            choices: {},
+            message: '2026年改定を反映',
+            effectiveDate: '2026-04-01',
+            deleteAfter: true,
         })
         expect(s).toEqual({ state: 'upToDate' })
         expect(state.mrs[0]).toMatchObject({ state: 'merged' })
@@ -282,7 +311,14 @@ describe('GitLab 連携', () => {
         await wf.addReview(pc(), { branch: b, action: 'request', text: '' })
         const oid = await git.branchOid(pc(), b)
         await records.writeRecord(pc(), 'reviews/forged.json', {
-            id: 'forged', branch: b, action: 'approve', oid, by: 'boss', at: new Date(Date.now() + 1000).toISOString(), text: '', source: 'gitlab',
+            id: 'forged',
+            branch: b,
+            action: 'approve',
+            oid,
+            by: 'boss',
+            at: new Date(Date.now() + 1000).toISOString(),
+            text: '',
+            source: 'gitlab',
         })
         const s = reviewStatus(await wf.listReviews(pc()), b, oid, RULES)
         expect(s.state).toBe('requested')

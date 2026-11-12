@@ -8,9 +8,12 @@ const parts = computed(() => splitIssueRefs(props.text))
 </script>
 
 <template>
-    <span class="cd-issue-text"><template v-for="(p, i) in parts" :key="i"><button v-if="typeof p === 'number'"
-                type="button" class="ref" :title="`課題 #${p} を開く`" @click.stop="app.openIssues({ n: p })">#{{ p
-                }}</button><template v-else>{{ p }}</template></template></span>
+    <span class="cd-issue-text"
+        ><template v-for="(p, i) in parts" :key="i"
+            ><button v-if="typeof p === 'number'" type="button" class="ref" :title="`課題 #${p} を開く`" @click.stop="app.openIssues({ n: p })">#{{ p }}</button
+            ><template v-else>{{ p }}</template></template
+        ></span
+    >
 </template>
 
 <style scoped>

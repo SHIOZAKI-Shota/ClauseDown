@@ -8,8 +8,7 @@ const TIMEOUT = () => Number(process.env.CLAUSEDOWN_OPENROUTER_TIMEOUT_MS ?? 5 *
 
 const b64url = (b: Buffer) => b.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 
-const PAGE = (msg: string) =>
-    `<!doctype html><meta charset="utf-8"><title>ClauseDown</title><body style="font-family:sans-serif;padding:40px">${msg}</body>`
+const PAGE = (msg: string) => `<!doctype html><meta charset="utf-8"><title>ClauseDown</title><body style="font-family:sans-serif;padding:40px">${msg}</body>`
 
 let current: (() => void) | null = null
 

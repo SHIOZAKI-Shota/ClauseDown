@@ -25,23 +25,23 @@ const groups = computed(() => [
         items: [
             ...(app.repoDir
                 ? [
-                    {
-                        label: 'リポジトリホーム',
-                        icon: 'i-lucide-layout-grid',
-                        onSelect: () => {
-                            open.value = false
-                            app.goRepoHome()
-                        },
-                    },
-                    {
-                        label: 'このリポジトリの設定',
-                        icon: 'i-lucide-settings-2',
-                        onSelect: () => {
-                            open.value = false
-                            app.view = 'repo'
-                        },
-                    },
-                ]
+                      {
+                          label: 'リポジトリホーム',
+                          icon: 'i-lucide-layout-grid',
+                          onSelect: () => {
+                              open.value = false
+                              app.goRepoHome()
+                          },
+                      },
+                      {
+                          label: 'このリポジトリの設定',
+                          icon: 'i-lucide-settings-2',
+                          onSelect: () => {
+                              open.value = false
+                              app.view = 'repo'
+                          },
+                      },
+                  ]
                 : []),
             {
                 label: 'リポジトリの追加・管理',

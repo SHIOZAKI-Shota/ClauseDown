@@ -5,21 +5,43 @@ import { blockLines, renderBlock } from '../src/shared/blocks'
 import { parseLegal } from '../src/shared/legal-parser'
 import { docToDocx } from '../src/shared/docx-export'
 
-const brief = (grid: string[][]) =>
-    tableSpans(grid).map((r) => r.map((s) => (s.hidden ? '-' : `${s.rowspan}x${s.colspan}`)).join(' '))
+const brief = (grid: string[][]) => tableSpans(grid).map((r) => r.map((s) => (s.hidden ? '-' : `${s.rowspan}x${s.colspan}`)).join(' '))
 
 describe('tableSpans', () => {
     it('> は右のセルと、^ は上のセルと結合する', () => {
-        expect(brief([['区分', '>', '内容'], ['A', 'B', 'C'], ['^', 'D', 'E']])).toEqual(['1x1 - 1x2', '2x1 1x1 1x1', '- 1x1 1x1'])
+        expect(
+            brief([
+                ['区分', '>', '内容'],
+                ['A', 'B', 'C'],
+                ['^', 'D', 'E'],
+            ]),
+        ).toEqual(['1x1 - 1x2', '2x1 1x1 1x1', '- 1x1 1x1'])
     })
 
     it('2 行 2 列の結合', () => {
-        expect(brief([['h1', 'h2', 'h3'], ['>', 'X', 'a'], ['>', '^', 'b']])).toEqual(['1x1 1x1 1x1', '- 2x2 1x1', '- - 1x1'])
-        expect(brief([['h1', 'h2', 'h3'], ['>', 'X', 'a'], ['^', '^', 'b']])).toEqual(['1x1 1x1 1x1', '- 2x2 1x1', '- - 1x1'])
+        expect(
+            brief([
+                ['h1', 'h2', 'h3'],
+                ['>', 'X', 'a'],
+                ['>', '^', 'b'],
+            ]),
+        ).toEqual(['1x1 1x1 1x1', '- 2x2 1x1', '- - 1x1'])
+        expect(
+            brief([
+                ['h1', 'h2', 'h3'],
+                ['>', 'X', 'a'],
+                ['^', '^', 'b'],
+            ]),
+        ).toEqual(['1x1 1x1 1x1', '- 2x2 1x1', '- - 1x1'])
     })
 
     it('見出しの行をまたぐ ^ と、右端の > は文字として残す', () => {
-        expect(brief([['h1', 'h2'], ['^', '>']])).toEqual(['1x1 1x1', '1x1 1x1'])
+        expect(
+            brief([
+                ['h1', 'h2'],
+                ['^', '>'],
+            ]),
+        ).toEqual(['1x1 1x1', '1x1 1x1'])
     })
 })
 

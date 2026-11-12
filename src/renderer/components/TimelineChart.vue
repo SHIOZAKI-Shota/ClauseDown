@@ -88,7 +88,14 @@ function reveal(date: string) {
 }
 defineExpose({ reveal, goToday })
 
-interface Tick { x: number; w: number; label: string; key: string; weekend?: boolean; strong?: boolean }
+interface Tick {
+    x: number
+    w: number
+    label: string
+    key: string
+    weekend?: boolean
+    strong?: boolean
+}
 function monthStarts(fromN: number, toN: number): number[] {
     const d = fromDayNum(Math.floor(fromN))
     let [y, m] = d.split('-').map(Number)
@@ -98,7 +105,10 @@ function monthStarts(fromN: number, toN: number): number[] {
         if (n > toN) break
         out.push(n)
         m++
-        if (m > 12) { m = 1; y++ }
+        if (m > 12) {
+            m = 1
+            y++
+        }
     }
     return out
 }
@@ -143,7 +153,14 @@ const axis = computed(() => {
     return { major, minor, lines, majorLabels }
 })
 
-interface Placed { it: TimelineItem; x: number; w: number; lane: number; range: boolean; color: string }
+interface Placed {
+    it: TimelineItem
+    x: number
+    w: number
+    lane: number
+    range: boolean
+    color: string
+}
 const CHAR_W = 12.5
 const layout = computed(() => {
     const p = ppd.value
@@ -181,7 +198,7 @@ let pan: { x: number; start: number } | null = null
 function onTrackDown(e: PointerEvent) {
     if (e.button !== 0 || (e.target as HTMLElement).closest('.item')) return
     pan = { x: e.clientX, start: left.value }
-        ; (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
 }
 let frame = 0
 let panX: number | null = null
@@ -237,7 +254,7 @@ function onItemDown(e: PointerEvent, pl: Placed) {
     if (e.button !== 0) return
     e.stopPropagation()
     drag.value = { key: pl.it.key, x: e.clientX, days: 0, moved: false }
-        ; (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
 }
 function onItemMove(e: PointerEvent, pl: Placed) {
     const d = drag.value
@@ -284,7 +301,12 @@ const rangeLabel = computed(() => {
     return `${f(a)} 〜 ${f(b)}`
 })
 const tipOf = (it: TimelineItem) =>
-    [`${props.kindOf(it.kind, it.dir).label}：${it.title}`, it.end ? `${it.date} 〜 ${it.end}` : it.date, it.done ? '済み' : it.overdue ? '期限切れ' : '', it.note ?? '']
+    [
+        `${props.kindOf(it.kind, it.dir).label}：${it.title}`,
+        it.end ? `${it.date} 〜 ${it.end}` : it.date,
+        it.done ? '済み' : it.overdue ? '期限切れ' : '',
+        it.note ?? '',
+    ]
         .filter(Boolean)
         .join('\n')
 </script>
@@ -296,14 +318,14 @@ const tipOf = (it: TimelineItem) =>
             <span class="cd-grow" />
             <span class="cd-muted range">{{ rangeLabel }}</span>
             <UFieldGroup size="xs">
-                <UButton icon="i-lucide-chevron-left" square color="neutral" variant="outline" aria-label="前へ"
-                    @click="panBy(-trackW / 2)" />
+                <UButton icon="i-lucide-chevron-left" square color="neutral" variant="outline" aria-label="前へ" @click="panBy(-trackW / 2)" />
                 <UButton label="今日" color="neutral" variant="outline" @click="goToday" />
-                <UButton icon="i-lucide-chevron-right" square color="neutral" variant="outline" aria-label="次へ"
-                    @click="panBy(trackW / 2)" />
+                <UButton icon="i-lucide-chevron-right" square color="neutral" variant="outline" aria-label="次へ" @click="panBy(trackW / 2)" />
             </UFieldGroup>
             <SegmentSwitch v-model="scale" size="xs" :items="SCALES.map((s) => ({ value: s.value, label: s.label }))" />
-            <UTooltip :text="`${MOD_KEY}＋ホイールで拡大・縮小します。背景のドラッグか Shift＋ホイールで、表示する期間を前後に動かします。空いた所をダブルクリックすると、その日に期日を足します`">
+            <UTooltip
+                :text="`${MOD_KEY}＋ホイールで拡大・縮小します。背景のドラッグか Shift＋ホイールで、表示する期間を前後に動かします。空いた所をダブルクリックすると、その日に期日を足します`"
+            >
                 <UIcon name="i-lucide-circle-help" class="help" />
             </UTooltip>
         </div>
@@ -314,15 +336,18 @@ const tipOf = (it: TimelineItem) =>
                     <div v-if="!bare" class="corner" />
                     <div class="axis-track">
                         <div class="major">
-                            <span v-for="t in axis.major" :key="t.key" class="tick"
-                                :style="{ left: `${t.x}px`, width: `${t.w}px` }" />
-                            <span v-for="l in axis.majorLabels" :key="'l' + l.key" class="mlabel"
-                                :style="{ left: `${l.x}px` }">{{ l.label }}</span>
+                            <span v-for="t in axis.major" :key="t.key" class="tick" :style="{ left: `${t.x}px`, width: `${t.w}px` }" />
+                            <span v-for="l in axis.majorLabels" :key="'l' + l.key" class="mlabel" :style="{ left: `${l.x}px` }">{{ l.label }}</span>
                         </div>
                         <div class="minor">
-                            <span v-for="t in axis.minor" :key="t.key" class="tick"
+                            <span
+                                v-for="t in axis.minor"
+                                :key="t.key"
+                                class="tick"
                                 :class="{ weekend: t.weekend, strong: t.strong }"
-                                :style="{ left: `${t.x}px`, width: `${t.w}px` }">{{ t.label }}</span>
+                                :style="{ left: `${t.x}px`, width: `${t.w}px` }"
+                                >{{ t.label }}</span
+                            >
                         </div>
                         <span class="today-tag" :style="{ left: `${todayX}px` }">今日</span>
                     </div>
@@ -330,9 +355,13 @@ const tipOf = (it: TimelineItem) =>
 
                 <div class="rows">
                     <div class="bg" aria-hidden="true">
-                        <span v-for="t in axis.lines" :key="t.key" class="line"
+                        <span
+                            v-for="t in axis.lines"
+                            :key="t.key"
+                            class="line"
                             :class="{ weekend: t.weekend, strong: t.strong }"
-                            :style="{ left: `${t.x}px`, width: `${t.w}px` }" />
+                            :style="{ left: `${t.x}px`, width: `${t.w}px` }"
+                        />
                         <span class="today" :style="{ left: `${todayX}px` }" />
                     </div>
 
@@ -341,20 +370,45 @@ const tipOf = (it: TimelineItem) =>
                             <span class="rname">{{ r.label }}</span>
                             <span v-if="r.sub" class="rsub">{{ r.sub }}</span>
                         </button>
-                        <div class="track" @scroll="noScroll" @pointerdown="onTrackDown" @pointermove="onTrackMove"
-                            @pointerup="onTrackUp" @pointercancel="onTrackUp" @dblclick="(e) => onTrackDbl(e, r.id)">
+                        <div
+                            class="track"
+                            @scroll="noScroll"
+                            @pointerdown="onTrackDown"
+                            @pointermove="onTrackMove"
+                            @pointerup="onTrackUp"
+                            @pointercancel="onTrackUp"
+                            @dblclick="(e) => onTrackDbl(e, r.id)"
+                        >
                             <template v-for="pl in layout.byRow.get(r.id)" :key="pl.it.key">
-                                <button v-if="visible(pl)" class="item"
-                                    :class="{ range: pl.range, done: pl.it.done, overdue: pl.it.overdue, on: selected === pl.it.key, movable: pl.it.movable, dragging: drag?.key === pl.it.key && drag.days, delivery: pl.it.source === 'delivery' }"
-                                    :style="{ left: `${xIn(pl) + shiftOf(pl)}px`, top: `${pl.lane * LANE_H + 5}px`, width: pl.range ? `${pl.w}px` : undefined, paddingLeft: pl.range && xIn(pl) < 0 ? `${6 - xIn(pl)}px` : undefined, '--k': pl.color }"
-                                    :title="tipOf(pl.it)" @pointerdown="(e) => onItemDown(e, pl)"
-                                    @pointermove="(e) => onItemMove(e, pl)" @pointerup="onItemUp(pl)"
-                                    @keydown.enter.prevent="emit('select', pl.it)">
+                                <button
+                                    v-if="visible(pl)"
+                                    class="item"
+                                    :class="{
+                                        range: pl.range,
+                                        done: pl.it.done,
+                                        overdue: pl.it.overdue,
+                                        on: selected === pl.it.key,
+                                        movable: pl.it.movable,
+                                        dragging: drag?.key === pl.it.key && drag.days,
+                                        delivery: pl.it.source === 'delivery',
+                                    }"
+                                    :style="{
+                                        left: `${xIn(pl) + shiftOf(pl)}px`,
+                                        top: `${pl.lane * LANE_H + 5}px`,
+                                        width: pl.range ? `${pl.w}px` : undefined,
+                                        paddingLeft: pl.range && xIn(pl) < 0 ? `${6 - xIn(pl)}px` : undefined,
+                                        '--k': pl.color,
+                                    }"
+                                    :title="tipOf(pl.it)"
+                                    @pointerdown="(e) => onItemDown(e, pl)"
+                                    @pointermove="(e) => onItemMove(e, pl)"
+                                    @pointerup="onItemUp(pl)"
+                                    @keydown.enter.prevent="emit('select', pl.it)"
+                                >
                                     <span v-if="!pl.range" class="mark" />
                                     <UIcon v-if="pl.it.done" name="i-lucide-check" class="check" />
                                     <span class="name">{{ pl.it.title }}</span>
-                                    <span v-if="drag?.key === pl.it.key && dragLabel" class="drag-date">{{ dragLabel
-                                    }}</span>
+                                    <span v-if="drag?.key === pl.it.key && dragLabel" class="drag-date">{{ dragLabel }}</span>
                                 </button>
                             </template>
                         </div>
@@ -667,7 +721,9 @@ const tipOf = (it: TimelineItem) =>
 }
 
 .item.overdue .mark {
-    box-shadow: 0 0 0 2px var(--ui-bg), 0 0 0 3.5px var(--ui-color-error-500);
+    box-shadow:
+        0 0 0 2px var(--ui-bg),
+        0 0 0 3.5px var(--ui-color-error-500);
 }
 
 .item.on {

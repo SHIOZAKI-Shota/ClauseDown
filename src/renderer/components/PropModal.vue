@@ -59,8 +59,7 @@ function apply() {
 </script>
 
 <template>
-    <UModal :open="true" title="書式を付ける"
-        @update:open="(v) => !v && emit('close')">
+    <UModal :open="true" title="書式を付ける" @update:open="(v) => !v && emit('close')">
         <template #body>
             <div class="form">
                 <UFormField label="付ける範囲">
@@ -81,8 +80,7 @@ function apply() {
                     <UFormField label="寄せ">
                         <SegmentSwitch v-model="align" :items="ALIGNS" aria-label="寄せ" />
                     </UFormField>
-                    <UFormField label="表の列の幅"
-                        :error="colsOk ? undefined : '25,75 のように、数字をカンマで区切って書いてください'">
+                    <UFormField label="表の列の幅" :error="colsOk ? undefined : '25,75 のように、数字をカンマで区切って書いてください'">
                         <UInput v-model="cols" placeholder="例：25,75" class="w-full" />
                     </UFormField>
                     <USwitch v-model="pageBreak" label="この前で改ページする" />

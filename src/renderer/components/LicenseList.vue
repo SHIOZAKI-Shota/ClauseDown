@@ -28,10 +28,9 @@ const open = (url: string) => window.api.openExternal(url)
         <div class="part">
             <h3>参考</h3>
             <p class="cd-muted">
-                法令の取り込み・書き出しは、<a href="#" class="link"
-                    @click.prevent="open('https://github.com/Kohei-Wada/houritsu')">houritsu</a>（Kohei-Wada）様の形式から自動変換でインポート・エクスポートできます。houritsu
-                は、e-Gov法令検索の法令データを Markdown にし、改正の履歴を Git の版として持つリポジトリです。
-                CC BY 4.0
+                法令の取り込み・書き出しは、<a href="#" class="link" @click.prevent="open('https://github.com/Kohei-Wada/houritsu')">houritsu</a
+                >（Kohei-Wada）様の形式から自動変換でインポート・エクスポートできます。houritsu は、e-Gov法令検索の法令データを Markdown にし、改正の履歴を Git
+                の版として持つリポジトリです。 CC BY 4.0
             </p>
         </div>
 
@@ -43,19 +42,23 @@ const open = (url: string) => window.api.openExternal(url)
                 <UInput v-if="data" v-model="q" icon="i-lucide-search" size="sm" placeholder="名前・ライセンスで検索" />
             </div>
             <p class="cd-muted">
-                ClauseDown は、次のオープンソースソフトウェアを使っております。各ソフトウェアの作者の皆さまに感謝します。
-                Electron に含まれる Chromium などのライセンスは、インストール先のフォルダにある LICENSES.chromium.html にございます。
+                ClauseDown は、次のオープンソースソフトウェアを使っております。各ソフトウェアの作者の皆さまに感謝します。 Electron に含まれる Chromium
+                などのライセンスは、インストール先のフォルダにある LICENSES.chromium.html にございます。
             </p>
 
             <p v-if="loaded && !data" class="cd-muted">
                 一覧がまだ作られていません。<code>npm run build</code> か <code>npm run licenses</code> を実行してください。
             </p>
-            <UAlert v-if="data?.partial" color="warning" variant="subtle" icon="i-lucide-info"
-                description="開発中のため、画面に組み込まれたパッケージが一覧に入っていません。npm run build を一度実行するとそろいます。" />
+            <UAlert
+                v-if="data?.partial"
+                color="warning"
+                variant="subtle"
+                icon="i-lucide-info"
+                description="開発中のため、画面に組み込まれたパッケージが一覧に入っていません。npm run build を一度実行するとそろいます。"
+            />
 
             <div v-if="kinds.length" class="kinds">
-                <UBadge v-for="[k, n] in kinds" :key="k" :label="`${k}　${n}`" color="neutral" variant="subtle"
-                    class="kind" @click="q = k" />
+                <UBadge v-for="[k, n] in kinds" :key="k" :label="`${k}　${n}`" color="neutral" variant="subtle" class="kind" @click="q = k" />
             </div>
 
             <details v-for="p in list" :key="p.name + '@' + p.version" class="pkg">
@@ -68,8 +71,16 @@ const open = (url: string) => window.api.openExternal(url)
                 </summary>
                 <div class="body">
                     <p v-if="p.author" class="cd-muted">作者：{{ p.author }}</p>
-                    <UButton v-if="p.url" :label="p.url" icon="i-lucide-external-link" size="xs" color="neutral"
-                        variant="link" class="url" @click="open(p.url)" />
+                    <UButton
+                        v-if="p.url"
+                        :label="p.url"
+                        icon="i-lucide-external-link"
+                        size="xs"
+                        color="neutral"
+                        variant="link"
+                        class="url"
+                        @click="open(p.url)"
+                    />
                     <pre v-if="p.text" class="text">{{ p.text }}</pre>
                     <p v-else class="cd-muted">ライセンスのファイルは同梱されていません（{{ p.license }}）。</p>
                 </div>

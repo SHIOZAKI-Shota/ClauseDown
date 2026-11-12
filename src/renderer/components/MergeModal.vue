@@ -22,9 +22,7 @@ const intoB = computed(() => app.branches.find((b) => b.name === props.into))
 const fromLabel = computed(() => fromB.value?.label ?? props.from)
 const intoLabel = computed(() => intoB.value?.label ?? props.into)
 const adopting = computed(() => !!intoB.value?.isMain)
-const title = computed(() =>
-    adopting.value ? `「${fromLabel.value}」を現行版に反映` : `${fromLabel.value}の最新を「${intoLabel.value}」に取り込む`,
-)
+const title = computed(() => (adopting.value ? `「${fromLabel.value}」を現行版に反映` : `${fromLabel.value}の最新を「${intoLabel.value}」に取り込む`))
 const status = computed(() => (adopting.value && fromB.value ? app.statusOf(fromB.value) : null))
 const blocked = computed(() => !!status.value && !status.value.canMerge)
 
@@ -85,13 +83,10 @@ function openReview() {
             <span v-else-if="status?.state === 'approved'" class="notice ok">
                 <UIcon name="i-lucide-badge-check" />{{ status.decision?.by }} さんが承認済み
             </span>
-            <span v-if="app.hasUnsaved" class="notice warn">
-                <UIcon name="i-lucide-triangle-alert" />保存していない変更があります
-            </span>
+            <span v-if="app.hasUnsaved" class="notice warn"> <UIcon name="i-lucide-triangle-alert" />保存していない変更があります </span>
         </template>
 
-        <ConflictResolver v-model="choices" :conflicts="preview.conflicts" :ours-label="intoLabel"
-            :theirs-label="fromLabel" />
+        <ConflictResolver v-model="choices" :conflicts="preview.conflicts" :ours-label="intoLabel" :theirs-label="fromLabel" />
 
         <template #footer>
             <UInput v-model="message" size="sm" class="memo" placeholder="記録するメモ" />
@@ -102,8 +97,13 @@ function openReview() {
             </template>
             <span class="cd-grow" />
             <UButton label="やめる" size="sm" color="neutral" variant="outline" @click="emit('close')" />
-            <UButton :label="adopting ? '現行版に反映' : '取り込む'" size="sm"
-                :disabled="app.hasUnsaved || blocked || unresolved > 0" :loading="app.busy" @click="apply" />
+            <UButton
+                :label="adopting ? '現行版に反映' : '取り込む'"
+                size="sm"
+                :disabled="app.hasUnsaved || blocked || unresolved > 0"
+                :loading="app.busy"
+                @click="apply"
+            />
         </template>
     </WorkspaceModal>
 
@@ -112,13 +112,30 @@ function openReview() {
             <div class="cd-form">
                 <p v-if="loading" class="muted">変更を調べています…</p>
                 <template v-else-if="preview">
-                    <UAlert v-if="app.hasUnsaved" color="warning" variant="subtle" icon="i-lucide-triangle-alert"
-                        title="保存していない変更があります" description="先に「版を保存」するか「変更を取り消す」をしてください。" />
-                    <UAlert v-if="blocked && status" color="warning" variant="subtle" icon="i-lucide-shield-alert"
-                        :title="`確認の状態：${STATE_LABEL[status.state]}`" :description="status.reason"
-                        :actions="[{ label: '確認依頼を開く', color: 'warning', variant: 'outline', onClick: openReview }]" />
-                    <UAlert v-else-if="status && status.state === 'approved'" color="success" variant="subtle"
-                        icon="i-lucide-badge-check" :title="`${status.decision?.by} さんが承認済みです`" />
+                    <UAlert
+                        v-if="app.hasUnsaved"
+                        color="warning"
+                        variant="subtle"
+                        icon="i-lucide-triangle-alert"
+                        title="保存していない変更があります"
+                        description="先に「版を保存」するか「変更を取り消す」をしてください。"
+                    />
+                    <UAlert
+                        v-if="blocked && status"
+                        color="warning"
+                        variant="subtle"
+                        icon="i-lucide-shield-alert"
+                        :title="`確認の状態：${STATE_LABEL[status.state]}`"
+                        :description="status.reason"
+                        :actions="[{ label: '確認依頼を開く', color: 'warning', variant: 'outline', onClick: openReview }]"
+                    />
+                    <UAlert
+                        v-else-if="status && status.state === 'approved'"
+                        color="success"
+                        variant="subtle"
+                        icon="i-lucide-badge-check"
+                        :title="`${status.decision?.by} さんが承認済みです`"
+                    />
                     <p v-if="preview.upToDate" class="muted">
                         {{ adopting ? 'この改定案には、まだ現行版に反映していない変更がありません。' : '取り込む変更はありません。すでに最新です。' }}
                     </p>
@@ -148,10 +165,14 @@ function openReview() {
         </template>
         <template #footer>
             <div class="cd-modal-foot">
-                <UButton :label="preview?.upToDate ? '閉じる' : 'やめる'" color="neutral" variant="outline"
-                    @click="emit('close')" />
-                <UButton v-if="preview && !preview.upToDate" :label="adopting ? '現行版に反映' : '取り込む'"
-                    :disabled="app.hasUnsaved || blocked || unresolved > 0" :loading="app.busy" @click="apply" />
+                <UButton :label="preview?.upToDate ? '閉じる' : 'やめる'" color="neutral" variant="outline" @click="emit('close')" />
+                <UButton
+                    v-if="preview && !preview.upToDate"
+                    :label="adopting ? '現行版に反映' : '取り込む'"
+                    :disabled="app.hasUnsaved || blocked || unresolved > 0"
+                    :loading="app.busy"
+                    @click="apply"
+                />
             </div>
         </template>
     </UModal>

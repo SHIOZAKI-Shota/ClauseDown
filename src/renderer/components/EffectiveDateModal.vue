@@ -14,8 +14,12 @@ async function save() {
 </script>
 
 <template>
-    <UModal :open="true" title="施行日を付ける" description="選んだ版を、この日から施行する版として記録します。同じ日付がすでにあれば置き換えます。"
-        @update:open="(v) => !v && emit('close')">
+    <UModal
+        :open="true"
+        title="施行日を付ける"
+        description="選んだ版を、この日から施行する版として記録します。同じ日付がすでにあれば置き換えます。"
+        @update:open="(v) => !v && emit('close')"
+    >
         <template #body>
             <UFormField label="施行日">
                 <DateField v-model="date" />

@@ -94,28 +94,67 @@ const indent = (depth: number) => ({ paddingLeft: `${6 + depth * 14}px` })
 <template>
     <nav class="ftree" :aria-label="withDocs ? '文書' : 'ディレクトリ'">
         <template v-for="r in rows" :key="r.kind === 'folder' ? `f:${r.node.path}` : r.doc.path">
-            <div v-if="r.kind === 'folder'" class="row" role="button" tabindex="0"
-                :class="{ on: isCurrent(r.node.path), drop: dropFolder === r.node.path }" :style="indent(r.depth)"
-                :aria-current="isCurrent(r.node.path) ? 'true' : undefined" :aria-expanded="isOpen(r.node.path)"
-                :data-folder="r.node.path" @click="onFolder(r.node.path)" @keydown.enter.self="onFolder(r.node.path)"
-                @dragover="onDragOver(r.node.path, $event)" @dragleave="onDragLeave(r.node.path)"
-                @drop="onDrop(r.node.path, $event)">
-                <button v-if="r.node.children.length || withDocs" class="chev" :class="{ open: isOpen(r.node.path) }"
-                    :aria-label="isOpen(r.node.path) ? 'ディレクトリを閉じる' : 'ディレクトリを開く'" @click.stop="toggle(r.node.path)">
+            <div
+                v-if="r.kind === 'folder'"
+                class="row"
+                role="button"
+                tabindex="0"
+                :class="{ on: isCurrent(r.node.path), drop: dropFolder === r.node.path }"
+                :style="indent(r.depth)"
+                :aria-current="isCurrent(r.node.path) ? 'true' : undefined"
+                :aria-expanded="isOpen(r.node.path)"
+                :data-folder="r.node.path"
+                @click="onFolder(r.node.path)"
+                @keydown.enter.self="onFolder(r.node.path)"
+                @dragover="onDragOver(r.node.path, $event)"
+                @dragleave="onDragLeave(r.node.path)"
+                @drop="onDrop(r.node.path, $event)"
+            >
+                <button
+                    v-if="r.node.children.length || withDocs"
+                    class="chev"
+                    :class="{ open: isOpen(r.node.path) }"
+                    :aria-label="isOpen(r.node.path) ? 'ディレクトリを閉じる' : 'ディレクトリを開く'"
+                    @click.stop="toggle(r.node.path)"
+                >
                     <UIcon name="i-lucide-chevron-right" class="chev-icon" />
                 </button>
                 <span v-else class="chev-space" />
-                <UIcon :name="r.node.path === '' ? 'i-lucide-archive' : isCurrent(r.node.path) || (withDocs && isOpen(r.node.path)) ? 'i-lucide-folder-open' : 'i-lucide-folder'"
-                    class="ficon" />
+                <UIcon
+                    :name="
+                        r.node.path === ''
+                            ? 'i-lucide-archive'
+                            : isCurrent(r.node.path) || (withDocs && isOpen(r.node.path))
+                              ? 'i-lucide-folder-open'
+                              : 'i-lucide-folder'
+                    "
+                    class="ficon"
+                />
                 <span class="label">{{ r.node.path === '' ? label : r.node.name }}</span>
                 <span v-if="!filtering" class="count">{{ r.node.count }}</span>
-                <UButton v-if="withDocs" icon="i-lucide-plus" size="xs" color="neutral" variant="ghost" class="add"
+                <UButton
+                    v-if="withDocs"
+                    icon="i-lucide-plus"
+                    size="xs"
+                    color="neutral"
+                    variant="ghost"
+                    class="add"
                     title="このディレクトリに文書を追加"
-                    @click.stop="app.dialog = { kind: 'newDoc', folder: r.node.path || undefined }" />
+                    @click.stop="app.dialog = { kind: 'newDoc', folder: r.node.path || undefined }"
+                />
             </div>
-            <button v-else class="row doc" :class="{ on: selectedDoc === r.doc.path, dragging: dragging?.path === r.doc.path }"
-                :style="indent(r.depth)" draggable="true" :title="r.doc.path" :data-path="r.doc.path"
-                @click="app.openDoc(r.doc.path)" @dragstart="onDragStart(r.doc, $event)" @dragend="onDragEnd">
+            <button
+                v-else
+                class="row doc"
+                :class="{ on: selectedDoc === r.doc.path, dragging: dragging?.path === r.doc.path }"
+                :style="indent(r.depth)"
+                draggable="true"
+                :title="r.doc.path"
+                :data-path="r.doc.path"
+                @click="app.openDoc(r.doc.path)"
+                @dragstart="onDragStart(r.doc, $event)"
+                @dragend="onDragEnd"
+            >
                 <span class="chev-space" />
                 <UIcon name="i-lucide-file-text" class="ficon" />
                 <span class="label">{{ r.doc.title }}</span>

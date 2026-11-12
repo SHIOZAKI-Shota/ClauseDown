@@ -18,7 +18,7 @@ export function scanMath(src: string, pos: number): MathSpan | null {
     const start = pos + open
     if (!display && (!src[start] || /\s/.test(src[start]))) return null
     let end = start
-    for (; ;) {
+    for (;;) {
         end = src.indexOf(display ? '$$' : '$', end)
         if (end < 0) return null
         if (src[end - 1] === '\\') {

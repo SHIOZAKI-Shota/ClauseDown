@@ -11,7 +11,13 @@ vi.mock('../src/main/settings', () => ({
 const git = await import('../src/main/git')
 const issues = await import('../src/main/issues')
 
-interface FakeIssue { n: number; title: string; body: string; state: 'open' | 'closed'; comments: string[] }
+interface FakeIssue {
+    n: number
+    title: string
+    body: string
+    state: 'open' | 'closed'
+    comments: string[]
+}
 const site = { next: 1, issues: [] as FakeIssue[] }
 let api: http.Server
 
@@ -25,8 +31,26 @@ function serve(kind: 'github' | 'gitlab') {
             res.writeHead(status, { 'Content-Type': 'application/json' })
             res.end(JSON.stringify(data))
         }
-        const gh = (i: FakeIssue) => ({ number: i.n, title: i.title, body: i.body, state: i.state, user: { login: 'staff' }, created_at: '2026-01-01T00:00:00Z', closed_at: null, html_url: `https://github.com/office/docs/issues/${i.n}` })
-        const gl = (i: FakeIssue) => ({ iid: i.n, title: i.title, description: i.body, state: i.state === 'open' ? 'opened' : 'closed', author: { username: 'staff' }, created_at: '2026-01-01T00:00:00Z', closed_at: null, web_url: `https://gitlab.example.com/office/docs/-/issues/${i.n}` })
+        const gh = (i: FakeIssue) => ({
+            number: i.n,
+            title: i.title,
+            body: i.body,
+            state: i.state,
+            user: { login: 'staff' },
+            created_at: '2026-01-01T00:00:00Z',
+            closed_at: null,
+            html_url: `https://github.com/office/docs/issues/${i.n}`,
+        })
+        const gl = (i: FakeIssue) => ({
+            iid: i.n,
+            title: i.title,
+            description: i.body,
+            state: i.state === 'open' ? 'opened' : 'closed',
+            author: { username: 'staff' },
+            created_at: '2026-01-01T00:00:00Z',
+            closed_at: null,
+            web_url: `https://gitlab.example.com/office/docs/-/issues/${i.n}`,
+        })
         const map = (i: FakeIssue): object => (kind === 'github' ? gh(i) : gl(i))
         const base = kind === 'github' ? '/repos/office/docs/issues' : `/projects/${encodeURIComponent('office/docs')}/issues`
         const p = decodeURIComponent(u.pathname).replace(decodeURIComponent(base), '@')
@@ -53,7 +77,10 @@ function serve(kind: 'github' | 'gitlab') {
                 return send(201, {})
             }
             if (Number(u.searchParams.get('page') ?? 1) > 1) return send(200, [])
-            return send(200, i.comments.map((c, k) => ({ id: k + 1, body: c, user: { login: 'staff' }, author: { username: 'staff' }, created_at: '2026-01-01T00:00:00Z' })))
+            return send(
+                200,
+                i.comments.map((c, k) => ({ id: k + 1, body: c, user: { login: 'staff' }, author: { username: 'staff' }, created_at: '2026-01-01T00:00:00Z' })),
+            )
         }
         send(404, { message: `not found ${req.method} ${u.pathname}` })
     }
@@ -120,7 +147,10 @@ describe('課題（GitHub）', () => {
         await expect(issues.commentIssue(dir, 1, '  ')).rejects.toThrow('コメントを書いて')
         expect(site.issues[0].comments).toHaveLength(2)
         const d = await issues.issueDetail(dir, 1)
-        expect(d.comments.map((c) => [c.kind, c.by])).toEqual([['link', 'staff'], ['user', 'staff']])
+        expect(d.comments.map((c) => [c.kind, c.by])).toEqual([
+            ['link', 'staff'],
+            ['user', 'staff'],
+        ])
         expect(d.comments[0].oid).toBe(head.oid)
         expect(d.comments[1].body).toBe('先方に確認中です')
     })
@@ -148,8 +178,14 @@ describe('課題（GitHub）', () => {
         useGitHub(url)
         expect(await issues.pendingLocalIssues(dir)).toBe(2)
         expect(await issues.moveIssuesToForge(dir)).toEqual({ moved: 2, renumbered: [] })
-        expect(site.issues.map((i) => [i.n, i.title, i.state])).toEqual([[1, 'A', 'open'], [2, 'B', 'closed']])
-        expect(site.issues[0].comments).toEqual([expect.stringMatching(/^（事務員A・\d{4}\/\d{2}\/\d{2} \d{2}:\d{2} のコメント）\n\n一つ目$/), expect.stringContaining('二つ目')])
+        expect(site.issues.map((i) => [i.n, i.title, i.state])).toEqual([
+            [1, 'A', 'open'],
+            [2, 'B', 'closed'],
+        ])
+        expect(site.issues[0].comments).toEqual([
+            expect.stringMatching(/^（事務員A・\d{4}\/\d{2}\/\d{2} \d{2}:\d{2} のコメント）\n\n一つ目$/),
+            expect.stringContaining('二つ目'),
+        ])
         expect(await issues.pendingLocalIssues(dir)).toBe(0)
     })
 

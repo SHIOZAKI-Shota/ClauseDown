@@ -42,13 +42,10 @@ async function retry() {
         </div>
         <div class="actions">
             <UButton label="新しい場所を選ぶ" icon="i-lucide-folder-search" @click="app.relocateRepo(repo.dir)" />
-            <UButton label="もう一度確かめる" icon="i-lucide-refresh-cw" color="neutral" variant="outline" :loading="checking"
-                @click="retry" />
+            <UButton label="もう一度確かめる" icon="i-lucide-refresh-cw" color="neutral" variant="outline" :loading="checking" @click="retry" />
             <UButton label="一覧から外す" color="error" variant="ghost" @click="app.forgetRepo(repo.dir)" />
         </div>
-        <p v-if="repo.url" class="cd-muted hint">
-            リモート（{{ repo.url }}）に版を送信してあれば、設定の「リポジトリを追加する」で取得し直すこともできます。
-        </p>
+        <p v-if="repo.url" class="cd-muted hint">リモート（{{ repo.url }}）に版を送信してあれば、設定の「リポジトリを追加する」で取得し直すこともできます。</p>
     </div>
 </template>
 

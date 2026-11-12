@@ -53,23 +53,28 @@ async function create() {
     <UModal :open="true" title="新しい文書" @update:open="(v) => !v && emit('close')">
         <template #body>
             <div class="cd-form">
-                <UFormField label="ディレクトリ" :hint="isNewClient ? `ディレクトリ「${clean(client)}」を作ります` : ''"
-                    description="文書を入れるディレクトリです。空欄ならディレクトリに入れません">
-                    <UInputMenu v-model="client" :items="folders" create-item placeholder="例：契約書" class="cd-full"
-                        @create="(v: string) => (client = v)" />
+                <UFormField
+                    label="ディレクトリ"
+                    :hint="isNewClient ? `ディレクトリ「${clean(client)}」を作ります` : ''"
+                    description="文書を入れるディレクトリです。空欄ならディレクトリに入れません"
+                >
+                    <UInputMenu v-model="client" :items="folders" create-item placeholder="例：契約書" class="cd-full" @create="(v: string) => (client = v)" />
                 </UFormField>
                 <UFormField label="文書の名前">
                     <UInput v-model="title" class="cd-full" autofocus @keydown.enter="create" />
                 </UFormField>
                 <div class="chips">
-                    <UButton v-for="s in SUGGEST" :key="s" :label="s" size="xs" color="neutral" variant="outline"
-                        @click="title = s" />
+                    <UButton v-for="s in SUGGEST" :key="s" :label="s" size="xs" color="neutral" variant="outline" @click="title = s" />
                 </div>
                 <UFormField label="書式">
-                    <SegmentSwitch v-model="preset" aria-label="書式" :items="[
-                        { value: 'law', label: '法令式', description: '章・（見出し）・第1条・号は 一、二。法律案・条例・規約・規程などに' },
-                        { value: 'contract', label: '契約書式', description: '第1条（見出し）・号は（1）。契約書・覚書・合意書などに' },
-                    ]" />
+                    <SegmentSwitch
+                        v-model="preset"
+                        aria-label="書式"
+                        :items="[
+                            { value: 'law', label: '法令式', description: '章・（見出し）・第1条・号は 一、二。法律案・条例・規約・規程などに' },
+                            { value: 'contract', label: '契約書式', description: '第1条（見出し）・号は（1）。契約書・覚書・合意書などに' },
+                        ]"
+                    />
                 </UFormField>
                 <p v-if="path" class="cd-muted">保存先：{{ path }}</p>
                 <UAlert v-if="exists" color="error" variant="subtle" title="同じ名前の文書がすでにあります" />

@@ -47,15 +47,22 @@ async function go() {
         }),
     )
     if (!rec) return
-    app.notify(rec.releaseError ? `納品一式を作りました（${app.forgeLabel} には載せられませんでした：${rec.releaseError}）` : `納品一式を作りました：${rec.folder}`, !!rec.releaseError)
+    app.notify(
+        rec.releaseError ? `納品一式を作りました（${app.forgeLabel} には載せられませんでした：${rec.releaseError}）` : `納品一式を作りました：${rec.folder}`,
+        !!rec.releaseError,
+    )
     await window.api.openPath(rec.folder)
     emit('done')
 }
 </script>
 
 <template>
-    <UModal :open="true" :title="effectiveDate ? `${effectiveDate} 施行版を納品` : '現行版を納品'"
-        description="保存先のフォルダに一式を作り、納品の記録を残します。" @update:open="(v) => !v && emit('close')">
+    <UModal
+        :open="true"
+        :title="effectiveDate ? `${effectiveDate} 施行版を納品` : '現行版を納品'"
+        description="保存先のフォルダに一式を作り、納品の記録を残します。"
+        @update:open="(v) => !v && emit('close')"
+    >
         <template #body>
             <div class="cd-form">
                 <UFormField label="宛先" description="例：株式会社A 法務部 〇〇様">
@@ -70,15 +77,18 @@ async function go() {
                 <UFormField label="メモ（任意）">
                     <UTextarea v-model="memo" :rows="2" class="cd-full" />
                 </UFormField>
-                <UCheckbox v-if="app.forge" v-model="publish" :label="`${app.forgeLabel} のリリースにも載せる`"
-                    :description="`納品物を ${app.forgeLabel} に添付して残します`" />
+                <UCheckbox
+                    v-if="app.forge"
+                    v-model="publish"
+                    :label="`${app.forgeLabel} のリリースにも載せる`"
+                    :description="`納品物を ${app.forgeLabel} に添付して残します`"
+                />
             </div>
         </template>
         <template #footer>
             <div class="cd-modal-foot">
                 <UButton label="やめる" color="neutral" variant="outline" @click="emit('close')" />
-                <UButton label="保存先を選んで作成" icon="i-lucide-package" :disabled="!items.length" :loading="app.busy"
-                    @click="go" />
+                <UButton label="保存先を選んで作成" icon="i-lucide-package" :disabled="!items.length" :loading="app.busy" @click="go" />
             </div>
         </template>
     </UModal>

@@ -20,10 +20,18 @@ const selected = computed(() => props.items.find((i) => i.value === model.value)
     <div class="seg-wrap">
         <UFieldGroup :size="size" role="radiogroup" :aria-label="ariaLabel" class="seg">
             <UTooltip v-for="it in items" :key="it.value" :text="it.tooltip ?? ''" :disabled="!it.tooltip">
-                <UButton :label="it.label" :icon="it.icon" :square="!it.label" :disabled="it.disabled"
-                    :color="model === it.value ? 'primary' : 'neutral'" :variant="model === it.value ? 'soft' : 'outline'"
-                    role="radio" :aria-checked="model === it.value" :aria-label="it.label ?? it.tooltip"
-                    @click="model = it.value" />
+                <UButton
+                    :label="it.label"
+                    :icon="it.icon"
+                    :square="!it.label"
+                    :disabled="it.disabled"
+                    :color="model === it.value ? 'primary' : 'neutral'"
+                    :variant="model === it.value ? 'soft' : 'outline'"
+                    role="radio"
+                    :aria-checked="model === it.value"
+                    :aria-label="it.label ?? it.tooltip"
+                    @click="model = it.value"
+                />
             </UTooltip>
         </UFieldGroup>
         <p v-if="selected?.description" class="cd-muted desc">{{ selected.description }}</p>

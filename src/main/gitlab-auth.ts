@@ -1,7 +1,7 @@
 import { GITLAB_APP } from '../shared/about'
 import { GITLAB_BASE } from '../shared/forge'
 import type { ForgeLogin } from '../shared/api'
-import { credentialFromResponse, gitlabWeb, loadSettings, saveCredential, type Profile } from './settings'
+import { credentialFromResponse, gitlabWeb, loadSettings, saveCredential, type OAuthResponse, type Profile } from './settings'
 
 export const gitlabApi = (base: string) => process.env.CLAUSEDOWN_GITLAB_API ?? `${base}/api/v4`
 
@@ -20,7 +20,7 @@ async function post(base: string, path: string, body: Record<string, string>) {
         headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams(body).toString(),
     })
-    return (await res.json().catch(() => ({ error: `HTTP ${res.status}` }))) as Record<string, unknown>
+    return (await res.json().catch(() => ({ error: `HTTP ${res.status}` }))) as OAuthResponse
 }
 
 interface Pending {
@@ -36,7 +36,9 @@ export async function startLogin(base: string): Promise<ForgeLogin> {
     if (!id) throw new Error('この GitLab の OAuth アプリの Application ID が設定されていません。管理者に登録してもらうか、アクセストークンを入力してください')
     const j = await post(base, '/oauth/authorize_device', { client_id: id, scope: SCOPE })
     if (!j.device_code) {
-        throw new Error(`GitLab にログインできません（${String(j.error_description ?? j.error ?? '不明なエラー')}）。GitLab が古い場合は、アクセストークンを入力してください`)
+        throw new Error(
+            `GitLab にログインできません（${String(j.error_description ?? j.error ?? '不明なエラー')}）。GitLab が古い場合は、アクセストークンを入力してください`,
+        )
     }
     pending.set(base, {
         deviceCode: String(j.device_code),

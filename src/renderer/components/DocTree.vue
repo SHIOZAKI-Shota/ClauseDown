@@ -41,8 +41,7 @@ const menu = computed<ContextMenuItem[][]>(() => {
 
 <template>
     <div class="tree">
-        <div class="head" :class="{ drop: dropFolder === '' }" @dragover="onDragOver('', $event)"
-            @dragleave="onDragLeave('')" @drop="onDrop('', $event)">
+        <div class="head" :class="{ drop: dropFolder === '' }" @dragover="onDragOver('', $event)" @dragleave="onDragLeave('')" @drop="onDrop('', $event)">
             <span>{{ dragging ? 'ここにドロップするとリポジトリの直下へ' : '文書' }}</span>
             <span class="cd-grow" />
             <UButton icon="i-lucide-plus" size="xs" color="neutral" variant="ghost" title="新しい文書" @click="newDocIn()" />
@@ -52,10 +51,10 @@ const menu = computed<ContextMenuItem[][]>(() => {
 
         <UContextMenu :items="menu" size="sm">
             <div class="scroll" @contextmenu="onContextMenu">
-                <FolderTree :root="tree" :docs="app.docs" :actions="actions" :selected-doc="selected" :query="q"
-                    hide-root />
+                <FolderTree :root="tree" :docs="app.docs" :actions="actions" :selected-doc="selected" :query="q" hide-root />
                 <p v-if="app.docs.length === 0 || (words.length && !hits.length)" class="empty">
-                    {{ words.length ? '見つかりません' : 'まだ文書がありません' }}</p>
+                    {{ words.length ? '見つかりません' : 'まだ文書がありません' }}
+                </p>
             </div>
         </UContextMenu>
 

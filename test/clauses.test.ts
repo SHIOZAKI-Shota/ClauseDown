@@ -38,8 +38,13 @@ describe('条項ライブラリ', () => {
     it('ライブラリの文書から、削除された条を除いて条を取り出す。自分への参照は対応づけの対象にしない', () => {
         expect(clauses.map((c) => c.title)).toEqual(['目的', '秘密保持', '契約期間'])
         expect(secret.id).toBe('secret')
-        expect(secret.body).toBe('### 秘密保持 {#secret}\n- 甲及び乙は、[[purpose]]の目的のために知った情報を秘密として扱う。\n- [[term]]の期間が終わった後も、[[secret:1]]の義務は残る。')
-        expect(secret.refs).toEqual([{ id: 'purpose', title: '目的' }, { id: 'term', title: '契約期間' }])
+        expect(secret.body).toBe(
+            '### 秘密保持 {#secret}\n- 甲及び乙は、[[purpose]]の目的のために知った情報を秘密として扱う。\n- [[term]]の期間が終わった後も、[[secret:1]]の義務は残る。',
+        )
+        expect(secret.refs).toEqual([
+            { id: 'purpose', title: '目的' },
+            { id: 'term', title: '契約期間' },
+        ])
     })
 
     it('見出しが同じ条を初めから選び、なければ文字で残す', () => {
@@ -53,7 +58,9 @@ describe('条項ライブラリ', () => {
         const lines = TARGET.split('\n')
         const r = applyClause(secret, t, lines, { purpose: { kind: 'article', index: 0 }, term: { kind: 'text' } })
         expect(r.lineEdits).toEqual([{ line: 3, text: '### 目的 {#purpose}' }])
-        expect(r.block).toBe('### 秘密保持 {#secret}\n- 甲及び乙は、[[purpose]]の目的のために知った情報を秘密として扱う。\n- 契約期間の条の期間が終わった後も、[[secret:1]]の義務は残る。')
+        expect(r.block).toBe(
+            '### 秘密保持 {#secret}\n- 甲及び乙は、[[purpose]]の目的のために知った情報を秘密として扱う。\n- 契約期間の条の期間が終わった後も、[[secret:1]]の義務は残る。',
+        )
     })
 
     it('入れる先に同じ名前があれば付け替え、自分への参照も追随する', () => {

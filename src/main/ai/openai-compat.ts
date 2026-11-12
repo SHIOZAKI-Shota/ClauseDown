@@ -29,7 +29,8 @@ export function client(r: ResolvedAi): OpenAI {
         baseURL: r.base,
         maxRetries: 1,
         timeout: 10 * 60 * 1000,
-        defaultHeaders: r.config.provider === 'openrouter' ? { 'HTTP-Referer': 'https://github.com/SHIOZAKI-Shota/ClauseDown', 'X-Title': 'ClauseDown' } : undefined,
+        defaultHeaders:
+            r.config.provider === 'openrouter' ? { 'HTTP-Referer': 'https://github.com/SHIOZAKI-Shota/ClauseDown', 'X-Title': 'ClauseDown' } : undefined,
     })
 }
 
@@ -41,7 +42,9 @@ export function explainOpenAi(e: unknown, r: ResolvedAi): string {
             : `${who} に接続できません。インターネットの接続と、接続先の URL を確かめてください`
     }
     if (e instanceof OpenAI.AuthenticationError) {
-        return r.config.provider === 'github' ? 'GitHub のログインの期限が切れています。設定の「GitHub/GitLab」でログインし直してください' : `${who} の API キーが正しくありません。設定の「AI」で入れ直してください`
+        return r.config.provider === 'github'
+            ? 'GitHub のログインの期限が切れています。設定の「GitHub/GitLab」でログインし直してください'
+            : `${who} の API キーが正しくありません。設定の「AI」で入れ直してください`
     }
     if (e instanceof OpenAI.PermissionDeniedError) {
         return r.config.provider === 'github'
@@ -83,10 +86,7 @@ export async function runOpenAi(
     const api = client(r)
 
     for (let turn = 0; turn < MAX_TURNS; turn++) {
-        const stream = await api.chat.completions.create(
-            { model: r.model, messages: history, tools: TOOL_DEFS, stream: true },
-            { signal },
-        )
+        const stream = await api.chat.completions.create({ model: r.model, messages: history, tools: TOOL_DEFS, stream: true }, { signal })
         let text = ''
         let finish: string | null = null
         const calls: Call[] = []

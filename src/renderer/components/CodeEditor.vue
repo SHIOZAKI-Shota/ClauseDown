@@ -221,10 +221,12 @@ function insertClause(afterLine: number, block: string, lineEdits: { line: numbe
     const doc = view.state.doc
     const at = doc.line(Math.min(Math.max(afterLine, 0) + 1, doc.lines)).to
     const changes = view.state.changes([
-        ...lineEdits.filter((e) => e.line + 1 <= doc.lines).map((e) => {
-            const l = doc.line(e.line + 1)
-            return { from: l.from, to: l.to, insert: e.text }
-        }),
+        ...lineEdits
+            .filter((e) => e.line + 1 <= doc.lines)
+            .map((e) => {
+                const l = doc.line(e.line + 1)
+                return { from: l.from, to: l.to, insert: e.text }
+            }),
         { from: at, insert: `\n\n${block}` },
     ])
     view.dispatch({ changes, selection: { anchor: changes.mapPos(at, -1) + 2 }, scrollIntoView: true })
@@ -278,11 +280,14 @@ ${indent}${close}`
         view.dispatch({
             changes: [
                 {
-                    from: first.from, insert: `${indent}${open}
-` },
+                    from: first.from,
+                    insert: `${indent}${open}
+`,
+                },
                 {
-                    from: last.to, insert: `
-${indent}${close}`
+                    from: last.to,
+                    insert: `
+${indent}${close}`,
                 },
             ],
             selection: { anchor: first.from + indent.length + cursorInOpen },
@@ -322,8 +327,11 @@ function insertBeforeLines(text: string) {
     const indent = /^\s*/.exec(first.text)![0]
     view.dispatch({
         changes: {
-            from: first.from, insert: `${indent}${text}
-` }, scrollIntoView: true
+            from: first.from,
+            insert: `${indent}${text}
+`,
+        },
+        scrollIntoView: true,
     })
     view.focus()
 }
@@ -364,7 +372,28 @@ function focus() {
     view?.focus()
 }
 
-defineExpose({ focus, nextIssue, openIssues, insertAfterLine, insertAtCursor, insertBlock, insertClause, insertAfterBullet, insertPreamble, wrapLines, wrapInline, insertBeforeLines, selectionInfo, insertRef, currentLine, goToLine, undo, redo, selectedText, flush })
+defineExpose({
+    focus,
+    nextIssue,
+    openIssues,
+    insertAfterLine,
+    insertAtCursor,
+    insertBlock,
+    insertClause,
+    insertAfterBullet,
+    insertPreamble,
+    wrapLines,
+    wrapInline,
+    insertBeforeLines,
+    selectionInfo,
+    insertRef,
+    currentLine,
+    goToLine,
+    undo,
+    redo,
+    selectedText,
+    flush,
+})
 </script>
 
 <template>

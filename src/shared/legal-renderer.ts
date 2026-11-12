@@ -7,15 +7,12 @@ import { useMath } from './math'
 
 const md = useMath(new MarkdownIt({ html: false, linkify: false, breaks: true }))
 
-const esc = (s: string) =>
-    s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
+const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
 
 function inline(text: string, doc: LegalDoc): string {
     const resolved = resolveRefs(text, doc, (id) => `[[${id}]]`)
     return inlinePropsHtml(
-        md
-            .renderInline(resolved)
-            .replace(/\[\[([^\]]+)\]\]/g, (_, id) => `<span class="cd-missing" title="参照先の条が見つかりません">[[${id}]]</span>`),
+        md.renderInline(resolved).replace(/\[\[([^\]]+)\]\]/g, (_, id) => `<span class="cd-missing" title="参照先の条が見つかりません">[[${id}]]</span>`),
     )
 }
 
@@ -69,7 +66,8 @@ function renderArticle(a: Article, doc: LegalDoc): string {
 export function renderDoc(doc: LegalDoc): string {
     let html = `<article class="cd-doc cd-indent-${doc.config.paragraph.indent}">`
     if (doc.title) html += `<h1 class="cd-title">${esc(doc.title)}</h1>`
-    if (doc.preamble) html += `<section class="cd-preamble">${doc.preambleParts ? renderRichParts(doc.preambleParts) : inlinePropsHtml(md.render(doc.preamble))}</section>`
+    if (doc.preamble)
+        html += `<section class="cd-preamble">${doc.preambleParts ? renderRichParts(doc.preambleParts) : inlinePropsHtml(md.render(doc.preamble))}</section>`
     for (const ch of doc.chapters) {
         const body = () => (ch.parts ? renderRichParts(ch.parts) : renderRich(ch.raw))
         if (ch.kind === 'appendix') {
@@ -118,7 +116,11 @@ function renderInline(parts: InlinePart[]): string {
 export function renderInlineDiff(rows: CompareRow[], opts: CompareOptions = {}): string {
     const list = opts.omitUnchanged ? collapseUnchanged(rows) : rows
     const body = list
-        .map((r) => (r.status === 'omitted' ? '<div class="cd-inline-row cd-omit"><p>（略）</p></div>' : `<div class="cd-inline-row cd-${r.status} cd-row-${r.kind}">${renderInline(r.inline)}</div>`))
+        .map((r) =>
+            r.status === 'omitted'
+                ? '<div class="cd-inline-row cd-omit"><p>（略）</p></div>'
+                : `<div class="cd-inline-row cd-${r.status} cd-row-${r.kind}">${renderInline(r.inline)}</div>`,
+        )
         .join('')
     return `<div class="cd-inline">${body}</div>`
 }

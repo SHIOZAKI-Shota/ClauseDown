@@ -24,7 +24,14 @@ function diffText(before: string, after: string): string {
 function firstLine(text: string): string {
     const line = text
         .split('\n')
-        .map((l) => l.trim().replace(/^[-*・]\s*/, '').replace(/。+$/, '').replace(/^[「『"']+|[」』"']+$/g, '').replace(/。+$/, ''))
+        .map((l) =>
+            l
+                .trim()
+                .replace(/^[-*・]\s*/, '')
+                .replace(/。+$/, '')
+                .replace(/^[「『"']+|[」』"']+$/g, '')
+                .replace(/。+$/, ''),
+        )
         .find(Boolean)
     if (!line) throw new Error('AI から説明が返りませんでした')
     return line.slice(0, 120)

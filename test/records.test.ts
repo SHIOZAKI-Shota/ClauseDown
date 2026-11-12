@@ -28,7 +28,7 @@ describe('記録用ブランチ', () => {
             ['settings', 'tree'],
         ])
         const reviews = await records.readRecords<{ n: number }>(dir, records.RECORD.reviews)
-        expect(reviews.map((r) => r.n).sort()).toEqual([1, 2])
+        expect(reviews.map((r) => r.n).sort((a, b) => a - b)).toEqual([1, 2])
         expect(await records.readRecord(dir, records.RECORD.rules)).toEqual({ approvers: [] })
         expect(fs.readdirSync(dir)).toEqual(['.git'])
     })

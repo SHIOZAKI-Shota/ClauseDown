@@ -76,7 +76,10 @@ describe('表と図', () => {
     })
 
     it('parseTable / blockLines', () => {
-        expect(parseTable('| a | b |\n|---|---|\n| 1 | 2 |')).toEqual([['a', 'b'], ['1', '2']])
+        expect(parseTable('| a | b |\n|---|---|\n| 1 | 2 |')).toEqual([
+            ['a', 'b'],
+            ['1', '2'],
+        ])
         expect(blockLines('```mermaid\nflowchart LR\n  A --> B\n```')).toEqual(['［図］', '　flowchart LR', '　A --> B'])
     })
 })

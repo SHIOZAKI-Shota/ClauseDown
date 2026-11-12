@@ -106,7 +106,10 @@ describe('課題（ローカルのリポジトリ）', () => {
         await writeRecord(dir, `${RECORD.issues}a.json`, { id: 'a', n: 1, title: '先', body: '', state: 'open', createdAt: '2026-01-01T00:00:00Z', links: [] })
         await writeRecord(dir, `${RECORD.issues}b.json`, { id: 'b', n: 1, title: '後', body: '', state: 'open', createdAt: '2026-01-02T00:00:00Z', links: [] })
         const list = await issues.listIssues(dir)
-        expect(list.map((i) => [i.n, i.title])).toEqual([[2, '後'], [1, '先']])
+        expect(list.map((i) => [i.n, i.title])).toEqual([
+            [2, '後'],
+            [1, '先'],
+        ])
         expect(list[0].body).toContain('#1 から #2 に振り直しました')
         expect((await issues.listIssues(dir)).map((i) => i.n)).toEqual([2, 1])
     })

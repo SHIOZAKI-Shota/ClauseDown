@@ -4,17 +4,7 @@ import { imageExt } from '../shared/images'
 import git, { TREE, dropCache } from './igit'
 import http from 'isomorphic-git/http/node'
 import type { CommitObject, TreeEntry } from 'isomorphic-git'
-import type {
-    BranchInfo,
-    ConflictChoice,
-    CommitInfo,
-    Conflict,
-    DocFile,
-    MergeInput,
-    MergePreview,
-    SaveVersionInput,
-    SyncState,
-} from '../shared/api'
+import type { BranchInfo, ConflictChoice, CommitInfo, Conflict, DocFile, MergeInput, MergePreview, SaveVersionInput, SyncState } from '../shared/api'
 import { author, explain, safeRemoteUrl, hasHead, hasRemote, onAuth, RECORDS_BRANCH, remoteUrl, tryResolve } from './git-base'
 import { pushRecords } from './records'
 import { autoMerge } from '../shared/merge3'
@@ -136,9 +126,11 @@ export async function walkMd(root: string, dir = root, out: string[] = []): Prom
     return out
 }
 
-
 async function sameIgnoringEol(dir: string, head: string, filepath: string): Promise<boolean> {
-    const stored = await git.readBlob({ fs, dir, oid: head, filepath }).then((r) => r.blob, () => null)
+    const stored = await git.readBlob({ fs, dir, oid: head, filepath }).then(
+        (r) => r.blob,
+        () => null,
+    )
     const work = await fsp.readFile(safeJoin(dir, filepath)).catch(() => null)
     if (!stored || !work) return false
     if (stored.includes(0) || work.includes(0)) return false
@@ -151,15 +143,13 @@ const versioned = (path: string, head: number) => head === 1 || path.toLowerCase
 async function realStatus(dir: string) {
     const [matrix, head] = await Promise.all([git.statusMatrix({ fs, dir }), tryResolve(dir, 'HEAD')])
     const rows = matrix.filter(([p, h, work, stage]) => !(h === 1 && work === 1 && stage === 1) && versioned(p, h))
-    const sameEol = await Promise.all(rows.map(([p, h, work]) => (head && h === 1 && work === 2 ? sameIgnoringEol(dir, head, p) : false)))
+    const sameEol = await Promise.all(rows.map(async ([p, h, work]) => (head && h === 1 && work === 2 ? sameIgnoringEol(dir, head, p) : false)))
     return rows.filter((_, i) => !sameEol[i])
 }
 
 export async function changedPaths(dir: string): Promise<Set<string>> {
     if (!(await hasHead(dir))) return new Set(await walkMd(dir))
-    return new Set(
-        (await realStatus(dir)).filter(([, head, work]) => !(head === 1 && work === 1)).map(([p]) => p),
-    )
+    return new Set((await realStatus(dir)).filter(([, head, work]) => !(head === 1 && work === 1)).map(([p]) => p))
 }
 
 export async function requireClean(dir: string, action: string) {
@@ -194,9 +184,7 @@ async function docTitle(dir: string, path: string): Promise<string | null> {
 
 export async function listDocTitles(dir: string): Promise<{ path: string; title: string }[]> {
     const docs = await Promise.all((await walkMd(dir)).map(async (path) => ({ path, title: await docTitle(dir, path) })))
-    return docs
-        .filter((d): d is { path: string; title: string } => d.title !== null)
-        .sort((a, b) => a.path.localeCompare(b.path, 'ja'))
+    return docs.filter((d): d is { path: string; title: string } => d.title !== null).sort((a, b) => a.path.localeCompare(b.path, 'ja'))
 }
 
 export async function listDocs(dir: string): Promise<DocFile[]> {
@@ -225,7 +213,10 @@ export async function createDoc(dir: string, path: string, title: string, preset
 export async function discardChanges(dir: string, path: string): Promise<void> {
     const head = await tryResolve(dir, 'HEAD')
     const inHead = head
-        ? await git.readBlob({ fs, dir, oid: head, filepath: path }).then(() => true, () => false)
+        ? await git.readBlob({ fs, dir, oid: head, filepath: path }).then(
+              () => true,
+              () => false,
+          )
         : false
     if (inHead) await git.checkout({ fs, dir, filepaths: [path], force: true })
     else await fsp.rm(safeJoin(dir, path), { force: true })
@@ -273,7 +264,11 @@ async function mergeBase(dir: string, a: string, b: string) {
     return (await git.findMergeBase({ fs, dir, oids: [a, b] }))[0] as string | undefined
 }
 
-const tryParents = (dir: string, oid: string) => readCommitCached(dir, oid).then((c) => c.parent, () => null)
+const tryParents = (dir: string, oid: string) =>
+    readCommitCached(dir, oid).then(
+        (c) => c.parent,
+        () => null,
+    )
 const parentsOf = async (dir: string, oid: string) => (await tryParents(dir, oid)) ?? []
 
 async function ancestors(dir: string, oid: string): Promise<Set<string>> {
@@ -323,10 +318,8 @@ export async function listBranches(dir: string): Promise<BranchInfo[]> {
     const main = await mainBranch(dir)
     const current = await git.currentBranch({ fs, dir })
     const locals = (await git.listBranches({ fs, dir })).filter((b) => b !== RECORDS_BRANCH)
-    const remotes = (await hasRemote(dir))
-        ? (await git.listBranches({ fs, dir, remote: 'origin' })).filter((b) => b !== 'HEAD' && b !== RECORDS_BRANCH)
-        : []
-    const mainOid = await tryResolve(dir, `refs/heads/${main}`) ?? await tryResolve(dir, `refs/remotes/origin/${main}`)
+    const remotes = (await hasRemote(dir)) ? (await git.listBranches({ fs, dir, remote: 'origin' })).filter((b) => b !== 'HEAD' && b !== RECORDS_BRANCH) : []
+    const mainOid = (await tryResolve(dir, `refs/heads/${main}`)) ?? (await tryResolve(dir, `refs/remotes/origin/${main}`))
     const names = [...new Set([...locals, ...remotes])]
     const oids = await Promise.all(names.map((name) => branchOid(dir, name)))
     const memo = memoOf(dir)
@@ -408,7 +401,7 @@ export async function deleteBranch(dir: string, name: string): Promise<void> {
         } catch (e) {
             throw new Error(`リモートから改定案を削除できませんでした（${explain(e)}）`)
         }
-        await git.deleteRef({ fs, dir, ref: `refs/remotes/origin/${name}` }).catch(() => { })
+        await git.deleteRef({ fs, dir, ref: `refs/remotes/origin/${name}` }).catch(() => {})
     }
     if (await tryResolve(dir, `refs/heads/${name}`)) await git.deleteBranch({ fs, dir, ref: name })
 }
@@ -417,7 +410,10 @@ const peeled = new Map<string, string>()
 async function peelTag(dir: string, oid: string): Promise<string> {
     const hit = peeled.get(oid)
     if (hit) return hit
-    const target = await git.readTag({ fs, dir, oid }).then((r) => r.tag.object, () => oid)
+    const target = await git.readTag({ fs, dir, oid }).then(
+        (r) => r.tag.object,
+        () => oid,
+    )
     return remember(peeled, oid, target, 20_000)
 }
 
@@ -497,8 +493,9 @@ export async function log(dir: string, path?: string, all = false): Promise<Comm
     const graph = new Map<string, { commit: CommitObject }>()
     const tipOf = new Map<string, string[]>()
     const shown = new Set<string>()
-    const tipOids = (await Promise.all(tips.map(async (tip) => ({ name: tip.name, oid: await tryResolve(dir, tip.ref) }))))
-        .filter((t): t is { name: string; oid: string } => !!t.oid)
+    const tipOids = (await Promise.all(tips.map(async (tip) => ({ name: tip.name, oid: await tryResolve(dir, tip.ref) })))).filter(
+        (t): t is { name: string; oid: string } => !!t.oid,
+    )
     let frontier = [...new Set(tipOids.map((t) => t.oid))]
     while (frontier.length && graph.size < 3000) {
         const batch = [...new Set(frontier.filter((o) => !graph.has(o)))].slice(0, 3000 - graph.size)
@@ -515,11 +512,13 @@ export async function log(dir: string, path?: string, all = false): Promise<Comm
     if (path) {
         const blobOf = (commit: string) => blobAt(dir, commit, path)
         const entries = [...graph]
-        const changed = await Promise.all(entries.map(async ([oid, e]) => {
-            const first = e.commit.parent[0]
-            const [mine, before] = await Promise.all([blobOf(oid), first && graph.has(first) ? blobOf(first) : null])
-            return mine !== before
-        }))
+        const changed = await Promise.all(
+            entries.map(async ([oid, e]) => {
+                const first = e.commit.parent[0]
+                const [mine, before] = await Promise.all([blobOf(oid), first && graph.has(first) ? blobOf(first) : null])
+                return mine !== before
+            }),
+        )
         entries.forEach(([oid], i) => changed[i] && shown.add(oid))
     } else {
         for (const oid of graph.keys()) shown.add(oid)
@@ -608,7 +607,7 @@ export async function log(dir: string, path?: string, all = false): Promise<Comm
 type TreeChanges = Map<string, string | null>
 
 async function patchTree(dir: string, treeOid: string | null, changes: TreeChanges): Promise<string | null> {
-    const entries = new Map<string, TreeEntry>(treeOid ? (await treeOf(dir, treeOid)) : [])
+    const entries = new Map<string, TreeEntry>(treeOid ? await treeOf(dir, treeOid) : [])
     const subs = new Map<string, TreeChanges>()
     for (const [path, oid] of changes) {
         const i = path.indexOf('/')
@@ -642,7 +641,7 @@ async function commitTree(dir: string, base: string | null, changes: TreeChanges
 async function stagePaths(dir: string, paths: string[]) {
     for (const filepath of paths) {
         if (fs.existsSync(join(dir, filepath))) await git.add({ fs, dir, filepath })
-        else await git.remove({ fs, dir, filepath }).catch(() => { })
+        else await git.remove({ fs, dir, filepath }).catch(() => {})
     }
 }
 
@@ -654,8 +653,7 @@ export async function commitPaths(dir: string, paths: string[], message: string)
         if (data && autocrlf) {
             try {
                 data = new TextEncoder().encode(new TextDecoder('utf8', { fatal: true }).decode(data).replace(/\r\n/g, '\n'))
-            } catch {
-            }
+            } catch {}
         }
         changes.set(p, data ? await git.writeBlob({ fs, dir, blob: data }) : null)
     }
@@ -750,7 +748,7 @@ export async function removeEffective(dir: string, docPath: string, date: string
         )
         if (!ok) await fsp.appendFile(untagFile(dir), tag + '\n', 'utf8')
     }
-    await git.deleteRef({ fs, dir, ref: `refs/tags/${tag}` }).catch(() => { })
+    await git.deleteRef({ fs, dir, ref: `refs/tags/${tag}` }).catch(() => {})
     const rest = pending.filter((t) => t !== tag)
     await fsp.writeFile(pendingFile(dir), rest.map((t) => `${t}\n`).join(''), 'utf8')
 }
@@ -790,7 +788,7 @@ const pendingUntags = (dir: string) => readLines(untagFile(dir))
 async function pushUntags(dir: string) {
     const list = await pendingUntags(dir)
     if (!list.length) return
-    for (const tag of list) await git.push({ fs, http, dir, remote: 'origin', ref: `refs/tags/${tag}`, delete: true, onAuth }).catch(() => { })
+    for (const tag of list) await git.push({ fs, http, dir, remote: 'origin', ref: `refs/tags/${tag}`, delete: true, onAuth }).catch(() => {})
     await fsp.rm(untagFile(dir), { force: true })
 }
 
@@ -802,10 +800,9 @@ async function pruneEffectiveTags(dir: string) {
     const keep = new Set(await pendingTags(dir))
     for (const tag of await git.listTags({ fs, dir })) {
         if (!tag.startsWith(EFFECTIVE_PREFIX) || remote.has(tag) || keep.has(tag)) continue
-        await git.deleteRef({ fs, dir, ref: `refs/tags/${tag}` }).catch(() => { })
+        await git.deleteRef({ fs, dir, ref: `refs/tags/${tag}` }).catch(() => {})
     }
 }
-
 
 async function fastForwardOthers(dir: string, current: string) {
     for (const b of await git.listBranches({ fs, dir })) {
@@ -828,8 +825,8 @@ export async function sync(dir: string): Promise<SyncState> {
         await git.fetch({ fs, http, dir, remote: 'origin', singleBranch: false, onAuth, tags: true, prune: true })
         dropCache(dir)
         const dirty = (await changedPaths(dir)).size > 0
-        await pruneEffectiveTags(dir).catch(() => { })
-        for (const tag of await pendingUntags(dir)) await git.deleteRef({ fs, dir, ref: `refs/tags/${tag}` }).catch(() => { })
+        await pruneEffectiveTags(dir).catch(() => {})
+        for (const tag of await pendingUntags(dir)) await git.deleteRef({ fs, dir, ref: `refs/tags/${tag}` }).catch(() => {})
         await fastForwardOthers(dir, branch)
         const remote = await tryResolve(dir, `refs/remotes/origin/${branch}`)
 
@@ -902,7 +899,9 @@ export async function pushEverything(dir: string): Promise<void> {
 }
 
 export async function publishRepo(dir: string, rawUrl: string): Promise<string> {
-    let url = String(rawUrl ?? '').trim().replace(/\/+$/, '')
+    let url = String(rawUrl ?? '')
+        .trim()
+        .replace(/\/+$/, '')
     if (!safeRemoteUrl(url)) throw new Error('リモートの URL は https:// で始まるものを入力してください')
     if (matchRemote(url, knownBases(await loadSettings())) && !/\.git$/i.test(url)) url += '.git'
     if (await hasRemote(dir)) throw new Error('このリポジトリには、すでにリモートが設定されています')
@@ -926,14 +925,16 @@ export async function publishRepo(dir: string, rawUrl: string): Promise<string> 
         await fsp.rm(pendingFile(dir), { force: true })
         await git.fetch({ fs, http, dir, remote: 'origin', singleBranch: false, onAuth, tags: true })
     } catch (e) {
-        await git.deleteRemote({ fs, dir, remote: 'origin' }).catch(() => { })
+        await git.deleteRemote({ fs, dir, remote: 'origin' }).catch(() => {})
         throw new Error(explain(e))
     }
     return url
 }
 
 export async function changeRemote(dir: string, rawUrl: string): Promise<string> {
-    let url = String(rawUrl ?? '').trim().replace(/\/+$/, '')
+    let url = String(rawUrl ?? '')
+        .trim()
+        .replace(/\/+$/, '')
     if (!safeRemoteUrl(url)) throw new Error('リモートの URL は https:// で始まるものを入力してください')
     if (matchRemote(url, knownBases(await loadSettings())) && !/\.git$/i.test(url)) url += '.git'
     const before = await remoteUrl(dir)
@@ -947,7 +948,14 @@ export async function changeRemote(dir: string, rawUrl: string): Promise<string>
         throw new Error(explain(e))
     }
     if (refs.length) {
-        const known = await Promise.all(refs.map((r) => git.readCommit({ fs, dir, oid: r.oid }).then(() => true, () => false)))
+        const known = await Promise.all(
+            refs.map((r) =>
+                git.readCommit({ fs, dir, oid: r.oid }).then(
+                    () => true,
+                    () => false,
+                ),
+            ),
+        )
         if (!known.some(Boolean)) throw new Error('このリモートには、このリポジトリとは別の履歴があります。正しい URL か確かめてください')
     }
 
@@ -965,12 +973,11 @@ export async function changeRemote(dir: string, rawUrl: string): Promise<string>
 export async function disconnectRemote(dir: string): Promise<void> {
     if (!(await hasRemote(dir))) return
     for (const b of await git.listBranches({ fs, dir, remote: 'origin' })) {
-        await git.deleteRef({ fs, dir, ref: `refs/remotes/origin/${b}` }).catch(() => { })
+        await git.deleteRef({ fs, dir, ref: `refs/remotes/origin/${b}` }).catch(() => {})
     }
     await git.deleteRemote({ fs, dir, remote: 'origin' })
     await fsp.rm(pendingFile(dir), { force: true })
 }
-
 
 interface Merge3 {
     path: string
@@ -988,7 +995,7 @@ async function threeWay(dir: string, base: string | undefined, ours: string, the
         map: async (filepath, entries) => {
             if (filepath === '.') return true
             const [b, o, t] = entries
-            const types = await Promise.all([o, t, base ? b : null].map((e) => e?.type()))
+            const types = await Promise.all([o, t, base ? b : null].map(async (e) => e?.type()))
             const [oo, to, bo] = await Promise.all([o?.oid(), t?.oid(), base ? b?.oid() : undefined])
             if (oo !== undefined && oo === to && types[0] === types[1]) return null
             if (base && bo !== undefined && bo === to && types[1] === types[2]) return null
@@ -1070,7 +1077,7 @@ async function commitMerge(dir: string, ours: string, theirs: string, plan: Tree
         const full = safeJoin(dir, path)
         if (blob === null) {
             await fsp.rm(full, { force: true })
-            await git.remove({ fs, dir, filepath: path }).catch(() => { })
+            await git.remove({ fs, dir, filepath: path }).catch(() => {})
         } else {
             await fsp.mkdir(dirname(full), { recursive: true })
             await writeAtomic(full, (await git.readBlob({ fs, dir, oid: blob })).blob)
@@ -1080,11 +1087,7 @@ async function commitMerge(dir: string, ours: string, theirs: string, plan: Tree
     return { oid, changed: [...plan.keys()] }
 }
 
-export async function resolveConflicts(
-    dir: string,
-    theirs: string,
-    choices: Record<string, ConflictChoice>,
-): Promise<SyncState> {
+export async function resolveConflicts(dir: string, theirs: string, choices: Record<string, ConflictChoice>): Promise<SyncState> {
     try {
         await requireClean(dir, '取り込み')
         const ours = await git.resolveRef({ fs, dir, ref: await branchName(dir) })
@@ -1099,7 +1102,7 @@ export async function resolveConflicts(
 export async function previewMerge(dir: string, from: string, into: string): Promise<MergePreview> {
     const fromOid = await branchOid(dir, from)
     const intoOid = await branchOid(dir, into)
-    if (await git.isDescendent({ fs, dir, oid: intoOid, ancestor: fromOid, depth: -1 }).catch(() => false) || fromOid === intoOid) {
+    if ((await git.isDescendent({ fs, dir, oid: intoOid, ancestor: fromOid, depth: -1 }).catch(() => false)) || fromOid === intoOid) {
         return { upToDate: true, files: [], conflicts: [], autoMerged: [], from: fromOid }
     }
     const { files, conflicts, autoMerged } = await analyze(dir, intoOid, fromOid)

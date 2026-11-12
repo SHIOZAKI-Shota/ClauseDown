@@ -1,4 +1,5 @@
 import type { ProofreadConfig, ProofreadIssue } from '../shared/api'
+import { noHankakuKana } from './proofread-hankaku'
 import { LEGAL_OKURIGANA_YAML, LEGAL_TERMS_YAML } from './proofread-legal'
 import { DEFAULT_JOSHI_ALLOW, MAX_TEN, PROOFREAD_RULES, ruleLabel, ruleOn } from '../shared/proofread-rules'
 
@@ -46,8 +47,13 @@ rules:
     pattern: 頂く
 `
 
-type Lint = (text: string, config: ProofreadConfig) => Promise<{ ruleId: string; message: string; range?: [number, number]; index: number; fix?: { range: [number, number] } }[]>
+type Lint = (
+    text: string,
+    config: ProofreadConfig,
+) => Promise<{ ruleId: string; message: string; range?: [number, number]; index: number; fix?: { range: [number, number] } }[]>
 let lint: Promise<Lint> | null = null
+
+const LOCAL_RULES: Record<string, unknown> = { 'no-hankaku-kana': noHankakuKana }
 
 // CommonJS の規則を ESM から読むと { default: { default: 規則 } } のように何重にも包まれることがある
 function unwrap(m: unknown): unknown {
@@ -68,10 +74,14 @@ function optionsOf(id: string, config: ProofreadConfig): unknown {
 async function load(): Promise<Lint> {
     const { TextlintKernel } = await import('@textlint/kernel')
     const markdown = unwrap(await import('@textlint/textlint-plugin-markdown'))
-    const modules = new Map(await Promise.all(PROOFREAD_RULES.map(async (r) => [r.id, unwrap(await import(r.pkg))] as const)))
+    const modules = new Map(await Promise.all(PROOFREAD_RULES.map(async (r) => [r.id, r.pkg ? unwrap(await import(r.pkg)) : LOCAL_RULES[r.id]] as const)))
     const kernel = new TextlintKernel()
     return async (text, config) => {
-        const rules = PROOFREAD_RULES.filter((r) => ruleOn(r.id, config.rules)).map((r) => ({ ruleId: r.id, rule: modules.get(r.id), options: optionsOf(r.id, config) }))
+        const rules = PROOFREAD_RULES.filter((r) => ruleOn(r.id, config.rules)).map((r) => ({
+            ruleId: r.id,
+            rule: modules.get(r.id),
+            options: optionsOf(r.id, config),
+        }))
         if (!rules.length) return []
         const res = await kernel.lintText(text, {
             ext: '.md',
@@ -96,7 +106,6 @@ export function ignoredRanges(source: string): [number, number][] {
     add(/^[ \t]*:{3,}[^\n]*$/gm)
     return out
 }
-
 
 export async function proofread(input: unknown, config: ProofreadConfig = {}): Promise<ProofreadIssue[]> {
     if (typeof input !== 'string' || !input.trim() || input.length > MAX_CHARS) return []

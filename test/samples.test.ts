@@ -24,7 +24,10 @@ describe('サンプルリポジトリ', () => {
 
         const rules = made[0].dir
         expect((await git.listDocs(rules)).map((d) => [d.path, d.changed])).toEqual([['就業規則.md', false]])
-        expect((await git.log(rules)).map((c) => c.message.split('\n')[0])).toEqual(['不妊治療休暇の日数と通勤手当の上限を引上げ', '厚生労働省のモデル就業規則をもとに作成'])
+        expect((await git.log(rules)).map((c) => c.message.split('\n')[0])).toEqual([
+            '不妊治療休暇の日数と通勤手当の上限を引上げ',
+            '厚生労働省のモデル就業規則をもとに作成',
+        ])
         expect(await igit.listTags({ fs, dir: rules })).toEqual(['施行/就業規則/2025-04-01', '施行/就業規則/2026-04-01'])
         expect(await igit.listBranches({ fs, dir: rules })).toContain('案/2027年4月改定')
         expect((await sch.listEvents(rules)).length).toBe(5)
@@ -56,8 +59,14 @@ describe('フォーク', () => {
         const gh = await import('../src/main/github')
         const settings = await import('../src/main/settings')
         vi.spyOn(settings, 'loadSettings').mockResolvedValue({ repos: [], author: { name: 't', email: '' }, username: '', prefs: {} } as never)
-        const fork = vi.spyOn(gh, 'forkRepo').mockResolvedValue({ full_name: 'me/rules', clone_url: 'https://github.com/me/rules.git', html_url: 'https://github.com/me/rules' })
-        vi.spyOn(gh, 'getRepo').mockResolvedValue({ full_name: 'me/rules', clone_url: 'https://github.com/me/rules.git', html_url: 'https://github.com/me/rules' })
+        const fork = vi
+            .spyOn(gh, 'forkRepo')
+            .mockResolvedValue({ full_name: 'me/rules', clone_url: 'https://github.com/me/rules.git', html_url: 'https://github.com/me/rules' })
+        vi.spyOn(gh, 'getRepo').mockResolvedValue({
+            full_name: 'me/rules',
+            clone_url: 'https://github.com/me/rules.git',
+            html_url: 'https://github.com/me/rules',
+        })
         const { forkRepo } = await import('../src/main/repo-copy')
         const parent = fs.mkdtempSync(join(os.tmpdir(), 'clausedown-fork-'))
         const [src] = await createSamples(parent)

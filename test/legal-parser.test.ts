@@ -5,9 +5,7 @@ import { toCircled, toIroha, toKanji, toFullwidth } from '../src/shared/numerals
 
 describe('numerals', () => {
     it('漢数字', () => {
-        expect([1, 10, 11, 20, 21, 100, 110, 999, 2026].map(toKanji)).toEqual([
-            '一', '十', '十一', '二十', '二十一', '百', '百十', '九百九十九', '二千二十六',
-        ])
+        expect([1, 10, 11, 20, 21, 100, 110, 999, 2026].map(toKanji)).toEqual(['一', '十', '十一', '二十', '二十一', '百', '百十', '九百九十九', '二千二十六'])
     })
     it('全角・丸数字・イロハ', () => {
         expect(toFullwidth(12)).toBe('１２')
@@ -178,7 +176,9 @@ describe('先頭の YAML と番号の指定', () => {
     })
 
     it('{n=… b=…} で条の番号を指定でき、続く条はそこから数える', () => {
-        const doc = parseLegal('# t\n\n### a {n=10}\n- x\n\n### b\n- x\n\n### c {n=11 b=2}\n- x\n\n### d {.branch}\n- x\n\n### e {n=11 b=5.2}\n- x\n\n### f\n- x\n')
+        const doc = parseLegal(
+            '# t\n\n### a {n=10}\n- x\n\n### b\n- x\n\n### c {n=11 b=2}\n- x\n\n### d {.branch}\n- x\n\n### e {n=11 b=5.2}\n- x\n\n### f\n- x\n',
+        )
         expect(doc.chapters[0].articles.map((a) => a.label)).toEqual(['第10条', '第11条', '第11条の2', '第11条の3', '第11条の5の2', '第12条'])
     })
 

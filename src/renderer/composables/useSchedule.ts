@@ -1,14 +1,5 @@
 import type { Ref } from 'vue'
-import {
-    addDays,
-    byDate,
-    kindMap,
-    type DueEvent,
-    type DueEventInput,
-    type EventKind,
-    type Occurrence,
-    type RepoSchedule,
-} from '@shared/schedule'
+import { addDays, byDate, kindMap, type DueEvent, type DueEventInput, type EventKind, type Occurrence, type RepoSchedule } from '@shared/schedule'
 import { useApp } from '~/stores/app'
 import { todayISO } from '~/utils/format'
 import { toPlain } from '~/utils/ipc'

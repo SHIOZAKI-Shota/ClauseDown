@@ -36,7 +36,14 @@ export function recordLicenses(name) {
                 }
             }
             mkdirSync(RECORD_DIR, { recursive: true })
-            writeFileSync(join(RECORD_DIR, `${name}.json`), JSON.stringify([...dirs].sort(), null, 2))
+            writeFileSync(
+                join(RECORD_DIR, `${name}.json`),
+                JSON.stringify(
+                    [...dirs].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)),
+                    null,
+                    2,
+                ),
+            )
         },
     }
 }

@@ -15,8 +15,7 @@ export function useStoredRef<T>(key: string, initial: T, opts: { deep?: boolean;
     const write = () => {
         try {
             localStorage.setItem(key, JSON.stringify(value.value))
-        } catch {
-        }
+        } catch {}
     }
     let timer: ReturnType<typeof setTimeout> | undefined
     watch(

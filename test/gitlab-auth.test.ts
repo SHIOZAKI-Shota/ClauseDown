@@ -36,8 +36,12 @@ beforeAll(async () => {
         }
         if (req.url === '/oauth/authorize_device') {
             return send(200, {
-                device_code: 'DEV', user_code: 'WXYZ-9876', verification_uri: `${addr()}/oauth/device`,
-                verification_uri_complete: `${addr()}/oauth/device?user_code=WXYZ-9876`, expires_in: 300, interval: 0,
+                device_code: 'DEV',
+                user_code: 'WXYZ-9876',
+                verification_uri: `${addr()}/oauth/device`,
+                verification_uri_complete: `${addr()}/oauth/device?user_code=WXYZ-9876`,
+                expires_in: 300,
+                interval: 0,
             })
         }
         if (req.url === '/oauth/token') {
@@ -62,7 +66,11 @@ beforeAll(async () => {
     process.env.CLAUSEDOWN_GITHUB_API = addr()
     fs.writeFileSync(
         join(userData, 'settings.json'),
-        JSON.stringify({ repos: [], author: { name: 't', email: '' }, gitlabHosts: [{ url: `${BASE}/`, clientId: 'app-123' }, { url: 'http://insecure.example.com' }] }),
+        JSON.stringify({
+            repos: [],
+            author: { name: 't', email: '' },
+            gitlabHosts: [{ url: `${BASE}/`, clientId: 'app-123' }, { url: 'http://insecure.example.com' }],
+        }),
     )
 })
 const addr = () => `http://127.0.0.1:${(server.address() as { port: number }).port}`
@@ -116,7 +124,10 @@ describe('GitLab のログイン', () => {
         expect(await settings.loadCredential('https://gitlab.com')).toBeNull()
         await accounts.setToken('https://gitlab.com', 'glpat-ok')
         expect((await accounts.accounts()).find((a) => a.base === 'https://gitlab.com')).toMatchObject({
-            login: 'staff-a', method: 'token', name: '山田', email: 'yamada@example.co.jp',
+            login: 'staff-a',
+            method: 'token',
+            name: '山田',
+            email: 'yamada@example.co.jp',
         })
 
         await accounts.logout(BASE)

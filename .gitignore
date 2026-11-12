@@ -8,8 +8,10 @@ release/
 .data/
 .cache/
 *.tsbuildinfo
+release-notes/
 
 coverage/
+.vitest/
 test-results/
 playwright-report/
 *.local.*

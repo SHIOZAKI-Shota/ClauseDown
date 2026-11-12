@@ -16,9 +16,9 @@ const { parseGitHub } = await import('../src/main/github')
 
 let root = ''
 let url = ''
-let close = () => { }
+let close = () => {}
 beforeAll(async () => {
-    ; ({ root, url, close } = await startGitServer())
+    ;({ root, url, close } = await startGitServer())
 })
 afterAll(() => close())
 

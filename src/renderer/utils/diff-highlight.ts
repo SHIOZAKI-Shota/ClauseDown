@@ -79,10 +79,13 @@ const plugin = ViewPlugin.fromClass(
             if (!u.docChanged && !baseChanged) return
             this.decorations = this.decorations.map(u.changes)
             clearTimeout(this.timer)
-            this.timer = setTimeout(() => {
-                this.decorations = build(this.view.state.field(baseField), this.view.state.doc.toString())
-                this.view.dispatch({})
-            }, baseChanged ? 0 : u.state.doc.length > LARGE ? 800 : 200)
+            this.timer = setTimeout(
+                () => {
+                    this.decorations = build(this.view.state.field(baseField), this.view.state.doc.toString())
+                    this.view.dispatch({})
+                },
+                baseChanged ? 0 : u.state.doc.length > LARGE ? 800 : 200,
+            )
         }
         destroy() {
             clearTimeout(this.timer)

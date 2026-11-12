@@ -14,9 +14,14 @@ const isButton = computed(() => props.as === 'button')
 </script>
 
 <template>
-    <component :is="as" class="cd-list-row" :class="{ on: active, off: dim, clickable: isButton }"
-        :type="isButton ? 'button' : undefined" :disabled="isButton && disabled ? true : undefined"
-        @click="(e: MouseEvent) => $emit('click', e)">
+    <component
+        :is="as"
+        class="cd-list-row"
+        :class="{ on: active, off: dim, clickable: isButton }"
+        :type="isButton ? 'button' : undefined"
+        :disabled="isButton && disabled ? true : undefined"
+        @click="(e: MouseEvent) => $emit('click', e)"
+    >
         <span v-if="icon || $slots.lead" class="lead">
             <slot name="lead">
                 <UIcon :name="icon!" class="ic" />

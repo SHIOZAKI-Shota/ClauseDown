@@ -66,7 +66,10 @@ function scopes(source: string, starts: number[]): [number, number][] {
         .chapters.filter((c) => c.line >= 0 && (c.kind === 'supplement' || c.kind === 'appendix' || /^附\s*則/.test(c.title)))
         .map((c) => starts[c.line] ?? source.length)
     const bounds = [0, ...cuts, source.length]
-    return bounds.slice(0, -1).map((b, i) => [b, bounds[i + 1]] as [number, number]).filter(([a, b]) => b > a)
+    return bounds
+        .slice(0, -1)
+        .map((b, i) => [b, bounds[i + 1]] as [number, number])
+        .filter(([a, b]) => b > a)
 }
 
 function occurrences(text: string, term: string): number[] {
@@ -121,7 +124,12 @@ export function checkDefinitions(input: string): DefinitionIssue[] {
             for (const i of uses) {
                 if (i >= def.from) break
                 if (source[starts[lineOf(i) - 1]] === '#') continue
-                out.push({ from: i, to: i + term.length, line: lineOf(i), message: `「${term}」は${lineOf(def.from)}行目で定義しています。定義より前で使っています` })
+                out.push({
+                    from: i,
+                    to: i + term.length,
+                    line: lineOf(i),
+                    message: `「${term}」は${lineOf(def.from)}行目で定義しています。定義より前で使っています`,
+                })
             }
         }
     }

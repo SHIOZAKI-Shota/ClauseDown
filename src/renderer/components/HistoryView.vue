@@ -95,8 +95,13 @@ async function onEffectiveAdded() {
             </div>
             <p v-if="loading && commits.length === 0" class="muted pad">読み込んでいます…</p>
             <p v-else-if="commits.length === 0" class="muted pad">まだ版が保存されていません。</p>
-            <HistoryGraph :commits="commits" :selected="selected" :pending="!!app.currentDoc?.changed"
-                :current-label="app.currentBranch?.label" @select="selected = $event" />
+            <HistoryGraph
+                :commits="commits"
+                :selected="selected"
+                :pending="!!app.currentDoc?.changed"
+                :current-label="app.currentBranch?.label"
+                @select="selected = $event"
+            />
             <div v-if="commits.length" class="legend">
                 <span><i class="ln main" />現行版</span>
                 <span><i class="ln draft" />改定案</span>
@@ -110,36 +115,74 @@ async function onEffectiveAdded() {
                         <IssueText :text="selectedCommit.message" />
                     </div>
                     <span class="cd-grow" />
-                    <UButton label="課題に紐付ける" icon="i-lucide-link" size="sm" color="neutral" variant="outline"
-                        @click="showLink = true" />
+                    <UButton label="課題に紐付ける" icon="i-lucide-link" size="sm" color="neutral" variant="outline" @click="showLink = true" />
                     <UButton label="前の版と比較" size="sm" color="neutral" variant="outline" @click="compareWithPrevious" />
                     <UButton label="今の文書と比較" size="sm" color="neutral" variant="outline" @click="compareWithCurrent" />
-                    <UButton label="施行日を付ける" icon="i-lucide-calendar-check" size="sm" color="neutral" variant="outline"
-                        :disabled="typeof content !== 'string'" @click="showEffective = true" />
-                    <UButton v-if="onCurrent" label="この版に戻す" icon="i-lucide-history" size="sm" color="neutral"
-                        variant="outline" :disabled="typeof content !== 'string'" @click="confirmRestore = true" />
+                    <UButton
+                        label="施行日を付ける"
+                        icon="i-lucide-calendar-check"
+                        size="sm"
+                        color="neutral"
+                        variant="outline"
+                        :disabled="typeof content !== 'string'"
+                        @click="showEffective = true"
+                    />
+                    <UButton
+                        v-if="onCurrent"
+                        label="この版に戻す"
+                        icon="i-lucide-history"
+                        size="sm"
+                        color="neutral"
+                        variant="outline"
+                        :disabled="typeof content !== 'string'"
+                        @click="confirmRestore = true"
+                    />
                     <template v-else>
                         <UTooltip :text="targetBranch ? '' : 'この版がある改定案は、反映後に削除されています'">
-                            <UButton :label="targetBranch ? `「${targetBranch.label}」に切り替える` : '切り替え先の案がありません'"
-                                icon="i-lucide-git-branch" size="sm" :disabled="!targetBranch"
-                                @click="switchToTarget" />
+                            <UButton
+                                :label="targetBranch ? `「${targetBranch.label}」に切り替える` : '切り替え先の案がありません'"
+                                icon="i-lucide-git-branch"
+                                size="sm"
+                                :disabled="!targetBranch"
+                                @click="switchToTarget"
+                            />
                         </UTooltip>
-                        <UButton :label="`この版の内容を「${currentLabel}」にコピー`" icon="i-lucide-download" size="sm"
-                            color="neutral" variant="outline" :disabled="typeof content !== 'string'"
-                            @click="confirmBring = true" />
+                        <UButton
+                            :label="`この版の内容を「${currentLabel}」にコピー`"
+                            icon="i-lucide-download"
+                            size="sm"
+                            color="neutral"
+                            variant="outline"
+                            :disabled="typeof content !== 'string'"
+                            @click="confirmBring = true"
+                        />
                     </template>
                 </div>
                 <DocPaper :text="content" :doc-path="path" />
             </template>
         </div>
         <IssueLinkModal v-if="showLink && selectedCommit" :oid="selectedCommit.oid" @close="showLink = false" />
-        <EffectiveDateModal v-if="showEffective && selectedCommit" :oid="selectedCommit.oid" :path="path"
-            @close="showEffective = false" @done="onEffectiveAdded" />
-        <ConfirmModal v-model:open="confirmBring" :title="`「${currentLabel}」にコピー`"
+        <EffectiveDateModal
+            v-if="showEffective && selectedCommit"
+            :oid="selectedCommit.oid"
+            :path="path"
+            @close="showEffective = false"
+            @done="onEffectiveAdded"
+        />
+        <ConfirmModal
+            v-model:open="confirmBring"
+            :title="`「${currentLabel}」にコピー`"
             :description="`別の案にある版の内容で、「${currentLabel}」のこの文書を置き換えます。作業中の案は切り替わりません。置き換えたあと「版を保存」すると、「${currentLabel}」の版として記録されます。`"
-            :confirm-label="`「${currentLabel}」にコピー`" @confirm="restore" />
-        <ConfirmModal v-model:open="confirmRestore" title="この版に戻す"
-            description="この版の内容で今の文書を置き換えます。置き換えたあと「版を保存」すると記録されます。" confirm-label="戻す" @confirm="restore" />
+            :confirm-label="`「${currentLabel}」にコピー`"
+            @confirm="restore"
+        />
+        <ConfirmModal
+            v-model:open="confirmRestore"
+            title="この版に戻す"
+            description="この版の内容で今の文書を置き換えます。置き換えたあと「版を保存」すると記録されます。"
+            confirm-label="戻す"
+            @confirm="restore"
+        />
     </div>
 </template>
 

@@ -21,7 +21,7 @@ import { suggestVersionMessage } from './ai-message'
 import * as fstyle from './folder-style'
 import * as accounts from './accounts'
 import { identity } from './git-base'
-import { forgetCachedSettings, loadSecret, loadSettings, resetAllData, saveSecret, updateSettings } from './settings'
+import { forgetCachedSettings, loadSettings, resetAllData, saveSecret, updateSettings } from './settings'
 import { listFonts } from './fonts'
 import { saveImage } from './images'
 import * as issues from './issues'
@@ -45,9 +45,7 @@ try {
 let win: BrowserWindow | null = null
 const DEV_ICON = resolve(import.meta.dirname, '../../build/icon.png')
 
-protocol.registerSchemesAsPrivileged([
-    { scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true } },
-])
+protocol.registerSchemesAsPrivileged([{ scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true } }])
 
 const CSP = [
     "default-src 'self'",
@@ -135,15 +133,15 @@ async function createWindow() {
         },
     })
     win.webContents.setWindowOpenHandler(({ url }) => {
-        if (url.startsWith('https://')) shell.openExternal(url)
+        if (url.startsWith('https://')) void shell.openExternal(url)
         return { action: 'deny' }
     })
     win.webContents.on('will-navigate', (e, url) => {
         if (url !== win?.webContents.getURL()) e.preventDefault()
     })
     win.webContents.session.setPermissionRequestHandler((_wc, perm, cb) => cb(perm === 'clipboard-sanitized-write'))
-    if (process.env.ELECTRON_RENDERER_URL) win.loadURL(process.env.ELECTRON_RENDERER_URL)
-    else win.loadURL('app://bundle/')
+    if (process.env.ELECTRON_RENDERER_URL) void win.loadURL(process.env.ELECTRON_RENDERER_URL)
+    else void win.loadURL('app://bundle/')
 }
 
 const pickedRoots = new Set<string>()
@@ -160,24 +158,114 @@ async function assertAllowedDir(dir: unknown): Promise<void> {
 }
 
 function assertPicked(dir: unknown) {
-    if (typeof dir !== 'string' || ![...pickedRoots].some((root) => under(norm(dir), root))) throw new Error('作る場所は、フォルダを選び直してから指定してください')
+    if (typeof dir !== 'string' || ![...pickedRoots].some((root) => under(norm(dir), root)))
+        throw new Error('作る場所は、フォルダを選び直してから指定してください')
 }
 
 const DIR_FIRST = new Set([
-    'openRepo', 'initRepo', 'listDocs', 'readDoc', 'writeDoc', 'createDoc', 'moveDoc', 'copyDoc', 'copyDocToRepo', 'deleteDoc', 'showDocInFolder', 'repoActivity', 'readRepoNote', 'saveRepoNote', 'log', 'lastChange', 'readAt', 'saveVersion', 'discardChanges',
-    'sync', 'push', 'publishRepo', 'changeRemote', 'disconnectRemote', 'resolveConflicts', 'listBranches', 'createBranch', 'switchBranch', 'previewMerge', 'mergeBranch',
-    'deleteBranch', 'listEffective', 'addEffective', 'removeEffective', 'listFolderStyles', 'saveFolderStyle', 'getRules', 'saveRules',
-    'forgeKind', 'listReviews', 'addReview', 'listDeliveries', 'deliver', 'aiRun',
-    'occurrences', 'listEvents', 'saveEvent', 'deleteEvent', 'setEventDone', 'getEventKinds', 'saveEventKinds',
-    'detectHouritsu', 'convertHouritsu', 'duplicateRepo', 'forkRepo', 'suggestVersionMessage', 'saveImage',
-    'listIssues', 'issueDetail', 'createIssue', 'updateIssue', 'linkIssue', 'commentIssue', 'closeIssue', 'branchIssues', 'setBranchIssues', 'pendingLocalIssues', 'moveIssuesToForge',
+    'openRepo',
+    'initRepo',
+    'listDocs',
+    'readDoc',
+    'writeDoc',
+    'createDoc',
+    'moveDoc',
+    'copyDoc',
+    'copyDocToRepo',
+    'deleteDoc',
+    'showDocInFolder',
+    'repoActivity',
+    'readRepoNote',
+    'saveRepoNote',
+    'log',
+    'lastChange',
+    'readAt',
+    'saveVersion',
+    'discardChanges',
+    'sync',
+    'push',
+    'publishRepo',
+    'changeRemote',
+    'disconnectRemote',
+    'resolveConflicts',
+    'listBranches',
+    'createBranch',
+    'switchBranch',
+    'previewMerge',
+    'mergeBranch',
+    'deleteBranch',
+    'listEffective',
+    'addEffective',
+    'removeEffective',
+    'listFolderStyles',
+    'saveFolderStyle',
+    'getRules',
+    'saveRules',
+    'forgeKind',
+    'listReviews',
+    'addReview',
+    'listDeliveries',
+    'deliver',
+    'aiRun',
+    'occurrences',
+    'listEvents',
+    'saveEvent',
+    'deleteEvent',
+    'setEventDone',
+    'getEventKinds',
+    'saveEventKinds',
+    'detectHouritsu',
+    'convertHouritsu',
+    'duplicateRepo',
+    'forkRepo',
+    'suggestVersionMessage',
+    'saveImage',
+    'listIssues',
+    'issueDetail',
+    'createIssue',
+    'updateIssue',
+    'linkIssue',
+    'commentIssue',
+    'closeIssue',
+    'branchIssues',
+    'setBranchIssues',
+    'pendingLocalIssues',
+    'moveIssuesToForge',
 ])
 
 const LOCKED = new Set([
-    'initRepo', 'writeDoc', 'createDoc', 'moveDoc', 'copyDoc', 'deleteDoc', 'saveRepoNote', 'saveVersion', 'discardChanges',
-    'sync', 'push', 'publishRepo', 'changeRemote', 'disconnectRemote', 'resolveConflicts', 'createBranch', 'switchBranch', 'mergeBranch',
-    'deleteBranch', 'addEffective', 'removeEffective', 'saveFolderStyle', 'saveRules', 'addReview', 'deliver',
-    'saveEvent', 'deleteEvent', 'setEventDone', 'saveEventKinds', 'convertHouritsu', 'duplicateRepo', 'forkRepo',
+    'initRepo',
+    'writeDoc',
+    'createDoc',
+    'moveDoc',
+    'copyDoc',
+    'deleteDoc',
+    'saveRepoNote',
+    'saveVersion',
+    'discardChanges',
+    'sync',
+    'push',
+    'publishRepo',
+    'changeRemote',
+    'disconnectRemote',
+    'resolveConflicts',
+    'createBranch',
+    'switchBranch',
+    'mergeBranch',
+    'deleteBranch',
+    'addEffective',
+    'removeEffective',
+    'saveFolderStyle',
+    'saveRules',
+    'addReview',
+    'deliver',
+    'saveEvent',
+    'deleteEvent',
+    'setEventDone',
+    'saveEventKinds',
+    'convertHouritsu',
+    'duplicateRepo',
+    'forkRepo',
 ])
 
 const notifyChanged = (by: DocChangedEvent['by']) => (dir: string, path: string) =>
@@ -431,10 +519,10 @@ for (const [name, fn] of Object.entries(handlers)) {
     })
 }
 
-app.whenReady().then(() => {
+void app.whenReady().then(() => {
     setAppMenu()
     serveRenderer()
-    createWindow()
+    void createWindow()
     void listFonts()
     void loadSettings().then((s) => applyMcp(s.mcp, notifyChanged('mcp')))
     initUpdater((u) => win?.webContents.send('updateState', u))

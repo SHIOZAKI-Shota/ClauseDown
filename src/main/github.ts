@@ -41,9 +41,11 @@ async function call<T>(method: string, url: string, body?: unknown, headers: Rec
         try {
             const j = (await res.json()) as { message?: string; errors?: { message?: string }[] }
             msg = [j.message, ...(j.errors ?? []).map((e) => e.message)].filter(Boolean).join(' / ')
-        } catch {
-        }
-        const issueHint = res.status === 403 && /\/issues(\/|\?|$)/.test(url) ? '。課題を使うには、GitHub App の権限に「Issues: Read and write」が必要です（App の持ち主が設定し、インストール先で承認します）' : ''
+        } catch {}
+        const issueHint =
+            res.status === 403 && /\/issues(\/|\?|$)/.test(url)
+                ? '。課題を使うには、GitHub App の権限に「Issues: Read and write」が必要です（App の持ち主が設定し、インストール先で承認します）'
+                : ''
         throw new GitHubError(res.status, githubMessage(res.status, msg) + issueHint)
     }
     if (res.status === 204) return undefined as T

@@ -70,7 +70,7 @@ const emit = defineEmits<{ close: [] }>()
     flex-direction: column;
 }
 
-.ws-main> :deep(*) {
+.ws-main > :deep(*) {
     flex: 1;
     min-height: 0;
 }

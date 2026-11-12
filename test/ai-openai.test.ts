@@ -21,14 +21,23 @@ const { cleanAiConfig } = await import('../src/shared/ai-providers')
 
 let server: http.Server
 let base = ''
-const requests: { auth?: string; body: { model: string; messages: { role: string; content?: string; tool_call_id?: string }[]; tools?: { function: { name: string } }[]; stream?: boolean } }[] = []
+const requests: {
+    auth?: string
+    body: { model: string; messages: { role: string; content?: string; tool_call_id?: string }[]; tools?: { function: { name: string } }[]; stream?: boolean }
+}[] = []
 
 function sse(res: http.ServerResponse, chunks: unknown[]) {
     res.writeHead(200, { 'Content-Type': 'text/event-stream' })
     for (const c of chunks) res.write(`data: ${JSON.stringify(c)}\n\n`)
     res.end('data: [DONE]\n\n')
 }
-const chunk = (delta: unknown, finish: string | null = null) => ({ id: 'x', object: 'chat.completion.chunk', created: 0, model: 'm', choices: [{ index: 0, delta, finish_reason: finish }] })
+const chunk = (delta: unknown, finish: string | null = null) => ({
+    id: 'x',
+    object: 'chat.completion.chunk',
+    created: 0,
+    model: 'm',
+    choices: [{ index: 0, delta, finish_reason: finish }],
+})
 
 beforeAll(async () => {
     await git.initRepo(dir)
@@ -40,11 +49,19 @@ beforeAll(async () => {
         for await (const c of req) raw.push(c as Buffer)
         const body = JSON.parse(Buffer.concat(raw).toString() || '{}')
         requests.push({ auth: req.headers.authorization, body })
-        if (body.model === 'bad-key') return res.writeHead(401, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: { message: 'Incorrect API key' } }))
-        if (body.model === 'no-tools') return res.writeHead(400, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: { message: 'model does not support tools' } }))
+        if (body.model === 'bad-key')
+            return res.writeHead(401, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: { message: 'Incorrect API key' } }))
+        if (body.model === 'no-tools')
+            return res.writeHead(400, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: { message: 'model does not support tools' } }))
         if (!body.stream) {
             return res.writeHead(200, { 'Content-Type': 'application/json' }).end(
-                JSON.stringify({ id: 'x', object: 'chat.completion', created: 0, model: body.model, choices: [{ index: 0, message: { role: 'assistant', content: '接続できました' }, finish_reason: 'stop' }] }),
+                JSON.stringify({
+                    id: 'x',
+                    object: 'chat.completion',
+                    created: 0,
+                    model: body.model,
+                    choices: [{ index: 0, message: { role: 'assistant', content: '接続できました' }, finish_reason: 'stop' }],
+                }),
             )
         }
         const last = body.messages.at(-1)
@@ -66,7 +83,12 @@ afterAll(() => server?.close())
 
 async function run(instruction: string) {
     const events: AiEvent[] = []
-    await aiRun(dir, { session: 's1', path: '就業規則.md', instruction }, (e) => events.push(e), () => { })
+    await aiRun(
+        dir,
+        { session: 's1', path: '就業規則.md', instruction },
+        (e) => events.push(e),
+        () => {},
+    )
     return events
 }
 
@@ -76,7 +98,12 @@ describe('OpenAI 互換の窓口', () => {
         secrets[keyName('openai', base)!] = 'sk-test'
         const events = await run('第1条を確かめて')
 
-        expect(events.filter((e) => e.type === 'text').map((e) => (e as { text: string }).text).join('')).toBe('確認します。第1条は問題ありません。')
+        expect(
+            events
+                .filter((e) => e.type === 'text')
+                .map((e) => (e as { text: string }).text)
+                .join(''),
+        ).toBe('確認します。第1条は問題ありません。')
         expect(events.find((e) => e.type === 'tool')).toMatchObject({ label: expect.stringContaining('就業規則.md') })
         expect(events.at(-1)).toEqual({ session: 's1', type: 'done' })
 
@@ -108,7 +135,10 @@ describe('OpenAI 互換の窓口', () => {
 describe('接続先とキー', () => {
     it('https か、この PC の中だけを接続先として認める', () => {
         expect(cleanAiConfig({ provider: 'openai', baseUrl: 'http://evil.example.com/v1' })).toEqual({ provider: 'openai' })
-        expect(cleanAiConfig({ provider: 'openai', baseUrl: 'https://api.deepseek.com/v1/' })).toEqual({ provider: 'openai', baseUrl: 'https://api.deepseek.com/v1' })
+        expect(cleanAiConfig({ provider: 'openai', baseUrl: 'https://api.deepseek.com/v1/' })).toEqual({
+            provider: 'openai',
+            baseUrl: 'https://api.deepseek.com/v1',
+        })
         expect(cleanAiConfig({ provider: 'ollama', baseUrl: 'http://localhost:11434/v1' }).baseUrl).toBe('http://localhost:11434/v1')
         expect(cleanAiConfig({ provider: 'nope', model: 'x y' })).toEqual({ provider: 'anthropic' })
     })

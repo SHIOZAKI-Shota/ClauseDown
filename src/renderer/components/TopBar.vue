@@ -34,12 +34,9 @@ watch(
 )
 const savedAt = computed(() => (lastSaved.value ? fmtDate(lastSaved.value.timestamp, 'mdhm') : ''))
 const versionTitle = computed(() =>
-    lastSaved.value
-        ? `${app.currentBranch?.label ?? ''}：「${savedMessage.value}」（${lastSaved.value.author}・${savedAt.value}）`
-        : '',
+    lastSaved.value ? `${app.currentBranch?.label ?? ''}：「${savedMessage.value}」（${lastSaved.value.author}・${savedAt.value}）` : '',
 )
 const savedMessage = computed(() => (lastSaved.value ? firstLine(lastSaved.value.message) : ''))
-
 </script>
 
 <template>
@@ -62,20 +59,25 @@ const savedMessage = computed(() => (lastSaved.value ? firstLine(lastSaved.value
             </div>
         </template>
         <template v-if="docView" #right>
-            <UButton label="期日" icon="i-lucide-calendar-range" size="sm" color="neutral" variant="ghost" :title="app.dueCount?.due ? `期限切れ ${app.dueCount.overdue} 件・30 日以内 ${app.dueCount.due - app.dueCount.overdue} 件` : undefined"
-                @click="app.openSchedule()">
+            <UButton
+                label="期日"
+                icon="i-lucide-calendar-range"
+                size="sm"
+                color="neutral"
+                variant="ghost"
+                :title="app.dueCount?.due ? `期限切れ ${app.dueCount.overdue} 件・30 日以内 ${app.dueCount.due - app.dueCount.overdue} 件` : undefined"
+                @click="app.openSchedule()"
+            >
                 <template v-if="app.dueCount?.due" #trailing>
                     <UBadge :label="String(app.dueCount.due)" :color="app.dueCount.overdue ? 'error' : 'neutral'" variant="subtle" size="sm" />
                 </template>
             </UButton>
-            <UButton label="課題" icon="i-lucide-list-todo" size="sm" color="neutral" variant="ghost"
-                @click="app.openIssues()">
+            <UButton label="課題" icon="i-lucide-list-todo" size="sm" color="neutral" variant="ghost" @click="app.openIssues()">
                 <template v-if="app.openIssueCount" #trailing>
                     <UBadge :label="String(app.openIssueCount)" color="neutral" variant="subtle" size="sm" />
                 </template>
             </UButton>
-            <UButton label="リポジトリホーム" icon="i-lucide-layout-grid" size="sm" color="neutral" variant="ghost"
-                @click="app.goRepoHome()">
+            <UButton label="リポジトリホーム" icon="i-lucide-layout-grid" size="sm" color="neutral" variant="ghost" @click="app.goRepoHome()">
                 <template v-if="app.toReview.length" #trailing>
                     <UBadge :label="`確認待ち ${app.toReview.length}`" color="warning" variant="subtle" size="sm" />
                 </template>
@@ -123,11 +125,11 @@ const savedMessage = computed(() => (lastSaved.value ? firstLine(lastSaved.value
     color: var(--cd-draft);
 }
 
-.version>* {
+.version > * {
     flex-shrink: 0;
 }
 
-.version>.msg {
+.version > .msg {
     flex-shrink: 1;
     min-width: 0;
     overflow: hidden;
@@ -151,13 +153,13 @@ const savedMessage = computed(() => (lastSaved.value ? firstLine(lastSaved.value
     column-gap: 16px;
 }
 
-.cd-nav>[data-slot='center'] {
+.cd-nav > [data-slot='center'] {
     min-width: 0;
     justify-content: center;
     overflow: hidden;
 }
 
-.cd-nav>[data-slot='right'] {
+.cd-nav > [data-slot='right'] {
     justify-self: end;
 }
 </style>

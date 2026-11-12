@@ -48,9 +48,7 @@ const parseId = (base: string, branches: string): NumberId => ({
 })
 const idLabel = (a: NumberId) => `第${toKanji(a.base)}条${a.path.map((b) => `の${toKanji(b)}`).join('')}`
 
-const ARTICLE_RE = new RegExp(
-    `^第(${NUM})条((?:の${NUM})*)(?:(から|及び)第(${NUM})条((?:の${NUM})*)(?:まで)?)?[\\s　]*(?:（(.*)）)?[\\s　]*$`,
-)
+const ARTICLE_RE = new RegExp(`^第(${NUM})条((?:の${NUM})*)(?:(から|及び)第(${NUM})条((?:の${NUM})*)(?:まで)?)?[\\s　]*(?:（(.*)）)?[\\s　]*$`)
 const ITEM_NO_RE = new RegExp(`^(${NUM})((?:の${NUM})*)$`)
 const LABEL_RE = new RegExp(`^(?:${NUM}(?:の${NUM})*|[ァ-ヶ](?:の${NUM})*|[（(][^（）()]{1,6}[）)]|[①-⑳])$`)
 const CHAPTER_RE = new RegExp(`^第${NUM}(?:の${NUM})*章`)
@@ -111,8 +109,7 @@ function htmlTable(html: string): string[] {
             const rs = Math.max(1, Number(/rowspan="?(\d+)/i.exec(cell[2])?.[1] ?? 1))
             const cs = Math.max(1, Number(/colspan="?(\d+)/i.exec(cell[2])?.[1] ?? 1))
             const text = strip(cell[3])
-            for (let i = 0; i < rs; i++)
-                for (let j = 0; j < cs; j++) (grid[r + i] ??= [])[c + j] = i > 0 ? '^' : j < cs - 1 ? '>' : text
+            for (let i = 0; i < rs; i++) for (let j = 0; j < cs; j++) (grid[r + i] ??= [])[c + j] = i > 0 ? '^' : j < cs - 1 ? '>' : text
             c += cs
         }
         r++
@@ -379,5 +376,10 @@ export function toHouritsu(source: string): string {
             paragraphLines(a.paragraphs, doc, out, false)
         }
     }
-    return out.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd() + '\n'
+    return (
+        out
+            .join('\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trimEnd() + '\n'
+    )
 }

@@ -39,10 +39,7 @@ describe('numberedText', () => {
 describe('checkDoc', () => {
     it('参照先のない条参照と本文のない条を見つける', () => {
         const issues = checkDoc('# 規程\n\n### 目的\n- [[ない]]による。\n\n### 空の条\n')
-        expect(issues.map((i) => i.message)).toEqual([
-            expect.stringContaining('[[ない]]'),
-            expect.stringContaining('第2条に本文がありません'),
-        ])
+        expect(issues.map((i) => i.message)).toEqual([expect.stringContaining('[[ない]]'), expect.stringContaining('第2条に本文がありません')])
         expect(issues[0].line).toBe(4)
     })
     it('誤りがなければ空', () => {
@@ -65,7 +62,11 @@ describe('ai-tools', () => {
     })
 
     it('edit_doc は1回だけ現れる本文を置き換え、CRLF の文書も LF の指定で直せる', async () => {
-        await runTool('edit_doc', { repo: 'A社_規程', path: '就業規則.md', old_text: '試用期間は3か月とする。\n  - 正社員', new_text: '試用期間は2か月とする。\n  - 正社員' }, ctx)
+        await runTool(
+            'edit_doc',
+            { repo: 'A社_規程', path: '就業規則.md', old_text: '試用期間は3か月とする。\n  - 正社員', new_text: '試用期間は2か月とする。\n  - 正社員' },
+            ctx,
+        )
         const src = fs.readFileSync(join(dir, '就業規則.md'), 'utf8')
         expect(src).toContain('試用期間は2か月とする。\r\n  - 正社員')
         expect(ctx.changed).toHaveBeenCalledWith(dir, '就業規則.md')

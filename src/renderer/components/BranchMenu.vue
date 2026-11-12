@@ -41,11 +41,7 @@ const groups = computed(() => {
                 {
                     label: '期日',
                     icon: 'i-lucide-calendar-range',
-                    suffix: app.dueCount?.due
-                        ? app.dueCount.overdue
-                            ? `期限切れ ${app.dueCount.overdue}`
-                            : `30 日以内 ${app.dueCount.due}`
-                        : undefined,
+                    suffix: app.dueCount?.due ? (app.dueCount.overdue ? `期限切れ ${app.dueCount.overdue}` : `30 日以内 ${app.dueCount.due}`) : undefined,
                     onSelect: () => {
                         open.value = false
                         app.openSchedule()
@@ -62,15 +58,15 @@ const groups = computed(() => {
                 },
                 ...(app.onDraft && app.currentBranch
                     ? [
-                        {
-                            label: 'この改定案で解決する課題…',
-                            icon: 'i-lucide-list-checks',
-                            onSelect: () => {
-                                open.value = false
-                                linkDraft.value = { name: app.currentBranch!.name, label: app.currentBranch!.label }
-                            },
-                        },
-                    ]
+                          {
+                              label: 'この改定案で解決する課題…',
+                              icon: 'i-lucide-list-checks',
+                              onSelect: () => {
+                                  open.value = false
+                                  linkDraft.value = { name: app.currentBranch!.name, label: app.currentBranch!.label }
+                              },
+                          },
+                      ]
                     : []),
                 {
                     label: '新しい改定案',
@@ -89,8 +85,7 @@ const title = computed(() => `作業中の案：${app.currentBranch?.label ?? ''
 
 <template>
     <UPopover v-model:open="open" :content="{ align: 'start', side: 'bottom' }">
-        <button class="cd-crumb-btn branch" :class="{ draft: app.onDraft, open }" :title="title"
-            aria-label="作業中の案を切り替える">
+        <button class="cd-crumb-btn branch" :class="{ draft: app.onDraft, open }" :title="title" aria-label="作業中の案を切り替える">
             <UIcon :name="app.onDraft ? 'i-lucide-file-pen-line' : 'i-lucide-book-check'" class="ci" />
             <span v-if="app.onDraft" class="tag">案</span>
             <span class="nm">{{ app.currentBranch?.label }}</span>
@@ -100,8 +95,7 @@ const title = computed(() => `作業中の案：${app.currentBranch?.label ?? ''
             <UCommandPalette :groups="groups" placeholder="改定案を検索" class="palette" />
         </template>
     </UPopover>
-    <IssueLinkModal v-if="linkDraft" :branch="linkDraft.name" :branch-label="linkDraft.label"
-        @close="linkDraft = null" />
+    <IssueLinkModal v-if="linkDraft" :branch="linkDraft.name" :branch-label="linkDraft.label" @close="linkDraft = null" />
 </template>
 
 <style scoped>

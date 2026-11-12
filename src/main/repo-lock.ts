@@ -16,8 +16,8 @@ export function withRepoLock<T>(dir: string, fn: () => Promise<T>): Promise<T> {
     const prev = tails.get(key) ?? Promise.resolve()
     const run = prev.then(() => held.run(new Set([...(mine ?? []), key]), fn))
     const tail = run.then(
-        () => { },
-        () => { },
+        () => {},
+        () => {},
     )
     tails.set(key, tail)
     void tail.then(() => {

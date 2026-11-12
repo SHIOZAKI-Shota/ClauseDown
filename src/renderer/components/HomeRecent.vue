@@ -57,13 +57,10 @@ function openAt(path: string, oid: string) {
                         <div class="msg">
                             <IssueText :text="firstLine(r.message)" />
                         </div>
-                        <div class="cd-muted meta">
-                            {{ r.author }}・<span :title="fmtDate(r.timestamp, 'ymdhm')">{{ hm(r.timestamp) }}</span>
-                        </div>
+                        <div class="cd-muted meta">{{ r.author }}・<span :title="fmtDate(r.timestamp, 'ymdhm')">{{ hm(r.timestamp) }}</span></div>
                         <div v-if="r.paths.length" class="docs">
                             <template v-for="p in r.paths.slice(0, 4)" :key="p">
-                                <button v-if="exists(p)" class="cd-chip" :title="`${p} の改定履歴を開く`"
-                                    @click="openAt(p, r.oid)">{{ titleOf(p) }}</button>
+                                <button v-if="exists(p)" class="cd-chip" :title="`${p} の改定履歴を開く`" @click="openAt(p, r.oid)">{{ titleOf(p) }}</button>
                                 <span v-else class="cd-chip gone" :title="`${p}（今はありません）`">{{ titleOf(p) }}</span>
                             </template>
                             <span v-if="r.paths.length > 4" class="cd-muted more">ほか {{ r.paths.length - 4 }}</span>
@@ -91,7 +88,7 @@ function openAt(path: string, oid: string) {
     margin: 0;
 }
 
-.day+.day {
+.day + .day {
     margin-top: 8px;
 }
 

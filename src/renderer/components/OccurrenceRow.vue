@@ -22,8 +22,7 @@ const when = computed(() => {
 </script>
 
 <template>
-    <ListRow as="div" :active="active" :dim="o.done" class="occ" :class="{ overdue: o.overdue }"
-        @click="$emit('click')">
+    <ListRow as="div" :active="active" :dim="o.done" class="occ" :class="{ overdue: o.overdue }" @click="$emit('click')">
         <template #lead>
             <DateTile :date="o.date" :fade-past="!o.overdue" />
         </template>
@@ -38,8 +37,7 @@ const when = computed(() => {
         <template #trail>
             <slot name="trail" />
             <UTooltip v-if="o.task && o.source === 'event'" :text="o.done ? '済みを取り消す' : '済みにする'">
-                <UCheckbox :model-value="o.done" :aria-label="o.done ? '済みを取り消す' : '済みにする'" @click.stop
-                    @update:model-value="$emit('toggle')" />
+                <UCheckbox :model-value="o.done" :aria-label="o.done ? '済みを取り消す' : '済みにする'" @click.stop @update:model-value="$emit('toggle')" />
             </UTooltip>
         </template>
     </ListRow>

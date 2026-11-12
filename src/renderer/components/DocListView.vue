@@ -70,10 +70,7 @@ watch(tree, (t) => {
 const current = computed(() => findFolder(tree.value, cwd.value) ?? tree.value)
 const crumbs = computed(() => {
     const parts = cwd.value ? cwd.value.split('/') : []
-    return [
-        { path: '', name: app.repo?.name ?? 'リポジトリ' },
-        ...parts.map((name, i) => ({ path: parts.slice(0, i + 1).join('/'), name })),
-    ]
+    return [{ path: '', name: app.repo?.name ?? 'リポジトリ' }, ...parts.map((name, i) => ({ path: parts.slice(0, i + 1).join('/'), name }))]
 })
 const goUp = () => (cwd.value = cwd.value.includes('/') ? cwd.value.slice(0, cwd.value.lastIndexOf('/')) : '')
 
@@ -140,9 +137,7 @@ const allNodes = computed(() => {
     walk(tree.value)
     return out
 })
-const folders = computed<FolderNode[]>(() =>
-    searching.value ? allNodes.value.filter((n) => matches(n.path)) : current.value.children,
-)
+const folders = computed<FolderNode[]>(() => (searching.value ? allNodes.value.filter((n) => matches(n.path)) : current.value.children))
 const docs = computed(() => {
     const list = searching.value
         ? app.docs.filter((d) => matches(`${d.title} ${d.path}`))
@@ -197,8 +192,14 @@ const VIEWS = [
                 <HomeSummary />
             </div>
             <span class="cd-grow" />
-            <UButton label="期日" icon="i-lucide-calendar-range" color="neutral" variant="outline" :title="app.dueCount?.due ? `期限切れ ${app.dueCount.overdue} 件・30 日以内 ${app.dueCount.due - app.dueCount.overdue} 件` : undefined"
-                @click="app.openSchedule()">
+            <UButton
+                label="期日"
+                icon="i-lucide-calendar-range"
+                color="neutral"
+                variant="outline"
+                :title="app.dueCount?.due ? `期限切れ ${app.dueCount.overdue} 件・30 日以内 ${app.dueCount.due - app.dueCount.overdue} 件` : undefined"
+                @click="app.openSchedule()"
+            >
                 <template v-if="app.dueCount?.due" #trailing>
                     <UBadge :label="String(app.dueCount.due)" :color="app.dueCount.overdue ? 'error' : 'neutral'" variant="subtle" size="sm" />
                 </template>
@@ -220,15 +221,28 @@ const VIEWS = [
 
             <div class="docs-pane">
                 <div class="docs-head">
-                    <UButton icon="i-lucide-arrow-up" size="sm" color="neutral" variant="ghost" square
-                        aria-label="上のディレクトリへ" :disabled="!cwd || searching" @click="goUp" />
+                    <UButton
+                        icon="i-lucide-arrow-up"
+                        size="sm"
+                        color="neutral"
+                        variant="ghost"
+                        square
+                        aria-label="上のディレクトリへ"
+                        :disabled="!cwd || searching"
+                        @click="goUp"
+                    />
                     <nav class="crumbs" aria-label="今いるディレクトリ">
                         <template v-for="(c, i) in crumbs" :key="c.path">
                             <UIcon v-if="i > 0" name="i-lucide-chevron-right" class="sep" />
-                            <button class="crumb"
+                            <button
+                                class="crumb"
                                 :class="{ on: c.path === cwd && !searching, drop: dropFolder === c.path }"
-                                :data-folder="c.path" @click="cwd = c.path" @dragover="onDragOver(c.path, $event)"
-                                @dragleave="onDragLeave(c.path)" @drop="onDrop(c.path, $event)">
+                                :data-folder="c.path"
+                                @click="cwd = c.path"
+                                @dragover="onDragOver(c.path, $event)"
+                                @dragleave="onDragLeave(c.path)"
+                                @drop="onDrop(c.path, $event)"
+                            >
                                 <UIcon v-if="i === 0" name="i-lucide-archive" />{{ c.name }}
                             </button>
                         </template>
@@ -243,13 +257,18 @@ const VIEWS = [
                     </span>
                     <USwitch v-if="!searching" v-model="recursive" size="sm" label="サブディレクトリの文書も表示" class="rec" />
                     <span class="cd-grow" />
-                    <USelect v-if="viewMode !== 'table'" v-model="sortSelect" size="sm" class="sort"
-                        :items="sortItems" />
+                    <USelect v-if="viewMode !== 'table'" v-model="sortSelect" size="sm" class="sort" :items="sortItems" />
                     <SegmentSwitch v-model="viewMode" aria-label="表示のしかた" :items="VIEWS" />
                     <UTooltip v-if="viewMode === 'cards'" :text="showPreview ? 'カードのプレビューを消す' : 'カードにプレビューを出す'">
-                        <UButton icon="i-lucide-image" square size="sm" :color="showPreview ? 'primary' : 'neutral'"
-                            :variant="showPreview ? 'soft' : 'outline'" aria-label="カードにプレビュー"
-                            @click="showPreview = !showPreview" />
+                        <UButton
+                            icon="i-lucide-image"
+                            square
+                            size="sm"
+                            :color="showPreview ? 'primary' : 'neutral'"
+                            :variant="showPreview ? 'soft' : 'outline'"
+                            aria-label="カードにプレビュー"
+                            @click="showPreview = !showPreview"
+                        />
                     </UTooltip>
                 </div>
 
@@ -263,29 +282,51 @@ const VIEWS = [
                         <table v-if="viewMode === 'table' && (folders.length || docs.length)" class="table">
                             <thead>
                                 <tr>
-                                    <th><button class="th" @click="sortBy('name')">名前
+                                    <th>
+                                        <button class="th" @click="sortBy('name')">
+                                            名前
                                             <UIcon v-if="sortIcon('name')" :name="sortIcon('name')" />
-                                        </button></th>
-                                    <th class="num"><button class="th" @click="sortBy('articles')">条
+                                        </button>
+                                    </th>
+                                    <th class="num">
+                                        <button class="th" @click="sortBy('articles')">
+                                            条
                                             <UIcon v-if="sortIcon('articles')" :name="sortIcon('articles')" />
-                                        </button></th>
-                                    <th><button class="th" @click="sortBy('effective')">施行中
+                                        </button>
+                                    </th>
+                                    <th>
+                                        <button class="th" @click="sortBy('effective')">
+                                            施行中
                                             <UIcon v-if="sortIcon('effective')" :name="sortIcon('effective')" />
-                                        </button></th>
-                                    <th><button class="th" @click="sortBy('next')">次の施行
+                                        </button>
+                                    </th>
+                                    <th>
+                                        <button class="th" @click="sortBy('next')">
+                                            次の施行
                                             <UIcon v-if="sortIcon('next')" :name="sortIcon('next')" />
-                                        </button></th>
-                                    <th><button class="th" @click="sortBy('updated')">最終更新
+                                        </button>
+                                    </th>
+                                    <th>
+                                        <button class="th" @click="sortBy('updated')">
+                                            最終更新
                                             <UIcon v-if="sortIcon('updated')" :name="sortIcon('updated')" />
-                                        </button></th>
+                                        </button>
+                                    </th>
                                     <th>状態</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="f in folders" :key="`f:${f.path}`" class="frow"
-                                    :class="{ drop: dropFolder === f.path }" :data-folder="f.path" @click="cwd = f.path"
-                                    @dragover="onDragOver(f.path, $event)" @dragleave="onDragLeave(f.path)"
-                                    @drop="onDrop(f.path, $event)">
+                                <tr
+                                    v-for="f in folders"
+                                    :key="`f:${f.path}`"
+                                    class="frow"
+                                    :class="{ drop: dropFolder === f.path }"
+                                    :data-folder="f.path"
+                                    @click="cwd = f.path"
+                                    @dragover="onDragOver(f.path, $event)"
+                                    @dragleave="onDragLeave(f.path)"
+                                    @drop="onDrop(f.path, $event)"
+                                >
                                     <td colspan="6">
                                         <div class="name">
                                             <UIcon name="i-lucide-folder" class="ficon folder" />
@@ -294,25 +335,30 @@ const VIEWS = [
                                         </div>
                                     </td>
                                 </tr>
-                                <tr v-for="d in docs" :key="d.path" :data-path="d.path" draggable="true"
-                                    :class="{ dragging: dragging?.path === d.path }" @click="app.openDoc(d.path)"
-                                    @dragstart="onDragStart(d, $event)" @dragend="onDragEnd">
+                                <tr
+                                    v-for="d in docs"
+                                    :key="d.path"
+                                    :data-path="d.path"
+                                    draggable="true"
+                                    :class="{ dragging: dragging?.path === d.path }"
+                                    @click="app.openDoc(d.path)"
+                                    @dragstart="onDragStart(d, $event)"
+                                    @dragend="onDragEnd"
+                                >
                                     <td>
                                         <div class="name">
                                             <UIcon name="i-lucide-file-text" class="ficon" />
                                             <div class="min">
                                                 <div class="t">{{ d.title }}</div>
-                                                <div class="cd-muted path">{{ showPath ? relPath(d) :
-                                                    d.path.split('/').pop() }}
-                                                </div>
+                                                <div class="cd-muted path">{{ showPath ? relPath(d) : d.path.split('/').pop() }}</div>
                                             </div>
                                         </div>
                                     </td>
                                     <td class="num">{{ info(d)?.articles ?? '' }}</td>
-                                    <td>{{ effectiveOf(d).current ? fmtDate(effectiveOf(d).current!, 'ymd') : '—' }}
-                                    </td>
+                                    <td>{{ effectiveOf(d).current ? fmtDate(effectiveOf(d).current!, 'ymd') : '—' }}</td>
                                     <td :class="{ next: effectiveOf(d).next }">
-                                        {{ effectiveOf(d).next ? fmtDate(effectiveOf(d).next!, 'ymd') : '—' }}</td>
+                                        {{ effectiveOf(d).next ? fmtDate(effectiveOf(d).next!, 'ymd') : '—' }}
+                                    </td>
                                     <td>
                                         <span v-if="info(d)?.timestamp" :title="fmtDate(info(d)!.timestamp!, 'ymdhm')">
                                             {{ info(d)!.author }}・{{ relTime(info(d)!.timestamp!) }}
@@ -320,8 +366,7 @@ const VIEWS = [
                                         <span v-else class="cd-muted">まだ版なし</span>
                                     </td>
                                     <td>
-                                        <UBadge v-if="d.changed" label="未保存の変更" color="warning" variant="subtle"
-                                            size="sm" />
+                                        <UBadge v-if="d.changed" label="未保存の変更" color="warning" variant="subtle" size="sm" />
                                     </td>
                                 </tr>
                             </tbody>
@@ -329,76 +374,91 @@ const VIEWS = [
 
                         <template v-else>
                             <div v-if="folders.length" class="ftiles">
-                                <button v-for="f in folders" :key="f.path" class="ftile"
-                                    :class="{ drop: dropFolder === f.path }" :data-folder="f.path" @click="cwd = f.path"
-                                    @dragover="onDragOver(f.path, $event)" @dragleave="onDragLeave(f.path)"
-                                    @drop="onDrop(f.path, $event)">
+                                <button
+                                    v-for="f in folders"
+                                    :key="f.path"
+                                    class="ftile"
+                                    :class="{ drop: dropFolder === f.path }"
+                                    :data-folder="f.path"
+                                    @click="cwd = f.path"
+                                    @dragover="onDragOver(f.path, $event)"
+                                    @dragleave="onDragLeave(f.path)"
+                                    @drop="onDrop(f.path, $event)"
+                                >
                                     <UIcon name="i-lucide-folder" class="ficon folder" />
                                     <span class="min">
                                         <span class="t">{{ searching ? f.path : f.name }}</span>
-                                        <span class="muted">{{ f.count }} 文書<template v-if="f.children.length">・ディレクトリ
-                                                {{ f.children.length }}</template></span>
+                                        <span class="muted"
+                                            >{{ f.count }} 文書<template v-if="f.children.length">・ディレクトリ {{ f.children.length }}</template></span
+                                        >
                                     </span>
                                 </button>
                             </div>
 
                             <div v-if="viewMode === 'list' && docs.length" class="list">
-                                <button v-for="d in docs" :key="d.path" class="item"
-                                    :class="{ dragging: dragging?.path === d.path }" :data-path="d.path"
-                                    draggable="true" @click="app.openDoc(d.path)" @dragstart="onDragStart(d, $event)"
-                                    @dragend="onDragEnd">
+                                <button
+                                    v-for="d in docs"
+                                    :key="d.path"
+                                    class="item"
+                                    :class="{ dragging: dragging?.path === d.path }"
+                                    :data-path="d.path"
+                                    draggable="true"
+                                    @click="app.openDoc(d.path)"
+                                    @dragstart="onDragStart(d, $event)"
+                                    @dragend="onDragEnd"
+                                >
                                     <UIcon name="i-lucide-file-text" class="ficon" />
                                     <span class="min">
                                         <span class="t">{{ d.title }}</span>
-                                        <span class="cd-muted path">{{ showPath ? relPath(d) : d.path.split('/').pop()
-                                            }}</span>
+                                        <span class="cd-muted path">{{ showPath ? relPath(d) : d.path.split('/').pop() }}</span>
                                     </span>
-                                    <UIcon v-if="d.changed" name="i-lucide-circle-dot" class="dot"
-                                        title="版を保存していない変更があります" />
+                                    <UIcon v-if="d.changed" name="i-lucide-circle-dot" class="dot" title="版を保存していない変更があります" />
                                 </button>
                             </div>
 
                             <div v-else-if="docs.length" class="grid">
-                                <UCard v-for="d in docs" :key="d.path" class="doc"
+                                <UCard
+                                    v-for="d in docs"
+                                    :key="d.path"
+                                    class="doc"
                                     :class="{ 'has-preview': showPreview, dragging: dragging?.path === d.path }"
-                                    :ui="{ body: 'p-0 sm:p-0' }" :data-path="d.path" draggable="true"
-                                    @click="app.openDoc(d.path)" @dragstart="onDragStart(d, $event)"
-                                    @dragend="onDragEnd">
+                                    :ui="{ body: 'p-0 sm:p-0' }"
+                                    :data-path="d.path"
+                                    draggable="true"
+                                    @click="app.openDoc(d.path)"
+                                    @dragstart="onDragStart(d, $event)"
+                                    @dragend="onDragEnd"
+                                >
                                     <div v-if="showPreview" class="preview">
                                         <DocThumb :path="d.path" />
-                                        <UBadge v-if="d.changed" label="未保存の変更" color="warning" variant="solid"
-                                            size="sm" class="flag" />
+                                        <UBadge v-if="d.changed" label="未保存の変更" color="warning" variant="solid" size="sm" class="flag" />
                                     </div>
                                     <div class="info">
                                         <div class="t">{{ d.title }}</div>
-                                        <div class="cd-muted path">{{ showPath ? relPath(d) : d.path.split('/').pop() }}
-                                        </div>
+                                        <div class="cd-muted path">{{ showPath ? relPath(d) : d.path.split('/').pop() }}</div>
                                         <div class="stats">
-                                            <span v-if="info(d)">
-                                                <UIcon name="i-lucide-list-ordered" />{{ info(d)!.articles }} 条
+                                            <span v-if="info(d)"> <UIcon name="i-lucide-list-ordered" />{{ info(d)!.articles }} 条 </span>
+                                            <span v-if="effectiveOf(d).current" :title="`施行中の版：${effectiveOf(d).current} 施行`">
+                                                <UIcon name="i-lucide-badge-check" />{{ fmtDate(effectiveOf(d).current!, 'ymd') }} 施行
                                             </span>
-                                            <span v-if="effectiveOf(d).current"
-                                                :title="`施行中の版：${effectiveOf(d).current} 施行`">
-                                                <UIcon name="i-lucide-badge-check" />{{ fmtDate(effectiveOf(d).current!,
-                                                'ymd') }} 施行
-                                            </span>
-                                            <span v-if="effectiveOf(d).next" class="next"
-                                                :title="`次の施行日：${effectiveOf(d).next}`">
-                                                <UIcon name="i-lucide-calendar-clock" />{{ fmtDate(effectiveOf(d).next!,
-                                                'ymd') }} 予定
+                                            <span v-if="effectiveOf(d).next" class="next" :title="`次の施行日：${effectiveOf(d).next}`">
+                                                <UIcon name="i-lucide-calendar-clock" />{{ fmtDate(effectiveOf(d).next!, 'ymd') }} 予定
                                             </span>
                                         </div>
                                         <div class="foot">
-                                            <UBadge v-if="d.changed && !showPreview" label="未保存の変更" color="warning"
-                                                variant="subtle" size="sm" />
-                                            <span v-else-if="info(d)?.timestamp" class="cd-muted updated"
-                                                :title="fmtDate(info(d)!.timestamp!, 'ymdhm')">{{ info(d)!.author }}・{{
-                                                relTime(info(d)!.timestamp!) }}</span>
+                                            <UBadge v-if="d.changed && !showPreview" label="未保存の変更" color="warning" variant="subtle" size="sm" />
+                                            <span v-else-if="info(d)?.timestamp" class="cd-muted updated" :title="fmtDate(info(d)!.timestamp!, 'ymdhm')"
+                                                >{{ info(d)!.author }}・{{ relTime(info(d)!.timestamp!) }}</span
+                                            >
                                             <span class="cd-grow" />
-                                            <UButton label="改定履歴" size="xs" color="neutral" variant="ghost"
-                                                @click.stop="app.openDoc(d.path, 'history')" />
-                                            <UButton label="期日・納品" size="xs" color="neutral" variant="ghost"
-                                                @click.stop="app.openDoc(d.path, 'releases')" />
+                                            <UButton label="改定履歴" size="xs" color="neutral" variant="ghost" @click.stop="app.openDoc(d.path, 'history')" />
+                                            <UButton
+                                                label="期日・納品"
+                                                size="xs"
+                                                color="neutral"
+                                                variant="ghost"
+                                                @click.stop="app.openDoc(d.path, 'releases')"
+                                            />
                                         </div>
                                     </div>
                                 </UCard>

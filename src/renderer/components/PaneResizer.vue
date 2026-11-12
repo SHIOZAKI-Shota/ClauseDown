@@ -19,7 +19,7 @@ function down(e: PointerEvent) {
     startX = e.clientX
     startW = widthNow()
     dragging.value = true
-        ; (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
     document.body.classList.add('cd-resizing')
 }
 function move(e: PointerEvent) {
@@ -49,9 +49,21 @@ function key(e: KeyboardEvent) {
 </script>
 
 <template>
-    <div class="cd-resizer" :class="{ dragging }" role="separator" aria-orientation="vertical" tabindex="0"
-        :aria-label="`${label}の幅を変える`" :title="`ドラッグで${label}の幅を変更（ダブルクリックで元の幅）`" @pointerdown="down"
-        @pointermove="move" @pointerup="up" @pointercancel="up" @dblclick="pane.reset()" @keydown="key" />
+    <div
+        class="cd-resizer"
+        :class="{ dragging }"
+        role="separator"
+        aria-orientation="vertical"
+        tabindex="0"
+        :aria-label="`${label}の幅を変える`"
+        :title="`ドラッグで${label}の幅を変更（ダブルクリックで元の幅）`"
+        @pointerdown="down"
+        @pointermove="move"
+        @pointerup="up"
+        @pointercancel="up"
+        @dblclick="pane.reset()"
+        @keydown="key"
+    />
 </template>
 
 <style scoped>
@@ -72,7 +84,9 @@ function key(e: KeyboardEvent) {
     bottom: 0;
     left: 3px;
     width: 1px;
-    transition: background-color 0.15s, box-shadow 0.15s;
+    transition:
+        background-color 0.15s,
+        box-shadow 0.15s;
 }
 
 .cd-resizer:hover::after,

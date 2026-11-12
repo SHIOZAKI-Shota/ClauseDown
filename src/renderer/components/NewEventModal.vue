@@ -20,7 +20,11 @@ async function save(input: DueEventInput) {
 </script>
 
 <template>
-    <DueEventModal v-if="kinds" :kinds="kinds"
-        :initial="{ docPath: props.docPath ?? app.currentPath ?? '', date: props.date }" @close="emit('close')"
-        @save="save" />
+    <DueEventModal
+        v-if="kinds"
+        :kinds="kinds"
+        :initial="{ docPath: props.docPath ?? app.currentPath ?? '', date: props.date }"
+        @close="emit('close')"
+        @save="save"
+    />
 </template>

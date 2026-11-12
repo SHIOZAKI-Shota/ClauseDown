@@ -4,6 +4,11 @@ export const AUTHOR = {
     url: 'https://shiozakishota.com',
 } as const
 
+export const PROJECT = {
+    repo: 'https://github.com/SHIOZAKI-Shota/ClauseDown',
+    manual: 'https://shiozaki-shota.github.io/ClauseDown/docs/manual/',
+} as const
+
 export const GITHUB_APP = {
     clientId: 'Iv23liL1XTDcvEkXRTXl',
     installUrl: 'https://github.com/apps/clausedown/installations/new',

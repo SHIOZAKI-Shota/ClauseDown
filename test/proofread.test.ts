@@ -54,6 +54,13 @@ describe('校閲', () => {
         expect((await proofread(src, { rules: { 'ja-no-redundant-expression': true } })).map((i) => i.rule)).toContain('冗長な表現')
     }, 60_000)
 
+    it('半角カナ：場所と全角の書き方を示し、リンクの中は見ない', async () => {
+        const src = '- 甲はｶﾞｲﾄﾞに従う。\n- [ｻﾝﾌﾟﾙ](https://example.com) を見る。\n'
+        const hits = (await proofread(src)).filter((i) => i.rule === '半角カナ')
+        expect(hits.map((i) => src.slice(i.from, i.to))).toEqual(['ｶﾞｲﾄﾞ'])
+        expect(hits[0].message).toContain('「ガイド」')
+    }, 60_000)
+
     it('組み込みの辞書に、ほかの辞書を足せる', async () => {
         const src = '- 子供に配る。\n'
         expect(await proofread(src)).toEqual([])
@@ -68,7 +75,8 @@ describe('校閲', () => {
     }, 60_000)
 
     it('法令の送り仮名：名詞のときだけ指摘し、動詞の連用形は指摘しない', async () => {
-        const src = '- 取り消しの請求は、手続きに従う。\n- 甲は、これを取り消し、乙に通知する。\n- 代金を払い渡し又は供託する。\n- 支払いを受ける。\n- 届け出る。届け出をする。\n'
+        const src =
+            '- 取り消しの請求は、手続きに従う。\n- 甲は、これを取り消し、乙に通知する。\n- 代金を払い渡し又は供託する。\n- 支払いを受ける。\n- 届け出る。届け出をする。\n'
         const hits = (await proofread(src)).filter((i) => i.rule === '法令の送り仮名').map((i) => src.slice(i.from, i.to))
         expect(hits).toEqual(['取り消し', '手続き', '支払い', '届け出'])
     }, 60_000)

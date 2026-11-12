@@ -6,7 +6,8 @@ export const styleFileOf = (folder: string) => (folder ? `${APP_DIR}/styles/${fo
 
 export type StyleOverride = Partial<DocStyle>
 export type StyleLayers = Record<string, StyleOverride>
-export type StyleSource = 'app' | string
+// 'app'（アプリの設定）か、設定を持つディレクトリのパス
+export type StyleSource = string
 
 export const STYLE_KEYS = Object.keys(DEFAULT_STYLE) as (keyof DocStyle)[]
 
@@ -40,7 +41,7 @@ function resolveChain(base: DocStyle, layers: StyleLayers, chain: string[]): Res
         if (!layer) continue
         for (const k of STYLE_KEYS) {
             if (layer[k] === undefined) continue
-                ; (style as Record<string, unknown>)[k] = layer[k]
+            ;(style as Record<string, unknown>)[k] = layer[k]
             from[k] = folder
         }
     }
@@ -52,7 +53,11 @@ export function resolveStyle(base: DocStyle, layers: StyleLayers, docPath: strin
 }
 
 export function inheritedStyle(base: DocStyle, layers: StyleLayers, folder: string): ResolvedStyle {
-    return resolveChain(base, layers, folderChain(folder, true).filter((f) => f !== folder))
+    return resolveChain(
+        base,
+        layers,
+        folderChain(folder, true).filter((f) => f !== folder),
+    )
 }
 
 export function sourceLabel(src: StyleSource): string {

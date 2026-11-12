@@ -87,8 +87,7 @@ const timeOf = (e: ReviewEvent) => {
     return Number.isNaN(t) ? 0 : t
 }
 
-const byTime = (a: ReviewEvent, b: ReviewEvent) =>
-    timeOf(a) - timeOf(b) || Number(b.action === 'request') - Number(a.action === 'request')
+const byTime = (a: ReviewEvent, b: ReviewEvent) => timeOf(a) - timeOf(b) || Number(b.action === 'request') - Number(a.action === 'request')
 
 export function reviewStatus(all: ReviewEvent[], branch: string, tipOid: string, rules: RepoRules): ReviewStatus {
     const events = all.filter((e) => e.branch === branch).sort(byTime)
@@ -119,10 +118,10 @@ export function reviewStatus(all: ReviewEvent[], branch: string, tipOid: string,
             state === 'none'
                 ? 'このリポジトリでは、現行版に反映する前に確認と承認が必要です。「確認を依頼」してください'
                 : state === 'outdated'
-                    ? '承認したあとで改定案が変更されています。もう一度承認を受けてください'
-                    : state === 'changes'
-                        ? '修正の依頼が出ています。直して再度確認を依頼してください'
-                        : 'まだ承認されていません'
+                  ? '承認したあとで改定案が変更されています。もう一度承認を受けてください'
+                  : state === 'changes'
+                    ? '修正の依頼が出ています。直して再度確認を依頼してください'
+                    : 'まだ承認されていません'
     }
     return status
 }

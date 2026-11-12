@@ -77,7 +77,10 @@ describe('MCP サーバー', () => {
         expect(fromBrowser.status).toBe(403)
         const http = await import('node:http')
         const status = await new Promise<number>((done) => {
-            const req = http.request({ host: '127.0.0.1', port: PORT, path: '/mcp', method: 'POST', headers: { ...headers, Host: `evil.example:${PORT}` } }, (res) => done(res.statusCode ?? 0))
+            const req = http.request(
+                { host: '127.0.0.1', port: PORT, path: '/mcp', method: 'POST', headers: { ...headers, Host: `evil.example:${PORT}` } },
+                (res) => done(res.statusCode ?? 0),
+            )
             req.end(body)
         })
         expect(status).toBe(403)
@@ -132,7 +135,12 @@ describe.skipIf(process.platform === 'win32')('Claude Desktop 用の通訳（ソ
 
     it('トークンなしで、stdio から道具を呼べる。通知には何も返さない', async () => {
         const b = bridge(sock)
-        b.send({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 't', version: '1' } } })
+        b.send({
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'initialize',
+            params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 't', version: '1' } },
+        })
         expect((await b.next()).result.serverInfo.name).toBe('clausedown')
         b.send({ jsonrpc: '2.0', method: 'notifications/initialized' })
         b.send({ jsonrpc: '2.0', id: 'two', method: 'tools/list' })

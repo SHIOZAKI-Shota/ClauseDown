@@ -28,7 +28,8 @@ let app: ElectronApplication
 let win: Page
 const errors: string[] = []
 
-const store = (code: string) => win.evaluate(`(() => { const s = document.querySelector('#__nuxt').__vue_app__.config.globalProperties.$pinia._s.get('app'); ${code} })()`)
+const store = (code: string) =>
+    win.evaluate(`(() => { const s = document.querySelector('#__nuxt').__vue_app__.config.globalProperties.$pinia._s.get('app'); ${code} })()`)
 const seen = (text: string) => win.getByText(text).filter({ visible: true }).first().waitFor()
 
 beforeAll(async () => {
@@ -66,7 +67,7 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-    await app?.close().catch(() => { })
+    await app?.close().catch(() => {})
     if (tmp) fs.rmSync(tmp, { recursive: true, force: true })
 })
 

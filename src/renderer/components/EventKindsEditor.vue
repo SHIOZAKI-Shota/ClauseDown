@@ -31,11 +31,7 @@ const save = useDebounced(async () => {
 watch(kinds, save, { deep: true })
 
 const COLORS = (Object.keys(KIND_COLORS) as KindColor[]).map((c) => ({ value: c, label: COLOR_LABEL[c] }))
-const REMIND = [
-    { label: '知らせない', value: -1 },
-    { label: '当日', value: 0 },
-    ...[1, 3, 7, 14, 30, 60, 90].map((n) => ({ label: `${n} 日前`, value: n })),
-]
+const REMIND = [{ label: '知らせない', value: -1 }, { label: '当日', value: 0 }, ...[1, 3, 7, 14, 30, 60, 90].map((n) => ({ label: `${n} 日前`, value: n }))]
 function add() {
     const unused = COLORS.find((c) => !kinds.value.some((k) => k.color === c.value))?.value ?? 'slate'
     kinds.value.push({ id: `k-${Date.now().toString(36)}`, label: '', color: unused, task: true, remind: 7 })
@@ -66,9 +62,18 @@ const removeTip = (k: EventKind) =>
         </div>
         <div v-for="(k, i) in kinds" :key="k.id" class="row">
             <UDropdownMenu
-                :items="COLORS.map((c) => ({ label: c.label, onSelect: () => { k.color = c.value }, slot: 'color' as const, hue: c.value }))">
-                <button class="swatch c-color" :style="{ '--k': KIND_COLORS[k.color] }"
-                    :aria-label="`色：${COLOR_LABEL[k.color]}`" />
+                :items="
+                    COLORS.map((c) => ({
+                        label: c.label,
+                        onSelect: () => {
+                            k.color = c.value
+                        },
+                        slot: 'color' as const,
+                        hue: c.value,
+                    }))
+                "
+            >
+                <button class="swatch c-color" :style="{ '--k': KIND_COLORS[k.color] }" :aria-label="`色：${COLOR_LABEL[k.color]}`" />
                 <template #color-leading="{ item }">
                     <span class="dot" :style="{ '--k': KIND_COLORS[(item as { hue: KindColor }).hue] }" />
                 </template>
@@ -77,20 +82,43 @@ const removeTip = (k: EventKind) =>
             <USwitch v-model="k.task" class="c-task" :aria-label="`${k.label}を「済みにする」種類にする`" />
             <USelect v-model="k.remind" :items="REMIND" size="sm" class="c-remind" />
             <div class="ops">
-                <UButton icon="i-lucide-chevron-up" size="xs" square color="neutral" variant="ghost" aria-label="上へ"
-                    :disabled="i === 0" @click="move(i, -1)" />
-                <UButton icon="i-lucide-chevron-down" size="xs" square color="neutral" variant="ghost" aria-label="下へ"
-                    :disabled="i === kinds.length - 1" @click="move(i, 1)" />
+                <UButton
+                    icon="i-lucide-chevron-up"
+                    size="xs"
+                    square
+                    color="neutral"
+                    variant="ghost"
+                    aria-label="上へ"
+                    :disabled="i === 0"
+                    @click="move(i, -1)"
+                />
+                <UButton
+                    icon="i-lucide-chevron-down"
+                    size="xs"
+                    square
+                    color="neutral"
+                    variant="ghost"
+                    aria-label="下へ"
+                    :disabled="i === kinds.length - 1"
+                    @click="move(i, 1)"
+                />
                 <UTooltip :text="removeTip(k)">
-                    <UButton icon="i-lucide-trash-2" size="xs" square :color="removable(k) ? 'error' : 'neutral'"
-                        variant="ghost" aria-label="消す" :disabled="!removable(k)" @click="remove(i)" />
+                    <UButton
+                        icon="i-lucide-trash-2"
+                        size="xs"
+                        square
+                        :color="removable(k) ? 'error' : 'neutral'"
+                        variant="ghost"
+                        aria-label="消す"
+                        :disabled="!removable(k)"
+                        @click="remove(i)"
+                    />
                 </UTooltip>
             </div>
         </div>
         <div class="foot">
             <UButton label="種類を足す" icon="i-lucide-plus" size="sm" color="neutral" variant="outline" @click="add" />
-            <UButton label="既定の種類を戻す" icon="i-lucide-rotate-ccw" size="sm" color="neutral" variant="ghost"
-                @click="resetDefaults" />
+            <UButton label="既定の種類を戻す" icon="i-lucide-rotate-ccw" size="sm" color="neutral" variant="ghost" @click="resetDefaults" />
         </div>
         <p class="cd-muted note">
             「済みにする」をオンにした種類（提出・届出など）は、済みにするまで残り、期限を過ぎると「期限切れ」と表示します。

@@ -43,21 +43,23 @@ async function discard() {
 <template>
     <div v-if="app.onDraft && app.currentBranch" class="banner">
         <UIcon name="i-lucide-file-pen-line" class="icon" />
-        <span class="text">
-            改定案<strong>「{{ app.currentBranch.label }}」</strong>で作業中です。ここでの変更は現行版に影響しません。
-        </span>
+        <span class="text"> 改定案<strong>「{{ app.currentBranch.label }}」</strong>で作業中です。ここでの変更は現行版に影響しません。 </span>
         <UBadge v-if="app.currentBranch.mainMoved" label="現行版が更新されています" color="warning" variant="outline" size="sm" />
         <span class="cd-grow" />
-        <UButton :label="status && status.state !== 'none' ? STATE_LABEL[status.state] : '確認を依頼'" :color="stateColor"
-            variant="soft" size="sm" icon="i-lucide-message-square-check" @click="review" />
-        <UButton label="現行版と比較" size="sm" color="neutral" variant="outline" icon="i-lucide-columns-2"
-            @click="compareWithMain" />
+        <UButton
+            :label="status && status.state !== 'none' ? STATE_LABEL[status.state] : '確認を依頼'"
+            :color="stateColor"
+            variant="soft"
+            size="sm"
+            icon="i-lucide-message-square-check"
+            @click="review"
+        />
+        <UButton label="現行版と比較" size="sm" color="neutral" variant="outline" icon="i-lucide-columns-2" @click="compareWithMain" />
         <UButton label="現行版に反映…" size="sm" icon="i-lucide-git-merge" @click="adopt" />
         <UDropdownMenu :items="more">
             <UButton icon="i-lucide-ellipsis" size="sm" color="neutral" variant="ghost" />
         </UDropdownMenu>
-        <ConfirmModal v-model:open="confirmDiscard" title="改定案を取り下げる" confirm-label="取り下げる" color="error"
-            :loading="app.busy" @confirm="discard">
+        <ConfirmModal v-model:open="confirmDiscard" title="改定案を取り下げる" confirm-label="取り下げる" color="error" :loading="app.busy" @confirm="discard">
             <p>
                 改定案「{{ app.currentBranch.label }}」を削除し、現行版に戻ります。
                 {{ app.currentBranch.remote ? 'リモートからも削除され、他の人も見られなくなります。' : '' }}

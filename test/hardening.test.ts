@@ -13,15 +13,18 @@ const iso = (await import('../src/main/igit')).default
 
 let root = ''
 let url = ''
-let close = () => { }
+let close = () => {}
 beforeAll(async () => {
-    ; ({ root, url, close } = await startGitServer())
+    ;({ root, url, close } = await startGitServer())
 })
 afterAll(() => close())
 
 const DOC = '規程.md'
 const V1 = '# 規程\n\n### 目的\n- 初版\n'
-const gitIn = (dir: string, ...args: string[]) => execFileSync('git', ['-C', dir, ...args]).toString().trim()
+const gitIn = (dir: string, ...args: string[]) =>
+    execFileSync('git', ['-C', dir, ...args])
+        .toString()
+        .trim()
 
 describe('壊れにくさ', () => {
     const pc = () => join(root, 'pc')
