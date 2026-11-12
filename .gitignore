@@ -8,6 +8,7 @@ release/
 .data/
 .cache/
 *.tsbuildinfo
+release-notes/
 
 coverage/
 .vitest/
