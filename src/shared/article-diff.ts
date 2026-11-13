@@ -20,32 +20,35 @@ export interface CompareRow {
     inline: InlinePart[]
 }
 
-interface Unit {
+export interface Unit {
     key: string
     kind: 'chapter' | 'article'
     label: string
     title: string
     text: string
+    line: number
+    body: string
 }
 
-function units(doc: LegalDoc): Unit[] {
+export function units(doc: LegalDoc): Unit[] {
     const out: Unit[] = []
     for (const ch of doc.chapters) {
         if (ch.kind === 'closing') continue
         if (ch.kind === 'appendix') {
             const text = [chapterHeading(ch), ...appendixLines(ch.raw)].join('\n')
-            out.push({ key: `ap:${ch.title}`, kind: 'chapter', label: '', title: ch.title, text })
+            out.push({ key: `ap:${ch.title}`, kind: 'chapter', label: '', title: ch.title, text, line: ch.line, body: text })
             continue
         }
         const heading = chapterHeading(ch)
         const intro = introLines(ch, doc)
         if (heading || intro.length) {
             const text = [heading, ...intro].filter(Boolean).join('\n')
-            out.push({ key: `ch:${ch.kind}:${ch.title}`, kind: 'chapter', label: ch.label, title: ch.title, text })
+            out.push({ key: `ch:${ch.kind}:${ch.title}`, kind: 'chapter', label: ch.label, title: ch.title, text, line: ch.line, body: text })
         }
         for (const a of ch.articles) {
             const key = a.id ? `id:${a.id}` : a.title ? `t:${a.title}` : `n:${a.number}.${a.branch}${a.deleted ? ':del' : ''}`
-            out.push({ key, kind: 'article', label: a.refLabel, title: a.title, text: articleLines(a, doc).join('\n') })
+            const text = articleLines(a, doc).join('\n')
+            out.push({ key, kind: 'article', label: a.refLabel, title: a.title, text, line: a.line, body: text.replace(a.label, '') })
         }
     }
     return out
@@ -150,19 +153,21 @@ function related(o: Unit, n: Unit): boolean {
 
 const PAIR_WINDOW = 20
 
-export function compareDocs(oldDoc: LegalDoc, newDoc: LegalDoc): CompareRow[] {
-    const a = units(oldDoc)
-    const b = units(newDoc)
-    deadline = performance.now() + DIFF_BUDGET
+export interface UnitPair {
+    old?: Unit
+    new?: Unit
+}
+
+export function alignUnits(a: Unit[], b: Unit[]): UnitPair[] {
     const chunks = diffArrays(a, b, { comparator: (x, y) => x.key === y.key })
-    const rows: CompareRow[] = []
+    const rows: UnitPair[] = []
     let ai = 0
     let bi = 0
     for (let c = 0; c < chunks.length; c++) {
         const chunk = chunks[c]
         const count = chunk.count ?? chunk.value.length
         if (!chunk.added && !chunk.removed) {
-            for (let k = 0; k < count; k++) rows.push(pairRow(a[ai++], b[bi++]))
+            for (let k = 0; k < count; k++) rows.push({ old: a[ai++], new: b[bi++] })
             continue
         }
         if (chunk.removed && chunks[c + 1]?.added) {
@@ -173,18 +178,25 @@ export function compareDocs(oldDoc: LegalDoc, newDoc: LegalDoc): CompareRow[] {
                 let m = bi
                 while (m < addEnd && m < bi + PAIR_WINDOW && !related(o, b[m])) m++
                 if (m < addEnd && m < bi + PAIR_WINDOW) {
-                    while (bi < m) rows.push(added(b[bi++]))
-                    rows.push(pairRow(o, b[bi++]))
-                } else rows.push(removed(o))
+                    while (bi < m) rows.push({ new: b[bi++] })
+                    rows.push({ old: o, new: b[bi++] })
+                } else rows.push({ old: o })
             }
-            while (bi < addEnd) rows.push(added(b[bi++]))
+            while (bi < addEnd) rows.push({ new: b[bi++] })
             c++
             continue
         }
-        if (chunk.removed) for (let k = 0; k < count; k++) rows.push(removed(a[ai++]))
-        else for (let k = 0; k < count; k++) rows.push(added(b[bi++]))
+        if (chunk.removed) for (let k = 0; k < count; k++) rows.push({ old: a[ai++] })
+        else for (let k = 0; k < count; k++) rows.push({ new: b[bi++] })
     }
     return rows
+}
+
+export function compareDocs(oldDoc: LegalDoc, newDoc: LegalDoc): CompareRow[] {
+    const a = units(oldDoc)
+    const b = units(newDoc)
+    deadline = performance.now() + DIFF_BUDGET
+    return alignUnits(a, b).map((p) => (p.old && p.new ? pairRow(p.old, p.new) : p.old ? removed(p.old) : added(p.new!)))
 }
 
 function removed(u: Unit): CompareRow {

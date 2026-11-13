@@ -85,7 +85,8 @@ const title = computed(() => [`リポジトリ：${app.repo?.name ?? '未選択'
             <UCommandPalette :groups="groups" placeholder="リポジトリを検索" class="palette" @mouseenter="moveOpen = false" />
             <UDropdownMenu v-if="app.repoDir" v-model:open="moveOpen" :modal="false" :items="moveItems"
                 :content="{ side: 'right', align: 'end', sideOffset: 4 }" size="sm">
-                <button class="move" :class="{ on: moveOpen }" @mouseenter="moveOpen = true" @click="moveOpen = true">
+                <button class="move" :class="{ on: moveOpen }" @mouseenter="moveOpen = true" @click="moveOpen = true"
+                    @keydown.esc="open = false">
                     <UIcon name="i-lucide-folder-input" class="mi" />
                     <span class="ml">セクションの移動</span>
                     <UIcon name="i-lucide-chevron-right" class="mi" />

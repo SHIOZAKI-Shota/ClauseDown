@@ -25,6 +25,12 @@ export function fmtDate(t: number | string, kind: 'md' | 'ymd' | 'mdhm' | 'ymdhm
     }
 }
 
+const WAREKI = new Intl.DateTimeFormat('ja-JP-u-ca-japanese', { era: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
+export function fmtWareki(date: string): string {
+    const t = Date.parse(`${date}T00:00:00Z`)
+    return Number.isNaN(t) ? date : WAREKI.format(t)
+}
+
 export function relTime(ts: number): string {
     if (!ts) return ''
     const diff = (Date.now() - ts * 1000) / 1000

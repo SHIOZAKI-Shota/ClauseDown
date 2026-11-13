@@ -12,6 +12,7 @@ import { useApp } from '~/stores/app'
 import { lastAtOrBefore, positionLabel } from '~/utils/legal-editor'
 import { toPlain } from '~/utils/ipc'
 import { useStoredRef } from '~/composables/useStoredRef'
+import { useArticleTrail } from '~/composables/useArticleTrail'
 import { useElementSize } from '@vueuse/core'
 import { usePane, paneStyle, type Pane } from '~/composables/usePane'
 import CodeEditor from '~/components/CodeEditor.vue'
@@ -309,10 +310,10 @@ const backRefItem = computed<DropdownMenuItem>(() => {
     const list = backs.value.get(line) ?? []
     return list.length
         ? {
-              label: `参照元（${list.length} 件）`,
-              icon: 'i-lucide-corner-up-left',
-              children: list.map((b) => ({ label: b.label, onSelect: () => editor.value?.goToLine(b.line) })),
-          }
+            label: `参照元（${list.length} 件）`,
+            icon: 'i-lucide-corner-up-left',
+            children: list.map((b) => ({ label: b.label, onSelect: () => editor.value?.goToLine(b.line) })),
+        }
         : { label: '参照元はありません', icon: 'i-lucide-corner-up-left', disabled: true }
 })
 function articleHere() {
@@ -648,6 +649,19 @@ async function saveShortcut() {
 }
 defineShortcuts({ meta_s: { handler: () => void saveShortcut(), usingInput: true } })
 const position = computed(() => positionLabel(doc.value, cursorLine.value))
+const trail = useArticleTrail(path, doc, cursorLine)
+const trailOpen = ref(false)
+watch(trailOpen, (v) => v && void trail.loadCommits())
+function openTrailVersion(date: string) {
+    trailOpen.value = false
+    app.releasesSelect = date
+    app.openDoc(path, 'releases')
+}
+function openTrailCommit(oid: string) {
+    trailOpen.value = false
+    app.historySelect = oid
+    app.view = 'history'
+}
 const chars = computed(() => settled.value.replace(/<!--[\s\S]*?-->/g, '').replace(/\s/g, '').length)
 const articleCount = computed(() => doc.value.chapters.reduce((n, c) => n + c.articles.length, 0))
 const saveState = computed(() => (saving.value === 'pending' ? '書き込み中…' : changed.value ? '版を保存していない変更があります' : '保存済みの版と同じです'))
@@ -755,11 +769,12 @@ const saveState = computed(() => (saving.value === 'pending' ? '書き込み中�
                         <CodeEditor ref="editor" v-model="text" :legal="doc" :wrap="app.prefs.lineWrap"
                             :proofread="app.prefs.proofread" :readonly="aiRunning" :diff-base="savedText"
                             @cursor="onCursor" @scroll="onScroll" @shortcut="onShortcut" @history="(h) => (history = h)"
-                            @images="addImages" @issues="(l) => (issueList = l)" @open-issues="issuesOpen ? (issuesOpen = false) : toggleIssues('all')" />
+                            @images="addImages" @issues="(l) => (issueList = l)"
+                            @open-issues="issuesOpen ? (issuesOpen = false) : toggleIssues('all')" />
                     </div>
                 </UContextMenu>
-                <IssuePane v-if="issuesOpen" v-model:filter="issueFilter" :items="issueList" :doc="doc" :active="activeIssue"
-                    @pick="pickIssue" @close="issuesOpen = false" />
+                <IssuePane v-if="issuesOpen" v-model:filter="issueFilter" :items="issueList" :doc="doc"
+                    :active="activeIssue" @pick="pickIssue" @close="issuesOpen = false" />
             </div>
             <PaneResizer v-if="mode === 'split'" :pane="editBase" side="left" label="編集" />
 
@@ -819,17 +834,31 @@ const saveState = computed(() => (saving.value === 'pending' ? '書き込み中�
                             :class="{ on: issuesOpen && issueFilter === k.kind }" :disabled="mode === 'preview'"
                             :aria-label="`${k.label}の一覧`" @click="toggleIssues(k.kind)" />
                     </UTooltip>
-                    <UButton icon="i-lucide-chevron-up" size="xs" variant="soft" :color="issues[k.count] ? k.color : 'neutral'"
-                        class="seg mid" :disabled="mode === 'preview' || !issues[k.count]" :aria-label="`前の${k.label}へ`"
+                    <UButton icon="i-lucide-chevron-up" size="xs" variant="soft"
+                        :color="issues[k.count] ? k.color : 'neutral'" class="seg mid"
+                        :disabled="mode === 'preview' || !issues[k.count]" :aria-label="`前の${k.label}へ`"
                         :title="`前の${k.label}へ`" @click="goIssue(k.kind, -1)" />
-                    <UButton icon="i-lucide-chevron-down" size="xs" variant="soft" :color="issues[k.count] ? k.color : 'neutral'"
-                        class="seg last" :disabled="mode === 'preview' || !issues[k.count]" :aria-label="`次の${k.label}へ`"
+                    <UButton icon="i-lucide-chevron-down" size="xs" variant="soft"
+                        :color="issues[k.count] ? k.color : 'neutral'" class="seg last"
+                        :disabled="mode === 'preview' || !issues[k.count]" :aria-label="`次の${k.label}へ`"
                         :title="`次の${k.label}へ`" @click="goIssue(k.kind, 1)" />
                 </div>
             </div>
             <span class="pos">
                 <UIcon name="i-lucide-map-pin" />{{ position || '—' }}
             </span>
+            <UPopover v-if="trail.trail.value && trail.article.value" v-model:open="trailOpen"
+                :content="{ side: 'top', align: 'start' }">
+                <button class="trail-btn" :class="{ pending: trail.trail.value.pending }">
+                    <UIcon name="i-lucide-history" />{{ trail.summary.value }}
+                </button>
+                <template #content>
+                    <ArticleTrail :label="trail.article.value.label" :versions="trail.versions.value"
+                        :trail="trail.trail.value" :commits="trail.commits.value"
+                        :commit-trail="trail.commitTrail.value" :loading="trail.commitsLoading.value"
+                        @version="(v) => openTrailVersion(v.date)" @commit="(c) => openTrailCommit(c.oid)" />
+                </template>
+            </UPopover>
             <span>{{ articleCount }} 条</span>
             <span>{{ chars.toLocaleString() }} 文字</span>
             <span class="cd-grow" />
@@ -856,6 +885,26 @@ const saveState = computed(() => (saving.value === 'pending' ? '書き込み中�
 </template>
 
 <style scoped>
+.trail-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.trail-btn:hover {
+    background: var(--ui-bg-accented);
+    color: var(--ui-text);
+}
+
+.trail-btn.pending {
+    color: var(--cd-draft);
+}
+
 .issue-pills {
     display: inline-flex;
     gap: 6px;
