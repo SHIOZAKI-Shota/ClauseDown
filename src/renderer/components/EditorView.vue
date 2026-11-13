@@ -576,13 +576,13 @@ async function discard() {
     saving.value = 'idle'
 }
 
-async function exportAs(format: 'pdf' | 'docx' | 'md') {
+async function exportAs(format: 'pdf' | 'docx' | 'html' | 'md') {
     await writeNow()
     const name = doc.value.title || path.replace(/\.md$/, '')
     const out = await app.run(() =>
         window.api.exportFile({ kind: 'doc', format, source: text.value, name, style: toPlain(app.style), dir: app.repoDir!, docPath: path }),
     )
-    if (out) app.notify(`書き出しました：${out}`)
+    if (out) app.notifyExported('書き出しました', out)
 }
 
 const changed = computed(() => app.currentDoc?.changed)
@@ -671,10 +671,11 @@ const saveState = computed(() => (saving.value === 'pending' ? '書き込み中�
             <UDropdownMenu :items="[
                 { label: 'PDF に書き出す', icon: 'i-lucide-file-text', onSelect: () => exportAs('pdf') },
                 { label: 'Word に書き出す', icon: 'i-lucide-file-type', onSelect: () => exportAs('docx') },
-                { label: 'Markdown（法令の形・houritsu）に書き出す', icon: 'i-lucide-file-code', onSelect: () => exportAs('md') },
+                { label: 'HTML に書き出す', icon: 'i-lucide-file-code', onSelect: () => exportAs('html') },
+                ...(isEnabled(app.settings, 'houritsuExport') ? [{ label: 'Markdown（houritsu）に書き出す', icon: 'i-lucide-file-code-2', onSelect: () => exportAs('md') }] : []),
             ]">
                 <UButton :label="compact ? undefined : '書き出し'" aria-label="書き出し"
-                    :title="compact ? '書き出し（PDF・Word・Markdown）' : undefined" icon="i-lucide-download"
+                    :title="compact ? '書き出し（PDF・Word・HTML）' : undefined" icon="i-lucide-download"
                     trailing-icon="i-lucide-chevron-down" size="sm" color="neutral" variant="outline" />
             </UDropdownMenu>
             <UButton label="版を保存" icon="i-lucide-save" size="sm" :disabled="!changed" @click="openSave" />

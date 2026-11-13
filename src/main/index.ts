@@ -288,6 +288,17 @@ async function setAiConfig(config: AiConfig): Promise<AiStatus> {
     return aiStatus()
 }
 
+const exported = new Set<string>()
+function keepExported<T extends string | null>(p: T): T {
+    if (p) exported.add(resolve(p))
+    return p
+}
+function exportedPath(p: unknown): string {
+    const full = typeof p === 'string' ? resolve(p) : ''
+    if (!exported.has(full) || !statSync(full, { throwIfNoEntry: false })?.isFile()) throw new Error('ファイルが見つかりません')
+    return full
+}
+
 async function openFolder(p: unknown): Promise<void> {
     if (typeof p !== 'string' || !(process.platform === 'win32' ? /^[A-Za-z]:[\\/]/.test(p) : isAbsolute(p))) throw new Error('この場所は開けません')
     const full = resolve(p)
@@ -408,7 +419,7 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
     deleteBranch: git.deleteBranch,
     exportFile: async (req) => {
         if (req?.dir) await assertAllowedDir(req.dir)
-        return exportFile(win, req)
+        return keepExported(await exportFile(win, req))
     },
     previewPdf: async (source, style, base) => {
         if (base?.dir) await assertAllowedDir(base.dir)
@@ -443,7 +454,9 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
     occurrencesAll: schedule.occurrencesAll,
     exportSchedule: async (dir, today) => {
         if (dir) await assertAllowedDir(dir)
-        return exportScheduleIcs(win, dir, today)
+        const r = await exportScheduleIcs(win, dir, today)
+        if (r) keepExported(r.path)
+        return r
     },
     listEvents: schedule.listEvents,
     saveEvent: schedule.saveEvent,
@@ -454,6 +467,11 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
     listDeliveries: wf.listDeliveries,
     deliver: (dir, input) => deliverWithDialog(win, dir, input),
     openPath: openFolder,
+    openExported: async (p: unknown) => {
+        const err = await shell.openPath(exportedPath(p))
+        if (err) throw new Error(err)
+    },
+    showExported: async (p: unknown) => shell.showItemInFolder(exportedPath(p)),
     openExternal: async (url: string) => {
         if (url.startsWith('https://') || url.startsWith('mailto:')) await shell.openExternal(url)
     },

@@ -93,7 +93,7 @@ async function exportAs(format: 'pdf' | 'docx') {
             docPath: app.currentPath!,
         }),
     )
-    if (out) app.notify(`書き出しました：${out}`)
+    if (out) app.notifyExported('書き出しました', out)
 }
 </script>
 

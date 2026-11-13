@@ -269,7 +269,7 @@ export interface DocBase {
 }
 
 export type ExportRequest =
-    | ({ kind: 'doc'; format: 'pdf' | 'docx' | 'md'; source: string; name: string; style?: DocStyle } & Partial<DocBase>)
+    | ({ kind: 'doc'; format: 'pdf' | 'docx' | 'html' | 'md'; source: string; name: string; style?: DocStyle } & Partial<DocBase>)
     | ({
           kind: 'compare'
           format: 'pdf' | 'docx'
@@ -451,6 +451,8 @@ export interface Api {
     listDeliveries(dir: string, docPath?: string): Promise<DeliveryRecord[]>
     deliver(dir: string, input: DeliverInput): Promise<DeliveryRecord | null>
     openPath(path: string): Promise<void>
+    openExported(path: string): Promise<void>
+    showExported(path: string): Promise<void>
     openExternal(url: string): Promise<void>
     getLicenses(): Promise<LicenseList | null>
 

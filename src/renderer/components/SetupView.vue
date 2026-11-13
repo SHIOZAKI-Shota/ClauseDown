@@ -713,24 +713,6 @@ async function addSamples() {
         </SettingsSection>
 
         <SettingsSection id="developer" title="Developer">
-            <template v-for="e in EXPERIMENTS" :key="e.id">
-                <SettingRow :description="e.description">
-                    <template #label>
-                        <span class="exp-label"
-                            >{{ e.label }}
-                            <UBadge label="試験中" size="sm" color="warning" variant="subtle" icon="i-lucide-flask-conical" />
-                        </span>
-                    </template>
-                    <USwitch :model-value="experimentOn(e.id)" @update:model-value="(v: boolean) => setExperiment(e.id, v)" />
-                </SettingRow>
-                <SettingRow
-                    v-if="e.id === 'clauseLibrary' && experimentOn('clauseLibrary')"
-                    label="ライブラリに使うリポジトリ"
-                    description="このリポジトリの文書に書いた条が、条項ライブラリに並びます。版の保存や同期は、通常のリポジトリと同様です"
-                >
-                    <USelect :model-value="libraryDir" :items="libraryItems" placeholder="選んでください" class="cd-w-input" @update:model-value="setLibrary" />
-                </SettingRow>
-            </template>
             <SettingRow
                 label="サンプルリポジトリを追加"
                 description="社内規程・契約書・条例と要綱・houritsu 形式の法令の 4 つを、選んだフォルダに作って一覧に加えます。版の履歴・改定案・施行日・期日が付いています。"
@@ -770,6 +752,26 @@ async function addSamples() {
             >
                 <UButton label="すべて初期化" icon="i-lucide-trash-2" size="sm" color="error" variant="outline" @click="resetting = 'all'" />
             </SettingRow>
+
+            <h3>試験中の機能</h3>
+            <template v-for="e in EXPERIMENTS" :key="e.id">
+                <SettingRow :description="e.description">
+                    <template #label>
+                        <span class="exp-label"
+                            >{{ e.label }}
+                            <UBadge label="試験中" size="sm" color="warning" variant="subtle" icon="i-lucide-flask-conical" />
+                        </span>
+                    </template>
+                    <USwitch :model-value="experimentOn(e.id)" @update:model-value="(v: boolean) => setExperiment(e.id, v)" />
+                </SettingRow>
+                <SettingRow
+                    v-if="e.id === 'clauseLibrary' && experimentOn('clauseLibrary')"
+                    label="ライブラリに使うリポジトリ"
+                    description="このリポジトリの文書に書いた条が、条項ライブラリに並びます。版の保存や同期は、通常のリポジトリと同様です"
+                >
+                    <USelect :model-value="libraryDir" :items="libraryItems" placeholder="選んでください" class="cd-w-input" @update:model-value="setLibrary" />
+                </SettingRow>
+            </template>
         </SettingsSection>
     </SettingsLayout>
 

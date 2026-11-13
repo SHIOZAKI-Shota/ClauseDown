@@ -39,7 +39,7 @@ async function convert() {
                 <ul class="cd-muted notes">
                     <li>条・項・号の番号と本文は、そのまま残ります。</li>
                     <li>編・節・款・目の見出しは消え、章の見出しだけが残ります。</li>
-                    <li>元の形は、版の履歴に残ります。書き出しの「Markdown（法令の形・houritsu）」で、元の形に戻して保存することもできます。</li>
+                    <li>元の形は、版の履歴に残ります。設定の Developer の「試験中の機能」で「Markdown（houritsu）に書き出す」をオンにすると、書き出しで元の形に戻して保存することもできます。</li>
                 </ul>
             </div>
             <div v-else class="body">

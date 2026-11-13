@@ -194,6 +194,14 @@ export function makeBuilders(style: DocStyle, css = '', base?: DocBase): Builder
     }
 }
 
+const screenCss = (margin: number) =>
+    `<style>@media screen { html { background: #f4f4f5; } body { box-sizing: border-box; max-width: 210mm; margin: 24px auto; padding: ${margin}mm; background: #fff; box-shadow: 0 1px 4px rgb(0 0 0 / 0.15); } }</style>`
+
+async function docHtml(source: string, style: DocStyle, css: string, base?: DocBase): Promise<string> {
+    const doc = parseLegal(source)
+    return inlineImages(page(screenCss(style.margin) + renderDoc(doc), doc.title, style, false, css), base)
+}
+
 const baseOf = (req: { dir?: string; docPath?: string }): DocBase | undefined =>
     typeof req.dir === 'string' && typeof req.docPath === 'string' ? { dir: req.dir, docPath: req.docPath } : undefined
 
@@ -210,6 +218,7 @@ async function build(req: ExportRequest): Promise<Uint8Array> {
     const { prefs } = await loadSettings()
     const b = makeBuilders(style, prefs.typesetCss, baseOf(req))
     if (req.kind === 'doc' && req.format === 'md') return new TextEncoder().encode(toHouritsu(req.source))
+    if (req.kind === 'doc' && req.format === 'html') return new TextEncoder().encode(await docHtml(req.source, style, prefs.typesetCss, baseOf(req)))
     if (req.kind === 'doc') return req.format === 'docx' ? b.docDocx(req.source) : b.docPdf(req.source)
     const rows = compareSources(req.oldSource, req.newSource)
     const opts = { title: req.title, omitUnchanged: req.omitUnchanged }
@@ -232,7 +241,7 @@ export async function exportFile(parent: BrowserWindow | null, req: ExportReques
     const { prefs } = await loadSettings()
     const ext = req.format
     const name = prefs.exportDateSuffix ? `${req.name}_${today()}` : req.name
-    const filters = [{ name: ext === 'pdf' ? 'PDF' : ext === 'md' ? 'Markdown' : 'Word 文書', extensions: [ext] }]
+    const filters = [{ name: { pdf: 'PDF', md: 'Markdown', html: 'HTML', docx: 'Word 文書' }[ext], extensions: [ext] }]
     const opts = { defaultPath: prefs.exportDir ? join(prefs.exportDir, `${name}.${ext}`) : `${name}.${ext}`, filters }
     const result = parent ? await dialog.showSaveDialog(parent, opts) : await dialog.showSaveDialog(opts)
     if (result.canceled || !result.filePath) return null
