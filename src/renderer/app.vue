@@ -74,6 +74,7 @@ defineShortcuts({
         <ReviewModal v-if="app.dialog?.kind === 'review'" :branch="app.dialog.branch" @close="app.dialog = null" />
         <OpeningSplash v-if="opening" @done="opening = false" />
         <HouritsuModal v-if="app.dialog?.kind === 'houritsu'" :dir="app.dialog.dir" :paths="app.dialog.paths" @close="app.dialog = null" />
+        <SectionNameModal v-if="app.dialog?.kind === 'sectionName'" :dir="app.dialog.dir" :from="app.dialog.from" @close="app.dialog = null" />
     </UApp>
 </template>
 

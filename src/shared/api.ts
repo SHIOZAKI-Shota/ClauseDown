@@ -15,6 +15,7 @@ export interface RepoEntry {
     name: string
     dir: string
     url?: string
+    section?: string
 }
 
 export interface AppSettings {
@@ -271,16 +272,16 @@ export interface DocBase {
 export type ExportRequest =
     | ({ kind: 'doc'; format: 'pdf' | 'docx' | 'html' | 'md'; source: string; name: string; style?: DocStyle } & Partial<DocBase>)
     | ({
-          kind: 'compare'
-          format: 'pdf' | 'docx'
-          oldSource: string
-          newSource: string
-          title: string
-          name: string
-          omitUnchanged: boolean
-          compareStyle?: 'table' | 'inline'
-          style?: DocStyle
-      } & Partial<DocBase>)
+        kind: 'compare'
+        format: 'pdf' | 'docx'
+        oldSource: string
+        newSource: string
+        title: string
+        name: string
+        omitUnchanged: boolean
+        compareStyle?: 'table' | 'inline'
+        style?: DocStyle
+    } & Partial<DocBase>)
 
 export interface IssueLink {
     oid: string

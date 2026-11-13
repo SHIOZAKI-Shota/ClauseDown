@@ -11,6 +11,7 @@ import { useSavedFlash } from '~/composables/useSavedFlash'
 import { useDebounced } from '~/composables/useDebounced'
 import { FORGE_LABEL, knownBases, matchRemote } from '@shared/forge'
 import { LEGAL_CSS } from '@shared/legal-css'
+import { cleanSection, groupRepos, sectionNames } from '@shared/repo-sections'
 const app = useApp()
 const { set: setTheme } = useTheme()
 
@@ -333,6 +334,13 @@ watch(
     }, 400),
 )
 
+const NO_SECTION = 'なし'
+const repoGroups = computed(() => groupRepos(app.settings?.repos ?? []))
+const sectionChoices = computed(() => [NO_SECTION, ...sectionNames(app.settings?.repos ?? [])])
+function setSection(r: RepoEntry, v: string) {
+    const next = v === NO_SECTION ? undefined : cleanSection(v)
+    if (next !== cleanSection(r.section)) void app.moveRepo(r.dir, { section: next })
+}
 const experimentOn = (id: ExperimentId) => isEnabled(app.settings, id)
 async function setExperiment(id: ExperimentId, on: boolean) {
     const s = app.settings!
@@ -617,40 +625,61 @@ async function addSamples() {
         </SettingsSection>
 
         <SettingsSection id="repos" title="リポジトリの一覧">
-            <SettingRow
-                v-for="r in app.settings!.repos"
-                :key="r.dir"
-                :label="r.name + (r.dir === app.repoDir ? '（使用中）' : '')"
-                :description="(app.repoStates[r.dir] ?? 'ok') !== 'ok' ? `見つかりません：${r.dir}` : r.url ? `${r.dir} ／ ${r.url}` : r.dir"
-            >
-                <template v-if="(app.repoStates[r.dir] ?? 'ok') !== 'ok'">
-                    <UBadge label="見つかりません" color="warning" variant="subtle" icon="i-lucide-folder-x" />
-                    <UButton label="新しい場所を選ぶ" size="sm" color="neutral" variant="outline" @click="app.relocateRepo(r.dir)" />
-                </template>
-                <UButton v-else-if="r.dir !== app.repoDir" label="切り替える" size="sm" color="neutral" variant="outline" @click="app.switchRepo(r.dir)" />
-                <template v-if="(app.repoStates[r.dir] ?? 'ok') === 'ok'">
-                    <UButton
-                        label="複製"
-                        icon="i-lucide-copy"
+            <template v-for="g in repoGroups" :key="g.section || '-'">
+                <h3 v-if="g.section" class="repo-sec">{{ g.section }}</h3>
+                <SettingRow
+                    v-for="r in g.repos"
+                    :key="r.dir"
+                    :label="r.name + (r.dir === app.repoDir ? '（使用中）' : '')"
+                    :description="(app.repoStates[r.dir] ?? 'ok') !== 'ok' ? `見つかりません：${r.dir}` : r.url ? `${r.dir} ／ ${r.url}` : r.dir"
+                >
+                    <USelectMenu
+                        :model-value="cleanSection(r.section) ?? NO_SECTION"
+                        :items="sectionChoices"
+                        create-item
                         size="sm"
-                        color="neutral"
-                        variant="ghost"
-                        title="履歴ごと別のフォルダにコピーします。リモートは外れます"
-                        @click="startDuplicate(r)"
+                        icon="i-lucide-folder"
+                        class="sec-select"
+                        aria-label="セクション"
+                        @update:model-value="(v: string) => setSection(r, v)"
+                        @create="(v: string) => setSection(r, v)"
                     />
+                    <template v-if="(app.repoStates[r.dir] ?? 'ok') !== 'ok'">
+                        <UBadge label="見つかりません" color="warning" variant="subtle" icon="i-lucide-folder-x" />
+                        <UButton label="新しい場所を選ぶ" size="sm" color="neutral" variant="outline" @click="app.relocateRepo(r.dir)" />
+                    </template>
+                    <UButton v-else-if="r.dir !== app.repoDir" label="切り替える" size="sm" color="neutral" variant="outline" @click="app.switchRepo(r.dir)" />
+                    <template v-if="(app.repoStates[r.dir] ?? 'ok') === 'ok'">
+                        <UButton
+                            label="複製"
+                            icon="i-lucide-copy"
+                            size="sm"
+                            color="neutral"
+                            variant="ghost"
+                            title="履歴ごと別のフォルダにコピーします。リモートは外れます"
+                            @click="startDuplicate(r)"
+                        />
+                        <UButton
+                            v-if="forgeOf(r)"
+                            label="フォーク"
+                            icon="i-lucide-git-fork"
+                            size="sm"
+                            color="neutral"
+                            variant="ghost"
+                            title="GitHub・GitLab に自分のコピーを作り、送信先をそちらに切り替えます"
+                            @click="forkOf = r"
+                        />
+                    </template>
                     <UButton
-                        v-if="forgeOf(r)"
-                        label="フォーク"
-                        icon="i-lucide-git-fork"
+                        label="一覧から外す"
                         size="sm"
-                        color="neutral"
+                        color="error"
                         variant="ghost"
-                        title="GitHub・GitLab に自分のコピーを作り、送信先をそちらに切り替えます"
-                        @click="forkOf = r"
+                        title="一覧から外すだけで、ファイルは消えません"
+                        @click="removeRepo(r)"
                     />
-                </template>
-                <UButton label="一覧から外す" size="sm" color="error" variant="ghost" title="一覧から外すだけで、ファイルは消えません" @click="removeRepo(r)" />
-            </SettingRow>
+                </SettingRow>
+            </template>
             <p v-if="app.settings!.repos.length === 0" class="cd-muted">リポジトリがありません。下の「リポジトリを追加する」から追加してください。</p>
 
             <h3>リポジトリを追加する</h3>
@@ -902,6 +931,15 @@ h3 {
     font-size: 13px;
     font-weight: 700;
     margin: 24px 0 0;
+}
+
+h3.repo-sec {
+    margin-top: 16px;
+    color: var(--ui-text-muted);
+}
+
+.sec-select {
+    width: 140px;
 }
 
 .css-box {

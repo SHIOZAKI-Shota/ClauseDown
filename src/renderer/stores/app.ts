@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref, shallowRef, watch } from 'vue'
-import type { AppSettings, Identity, BranchInfo, DocChangedEvent, RepoState, DocFile, ForgeAccount, RepoRules, ReviewEvent, SyncState } from '@shared/api'
+import type { AppSettings, Identity, BranchInfo, DocChangedEvent, RepoEntry, RepoState, DocFile, ForgeAccount, RepoRules, ReviewEvent, SyncState } from '@shared/api'
 import { canApprove, DEFAULT_RULES, reviewStatus, type Reviewer, type ReviewStatus } from '@shared/review'
 import { FORGE_LABEL, type ForgeKind } from '@shared/forge'
 import { DEFAULT_PREFS, type AppPrefs, type DocStyle, type RecentDoc } from '@shared/prefs'
@@ -8,6 +8,7 @@ import { resolveStyle, type StyleLayers } from '@shared/folder-style'
 import { toPlain } from '~/utils/ipc'
 import { todayISO } from '~/utils/format'
 import { IS_MAC } from '~/utils/platform'
+import { dissolveSection, placeRepo, renameSection } from '@shared/repo-sections'
 import { addDays } from '@shared/schedule'
 import { useStoredRef } from '~/composables/useStoredRef'
 
@@ -53,6 +54,7 @@ export const useApp = defineStore('app', () => {
         | { kind: 'newDoc'; folder?: string }
         | { kind: 'newEvent'; docPath?: string; date?: string }
         | { kind: 'houritsu'; dir: string; paths: string[] }
+        | { kind: 'sectionName'; dir?: string; from?: string }
     >(null)
 
     const repoDir = computed(() => settings.value?.current ?? null)
@@ -252,6 +254,14 @@ export const useApp = defineStore('app', () => {
         settings.value = next
         await window.api.saveSettings(toPlain(next))
     }
+
+    async function setRepos(fn: (repos: RepoEntry[]) => RepoEntry[]) {
+        if (!settings.value) return
+        await run(() => saveSettings({ ...settings.value!, repos: fn(settings.value!.repos) }))
+    }
+    const moveRepo = (dir: string, to: { section?: string; before?: string }) => setRepos((r) => placeRepo(r, dir, to))
+    const renameRepoSection = (from: string, to: string) => setRepos((r) => renameSection(r, from, to))
+    const dissolveRepoSection = (name: string) => setRepos((r) => dissolveSection(r, name))
 
     let refreshing: Promise<void> | null = null
     let refreshAgain = false
@@ -594,6 +604,9 @@ export const useApp = defineStore('app', () => {
         openRecent,
         load,
         saveSettings,
+        moveRepo,
+        renameRepoSection,
+        dissolveRepoSection,
         refreshDocs,
         onDocChanged,
         publishRepo,
