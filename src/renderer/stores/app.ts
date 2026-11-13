@@ -31,6 +31,7 @@ export const useApp = defineStore('app', () => {
     const busy = computed(() => busyCount.value > 0)
     const compareTarget = ref<{ oldOid: string; newOid: string } | null>(null)
     const historySelect = ref<string | null>(null)
+    const releasesSelect = ref<string | null>(null)
     const jumpTo = ref<{ path: string; line: number } | null>(null)
     const branches = shallowRef<BranchInfo[]>([])
     const reviews = shallowRef<ReviewEvent[]>([])
@@ -510,7 +511,7 @@ export const useApp = defineStore('app', () => {
     function labelForReturn(v: View) {
         if (DOC_VIEWS.includes(v)) return `${currentDoc.value?.title ?? '文書'}に戻る`
         if (v === 'docs') return 'リポジトリホームに戻る'
-        if (v === 'schedule') return '期日の画面に戻る'
+        if (v === 'schedule') return '期日・有効期間の画面に戻る'
         if (v === 'issues') return '課題の画面に戻る'
         return 'トップページに戻る'
     }
@@ -534,6 +535,7 @@ export const useApp = defineStore('app', () => {
         busy,
         compareTarget,
         historySelect,
+        releasesSelect,
         dialog,
         branches,
         currentBranch,

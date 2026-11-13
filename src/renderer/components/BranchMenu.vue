@@ -39,7 +39,7 @@ const groups = computed(() => {
                     },
                 },
                 {
-                    label: '期日',
+                    label: '期日・有効期間',
                     icon: 'i-lucide-calendar-range',
                     suffix: app.dueCount?.due ? (app.dueCount.overdue ? `期限切れ ${app.dueCount.overdue}` : `30 日以内 ${app.dueCount.due}`) : undefined,
                     onSelect: () => {

@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { addDays, KIND_COLORS, type DueEventInput, type EventKind, type Occurrence } from '@shared/schedule'
+import { addDays, inForceAt, KIND_COLORS, type DueEventInput, type EventKind, type Occurrence } from '@shared/schedule'
 import { useApp } from '~/stores/app'
 import { usePane } from '~/composables/usePane'
-import { useSchedule, type RepoOccurrence } from '~/composables/useSchedule'
+import { useSchedule, type RepoOccurrence, type RepoPeriod } from '~/composables/useSchedule'
 import { useStoredRef } from '~/composables/useStoredRef'
 import { baseName, folderOf } from '~/utils/folders'
 import { daysUntil, fmtDate, untilLabel } from '~/utils/format'
-import type { TimelineItem, TimelineRow } from '~/components/TimelineChart.vue'
+import type { TimelineBand, TimelineItem, TimelineRow } from '~/components/TimelineChart.vue'
 
 const props = defineProps<{ all?: boolean }>()
 const app = useApp()
@@ -29,9 +29,11 @@ const exists = (path: string, dir: string) => !!path && !!docOf(path, dir)
 const whereOf = (o: RepoOccurrence) => (isAll.value ? `${repoName(o.dir)}・${titleOf(o.docPath, o.dir)}` : titleOf(o.docPath, o.dir))
 const kindOf = (o: RepoOccurrence): EventKind => s.kindOf.value(o.kind, o.dir)
 
-async function openDocIn(dir: string, path: string) {
+async function openDocIn(dir: string, path: string, date?: string) {
     if (dir !== app.repoDir) await app.switchRepo(dir)
-    if (app.docs.some((d) => d.path === path)) app.openDoc(path, 'releases')
+    if (!app.docs.some((d) => d.path === path)) return
+    app.releasesSelect = date ?? null
+    app.openDoc(path, 'releases')
 }
 
 const docFilter = computed(() => (isAll.value ? null : app.scheduleDoc))
@@ -72,7 +74,7 @@ const rows = computed<TimelineRow[]>(() => {
     }
     const dir = app.repoDir ?? ''
     if (app.scheduleDoc) return [{ id: app.scheduleDoc, label: titleOf(app.scheduleDoc, dir), sub: folderOf(app.scheduleDoc) || undefined }]
-    const used = new Set(shown.value.map((o) => o.docPath))
+    const used = new Set([...shown.value.map((o) => o.docPath), ...s.periods.value.map((p) => p.docPath)])
     const paths = allDocs.value ? new Set([...app.docs.map((d) => d.path), ...used]) : used
     paths.delete('')
     const list = [...paths].sort((a, b) => a.localeCompare(b, 'ja'))
@@ -81,6 +83,36 @@ const rows = computed<TimelineRow[]>(() => {
         ...list.map((p) => ({ id: p, label: titleOf(p, dir), sub: exists(p, dir) ? folderOf(p) || undefined : '（見つかりません）', title: p })),
     ]
 })
+const timelineBands = computed<TimelineBand[]>(() => {
+    if (isAll.value && groupBy.value === 'repo') return []
+    return s.periods.value
+        .filter((p) => !docFilter.value || p.docPath === docFilter.value)
+        .map((p) => ({ ...p, row: isAll.value ? `${p.dir}|${p.docPath}` : p.docPath }))
+})
+const periodOf = (o: RepoOccurrence) => s.periods.value.find((p) => p.dir === o.dir && p.docPath === o.docPath && p.date === o.date)
+const spanLabel = (p: RepoPeriod) => `${fmtDate(p.date, 'ymd')} 〜 ${p.until ? fmtDate(p.until, 'ymd') : ''}`
+function onBand(b: TimelineBand) {
+    const dir = b.dir ?? app.repoDir ?? ''
+    const o = isAll.value ? null : s.items.value.find((x) => x.source === 'tag' && x.docPath === b.docPath && x.date === b.date)
+    if (o) select(o)
+    else void openDocIn(dir, b.docPath, b.date)
+}
+
+const asOf = ref('')
+watch(asOf, (d) => {
+    if (!d) return
+    if (mode.value === 'timeline') chart.value?.reveal(d)
+    if (pane.state.value.collapsed) pane.expand()
+})
+const inForce = computed(() => {
+    const d = asOf.value
+    if (!d || isAll.value) return []
+    const dir = app.repoDir ?? ''
+    const list = s.periods.value.filter((p) => p.dir === dir)
+    const docs = new Set(list.map((p) => p.docPath))
+    return rows.value.filter((r) => docs.has(r.id)).map((r) => ({ row: r, p: inForceAt(list, r.id, d) }))
+})
+
 const timelineItems = computed<TimelineItem[]>(() => shown.value.map((o) => ({ ...o, row: rowOf(o), movable: o.source === 'event' && !o.repeat })))
 function onRowClick(r: TimelineRow) {
     if (!isAll.value) {
@@ -155,7 +187,7 @@ async function remove() {
 
 function openSource(o: RepoOccurrence) {
     if (o.source === 'event') editing.value = { event: o.id, dir: o.dir }
-    else if (exists(o.docPath, o.dir)) void openDocIn(o.dir, o.docPath)
+    else if (exists(o.docPath, o.dir)) void openDocIn(o.dir, o.docPath, o.source === 'tag' ? o.date : undefined)
 }
 
 const kindItems = computed(() => {
@@ -196,15 +228,22 @@ const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当�
                 @click="app.leavePage('schedule')"
             />
             <div class="cd-toolbar head">
-                <strong v-if="!isAll" class="h">期日</strong>
+                <strong v-if="!isAll" class="h">期日・有効期間</strong>
                 <span v-if="docFilter" class="cd-chip only">
                     {{ titleOf(docFilter, app.repoDir ?? '') }} だけ
                     <button class="x" aria-label="絞り込みをやめる" @click="app.scheduleDoc = null">
                         <UIcon name="i-lucide-x" />
                     </button>
                 </span>
-                <UButton label="期日を足す" icon="i-lucide-calendar-plus" size="sm" :disabled="!s.repos.value.length" @click="addAt()" />
+                <UButton label="期日の追加" icon="i-lucide-calendar-plus" size="sm" :disabled="!s.repos.value.length" @click="addAt()" />
                 <span class="cd-grow" />
+                <span v-if="!isAll" class="asof">
+                    <UTooltip text="この日に効力のあった版">
+                        <UIcon name="i-lucide-history" class="asof-icon" />
+                    </UTooltip>
+                    <DateField v-model="asOf" size="sm" />
+                    <UButton v-if="asOf" icon="i-lucide-x" size="xs" square color="neutral" variant="ghost" aria-label="日付を消す" @click="asOf = ''" />
+                </span>
                 <UDropdownMenu :items="kindItems" :content="{ align: 'end' }">
                     <UButton
                         :label="hidden.length ? `種類（${hidden.length} 件を非表示）` : '種類'"
@@ -247,14 +286,14 @@ const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当�
                         @click="exportIcs"
                     />
                 </UTooltip>
-                <UTooltip v-if="!isAll" text="すべてのリポジトリの期日（初期ページ）">
+                <UTooltip v-if="!isAll" text="すべてのリポジトリの期日・有効期間（初期ページ）">
                     <UButton
                         icon="i-lucide-layers"
                         size="sm"
                         square
                         color="neutral"
                         variant="ghost"
-                        aria-label="すべてのリポジトリの期日"
+                        aria-label="すべてのリポジトリの期日・有効期間"
                         @click="app.openScheduleAll()"
                     />
                 </UTooltip>
@@ -277,6 +316,8 @@ const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当�
                 class="chart"
                 :rows="rows"
                 :items="timelineItems"
+                :bands="timelineBands"
+                :as-of="isAll ? null : asOf || null"
                 :kind-of="s.kindOf.value"
                 :selected="selKey"
                 :storage-key="isAll ? 'schedule-all' : 'schedule'"
@@ -284,6 +325,8 @@ const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当�
                 @add="({ date, row }) => addAt(date, row)"
                 @move="(o, d) => s.move(o, d)"
                 @row-click="onRowClick"
+                @band="onBand"
+                @as-of="(d) => !isAll && (asOf = d)"
             />
 
             <div v-else class="list">
@@ -316,7 +359,7 @@ const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当�
                 <div v-if="s.loaded.value && !overdue.length && !listGroups.length" class="none">
                     <UIcon name="i-lucide-calendar-range" class="big" />
                     <p>期日はまだありません。</p>
-                    <UButton v-if="s.repos.value.length" label="期日を足す" icon="i-lucide-calendar-plus" size="sm" @click="addAt()" />
+                    <UButton v-if="s.repos.value.length" label="期日の追加" icon="i-lucide-calendar-plus" size="sm" @click="addAt()" />
                 </div>
             </div>
         </div>
@@ -338,6 +381,10 @@ const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当�
                         {{ fmtDate(sel.date, 'ymd') }}<template v-if="sel.end"> 〜 {{ fmtDate(sel.end, 'ymd') }}</template>
                         <span class="cd-muted">（{{ untilLabel(daysUntil(sel.date, today)) }}）</span>
                     </dd>
+                    <template v-if="sel.source === 'tag' && periodOf(sel)">
+                        <dt>有効期間</dt>
+                        <dd>{{ spanLabel(periodOf(sel)!) }}</dd>
+                    </template>
                     <template v-if="sel.repeat">
                         <dt>繰り返し</dt>
                         <dd>{{ repeatLabel(sel) }}</dd>
@@ -387,7 +434,7 @@ const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当�
                     />
                     <UButton
                         v-else-if="exists(sel.docPath, sel.dir)"
-                        label="期日・納品を開く"
+                        label="期日・有効期間・納品を開く"
                         icon="i-lucide-package-check"
                         size="sm"
                         color="neutral"
@@ -405,10 +452,23 @@ const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当�
                     />
                 </div>
                 <p v-if="sel.source !== 'event'" class="cd-muted hint">
-                    {{ sel.source === 'tag' ? '版に付けた施行日です。文書の「期日・納品」で外せます。' : '納品の記録です。' }}
+                    {{ sel.source === 'tag' ? '版に付けた施行日です。文書の「期日・有効期間・納品」で外せます。' : '納品の記録です。' }}
                 </p>
             </section>
 
+            <div v-if="asOf && inForce.length" class="cd-list-group">
+                <SectionHead :label="`${fmtDate(asOf, 'ymd')} の版`" icon="i-lucide-history" :count="inForce.length" pinned />
+                <ListRow
+                    v-for="v in inForce"
+                    :key="v.row.id"
+                    icon="i-lucide-file-text"
+                    :class="{ off: !v.p }"
+                    @click="v.p && openDocIn(app.repoDir ?? '', v.row.id, v.p.date)"
+                >
+                    {{ v.row.label }}
+                    <template #sub>{{ v.p ? spanLabel(v.p) : '施行前' }}</template>
+                </ListRow>
+            </div>
             <div class="cd-list-group">
                 <SectionHead label="期限切れ" icon="i-lucide-alarm-clock-off" :count="overdue.length" pinned />
                 <p v-if="!overdue.length" class="cd-muted empty">ありません</p>
@@ -470,6 +530,22 @@ const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当�
 </template>
 
 <style scoped>
+.asof {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.asof-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--ui-text-muted);
+}
+
+.off {
+    opacity: 0.55;
+}
+
 .schedule {
     display: flex;
     height: 100%;

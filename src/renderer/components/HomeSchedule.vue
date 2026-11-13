@@ -29,15 +29,15 @@ const shortDate = (d: string) => fmtDate(`${d}T00:00:00`, d.startsWith(thisYear)
 
 <template>
     <section class="cd-side-sec">
-        <SectionHead label="期日" icon="i-lucide-calendar-clock" :count="upcoming.length">
-            <UTooltip text="期日を足す">
+        <SectionHead label="期日・有効期間" icon="i-lucide-calendar-clock" :count="upcoming.length">
+            <UTooltip text="期日の追加">
                 <UButton
                     icon="i-lucide-calendar-plus"
                     size="xs"
                     square
                     color="neutral"
                     variant="ghost"
-                    aria-label="期日を足す"
+                    aria-label="期日の追加"
                     @click="app.dialog = { kind: 'newEvent', docPath: '' }"
                 />
             </UTooltip>

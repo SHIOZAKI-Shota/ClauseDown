@@ -152,7 +152,7 @@ function addRepo() {
                         aria-label="左のペイン"
                         :items="[
                             { value: 'recent', label: '最近開いた文書', icon: 'i-lucide-history' },
-                            { value: 'schedule', label: 'すべてのリポジトリの期日', icon: 'i-lucide-calendar-days' },
+                            { value: 'schedule', label: 'すべてのリポジトリの期日・有効期間', icon: 'i-lucide-calendar-days' },
                         ]"
                     />
                 </div>
@@ -212,20 +212,20 @@ function addRepo() {
                     <div class="cd-list-group">
                         <SectionHead label="これからの期日" icon="i-lucide-calendar-clock" :count="upcoming?.length" pinned>
                             <UBadge v-if="overdueCount" :label="`期限切れ ${overdueCount}`" color="error" variant="subtle" size="sm" />
-                            <UTooltip text="すべてのリポジトリの期日をタイムラインで見る">
+                            <UTooltip text="すべてのリポジトリの期日・有効期間をタイムラインで見る">
                                 <UButton
                                     icon="i-lucide-calendar-days"
                                     size="xs"
                                     square
                                     color="neutral"
                                     variant="ghost"
-                                    aria-label="すべてのリポジトリの期日"
+                                    aria-label="すべてのリポジトリの期日・有効期間"
                                     @click="app.openScheduleAll()"
                                 />
                             </UTooltip>
                         </SectionHead>
                         <p v-if="upcoming && !upcoming.length" class="cd-muted empty">
-                            これから 90 日の期日はありません。施行・公布・提出・届出・契約の更新などの日付は、リポジトリの「期日」で足せます。
+                            これから 90 日の期日はありません。施行・公布・提出・届出・契約の更新などの日付は、リポジトリの「期日・有効期間」で足せます。
                         </p>
                         <OccurrenceRow
                             v-for="u in (upcoming ?? []).slice(0, SHOW)"

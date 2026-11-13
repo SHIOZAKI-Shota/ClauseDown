@@ -1,5 +1,5 @@
 import type { Ref } from 'vue'
-import { addDays, byDate, kindMap, type DueEvent, type DueEventInput, type EventKind, type Occurrence, type RepoSchedule } from '@shared/schedule'
+import { addDays, byDate, kindMap, type DueEvent, type DueEventInput, type EventKind, type Occurrence, type Period, type RepoSchedule } from '@shared/schedule'
 import { useApp } from '~/stores/app'
 import { todayISO } from '~/utils/format'
 import { toPlain } from '~/utils/ipc'
@@ -7,6 +7,7 @@ import { toPlain } from '~/utils/ipc'
 const YEARS = 5
 
 export type RepoOccurrence = Occurrence & { dir: string; repo?: string }
+export type RepoPeriod = Period & { dir: string }
 
 export function useSchedule(all?: Ref<boolean>) {
     const app = useApp()
@@ -15,6 +16,7 @@ export function useSchedule(all?: Ref<boolean>) {
     const to = addDays(today, 365 * YEARS)
     const repos = shallowRef<RepoSchedule[]>([])
     const items = shallowRef<RepoOccurrence[]>([])
+    const periods = shallowRef<RepoPeriod[]>([])
     const loaded = ref(false)
     const isAll = () => !!all?.value
 
@@ -26,6 +28,7 @@ export function useSchedule(all?: Ref<boolean>) {
             if (!r || n !== seq || !isAll()) return
             repos.value = r.repos
             items.value = r.items
+            periods.value = r.periods
         } else {
             const dir = app.repoDir
             if (!dir) return
@@ -33,6 +36,7 @@ export function useSchedule(all?: Ref<boolean>) {
             if (!r || n !== seq || dir !== app.repoDir || isAll()) return
             repos.value = [{ dir, name: app.repo?.name ?? '', kinds: r.kinds, events: r.events, docs: app.docs }]
             items.value = r.items.map((o) => ({ ...o, dir }))
+            periods.value = r.periods.map((p) => ({ ...p, dir }))
         }
         loaded.value = true
     }
@@ -50,6 +54,7 @@ export function useSchedule(all?: Ref<boolean>) {
             return { ...o, key: `${dir}|${o.key}`, dir, repo: repo.name, kindLabel: k.label, color: k.color }
         })
         items.value = [...items.value.filter((o) => o.dir !== dir), ...fresh].sort(byDate)
+        periods.value = [...periods.value.filter((p) => p.dir !== dir), ...r.periods.map((p) => ({ ...p, key: `${dir}|${p.key}`, dir }))]
     }
 
     watch(() => [isAll(), app.repoDir, app.reloadKey], load, { immediate: true })
@@ -103,5 +108,5 @@ export function useSchedule(all?: Ref<boolean>) {
         await save({ ...rest, date, ...(span ? { end: addDays(date, span) } : {}) }, dirOf(o))
     }
 
-    return { today, repos, repoOf, kinds, events, items, loaded, load, kindOf, eventOf, toggleDone, save, remove, move }
+    return { today, repos, repoOf, kinds, events, items, periods, loaded, load, kindOf, eventOf, toggleDone, save, remove, move }
 }

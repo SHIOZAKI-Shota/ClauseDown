@@ -5,7 +5,7 @@ import type { StyleLayers, StyleOverride } from './folder-style'
 import type { ForgeKind, GitLabHost } from './forge'
 import type { AiConfig, AiProvider } from './ai-providers'
 import type { HouritsuConversion } from './houritsu'
-import type { DueEvent, DueEventInput, EventKind, Occurrence, RepoSchedule, ScheduleItem } from './schedule'
+import type { DueEvent, DueEventInput, EventKind, Occurrence, Period, RepoSchedule, ScheduleItem } from './schedule'
 
 export type { RepoRules, ReviewAction, ReviewEvent, AppPrefs, DocStyle }
 
@@ -438,8 +438,8 @@ export interface Api {
     listReviews(dir: string): Promise<ReviewEvent[]>
     addReview(dir: string, input: { branch: string; action: ReviewAction; text: string }): Promise<void>
 
-    occurrences(dir: string, from: string, to: string, today: string): Promise<{ kinds: EventKind[]; events: DueEvent[]; items: Occurrence[] }>
-    occurrencesAll(from: string, to: string, today: string): Promise<{ repos: RepoSchedule[]; items: ScheduleItem[] }>
+    occurrences(dir: string, from: string, to: string, today: string): Promise<{ kinds: EventKind[]; events: DueEvent[]; items: Occurrence[]; periods: Period[] }>
+    occurrencesAll(from: string, to: string, today: string): Promise<{ repos: RepoSchedule[]; items: ScheduleItem[]; periods: (Period & { dir: string })[] }>
     exportSchedule(dir: string, today: string): Promise<{ path: string; count: number } | null>
     listEvents(dir: string): Promise<DueEvent[]>
     saveEvent(dir: string, input: DueEventInput): Promise<DueEvent>

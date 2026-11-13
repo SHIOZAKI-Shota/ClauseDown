@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { addDays, dayNum, fromDayNum, KIND_COLORS, type EventKind, type Occurrence } from '@shared/schedule'
+import { addDays, dayNum, fromDayNum, KIND_COLORS, type EventKind, type Occurrence, type Period } from '@shared/schedule'
 import { useStoredRef } from '~/composables/useStoredRef'
 import { todayISO } from '~/utils/format'
 
@@ -10,23 +10,28 @@ export interface TimelineRow {
     title?: string
 }
 export type TimelineItem = Occurrence & { row: string; movable?: boolean; dir?: string }
+export type TimelineBand = Period & { row: string; dir?: string }
 
 const props = withDefaults(
     defineProps<{
         rows: TimelineRow[]
         items: TimelineItem[]
+        bands?: TimelineBand[]
+        asOf?: string | null
         kindOf: (id: string, dir?: string) => EventKind
         selected?: string | null
         bare?: boolean
         storageKey?: string
     }>(),
-    { selected: null, bare: false, storageKey: 'timeline' },
+    { selected: null, bare: false, storageKey: 'timeline', bands: () => [], asOf: null },
 )
 const emit = defineEmits<{
     select: [TimelineItem]
     add: [{ date: string; row: string }]
     move: [TimelineItem, string]
     rowClick: [TimelineRow]
+    band: [TimelineBand]
+    asOf: [string]
 }>()
 
 const SCALES = [
@@ -49,6 +54,7 @@ const scale = computed({
 const LABEL_W = 180
 const LANE_H = 24
 const AXIS_H = 44
+const BAND_H = 12
 const labelW = computed(() => (props.bare ? 0 : LABEL_W))
 
 const today = todayISO()
@@ -186,17 +192,41 @@ const layout = computed(() => {
             ends[lane] = pl.x + pl.w
             pl.lane = lane
         }
-        heights.set(row, Math.max(1, ends.length) * LANE_H + 10)
+        heights.set(row, Math.max(1, ends.length) * LANE_H + 10 + (bandRows.value.has(row) ? BAND_H : 0))
     }
     return { byRow, heights }
 })
+
+const bandRows = computed(() => {
+    const m = new Map<string, TimelineBand[]>()
+    for (const b of props.bands) {
+        const l = m.get(b.row)
+        if (l) l.push(b)
+        else m.set(b.row, [b])
+    }
+    for (const l of m.values()) l.sort((a, b) => a.date.localeCompare(b.date))
+    return m
+})
+const bandsOf = (row: string) => {
+    const p = ppd.value
+    const edge = left.value + days.value + 2
+    return (bandRows.value.get(row) ?? [])
+        .map((b, i) => {
+            const a = dayNum(b.date)
+            const z = b.until ? dayNum(b.until) + 1 : Math.max(edge, a + 1)
+            const x = xOf(a)
+            return { b, x, w: (z - a) * p, odd: i % 2 === 1, on: !!props.asOf && b.date <= props.asOf && (!b.until || b.until >= props.asOf) }
+        })
+        .filter((v) => v.x + v.w >= -40 && v.x <= trackW.value + 40)
+}
+const bandTip = (b: TimelineBand) => [`${b.date} 〜 ${b.until ?? ''}`, b.title].filter(Boolean).join('\n')
 const xIn = (pl: Placed) => pl.x - offX.value
 const visible = (pl: Placed) => xIn(pl) + pl.w >= -40 && xIn(pl) <= trackW.value + 40
 const rowHeight = (id: string) => layout.value.heights.get(id) ?? LANE_H + 10
 
 let pan: { x: number; start: number } | null = null
 function onTrackDown(e: PointerEvent) {
-    if (e.button !== 0 || (e.target as HTMLElement).closest('.item')) return
+    if (e.button !== 0 || (e.target as HTMLElement).closest('.item, .band')) return
     pan = { x: e.clientX, start: left.value }
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
 }
@@ -231,7 +261,7 @@ function dateAt(e: MouseEvent): string {
     return fromDayNum(Math.floor(left.value + (e.clientX - rect.left) / ppd.value))
 }
 function onTrackDbl(e: MouseEvent, row: string) {
-    if ((e.target as HTMLElement).closest('.item')) return
+    if ((e.target as HTMLElement).closest('.item, .band')) return
     emit('add', { date: dateAt(e), row })
 }
 
@@ -294,6 +324,8 @@ function onKey(e: KeyboardEvent) {
 }
 
 const todayX = computed(() => xOf(todayN) + ppd.value / 2)
+const asOfX = computed(() => (props.asOf ? xOf(dayNum(props.asOf)) + ppd.value / 2 : null))
+const asOfLabel = computed(() => (props.asOf ? `${props.asOf.slice(0, 4)}/${Number(props.asOf.slice(5, 7))}/${Number(props.asOf.slice(8))}` : ''))
 const rangeLabel = computed(() => {
     const a = fromDayNum(Math.floor(left.value))
     const b = fromDayNum(Math.floor(left.value + days.value))
@@ -324,7 +356,7 @@ const tipOf = (it: TimelineItem) =>
             </UFieldGroup>
             <SegmentSwitch v-model="scale" size="xs" :items="SCALES.map((s) => ({ value: s.value, label: s.label }))" />
             <UTooltip
-                :text="`${MOD_KEY}＋ホイールで拡大・縮小します。背景のドラッグか Shift＋ホイールで、表示する期間を前後に動かします。空いた所をダブルクリックすると、その日に期日を足します`"
+                :text="`${MOD_KEY}＋ホイールで拡大・縮小します。背景のドラッグか Shift＋ホイールで、表示する期間を前後に動かします。空いた所をダブルクリックすると、その日に期日を追加します`"
             >
                 <UIcon name="i-lucide-circle-help" class="help" />
             </UTooltip>
@@ -334,7 +366,7 @@ const tipOf = (it: TimelineItem) =>
             <div class="content" :style="{ '--label-w': `${labelW}px` }">
                 <div class="axis" :style="{ height: `${AXIS_H}px` }">
                     <div v-if="!bare" class="corner" />
-                    <div class="axis-track">
+                    <div class="axis-track" @click="(e) => emit('asOf', dateAt(e))">
                         <div class="major">
                             <span v-for="t in axis.major" :key="t.key" class="tick" :style="{ left: `${t.x}px`, width: `${t.w}px` }" />
                             <span v-for="l in axis.majorLabels" :key="'l' + l.key" class="mlabel" :style="{ left: `${l.x}px` }">{{ l.label }}</span>
@@ -350,6 +382,7 @@ const tipOf = (it: TimelineItem) =>
                             >
                         </div>
                         <span class="today-tag" :style="{ left: `${todayX}px` }">今日</span>
+                        <span v-if="asOfX !== null" class="asof-tag" :style="{ left: `${asOfX}px` }">{{ asOfLabel }}</span>
                     </div>
                 </div>
 
@@ -363,6 +396,7 @@ const tipOf = (it: TimelineItem) =>
                             :style="{ left: `${t.x}px`, width: `${t.w}px` }"
                         />
                         <span class="today" :style="{ left: `${todayX}px` }" />
+                        <span v-if="asOfX !== null" class="asof" :style="{ left: `${asOfX}px` }" />
                     </div>
 
                     <div v-for="r in rows" :key="r.id" class="row" :style="{ height: `${rowHeight(r.id)}px` }">
@@ -411,6 +445,16 @@ const tipOf = (it: TimelineItem) =>
                                     <span v-if="drag?.key === pl.it.key && dragLabel" class="drag-date">{{ dragLabel }}</span>
                                 </button>
                             </template>
+                            <button
+                                v-for="v in bandsOf(r.id)"
+                                :key="v.b.key"
+                                class="band"
+                                :class="{ odd: v.odd, on: v.on, open: !v.b.until }"
+                                :style="{ left: `${v.x}px`, width: `${v.w}px` }"
+                                :title="bandTip(v.b)"
+                                :aria-label="bandTip(v.b)"
+                                @click="emit('band', v.b)"
+                            />
                         </div>
                     </div>
                     <div v-if="!rows.length" class="empty cd-muted">表示するものがありません</div>
@@ -550,6 +594,56 @@ const tipOf = (it: TimelineItem) =>
     color: white;
     background: var(--ui-color-error-500);
     pointer-events: none;
+}
+
+.asof-tag {
+    position: absolute;
+    top: 1px;
+    transform: translateX(-50%);
+    padding: 0 4px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: white;
+    background: var(--ui-color-primary-500);
+    pointer-events: none;
+}
+
+.axis-track {
+    cursor: pointer;
+}
+
+.asof {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    border-left: 2px dashed var(--ui-color-primary-500);
+}
+
+.band {
+    position: absolute;
+    bottom: 4px;
+    height: 8px;
+    border-radius: 2px;
+    background: color-mix(in oklab, var(--ui-color-primary-500) 35%, var(--ui-bg));
+    border-left: 2px solid var(--ui-color-primary-500);
+    cursor: pointer;
+}
+
+.band.odd {
+    background: color-mix(in oklab, var(--ui-color-primary-500) 20%, var(--ui-bg));
+}
+
+.band.open {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.band:hover,
+.band.on {
+    background: color-mix(in oklab, var(--ui-color-primary-500) 60%, var(--ui-bg));
 }
 
 .rows {
