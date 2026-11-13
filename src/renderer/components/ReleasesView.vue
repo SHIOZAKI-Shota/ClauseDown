@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import type { DeliveryRecord, EffectiveVersion } from '@shared/api'
-import { addDays, KIND_COLORS, type DueEventInput, type Occurrence } from '@shared/schedule'
+import { addDays, effectivePeriods, inForceAt, KIND_COLORS, type DueEventInput, type Occurrence } from '@shared/schedule'
 import { FORGE_LABEL } from '@shared/forge'
 import { useApp } from '~/stores/app'
 import { usePane } from '~/composables/usePane'
 import { useSchedule } from '~/composables/useSchedule'
 import { useStoredRef } from '~/composables/useStoredRef'
 import { daysUntil, firstLine, fmtDate, todayISO, untilLabel } from '~/utils/format'
-import type { TimelineItem } from '~/components/TimelineChart.vue'
+import type { TimelineBand, TimelineItem } from '~/components/TimelineChart.vue'
 
 const app = useApp()
 const path = app.currentPath!
@@ -54,6 +54,9 @@ const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当�
 async function load() {
     ;[versions.value, deliveries.value] = await Promise.all([window.api.listEffective(app.repoDir!, path), window.api.listDeliveries(app.repoDir!, path)])
     loaded.value = true
+    const want = app.releasesSelect && versions.value.find((v) => v.date === app.releasesSelect)
+    app.releasesSelect = null
+    if (want) sel.value = { kind: 'v', id: want.tag }
     const cur = sel.value
     const still = cur && (cur.kind === 'e' || (cur.kind === 'v' ? versions.value.some((v) => v.tag === cur.id) : deliveries.value.some((d) => d.id === cur.id)))
     if (!still)
@@ -62,7 +65,17 @@ async function load() {
 onMounted(load)
 
 const today = todayISO()
-const currentTag = computed(() => versions.value.find((v) => v.date <= today)?.tag)
+const periods = computed(() => effectivePeriods(versions.value.map((v) => ({ docPath: path, date: v.date, oid: v.oid, message: v.message }))))
+const bands = computed<TimelineBand[]>(() => periods.value.map((p) => ({ ...p, row: 'doc' })))
+const untilOf = (v: EffectiveVersion) => periods.value.find((p) => p.date === v.date)?.until ?? null
+const currentTag = computed(() => {
+    const p = inForceAt(periods.value, path, today)
+    return p ? versions.value.find((v) => v.date === p.date)?.tag : undefined
+})
+function pickBand(b: TimelineBand) {
+    const v = versions.value.find((x) => x.date === b.date)
+    if (v) sel.value = { kind: 'v', id: v.tag }
+}
 const stateOf = (v: EffectiveVersion) => (v.date > today ? 'upcoming' : v.tag === currentTag.value ? 'current' : 'past')
 const STATE: Record<string, { label: string; color: 'primary' | 'success' | 'neutral' }> = {
     upcoming: { label: '施行予定', color: 'primary' },
@@ -124,21 +137,24 @@ const itemsOf = (d: DeliveryRecord) => d.items.map((x) => ITEM_LABEL[x] ?? x)
             class="strip"
             :rows="[{ id: 'doc', label: '' }]"
             :items="timelineItems"
+            :bands="bands"
+            :as-of="selVersion?.date ?? null"
             bare
             :kind-of="s.kindOf.value"
             :selected="sel?.kind === 'e' ? sel.id : null"
             storage-key="doc"
             @select="pick"
+            @band="pickBand"
             @add="({ date }) => (editing = { date })"
             @move="(o, d) => s.move(o, d)"
         >
             <template #tools>
-                <UButton label="期日を足す" icon="i-lucide-calendar-plus" size="xs" @click="editing = {}" />
-                <UButton label="すべての文書の期日" icon="i-lucide-calendar-range" size="xs" color="neutral" variant="ghost" @click="app.openSchedule()" />
+                <UButton label="期日の追加" icon="i-lucide-calendar-plus" size="xs" @click="editing = {}" />
+                <UButton label="すべての文書の期日・有効期間" icon="i-lucide-calendar-range" size="xs" color="neutral" variant="ghost" @click="app.openSchedule()" />
             </template>
         </TimelineChart>
         <div class="releases">
-            <SidePane :pane="listPane" side="left" label="期日・納品" icon="i-lucide-calendar-check">
+            <SidePane :pane="listPane" side="left" label="期日・有効期間・納品" icon="i-lucide-calendar-check">
                 <template #bar>
                     <UTooltip :text="showTimeline ? 'タイムラインを隠す' : 'タイムラインを出す'">
                         <UButton
@@ -154,8 +170,8 @@ const itemsOf = (d: DeliveryRecord) => d.items.map((x) => ITEM_LABEL[x] ?? x)
                 </template>
                 <div class="cd-list-group">
                     <SectionHead label="期日" icon="i-lucide-calendar-clock" :count="dueList.length" pinned>
-                        <UTooltip text="この文書の期日を足す">
-                            <UButton icon="i-lucide-plus" size="xs" square color="neutral" variant="ghost" aria-label="期日を足す" @click="editing = {}" />
+                        <UTooltip text="この文書の期日の追加">
+                            <UButton icon="i-lucide-plus" size="xs" square color="neutral" variant="ghost" aria-label="期日の追加" @click="editing = {}" />
                         </UTooltip>
                     </SectionHead>
                     <p v-if="s.loaded.value && !dueList.length" class="cd-muted empty">
@@ -194,7 +210,10 @@ const itemsOf = (d: DeliveryRecord) => d.items.map((x) => ITEM_LABEL[x] ?? x)
                             <DateTile :date="v.date" :active="stateOf(v) === 'current'" :fade-past="stateOf(v) === 'past'" />
                         </template>
                         <IssueText :text="firstLine(v.message)" />
-                        <template #sub>{{ v.author }}<template v-if="v.date >= today">・{{ untilLabel(daysUntil(v.date, today)) }}</template></template>
+                        <template #sub
+                            >{{ v.author }}<template v-if="v.date >= today">・{{ untilLabel(daysUntil(v.date, today)) }}</template
+                            ><template v-if="untilOf(v)">・{{ fmtDate(untilOf(v)!, 'ymd') }} まで</template></template
+                        >
                         <template #trail>
                             <UBadge v-if="stateOf(v) !== 'past'" :label="STATE[stateOf(v)].label" :color="STATE[stateOf(v)].color" variant="subtle" size="sm" />
                         </template>

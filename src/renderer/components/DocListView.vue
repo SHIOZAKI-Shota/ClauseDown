@@ -162,7 +162,7 @@ const menu = computed<ContextMenuItem[][]>(() => {
         const d = t.doc
         return actions.docMenu(d, [
             { label: '改定履歴', icon: 'i-lucide-git-commit-horizontal', onSelect: () => app.openDoc(d.path, 'history') },
-            { label: '期日・納品', icon: 'i-lucide-package', onSelect: () => app.openDoc(d.path, 'releases') },
+            { label: '期日・有効期間・納品', icon: 'i-lucide-package', onSelect: () => app.openDoc(d.path, 'releases') },
         ])
     }
     if (t?.folder !== undefined) {
@@ -193,7 +193,7 @@ const VIEWS = [
             </div>
             <span class="cd-grow" />
             <UButton
-                label="期日"
+                label="期日・有効期間"
                 icon="i-lucide-calendar-range"
                 color="neutral"
                 variant="outline"
@@ -453,7 +453,7 @@ const VIEWS = [
                                             <span class="cd-grow" />
                                             <UButton label="改定履歴" size="xs" color="neutral" variant="ghost" @click.stop="app.openDoc(d.path, 'history')" />
                                             <UButton
-                                                label="期日・納品"
+                                                label="期日・有効期間・納品"
                                                 size="xs"
                                                 color="neutral"
                                                 variant="ghost"
@@ -468,7 +468,7 @@ const VIEWS = [
                 </UContextMenu>
             </div>
 
-            <SidePane :pane="sidePane" side="right" label="メモ・改定案・期日" icon="i-lucide-notebook-text">
+            <SidePane :pane="sidePane" side="right" label="メモ・改定案・期日・有効期間" icon="i-lucide-notebook-text">
                 <div class="side-body">
                     <HomeNote />
                     <HomeDrafts />

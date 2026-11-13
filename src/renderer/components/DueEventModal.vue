@@ -86,7 +86,7 @@ function save() {
 <template>
     <UModal
         :open="true"
-        :title="event ? '期日を直す' : '期日を足す'"
+        :title="event ? '期日を直す' : '期日の追加'"
         description="施行・公布・提出・届出・契約の開始や更新などの日付を記録します。リポジトリを使う全員に共有されます。"
         @update:open="(v) => !v && emit('close')"
     >

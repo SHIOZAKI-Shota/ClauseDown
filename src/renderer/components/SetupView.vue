@@ -19,7 +19,7 @@ const SECTIONS = [
     { id: 'display', label: '表示', icon: 'i-lucide-monitor' },
     { id: 'editor', label: 'エディタ', icon: 'i-lucide-square-pen' },
     { id: 'sync', label: '同期', icon: 'i-lucide-refresh-cw' },
-    { id: 'due', label: '期日', icon: 'i-lucide-calendar-clock' },
+    { id: 'due', label: '期日・有効期間', icon: 'i-lucide-calendar-clock' },
     { id: 'export', label: '書き出し', icon: 'i-lucide-download' },
     { id: 'print', label: '印刷・PDF・Word の書式', icon: 'i-lucide-type' },
     { id: 'remote', label: 'GitHub/GitLab', icon: 'i-lucide-cloud' },
@@ -518,7 +518,7 @@ async function addSamples() {
             </SettingRow>
         </SettingsSection>
 
-        <SettingsSection id="due" title="期日">
+        <SettingsSection id="due" title="期日・有効期間">
             <SettingRow label="期日をデスクトップに通知する" description="登録しているすべてのリポジトリの期日を一度だけ通知します">
                 <USwitch :model-value="app.prefs.notifyDue" @update:model-value="(v: boolean) => setPref('notifyDue', v)" />
             </SettingRow>

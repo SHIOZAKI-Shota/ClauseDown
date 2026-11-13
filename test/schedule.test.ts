@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
 import { join } from 'node:path'
-import { addMonths, cleanEventInput, cleanKinds, DEFAULT_KINDS, dueReminders, expand, type DueEvent } from '../src/shared/schedule'
+import { addMonths, cleanEventInput, cleanKinds, DEFAULT_KINDS, dueReminders, effectivePeriods, expand, inForceAt, type DueEvent } from '../src/shared/schedule'
 
 const repos: { name: string; dir: string }[] = []
 vi.mock('../src/main/settings', () => ({
@@ -22,6 +22,35 @@ const ev = (p: Partial<DueEvent>): DueEvent => ({
     at: '',
     updatedAt: '',
     ...p,
+})
+
+describe('有効期間', () => {
+    const periods = effectivePeriods([
+        { docPath: 'a.md', date: '2026-04-01', message: '改正' },
+        { docPath: 'a.md', date: '2015-04-01', message: '制定\n本文' },
+        { docPath: 'a.md', date: '2020-10-01' },
+        { docPath: '', date: '2021-01-01' },
+    ])
+
+    it('次の版の施行日の前日まで、最後の版は終わりなし', () => {
+        expect(periods.filter((p) => p.docPath === 'a.md').map((p) => [p.date, p.until, p.title])).toEqual([
+            ['2015-04-01', '2020-09-30', '制定'],
+            ['2020-10-01', '2026-03-31', ''],
+            ['2026-04-01', null, '改正'],
+        ])
+    })
+
+    it('指定した日に効力のある版を返し、施行前は null', () => {
+        expect(inForceAt(periods, 'a.md', '2020-09-30')?.date).toBe('2015-04-01')
+        expect(inForceAt(periods, 'a.md', '2020-10-01')?.date).toBe('2020-10-01')
+        expect(inForceAt(periods, 'a.md', '2030-01-01')?.date).toBe('2026-04-01')
+        expect(inForceAt(periods, 'a.md', '2015-03-31')).toBeNull()
+    })
+
+    it('文書を決めない施行日は文書の期間に混ぜない', () => {
+        expect(inForceAt(periods, 'a.md', '2021-06-01')?.date).toBe('2020-10-01')
+        expect(inForceAt(periods, '', '2021-06-01')?.date).toBe('2021-01-01')
+    })
 })
 
 describe('日付の計算', () => {

@@ -8,7 +8,7 @@ const tabs = [
     { label: '編集', value: 'editor', icon: 'i-lucide-pencil' },
     { label: '改定履歴', value: 'history', icon: 'i-lucide-git-commit-vertical' },
     { label: '新旧対照表', value: 'compare', icon: 'i-lucide-columns-2' },
-    { label: '期日・納品', value: 'releases', icon: 'i-lucide-calendar-check' },
+    { label: '期日・有効期間・納品', value: 'releases', icon: 'i-lucide-calendar-check' },
 ]
 const docView = computed(() => app.currentDoc && tabs.some((t) => t.value === app.view))
 const tab = computed({
@@ -60,7 +60,7 @@ const savedMessage = computed(() => (lastSaved.value ? firstLine(lastSaved.value
         </template>
         <template v-if="docView" #right>
             <UButton
-                label="期日"
+                label="期日・有効期間"
                 icon="i-lucide-calendar-range"
                 size="sm"
                 color="neutral"

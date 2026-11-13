@@ -11,6 +11,7 @@ import {
     cleanEventInput,
     cleanKinds,
     DELIVERY_KIND,
+    effectivePeriods,
     expand,
     fromEffective,
     isDate,
@@ -19,6 +20,7 @@ import {
     type DueEventInput,
     type EventKind,
     type Occurrence,
+    type Period,
     type RepoSchedule,
     type ScheduleItem,
 } from '../shared/schedule'
@@ -100,7 +102,7 @@ export async function occurrences(
     from: string,
     to: string,
     today: string,
-): Promise<{ kinds: EventKind[]; events: DueEvent[]; items: Occurrence[] }> {
+): Promise<{ kinds: EventKind[]; events: DueEvent[]; items: Occurrence[]; periods: Period[] }> {
     if (!isDate(from) || !isDate(to) || !isDate(today)) throw new Error('日付が正しくありません')
     const [kinds, events, tags, deliveries] = await Promise.all([
         getEventKinds(dir),
@@ -135,13 +137,14 @@ export async function occurrences(
             oid: d.oid,
         })
     }
-    return { kinds, events, items: items.sort(byDate) }
+    const periods = effectivePeriods(tags)
+    return { kinds, events, items: items.sort(byDate), periods }
 }
 
 async function repoPart(r: { dir: string; name: string }, from: string, to: string, today: string) {
     if (!fs.existsSync(r.dir)) return null
     try {
-        const [{ kinds, events, items }, docs] = await Promise.all([occurrences(r.dir, from, to, today), listDocTitles(r.dir)])
+        const [{ kinds, events, items, periods }, docs] = await Promise.all([occurrences(r.dir, from, to, today), listDocTitles(r.dir)])
         const kindOf = kindMap(kinds)
         const repo: RepoSchedule = { dir: r.dir, name: r.name, kinds, events, docs }
         return {
@@ -150,17 +153,22 @@ async function repoPart(r: { dir: string; name: string }, from: string, to: stri
                 const k = kindOf(o.kind)
                 return { ...o, key: `${r.dir}|${o.key}`, dir: r.dir, repo: r.name, kindLabel: k.label, color: k.color }
             }),
+            periods: periods.map((p) => ({ ...p, key: `${r.dir}|${p.key}`, dir: r.dir })),
         }
     } catch {
         return null
     }
 }
 
-export async function occurrencesAll(from: string, to: string, today: string): Promise<{ repos: RepoSchedule[]; items: ScheduleItem[] }> {
+export async function occurrencesAll(
+    from: string,
+    to: string,
+    today: string,
+): Promise<{ repos: RepoSchedule[]; items: ScheduleItem[]; periods: (Period & { dir: string })[] }> {
     if (!isDate(from) || !isDate(to) || !isDate(today)) throw new Error('日付が正しくありません')
     const { repos } = await loadSettings()
     const ok = (await Promise.all(repos.map((r) => repoPart(r, from, to, today)))).filter((p) => !!p)
-    return { repos: ok.map((p) => p.repo), items: ok.flatMap((p) => p.items).sort(byDate) }
+    return { repos: ok.map((p) => p.repo), items: ok.flatMap((p) => p.items).sort(byDate), periods: ok.flatMap((p) => p.periods) }
 }
 
 export async function scheduleIcs(dir: string, today: string): Promise<{ name: string; text: string; count: number }> {

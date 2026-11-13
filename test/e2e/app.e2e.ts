@@ -72,13 +72,13 @@ afterAll(async () => {
 })
 
 describe('画面', () => {
-    it('トップページに、すべてのリポジトリの期日（期限切れとこれから）が出る', async () => {
+    it('トップページに、すべてのリポジトリの期日・有効期間（期限切れとこれから）が出る', async () => {
         await win.getByText('規程の提出').first().waitFor({ state: 'visible', timeout: 10000 })
         await win.getByText('労基署への届出').first().waitFor({ state: 'visible', timeout: 10000 })
     })
 
-    it('左のペインをすべてのリポジトリの期日に切り替え、一覧から済みにすると記録に残る', async () => {
-        await win.getByRole('radio', { name: 'すべてのリポジトリの期日' }).click()
+    it('左のペインをすべてのリポジトリの期日・有効期間に切り替え、一覧から済みにすると記録に残る', async () => {
+        await win.getByRole('radio', { name: 'すべてのリポジトリの期日・有効期間' }).click()
         await win.getByRole('button', { name: 'カレンダーに書き出す' }).waitFor()
         await win.getByRole('radio', { name: '一覧' }).click()
         await win.getByRole('checkbox', { name: '済みにする' }).first().click()
@@ -87,7 +87,7 @@ describe('画面', () => {
         await win.getByRole('radio', { name: '最近開いた文書' }).click()
     })
 
-    it('リポジトリ・編集・改定履歴・新旧対照表・期日・納品・期日の画面を開ける', async () => {
+    it('リポジトリ・編集・改定履歴・新旧対照表・期日・有効期間・納品・期日・有効期間の画面を開ける', async () => {
         await store(`s.view = 'docs'`)
         await seen('就業規則')
         await store(`s.openDoc(${JSON.stringify(DOC)})`)
@@ -98,7 +98,7 @@ describe('画面', () => {
             await win.waitForTimeout(500)
         }
         await store(`s.openSchedule()`)
-        await win.getByRole('button', { name: '期日を足す' }).first().waitFor()
+        await win.getByRole('button', { name: '期日の追加' }).first().waitFor()
         await expect(win.getByText('労基署への届出').first().isVisible()).resolves.toBe(true)
     })
 

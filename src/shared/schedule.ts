@@ -237,6 +237,47 @@ export function fromEffective(list: { docPath: string; date: string; oid?: strin
     }))
 }
 
+export interface Period {
+    key: string
+    docPath: string
+    date: string
+    until: string | null
+    title: string
+    oid?: string
+}
+
+export function effectivePeriods(list: { docPath: string; date: string; oid?: string; message?: string }[]): Period[] {
+    const byDoc = new Map<string, typeof list>()
+    for (const e of list) {
+        if (!isDate(e.date)) continue
+        const l = byDoc.get(e.docPath)
+        if (l) l.push(e)
+        else byDoc.set(e.docPath, [e])
+    }
+    const out: Period[] = []
+    for (const [docPath, l] of byDoc) {
+        l.sort((a, b) => a.date.localeCompare(b.date))
+        l.forEach((e, i) => {
+            const next = l[i + 1]
+            out.push({
+                key: `${docPath}:${e.date}`,
+                docPath,
+                date: e.date,
+                until: next ? addDays(next.date, -1) : null,
+                title: e.message?.split(/\r?\n/)[0] || '',
+                ...(e.oid ? { oid: e.oid } : {}),
+            })
+        })
+    }
+    return out.sort((a, b) => a.docPath.localeCompare(b.docPath) || a.date.localeCompare(b.date))
+}
+
+export function inForceAt<T extends Period>(periods: T[], docPath: string, date: string): T | null {
+    let hit: T | null = null
+    for (const p of periods) if (p.docPath === docPath && p.date <= date && (!hit || p.date > hit.date)) hit = p
+    return hit
+}
+
 export function byDate(a: Occurrence, b: Occurrence): number {
     return a.date.localeCompare(b.date) || (b.end ?? b.date).localeCompare(a.end ?? a.date) || a.kind.localeCompare(b.kind)
 }
