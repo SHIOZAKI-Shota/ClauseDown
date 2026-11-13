@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { getDocument, GlobalWorkerOptions, TextLayer, type PDFDocumentProxy } from 'pdfjs-dist'
 import type { TextContent, TextItem } from 'pdfjs-dist/types/src/display/api'
+// oxlint-disable-next-line import/default -- ?url の default は Vite が作る
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { lineSpans, stripMarks, type LineSpan, type MarkSpot } from '@shared/line-marks'
 import { fixRadicals } from '@shared/radicals'
@@ -180,8 +181,8 @@ async function draw(i: number) {
     const viewport = page.getViewport({ scale: scale.value })
     const ratio = window.devicePixelRatio || 1
     const canvas = document.createElement('canvas')
-    canvas.width = Math.floor(viewport.width * ratio)
-    canvas.height = Math.floor(viewport.height * ratio)
+    canvas.width = Math.round(viewport.width * ratio)
+    canvas.height = Math.round(viewport.height * ratio)
     try {
         await page.render({ canvas, viewport, transform: ratio === 1 ? undefined : [ratio, 0, 0, ratio, 0, 0] }).promise
     } catch {
@@ -196,7 +197,24 @@ async function draw(i: number) {
     el.querySelector('.textLayer')?.remove()
     el.prepend(canvas)
     el.append(layer)
+    snap(el)
 }
+
+function px(v: number): string {
+    const r = window.devicePixelRatio || 1
+    return `${Math.round(v * scale.value * r) / r}px`
+}
+
+function snap(el: HTMLElement) {
+    const r = window.devicePixelRatio || 1
+    el.style.translate = ''
+    const box = el.getBoundingClientRect()
+    const dx = (Math.round(box.left * r) - box.left * r) / r
+    const dy = (Math.round(box.top * r) - box.top * r) / r
+    if (dx || dy) el.style.translate = `${dx}px ${dy}px`
+}
+
+watch(room, () => nextTick(() => pageEls.value.forEach(snap)))
 
 function redrawVisible() {
     for (const i of visible) void draw(i)
@@ -234,7 +252,7 @@ defineExpose({ reveal, follow })
 <template>
     <div ref="host" class="pdf-pages" @copy="onCopy">
         <div v-for="(s, i) in sheets" :key="i" ref="pageEls" class="sheet" :data-page="i"
-            :style="{ width: `${s.w * scale}px`, height: `${s.h * scale}px`, '--total-scale-factor': scale, '--scale-round-x': '1px', '--scale-round-y': '1px' }"
+            :style="{ width: px(s.w), height: px(s.h), '--total-scale-factor': scale, '--scale-round-x': '1px', '--scale-round-y': '1px' }"
             @click="onClick($event, i)">
             <div v-if="bands(i)" class="band" :style="bands(i)!" />
         </div>
