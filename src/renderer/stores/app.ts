@@ -7,6 +7,7 @@ import { DEFAULT_PREFS, type AppPrefs, type DocStyle, type RecentDoc } from '@sh
 import { resolveStyle, type StyleLayers } from '@shared/folder-style'
 import { toPlain } from '~/utils/ipc'
 import { todayISO } from '~/utils/format'
+import { IS_MAC } from '~/utils/platform'
 import { addDays } from '@shared/schedule'
 import { useStoredRef } from '~/composables/useStoredRef'
 
@@ -118,6 +119,27 @@ export const useApp = defineStore('app', () => {
             color: error ? 'error' : 'success',
             icon: error ? 'i-lucide-circle-alert' : 'i-lucide-circle-check',
             duration: error ? 8000 : 3000,
+        })
+    }
+
+    function notifyExported(text: string, path: string) {
+        toast.add({
+            title: text,
+            description: path.split(/[\\/]/).pop(),
+            color: 'success',
+            icon: 'i-lucide-circle-check',
+            duration: 8000,
+            actions: [
+                { label: '開く', icon: 'i-lucide-external-link', size: 'xs', color: 'neutral', variant: 'outline', onClick: () => void run(() => window.api.openExported(path)) },
+                {
+                    label: IS_MAC ? 'Finder で表示' : 'エクスプローラーで表示',
+                    icon: 'i-lucide-folder-open',
+                    size: 'xs',
+                    color: 'neutral',
+                    variant: 'ghost',
+                    onClick: () => void run(() => window.api.showExported(path)),
+                },
+            ],
         })
     }
 
@@ -610,6 +632,7 @@ export const useApp = defineStore('app', () => {
         run,
         runOk,
         notify,
+        notifyExported,
         sync,
     }
 })

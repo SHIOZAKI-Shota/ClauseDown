@@ -209,7 +209,7 @@ const repeatLabel = (o: RepoOccurrence) => {
 }
 async function exportIcs() {
     const r = await app.run(() => window.api.exportSchedule(isAll.value ? '' : (app.repoDir ?? ''), s.today))
-    if (r) app.notify(`${r.count} 件の期日を書き出しました。カレンダーのアプリで取り込んでください`)
+    if (r) app.notifyExported(`${r.count} 件の期日を書き出しました。カレンダーのアプリで取り込んでください`, r.path)
 }
 const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当日に知らせる' : `${n} 日前から知らせる`)
 </script>

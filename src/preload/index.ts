@@ -95,6 +95,8 @@ const names: (keyof Api)[] = [
     'listDeliveries',
     'deliver',
     'openPath',
+    'openExported',
+    'showExported',
     'openExternal',
     'getLicenses',
     'accounts',
