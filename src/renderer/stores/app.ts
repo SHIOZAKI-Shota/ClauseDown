@@ -130,13 +130,12 @@ export const useApp = defineStore('app', () => {
             icon: 'i-lucide-circle-check',
             duration: 8000,
             actions: [
-                { label: '開く', icon: 'i-lucide-external-link', size: 'xs', color: 'neutral', variant: 'outline', onClick: () => void run(() => window.api.openExported(path)) },
+                { label: '開く', icon: 'i-lucide-external-link', size: 'sm', onClick: () => void run(() => window.api.openExported(path)) },
                 {
                     label: IS_MAC ? 'Finder で表示' : 'エクスプローラーで表示',
-                    icon: 'i-lucide-folder-open',
-                    size: 'xs',
+                    size: 'sm',
                     color: 'neutral',
-                    variant: 'ghost',
+                    variant: 'outline',
                     onClick: () => void run(() => window.api.showExported(path)),
                 },
             ],
