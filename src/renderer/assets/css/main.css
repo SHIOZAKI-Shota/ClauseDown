@@ -138,6 +138,15 @@ body.cd-resizing * {
     cursor: col-resize !important;
 }
 
+body.cd-resizing-v {
+    cursor: row-resize !important;
+    user-select: none;
+}
+
+body.cd-resizing-v * {
+    cursor: row-resize !important;
+}
+
 .cd-hint {
     color: var(--cd-syn-hint);
     font-size: 11px;

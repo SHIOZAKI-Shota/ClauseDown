@@ -10,6 +10,7 @@ import { articleTitle } from '@shared/legal-parser'
 import { checkDefinitions } from '@shared/definitions'
 import { findMath, mathError } from '@shared/math'
 import type { ProofreadIssue } from '@shared/api'
+import { backRefs, type BackRef } from '@shared/doc-view'
 
 export const legalTheme = EditorView.theme({
     '&': { height: '100%', fontSize: 'var(--cd-ed-size, 14px)', backgroundColor: 'var(--cd-ed-bg)', color: 'var(--cd-ed-text)' },
@@ -53,6 +54,9 @@ export const legalTheme = EditorView.theme({
     '.cm-diagnostic-warning': { borderLeft: '4px solid var(--cd-draft)' },
     '.cm-panel.cm-panel-lint [name=close]': { top: '4px', right: '8px', color: 'var(--ui-text-muted)', cursor: 'pointer' },
     '.cd-hint': { marginRight: '6px' },
+    '.cd-backref': { marginLeft: '12px', fontSize: '11px', color: 'var(--cd-syn-hint)', fontFamily: 'var(--ui-font-family)', userSelect: 'none', whiteSpace: 'nowrap' },
+    '.cd-backref-to': { cursor: 'pointer', textDecoration: 'underline dotted', textUnderlineOffset: '3px' },
+    '.cd-backref-to:hover': { color: 'var(--cd-syn-article)' },
     '.cd-attr': { color: 'var(--cd-syn-mark)' },
     '.cd-prop': {
         color: 'var(--cd-syn-mark)',
@@ -86,12 +90,16 @@ export const setLegalDoc = StateEffect.define<LegalDoc>()
 interface LegalState {
     ld: LegalDoc
     hints: Map<number, Hint>
+    backs: Map<number, BackRef[]>
 }
 const legalDocField = StateField.define<LegalState | null>({
     create: () => null,
     update: (v, tr) => {
         for (const e of tr.effects) {
-            if (e.is(setLegalDoc)) return v?.ld === e.value ? v : { ld: e.value, hints: new Map(hintsOf(e.value).map((h) => [h.line, h])) }
+            if (e.is(setLegalDoc))
+                return v?.ld === e.value
+                    ? v
+                    : { ld: e.value, hints: new Map(hintsOf(e.value).map((h) => [h.line, h])), backs: backRefs(tr.state.doc.toString(), e.value) }
         }
         return v
     },
@@ -151,6 +159,44 @@ class HintWidget extends WidgetType {
     }
 }
 
+class BackRefWidget extends WidgetType {
+    readonly key: string
+    constructor(readonly list: BackRef[]) {
+        super()
+        this.key = list.map((b) => `${b.line}:${b.label}`).join('|')
+    }
+    override eq(o: BackRefWidget) {
+        return o.key === this.key
+    }
+    toDOM(view: EditorView) {
+        const el = document.createElement('span')
+        el.className = 'cd-backref'
+        el.title = this.list.map((b) => b.label).join('\n')
+        el.append('← ')
+        const firsts = new Map<string, BackRef>()
+        for (const b of this.list) if (!firsts.has(b.article)) firsts.set(b.article, b)
+        let n = 0
+        for (const [article, b] of firsts) {
+            if (n++) el.append('・')
+            const to = document.createElement('span')
+            to.className = 'cd-backref-to'
+            to.textContent = article
+            to.addEventListener('mousedown', (e) => {
+                e.preventDefault()
+                const line = view.state.doc.line(Math.min(b.line + 1, view.state.doc.lines))
+                view.dispatch({ selection: { anchor: line.to }, effects: EditorView.scrollIntoView(line.from, { y: 'center' }) })
+                view.focus()
+            })
+            el.append(to)
+        }
+        el.append(' から参照')
+        return el
+    }
+    override ignoreEvent() {
+        return true
+    }
+}
+
 const ATTR_RE = /\s\{[^{}]*\}\s*$/
 const REF_RE = /\[\[([^\]:]+)(?::\d+)?(?::\d+)?\]\]/g
 const PROP_INLINE_RE = /\](\{[^{}]*\})/g
@@ -192,6 +238,9 @@ function buildDecorations(view: EditorView): DecorationSet {
                     deco: Decoration.mark({ class: ok ? 'cd-ref' : 'cd-ref-bad' }),
                 })
             }
+            const backs = st?.backs.get(line.number - 1)
+            if (backs?.length && h?.kind === 'article')
+                marks.push({ from: line.to, to: line.to, deco: Decoration.widget({ widget: new BackRefWidget(backs), side: 1 }) })
             marks.sort((x, y) => x.from - y.from)
             for (const mk of marks) builder.add(mk.from, mk.to, mk.deco)
             pos = line.to + 1

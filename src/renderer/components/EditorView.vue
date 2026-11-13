@@ -6,6 +6,7 @@ import { autoMerge } from '@shared/merge3'
 import { DEFAULT_CONFIG, writeConfig, type DocConfig } from '@shared/config'
 import { extOfMime } from '@shared/images'
 import { clauseInsertLine, type ClauseInsert } from '@shared/clauses'
+import { backRefs } from '@shared/doc-view'
 import { isEnabled } from '@shared/experiments'
 import { useApp } from '~/stores/app'
 import { lastAtOrBefore, positionLabel } from '~/utils/legal-editor'
@@ -14,6 +15,7 @@ import { useStoredRef } from '~/composables/useStoredRef'
 import { useElementSize } from '@vueuse/core'
 import { usePane, paneStyle, type Pane } from '~/composables/usePane'
 import CodeEditor from '~/components/CodeEditor.vue'
+import type { EditorIssue } from '~/components/IssuePane.vue'
 import PdfPages from '~/components/PdfPages.vue'
 import type { SaveRequest } from '~/components/SaveVersionModal.vue'
 
@@ -70,6 +72,16 @@ watch(text, (v) => {
     parseTimer = setTimeout(() => (settled.value = v), v.length > 200_000 ? 500 : 120)
 })
 const doc = computed(() => parseLegal(settled.value))
+const backs = computed(() => backRefs(settled.value, doc.value))
+const countArticles = (d: typeof doc.value) => d.chapters.reduce((n, ch) => n + ch.articles.length, 0)
+let referenced = new Map<string, string>()
+watch(doc, (d, old) => {
+    if (old && countArticles(d) < countArticles(old)) {
+        const lost = [...referenced].filter(([id]) => !d.refs[id] && settled.value.includes(`[[${id}`))
+        if (lost.length) app.notify(`${lost.map(([, label]) => label).join('・')}は、ほかの条から参照されていました。参照先がなくなっています`, true)
+    }
+    referenced = new Map(Object.entries(d.refs).flatMap(([id, a]) => (backs.value.has(a.line) ? [[id, a.refLabel] as [string, string]] : [])))
+})
 const printKind = computed({
     get: () => app.prefs.previewKind ?? 'normal',
     set: (v: 'normal' | 'print') => app.setPrefsLive({ previewKind: v }),
@@ -288,9 +300,21 @@ const editMenu = computed<DropdownMenuItem[][]>(() => [
         { label: selEmpty.value ? 'この行に書式を付ける…' : '選んだ範囲に書式を付ける…', icon: 'i-lucide-type', onSelect: addFormat },
         { label: 'この行の前で改ページ', icon: 'i-lucide-separator-horizontal', onSelect: addPageBreak },
     ],
-    [{ label: '条参照を入れる', icon: 'i-lucide-link', onSelect: () => editor.value?.insertRef() }],
+    [{ label: '条参照を入れる', icon: 'i-lucide-link', onSelect: () => editor.value?.insertRef() }, backRefItem.value],
     [{ label: articleHere() ? 'この条について課題を作る' : 'この文書について課題を作る', icon: 'i-lucide-list-todo', onSelect: issueHere }],
 ])
+const backRefItem = computed<DropdownMenuItem>(() => {
+    let line = -1
+    for (const ch of doc.value.chapters) for (const a of ch.articles) if (a.line >= 0 && a.line <= cursorLine.value) line = a.line
+    const list = backs.value.get(line) ?? []
+    return list.length
+        ? {
+              label: `参照元（${list.length} 件）`,
+              icon: 'i-lucide-corner-up-left',
+              children: list.map((b) => ({ label: b.label, onSelect: () => editor.value?.goToLine(b.line) })),
+          }
+        : { label: '参照元はありません', icon: 'i-lucide-corner-up-left', disabled: true }
+})
 function articleHere() {
     let hit: { label: string; title: string } | null = null
     for (const ch of doc.value.chapters)
@@ -303,14 +327,39 @@ function issueHere() {
     const where = a ? `${name} ${a.label}${a.title ? `（${a.title}）` : ''}` : name
     app.openIssues({ draft: { title: '', body: where } })
 }
-const issues = ref({ errors: 0, warnings: 0 })
+const issueList = shallowRef<EditorIssue[]>([])
+const issues = computed(() => {
+    const errors = issueList.value.filter((i) => i.severity === 'error').length
+    return { errors, warnings: issueList.value.length - errors }
+})
+const issuesOpen = useStoredRef('clausedown.issues.open', false)
+const issueFilter = ref<'all' | 'error' | 'warning'>('all')
+const activeIssue = ref<number | null>(null)
 const issueNote = ref<{ kind: 'error' | 'warning'; text: string } | null>(null)
 let issueTimer: ReturnType<typeof setTimeout> | undefined
-function goIssue(kind: 'error' | 'warning') {
-    const msg = editor.value?.nextIssue(kind)
+const ISSUE_KINDS = [
+    { kind: 'error', count: 'errors', label: '誤り', icon: 'i-lucide-circle-x', color: 'error' },
+    { kind: 'warning', count: 'warnings', label: '注意', icon: 'i-lucide-triangle-alert', color: 'warning' },
+] as const
+function noteIssue(it: EditorIssue | null | undefined) {
     clearTimeout(issueTimer)
-    issueNote.value = msg ? { kind, text: msg } : null
-    if (msg) issueTimer = setTimeout(() => (issueNote.value = null), 10_000)
+    activeIssue.value = it?.from ?? null
+    issueNote.value = it ? { kind: it.severity, text: it.message } : null
+    if (it) issueTimer = setTimeout(() => (issueNote.value = null), 10_000)
+}
+function goIssue(kind: 'error' | 'warning', dir: 1 | -1) {
+    noteIssue(editor.value?.nextIssue(kind, dir))
+}
+function pickIssue(it: EditorIssue) {
+    editor.value?.selectIssue(it)
+    noteIssue(it)
+}
+function toggleIssues(kind: 'all' | 'error' | 'warning') {
+    if (issuesOpen.value && issueFilter.value === kind) issuesOpen.value = false
+    else {
+        issueFilter.value = kind
+        issuesOpen.value = true
+    }
 }
 watch(text, () => (issueNote.value = null))
 const showClauses = ref(false)
@@ -706,9 +755,11 @@ const saveState = computed(() => (saving.value === 'pending' ? '書き込み中�
                         <CodeEditor ref="editor" v-model="text" :legal="doc" :wrap="app.prefs.lineWrap"
                             :proofread="app.prefs.proofread" :readonly="aiRunning" :diff-base="savedText"
                             @cursor="onCursor" @scroll="onScroll" @shortcut="onShortcut" @history="(h) => (history = h)"
-                            @images="addImages" @issues="(n) => (issues = n)" />
+                            @images="addImages" @issues="(l) => (issueList = l)" @open-issues="issuesOpen ? (issuesOpen = false) : toggleIssues('all')" />
                     </div>
                 </UContextMenu>
+                <IssuePane v-if="issuesOpen" v-model:filter="issueFilter" :items="issueList" :doc="doc" :active="activeIssue"
+                    @pick="pickIssue" @close="issuesOpen = false" />
             </div>
             <PaneResizer v-if="mode === 'split'" :pane="editBase" side="left" label="編集" />
 
@@ -760,23 +811,27 @@ const saveState = computed(() => (saving.value === 'pending' ? '書き込み中�
             </template>
         </div>
         <footer class="cd-statusbar">
+            <div class="issue-pills">
+                <div v-for="k in ISSUE_KINDS" :key="k.kind" class="pill">
+                    <UTooltip :text="`${k.label}の一覧（${keys('Ctrl+Shift+M')}）`">
+                        <UButton :icon="k.icon" :label="String(issues[k.count])" size="xs" variant="soft"
+                            :color="issues[k.count] ? k.color : 'neutral'" class="seg first count"
+                            :class="{ on: issuesOpen && issueFilter === k.kind }" :disabled="mode === 'preview'"
+                            :aria-label="`${k.label}の一覧`" @click="toggleIssues(k.kind)" />
+                    </UTooltip>
+                    <UButton icon="i-lucide-chevron-up" size="xs" variant="soft" :color="issues[k.count] ? k.color : 'neutral'"
+                        class="seg mid" :disabled="mode === 'preview' || !issues[k.count]" :aria-label="`前の${k.label}へ`"
+                        :title="`前の${k.label}へ`" @click="goIssue(k.kind, -1)" />
+                    <UButton icon="i-lucide-chevron-down" size="xs" variant="soft" :color="issues[k.count] ? k.color : 'neutral'"
+                        class="seg last" :disabled="mode === 'preview' || !issues[k.count]" :aria-label="`次の${k.label}へ`"
+                        :title="`次の${k.label}へ`" @click="goIssue(k.kind, 1)" />
+                </div>
+            </div>
             <span class="pos">
                 <UIcon name="i-lucide-map-pin" />{{ position || '—' }}
             </span>
             <span>{{ articleCount }} 条</span>
             <span>{{ chars.toLocaleString() }} 文字</span>
-            <UTooltip :text="`次の誤り（赤い波線）へ。右クリックで一覧を開きます（${keys('Ctrl+Shift+M')}）`">
-                <button class="issue err" :class="{ none: !issues.errors }" :disabled="mode === 'preview'"
-                    @click="goIssue('error')" @contextmenu.prevent="editor?.openIssues()">
-                    <UIcon name="i-lucide-circle-x" />{{ issues.errors }}
-                </button>
-            </UTooltip>
-            <UTooltip :text="`次の注意（黄色の波線）へ。右クリックで一覧を開きます（${keys('Ctrl+Shift+M')}）`">
-                <button class="issue warn" :class="{ none: !issues.warnings }" :disabled="mode === 'preview'"
-                    @click="goIssue('warning')" @contextmenu.prevent="editor?.openIssues()">
-                    <UIcon name="i-lucide-triangle-alert" />{{ issues.warnings }}
-                </button>
-            </UTooltip>
             <span class="cd-grow" />
             <span v-if="issueNote" class="issue-note" :class="issueNote.kind">{{ issueNote.text }}</span>
             <span v-else class="hint">[[ で条参照 ／ Tab で項→号 ／ {{ keys('Ctrl+F') }} で検索</span>
@@ -801,33 +856,44 @@ const saveState = computed(() => (saving.value === 'pending' ? '書き込み中�
 </template>
 
 <style scoped>
-.issue {
+.issue-pills {
     display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 0 6px;
+    gap: 6px;
+}
+
+.pill {
+    display: inline-flex;
+    align-items: stretch;
+}
+
+.seg {
     height: 20px;
-    border-radius: 4px;
+    border-radius: 0;
+}
+
+.seg.first {
+    border-radius: 999px 0 0 999px;
+}
+
+.seg.mid,
+.seg.last {
+    margin-left: 1px;
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+.seg.last {
+    border-radius: 0 999px 999px 0;
+    padding-right: 6px;
+}
+
+.seg.count {
+    min-width: 46px;
     font-variant-numeric: tabular-nums;
-    cursor: pointer;
 }
 
-.issue:hover:not(:disabled) {
-    background: var(--ui-bg-accented);
-}
-
-.issue.err {
-    color: var(--cd-syn-ref-bad);
-}
-
-.issue.warn {
-    color: var(--cd-draft);
-}
-
-.issue.none,
-.issue:disabled {
-    color: var(--ui-text-dimmed);
-    cursor: default;
+.seg.count.on {
+    box-shadow: inset 0 0 0 1px currentColor;
 }
 
 .issue-note {

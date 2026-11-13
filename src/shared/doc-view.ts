@@ -57,6 +57,43 @@ export interface DocIssue {
 
 const REF_RE = /\[\[([^\]:]+)(?::\d+)?(?::\d+)?\]\]/g
 
+export interface BackRef {
+    line: number
+    label: string
+    article: string
+}
+
+export function backRefs(input: string, doc: LegalDoc): Map<number, BackRef[]> {
+    const labels = [...lineLabels(doc)].sort((a, b) => a[0] - b[0])
+    const articles = doc.chapters.flatMap((ch) => ch.articles).filter((a) => a.line >= 0)
+    const before = <T>(list: T[], line: number, at: (x: T) => number): T | undefined => {
+        let hit: T | undefined
+        for (const x of list) {
+            if (at(x) > line) break
+            hit = x
+        }
+        return hit
+    }
+    const out = new Map<number, BackRef[]>()
+    input
+        .replace(/\r\n?/g, '\n')
+        .split('\n')
+        .forEach((text, line) => {
+            for (const r of text.matchAll(REF_RE)) {
+                const target = doc.refs[r[1].trim()]
+                if (!target || target.line < 0) continue
+                const label = before(labels, line, (l) => l[0])?.[1] || '前文'
+                const found = before(articles, line, (a) => a.line)
+                const own = found && label.startsWith(found.refLabel) ? found : undefined
+                if (own === target) continue
+                const list = out.get(target.line) ?? []
+                if (!list.some((b) => b.line === line)) list.push({ line, label, article: own?.refLabel ?? label })
+                out.set(target.line, list)
+            }
+        })
+    return out
+}
+
 export function checkDoc(input: string): DocIssue[] {
     const source = input.replace(/\r\n?/g, '\n')
     const doc = parseLegal(source)
