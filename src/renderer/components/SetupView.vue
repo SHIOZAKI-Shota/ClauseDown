@@ -15,6 +15,9 @@ import { cleanSection, groupRepos, sectionNames } from '@shared/repo-sections'
 const app = useApp()
 const { set: setTheme } = useTheme()
 
+const demo = isDemo()
+const DEMO_SECTIONS = ['display', 'editor', 'print']
+const shown = (id: string) => !demo || DEMO_SECTIONS.includes(id)
 const SECTIONS = [
     { id: 'profile', label: 'あなたの情報', icon: 'i-lucide-user' },
     { id: 'display', label: '表示', icon: 'i-lucide-monitor' },
@@ -27,7 +30,7 @@ const SECTIONS = [
     { id: 'ai', label: 'AI', icon: 'i-lucide-sparkles' },
     { id: 'repos', label: 'リポジトリの一覧', icon: 'i-lucide-archive' },
     { id: 'developer', label: 'Developer', icon: 'i-lucide-code-xml' },
-]
+].filter((s) => shown(s.id))
 
 const resetting = ref<'prefs' | 'all' | null>(null)
 const resetBusy = ref(false)
@@ -131,6 +134,7 @@ const showMcpToken = ref(false)
 const desktop = ref<DesktopStatus | null>(null)
 const refreshDesktop = async () => (desktop.value = await window.api.desktopStatus().catch(() => null))
 onMounted(async () => {
+    if (demo) return
     ai.value = await window.api.aiStatus()
     if (mcpEnabled.value) mcpToken.value = await window.api.getMcpToken()
     void refreshDesktop()
@@ -376,7 +380,7 @@ async function addSamples() {
         :saved="saved"
         id-prefix="s"
     >
-        <SettingsSection id="profile" title="あなたの情報">
+        <SettingsSection v-if="shown('profile')" id="profile" title="あなたの情報">
             <UAlert
                 v-if="app.repoDir && app.identity"
                 color="neutral"
@@ -517,7 +521,7 @@ async function addSamples() {
             </template>
         </SettingsSection>
 
-        <SettingsSection id="sync" title="同期">
+        <SettingsSection v-if="shown('sync')" id="sync" title="同期">
             <SettingRow label="起動したら同期する" description="アプリを起動したときに、リモートの最新の状態を取得します">
                 <USwitch :model-value="app.prefs.syncOnStart" @update:model-value="(v: boolean) => setPref('syncOnStart', v)" />
             </SettingRow>
@@ -526,7 +530,7 @@ async function addSamples() {
             </SettingRow>
         </SettingsSection>
 
-        <SettingsSection id="due" title="期日・有効期間">
+        <SettingsSection v-if="shown('due')" id="due" title="期日・有効期間">
             <SettingRow label="期日をデスクトップに通知する" description="登録しているすべてのリポジトリの期日を一度だけ通知します">
                 <USwitch :model-value="app.prefs.notifyDue" @update:model-value="(v: boolean) => setPref('notifyDue', v)" />
             </SettingRow>
@@ -543,7 +547,7 @@ async function addSamples() {
             </SettingRow>
         </SettingsSection>
 
-        <SettingsSection id="export" title="書き出し">
+        <SettingsSection v-if="shown('export')" id="export" title="書き出し">
             <SettingRow label="既定の保存先" description="PDF・Word の書き出しと、納品一式の保存に使うフォルダです">
                 <span class="path">{{ app.prefs.exportDir || '（毎回選ぶ）' }}</span>
                 <UButton label="選ぶ" size="sm" color="neutral" variant="outline" @click="pickExportDir" />
@@ -564,12 +568,12 @@ async function addSamples() {
             />
         </SettingsSection>
 
-        <SettingsSection id="remote" title="GitHub/GitLab">
+        <SettingsSection v-if="shown('remote')" id="remote" title="GitHub/GitLab">
             <ForgeAccountRow v-for="acc in app.accounts" :key="acc.base" :account="acc" />
             <GitLabHostAdd />
         </SettingsSection>
 
-        <SettingsSection id="ai" title="AI">
+        <SettingsSection v-if="shown('ai')" id="ai" title="AI">
             <AiProviderSettings @status="(st) => (ai = st)" />
             <SettingRow
                 label="外部の AI からつなぐ（MCP）"
@@ -624,7 +628,7 @@ async function addSamples() {
             </template>
         </SettingsSection>
 
-        <SettingsSection id="repos" title="リポジトリの一覧">
+        <SettingsSection v-if="shown('repos')" id="repos" title="リポジトリの一覧">
             <template v-for="g in repoGroups" :key="g.section || '-'">
                 <h3 v-if="g.section" class="repo-sec">{{ g.section }}</h3>
                 <SettingRow
@@ -741,7 +745,7 @@ async function addSamples() {
             </div>
         </SettingsSection>
 
-        <SettingsSection id="developer" title="Developer">
+        <SettingsSection v-if="shown('developer')" id="developer" title="Developer">
             <SettingRow
                 label="サンプルリポジトリを追加"
                 description="社内規程・契約書・条例と要綱・houritsu 形式の法令の 4 つを、選んだフォルダに作って一覧に加えます。版の履歴・改定案・施行日・期日が付いています。"

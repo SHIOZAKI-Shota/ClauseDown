@@ -36,7 +36,8 @@ export function useArticleTrail(path: string, doc: Ref<LegalDoc>, cursorLine: Re
 
     const article = computed(() => {
         let hit: { line: number; label: string } | null = null
-        for (const ch of doc.value.chapters) for (const a of ch.articles) if (a.line >= 0 && a.line <= cursorLine.value) hit = { line: a.line, label: a.refLabel }
+        for (const ch of doc.value.chapters)
+            for (const a of ch.articles) if (a.line >= 0 && a.line <= cursorLine.value) hit = { line: a.line, label: a.refLabel }
         return hit
     })
     const articleLine = computed(() => article.value?.line ?? -1)

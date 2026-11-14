@@ -111,7 +111,7 @@ const groups = computed(() => [
             { label: '期日の追加…', icon: 'i-lucide-calendar-plus', onSelect: () => run(() => (app.dialog = { kind: 'newEvent' })) },
             { label: '設定（アプリ全体）', icon: 'i-lucide-settings', onSelect: () => run(() => (app.view = 'setup')) },
             { label: 'このリポジトリの設定', icon: 'i-lucide-settings-2', onSelect: () => run(() => (app.view = 'repo')) },
-            { label: 'このソフトについて', icon: 'i-lucide-info', onSelect: () => run(() => (app.view = 'about')) },
+            ...(isDemo() ? [] : [{ label: 'このソフトについて', icon: 'i-lucide-info', onSelect: () => run(() => (app.view = 'about')) }]),
             {
                 label: theme.dark.value ? 'ライトモードにする' : 'ダークモードにする',
                 icon: theme.dark.value ? 'i-lucide-sun' : 'i-lucide-moon',

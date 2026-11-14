@@ -41,7 +41,9 @@ const menu = computed<DropdownMenuItem[][]>(() => {
 const dragging = ref<string | null>(null)
 const over = ref<Target | null>(null)
 const sameTarget = (a: Target | null, b: Target) =>
-    !!a && a.kind === b.kind && (a.kind === 'repo' ? a.dir === (b as { dir: string }).dir : a.kind === 'section' ? a.name === (b as { name: string }).name : true)
+    !!a &&
+    a.kind === b.kind &&
+    (a.kind === 'repo' ? a.dir === (b as { dir: string }).dir : a.kind === 'section' ? a.name === (b as { name: string }).name : true)
 function onDragStart(e: DragEvent, dir: string) {
     dragging.value = dir
     e.dataTransfer?.setData('text/plain', dir)
@@ -75,44 +77,72 @@ function onDragEnd() {
 
 <template>
     <div class="repos">
-        <div class="head" :class="{ drop: over?.kind === 'top' }" @dragover="(e) => onDragOver(e, { kind: 'top' })"
-            @dragleave="onDragLeave({ kind: 'top' })" @drop.prevent="onDrop({ kind: 'top' })">
+        <div
+            class="head"
+            :class="{ drop: over?.kind === 'top' }"
+            @dragover="(e) => onDragOver(e, { kind: 'top' })"
+            @dragleave="onDragLeave({ kind: 'top' })"
+            @drop.prevent="onDrop({ kind: 'top' })"
+        >
             <span>リポジトリ</span>
-            <UButton icon="i-lucide-plus" size="xs" color="neutral" variant="ghost" title="リポジトリの追加・管理"
-                @click="app.openSettings('setup', 'repos')" />
+            <UButton
+                icon="i-lucide-plus"
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                title="リポジトリの追加・管理"
+                @click="app.openSettings('setup', 'repos')"
+            />
         </div>
         <UContextMenu :items="menu" size="sm" :disabled="!menu.length">
             <div class="scroll" @contextmenu.capture="menuFor = null">
                 <template v-for="g in groups" :key="g.section || '-'">
-                    <button v-if="g.section" class="section"
+                    <button
+                        v-if="g.section"
+                        class="section"
                         :class="{ drop: over?.kind === 'section' && over.name === g.section }"
-                        :aria-expanded="isOpen(g)" @click="toggle(g.section)"
+                        :aria-expanded="isOpen(g)"
+                        @click="toggle(g.section)"
                         @contextmenu="menuFor = { kind: 'section', name: g.section }"
                         @dragover="(e) => onDragOver(e, { kind: 'section', name: g.section })"
                         @dragleave="onDragLeave({ kind: 'section', name: g.section })"
-                        @drop.prevent="onDrop({ kind: 'section', name: g.section })">
+                        @drop.prevent="onDrop({ kind: 'section', name: g.section })"
+                    >
                         <UIcon name="i-lucide-chevron-right" class="chev" :class="{ open: isOpen(g) }" />
                         <span class="nm">{{ g.section }}</span>
                         <span class="count">{{ g.repos.length }}</span>
                     </button>
                     <template v-if="visibleRepos(g).length">
-                        <button v-for="r in visibleRepos(g)" :key="r.dir" class="repo" :class="{
-                            on: r.dir === app.repoDir,
-                            missing: missing(r.dir),
-                            inner: !!g.section,
-                            drop: over?.kind === 'repo' && over.dir === r.dir,
-                            lifted: dragging === r.dir,
-                        }" :title="[r.name, missing(r.dir) ? '見つかりません' : r.url || r.dir].join('\n')" draggable="true"
-                            @click="open(r.dir)" @contextmenu="menuFor = { kind: 'repo', dir: r.dir }"
-                            @dragstart="(e) => onDragStart(e, r.dir)" @dragend="onDragEnd"
+                        <button
+                            v-for="r in visibleRepos(g)"
+                            :key="r.dir"
+                            class="repo"
+                            :class="{
+                                on: r.dir === app.repoDir,
+                                missing: missing(r.dir),
+                                inner: !!g.section,
+                                drop: over?.kind === 'repo' && over.dir === r.dir,
+                                lifted: dragging === r.dir,
+                            }"
+                            :title="[r.name, missing(r.dir) ? '見つかりません' : r.url || r.dir].join('\n')"
+                            draggable="true"
+                            @click="open(r.dir)"
+                            @contextmenu="menuFor = { kind: 'repo', dir: r.dir }"
+                            @dragstart="(e) => onDragStart(e, r.dir)"
+                            @dragend="onDragEnd"
                             @dragover="(e) => onDragOver(e, { kind: 'repo', dir: r.dir })"
                             @dragleave="onDragLeave({ kind: 'repo', dir: r.dir })"
-                            @drop.prevent="onDrop({ kind: 'repo', dir: r.dir })">
-                            <UIcon
-                                :name="missing(r.dir) ? 'i-lucide-folder-x' : r.url ? 'i-lucide-cloud' : 'i-lucide-hard-drive'" />
+                            @drop.prevent="onDrop({ kind: 'repo', dir: r.dir })"
+                        >
+                            <UIcon :name="missing(r.dir) ? 'i-lucide-folder-x' : r.url ? 'i-lucide-cloud' : 'i-lucide-hard-drive'" />
                             <span class="nm">{{ r.name }}</span>
-                            <UBadge v-if="r.dir === app.repoDir && app.toReview.length"
-                                :label="`確認待ち ${app.toReview.length}`" color="warning" variant="subtle" size="sm" />
+                            <UBadge
+                                v-if="r.dir === app.repoDir && app.toReview.length"
+                                :label="`確認待ち ${app.toReview.length}`"
+                                color="warning"
+                                variant="subtle"
+                                size="sm"
+                            />
                         </button>
                     </template>
                 </template>

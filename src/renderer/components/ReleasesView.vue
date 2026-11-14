@@ -150,7 +150,14 @@ const itemsOf = (d: DeliveryRecord) => d.items.map((x) => ITEM_LABEL[x] ?? x)
         >
             <template #tools>
                 <UButton label="期日の追加" icon="i-lucide-calendar-plus" size="xs" @click="editing = {}" />
-                <UButton label="すべての文書の期日・有効期間" icon="i-lucide-calendar-range" size="xs" color="neutral" variant="ghost" @click="app.openSchedule()" />
+                <UButton
+                    label="すべての文書の期日・有効期間"
+                    icon="i-lucide-calendar-range"
+                    size="xs"
+                    color="neutral"
+                    variant="ghost"
+                    @click="app.openSchedule()"
+                />
             </template>
         </TimelineChart>
         <div class="releases">

@@ -3,6 +3,7 @@ import { useApp } from '~/stores/app'
 
 const app = useApp()
 const emit = defineEmits<{ search: [] }>()
+const demo = isDemo()
 const inDoc = computed(() => ['editor', 'history', 'compare', 'releases'].includes(app.view))
 function backToDoc() {
     if (app.currentDoc && !inDoc.value) app.openDoc(app.currentDoc.path, app.lastDocView)
@@ -10,7 +11,7 @@ function backToDoc() {
 </script>
 
 <template>
-    <header class="titlebar" :class="{ mac: IS_MAC }">
+    <header class="titlebar" :class="{ mac: IS_MAC && !demo }">
         <button class="brand" title="初期ページへ" aria-label="ClauseDown（初期ページへ）" @click="app.view = 'home'">
             <BrandLogo class="logo" />
         </button>
@@ -43,7 +44,8 @@ function backToDoc() {
         </button>
         <span class="cd-grow" />
         <div class="right">
-            <SyncStatus />
+            <DemoActions v-if="demo" />
+            <SyncStatus v-else />
             <ThemeToggle variant="ghost" size="xs" />
         </div>
     </header>

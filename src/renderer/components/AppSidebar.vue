@@ -27,6 +27,7 @@ const sidePane: Pane = {
     expand: () => (collapsed.value = false),
     toggle: () => (collapsed.value = !collapsed.value),
 }
+const demo = isDemo()
 const toggle = (to: 'setup' | 'about') => (app.view === to ? app.goBack() : (app.view = to))
 </script>
 
@@ -63,7 +64,7 @@ const toggle = (to: 'setup' | 'about') => (app.view === to ? app.goBack() : (app
 
         <template #footer>
             <template v-if="collapsed">
-                <UTooltip :text="app.view === 'about' ? 'このソフトについてを閉じる' : 'このソフトについて'">
+                <UTooltip v-if="!demo" :text="app.view === 'about' ? 'このソフトについてを閉じる' : 'このソフトについて'">
                     <button
                         class="rail-btn"
                         :class="{ on: app.view === 'about' }"
@@ -85,7 +86,7 @@ const toggle = (to: 'setup' | 'about') => (app.view === to ? app.goBack() : (app
                 </UTooltip>
             </template>
             <template v-else>
-                <button class="nav-item footer-item" :class="{ on: app.view === 'about' }" @click="toggle('about')">
+                <button v-if="!demo" class="nav-item footer-item" :class="{ on: app.view === 'about' }" @click="toggle('about')">
                     <UIcon :name="app.view === 'about' ? 'i-lucide-x' : 'i-lucide-info'" />
                     <span class="nl">{{ app.view === 'about' ? 'このソフトについてを閉じる' : 'このソフトについて' }}</span>
                 </button>

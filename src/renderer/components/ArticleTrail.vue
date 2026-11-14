@@ -31,9 +31,7 @@ const saved = computed(() =>
 <template>
     <div class="trail">
         <div class="head">{{ label }}の沿革</div>
-        <p v-if="trail.pending" class="pending">
-            <UIcon name="i-lucide-pencil-line" />未施行の変更あり
-        </p>
+        <p v-if="trail.pending" class="pending"><UIcon name="i-lucide-pencil-line" />未施行の変更あり</p>
 
         <div class="group">施行版</div>
         <button v-for="{ e, v } in effective" :key="v.tag" class="row" @click="emit('version', v)">
@@ -44,9 +42,7 @@ const saved = computed(() =>
         <p v-if="!effective.length" class="none">ありません</p>
 
         <div class="group">保存した版</div>
-        <p v-if="loading" class="none">
-            <UIcon name="i-lucide-loader-circle" class="spin" />読み込み中
-        </p>
+        <p v-if="loading" class="none"><UIcon name="i-lucide-loader-circle" class="spin" />読み込み中</p>
         <template v-else>
             <button v-for="{ e, c } in saved" :key="c.oid" class="row" @click="emit('commit', c)">
                 <span class="when">{{ fmtDate(c.timestamp, 'ymd') }}</span>
