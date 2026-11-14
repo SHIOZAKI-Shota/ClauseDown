@@ -38,7 +38,5 @@ export function lineSpans(pages: { str: string; y: number }[][]): LineSpan[] {
                 else if (!starts.has(line)) starts.set(line, { page, y: it.y })
             }
     })
-    return [...starts]
-        .map(([line, start]) => ({ line, start, end: ends.get(line) ?? start }))
-        .sort((a, b) => a.line - b.line)
+    return [...starts].map(([line, start]) => ({ line, start, end: ends.get(line) ?? start })).sort((a, b) => a.line - b.line)
 }

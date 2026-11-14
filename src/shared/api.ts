@@ -272,16 +272,16 @@ export interface DocBase {
 export type ExportRequest =
     | ({ kind: 'doc'; format: 'pdf' | 'docx' | 'html' | 'md'; source: string; name: string; style?: DocStyle } & Partial<DocBase>)
     | ({
-        kind: 'compare'
-        format: 'pdf' | 'docx'
-        oldSource: string
-        newSource: string
-        title: string
-        name: string
-        omitUnchanged: boolean
-        compareStyle?: 'table' | 'inline'
-        style?: DocStyle
-    } & Partial<DocBase>)
+          kind: 'compare'
+          format: 'pdf' | 'docx'
+          oldSource: string
+          newSource: string
+          title: string
+          name: string
+          omitUnchanged: boolean
+          compareStyle?: 'table' | 'inline'
+          style?: DocStyle
+      } & Partial<DocBase>)
 
 export interface IssueLink {
     oid: string
@@ -439,7 +439,12 @@ export interface Api {
     listReviews(dir: string): Promise<ReviewEvent[]>
     addReview(dir: string, input: { branch: string; action: ReviewAction; text: string }): Promise<void>
 
-    occurrences(dir: string, from: string, to: string, today: string): Promise<{ kinds: EventKind[]; events: DueEvent[]; items: Occurrence[]; periods: Period[] }>
+    occurrences(
+        dir: string,
+        from: string,
+        to: string,
+        today: string,
+    ): Promise<{ kinds: EventKind[]; events: DueEvent[]; items: Occurrence[]; periods: Period[] }>
     occurrencesAll(from: string, to: string, today: string): Promise<{ repos: RepoSchedule[]; items: ScheduleItem[]; periods: (Period & { dir: string })[] }>
     exportSchedule(dir: string, today: string): Promise<{ path: string; count: number } | null>
     listEvents(dir: string): Promise<DueEvent[]>

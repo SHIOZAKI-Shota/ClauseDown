@@ -5,6 +5,7 @@ export interface PaneOptions {
     size: number
     min: number
     max: number
+    collapsed?: boolean
 }
 
 export interface Pane {
@@ -23,7 +24,7 @@ export interface Pane {
 const STEP = 48
 
 export function usePane(key: string, opts: PaneOptions): Pane {
-    const state = useStoredRef(`clausedown.pane.${key}`, { size: opts.size, collapsed: false })
+    const state = useStoredRef(`clausedown.pane.${key}`, { size: opts.size, collapsed: opts.collapsed ?? false })
     const measure = ref<(() => number) | null>(null)
     const clamp = (px: number) => Math.round(Math.min(opts.max, Math.max(opts.min, px)))
     const current = () => state.value.size || measure.value?.() || opts.min

@@ -1,6 +1,18 @@
 import { defineStore } from 'pinia'
 import { computed, ref, shallowRef, watch } from 'vue'
-import type { AppSettings, Identity, BranchInfo, DocChangedEvent, RepoEntry, RepoState, DocFile, ForgeAccount, RepoRules, ReviewEvent, SyncState } from '@shared/api'
+import type {
+    AppSettings,
+    Identity,
+    BranchInfo,
+    DocChangedEvent,
+    RepoEntry,
+    RepoState,
+    DocFile,
+    ForgeAccount,
+    RepoRules,
+    ReviewEvent,
+    SyncState,
+} from '@shared/api'
 import { canApprove, DEFAULT_RULES, reviewStatus, type Reviewer, type ReviewStatus } from '@shared/review'
 import { FORGE_LABEL, type ForgeKind } from '@shared/forge'
 import { DEFAULT_PREFS, type AppPrefs, type DocStyle, type RecentDoc } from '@shared/prefs'

@@ -43,7 +43,9 @@
         "testdata": "node scripts/make-testdata.mjs",
         "lint": "oxlint",
         "format": "oxfmt",
-        "format:check": "oxfmt --check"
+        "format:check": "oxfmt --check",
+        "build:demo": "CLAUSEDOWN_DEMO=1 nuxt generate",
+        "site": "node scripts/site.mjs"
     },
     "dependencies": {
         "@textlint/kernel": "^15.8.0",
@@ -91,6 +93,8 @@
         "oxfmt": "^0.78.0",
         "oxlint": "^1.93.0",
         "oxlint-tsgolint": "^7.0.2006",
+        "pako": "^1.0.11",
+        "pathe": "^2.0.3",
         "pdfjs-dist": "^6.5.438",
         "pele": "^1.13.0",
         "pinia": "^4.1.0",

@@ -47,9 +47,7 @@ const isText = (it: TextContent['items'][number]): it is TextItem => 'str' in it
 const marked = (it: TextContent['items'][number]): it is TextItem => isText(it) && stripMarks(it.str) !== it.str
 
 function cleanText(tc: TextContent): TextContent {
-    const items = tc.items
-        .filter((it) => !marked(it) || stripMarks(it.str).trim())
-        .map((it) => (marked(it) ? { ...it, str: stripMarks(it.str) } : it))
+    const items = tc.items.filter((it) => !marked(it) || stripMarks(it.str).trim()).map((it) => (marked(it) ? { ...it, str: stripMarks(it.str) } : it))
     return { ...tc, items }
 }
 
@@ -239,7 +237,11 @@ function observe() {
     visible.clear()
     pageEls.value.forEach((el) => io!.observe(el))
 }
-watch(() => sheets.value.length, () => nextTick(observe), { flush: 'post' })
+watch(
+    () => sheets.value.length,
+    () => nextTick(observe),
+    { flush: 'post' },
+)
 onBeforeUnmount(() => {
     io?.disconnect()
     gen++
@@ -251,9 +253,15 @@ defineExpose({ reveal, follow })
 
 <template>
     <div ref="host" class="pdf-pages" @copy="onCopy">
-        <div v-for="(s, i) in sheets" :key="i" ref="pageEls" class="sheet" :data-page="i"
+        <div
+            v-for="(s, i) in sheets"
+            :key="i"
+            ref="pageEls"
+            class="sheet"
+            :data-page="i"
             :style="{ width: px(s.w), height: px(s.h), '--total-scale-factor': scale, '--scale-round-x': '1px', '--scale-round-y': '1px' }"
-            @click="onClick($event, i)">
+            @click="onClick($event, i)"
+        >
             <div v-if="bands(i)" class="band" :style="bands(i)!" />
         </div>
     </div>

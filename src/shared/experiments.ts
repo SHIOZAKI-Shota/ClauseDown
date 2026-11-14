@@ -7,7 +7,8 @@ export const EXPERIMENTS = [
     {
         id: 'lanAi',
         label: 'LAN内 の Ollama に接続する',
-        description: 'Ollama と OpenAI 互換の接続先に、LAN 内のアドレス（http://192.168.x.x:11434 など）を使えるようにします。文書は暗号化されずに LAN を通ります。',
+        description:
+            'Ollama と OpenAI 互換の接続先に、LAN 内のアドレス（http://192.168.x.x:11434 など）を使えるようにします。文書は暗号化されずに LAN を通ります。',
     },
     {
         id: 'houritsuExport',

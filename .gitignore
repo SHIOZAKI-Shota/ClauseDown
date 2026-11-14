@@ -4,6 +4,7 @@ out/
 dist
 release/
 .nuxt/
+.nuxt-demo/
 .output/
 .data/
 .cache/
@@ -20,6 +21,7 @@ playwright-report/
 .env.*
 !.env.example
 scripts/ship.mjs
+scripts/site.mjs
 
 *.log
 npm-debug.log*

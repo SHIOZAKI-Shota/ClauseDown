@@ -1,0 +1,3100 @@
+<!doctype html>
+<html lang="ja">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>ClauseDown｜条文のための統合管理編集ツール</title>
+        <meta
+            name="description"
+            content="法律案・条例・契約書・規程など「第○条」が並ぶ文書のための Windows・macOS 用エディタ。条を追加すると後続の条番号と条参照を自動で更新し、版の履歴・新旧対照表・施行日を一元管理します。無料、MIT ライセンス。"
+        />
+        <meta property="og:title" content="ClauseDown" />
+        <meta property="og:description" content="条文のための統合管理編集ツール。「第○条」が並ぶ文書のための Windows・macOS 用アプリ" />
+        <meta property="og:image" content="docs/manual/images/editor.png" />
+        <script>
+            try {
+                const t = localStorage.getItem('clausedown-site-theme')
+                if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t
+            } catch {}
+            if (!matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.classList.add('motion')
+        </script>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
+        <style>
+            :root {
+                --paper: #f6f7f9;
+                --paper-2: #eef0f4;
+                --sheet: #ffffff;
+                --ink: #18181b;
+                --ink-2: #52525b;
+                --ink-3: #63636c;
+                --rule: #e4e4e7;
+                --line: #d4d4d8;
+                --brand: #201ed0;
+                --ai: #4f46e5;
+                --ai-strong: #4338ca;
+                --ai-wash: #e0e7ff;
+                --on-ai: #ffffff;
+                --red: #c02626;
+                --warn: #b45309;
+                --ok: #15803d;
+                --serif: 'Noto Serif JP', 'Hiragino Mincho ProN', 'Yu Mincho', serif;
+                --sans: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic UI', system-ui, sans-serif;
+                --mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'BIZ UDGothic', 'Noto Sans JP', monospace;
+                color-scheme: light dark;
+                --lw: 33.333%;
+                --cols: max(300px, var(--lw)) minmax(0, 1fr);
+            }
+            @media (prefers-color-scheme: dark) {
+                :root:not([data-theme='light']) {
+                    --paper: #15161c;
+                    --paper-2: #121318;
+                    --sheet: #17181e;
+                    --ink: #e4e4e7;
+                    --ink-2: #a1a1aa;
+                    --ink-3: #8f8f99;
+                    --rule: #27272a;
+                    --line: #3f3f46;
+                    --brand: #9d9bff;
+                    --ai: #818cf8;
+                    --ai-strong: #a5b4fc;
+                    --ai-wash: #232254;
+                    --on-ai: #121318;
+                    --red: #ff7b7b;
+                --warn: #fbbf24;
+                --ok: #4ade80;
+                }
+            }
+            :root[data-theme='light'] {
+                color-scheme: light;
+            }
+            :root[data-theme='dark'] {
+                color-scheme: dark;
+                --paper: #15161c;
+                --paper-2: #121318;
+                --sheet: #17181e;
+                --ink: #e4e4e7;
+                --ink-2: #a1a1aa;
+                --ink-3: #8f8f99;
+                --rule: #27272a;
+                --line: #3f3f46;
+                --brand: #9d9bff;
+                --ai: #818cf8;
+                --ai-strong: #a5b4fc;
+                --ai-wash: #232254;
+                --on-ai: #121318;
+                --red: #ff7b7b;
+                --warn: #fbbf24;
+                --ok: #4ade80;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            html {
+                scroll-snap-type: y mandatory;
+                scroll-padding-top: 65px;
+                scrollbar-width: none;
+            }
+            html::-webkit-scrollbar {
+                display: none;
+            }
+            @media (prefers-reduced-motion: no-preference) {
+                html {
+                    scroll-behavior: smooth;
+                }
+            }
+            .slide {
+                min-height: calc(100dvh - 65px);
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                scroll-snap-align: start;
+                scroll-snap-stop: always;
+            }
+            body {
+                margin: 0;
+                background: var(--paper);
+                color: var(--ink);
+                font: 400 16px/1.85 var(--sans);
+                font-feature-settings: 'palt';
+                -webkit-font-smoothing: antialiased;
+            }
+            a {
+                color: inherit;
+                text-underline-offset: 3px;
+            }
+            :focus-visible {
+                outline: 2px solid var(--ai);
+                outline-offset: 3px;
+            }
+            h1,
+            h2,
+            h3 {
+                font-family: var(--serif);
+                font-weight: 700;
+                word-break: keep-all;
+                overflow-wrap: anywhere;
+            }
+
+            header.top {
+                position: sticky;
+                top: 0;
+                z-index: 20;
+                display: grid;
+                grid-template-columns: var(--cols);
+                height: 65px;
+                background: var(--paper);
+                border-bottom: 1px solid var(--line);
+            }
+            header.top .l {
+                display: flex;
+                align-items: center;
+                padding: 0 40px;
+                border-right: 1px solid var(--line);
+            }
+            header.top .r {
+                display: flex;
+                align-items: center;
+                gap: 32px;
+                padding: 0 40px 0 56px;
+                background: var(--paper-2);
+            }
+            .logo {
+                display: block;
+                width: 150px;
+                height: 23px;
+                background: var(--brand);
+                -webkit-mask: url(clausedown_logo.svg) no-repeat left center / contain;
+                mask: url(clausedown_logo.svg) no-repeat left center / contain;
+            }
+            nav.links {
+                display: flex;
+                gap: 24px;
+                margin-left: auto;
+                font-size: 14px;
+            }
+            nav.links a {
+                color: var(--ink-2);
+                text-decoration: none;
+                white-space: nowrap;
+            }
+            @media (max-width: 1366px) {
+                nav.links {
+                    gap: 16px;
+                }
+            }
+            @media (max-width: 1279px) {
+                nav.links .wide {
+                    display: none;
+                }
+            }
+            nav.links a:hover {
+                color: var(--ink);
+                text-decoration: underline;
+            }
+            .theme {
+                display: grid;
+                place-items: center;
+                width: 32px;
+                height: 32px;
+                padding: 0;
+                border: 1px solid var(--rule);
+                border-radius: 2px;
+                background: transparent;
+                color: var(--ink);
+                cursor: pointer;
+            }
+            .theme svg {
+                width: 16px;
+                height: 16px;
+            }
+            .theme .sun,
+            :root[data-dark] .theme .moon {
+                display: none;
+            }
+            :root[data-dark] .theme .sun {
+                display: block;
+            }
+
+            .btn {
+                display: inline-flex;
+                align-items: center;
+                padding: 12px 24px;
+                border: 1px solid var(--ai);
+                border-radius: 2px;
+                background: var(--ai);
+                color: var(--on-ai);
+                font: 500 16px/1.2 var(--sans);
+                text-decoration: none;
+                cursor: pointer;
+                transition:
+                    background 0.2s,
+                    border-color 0.2s;
+            }
+            .btn:hover {
+                background: var(--ai-strong);
+                border-color: var(--ai-strong);
+            }
+            .btn.line {
+                border-color: var(--line);
+                background: var(--sheet);
+                color: var(--ink);
+            }
+            .btn.line:hover {
+                border-color: var(--ai);
+                background: var(--ai-wash);
+            }
+            header .btn {
+                padding: 8px 16px;
+                font-size: 14px;
+                white-space: nowrap;
+            }
+
+            .two {
+                flex: 1;
+                display: grid;
+                grid-template-columns: var(--cols);
+            }
+            .two > .l {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                padding: 48px 40px;
+                border-right: 1px solid var(--line);
+            }
+            .two > .r {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                min-width: 0;
+                padding: 48px 56px;
+                background: var(--paper-2);
+            }
+            .hero {
+                padding: 0;
+            }
+            .title {
+                margin: 0 0 24px;
+                font-size: clamp(22px, 1.9vw, 30px);
+                line-height: 1.5;
+            }
+            .title em {
+                font-style: normal;
+                color: var(--ai);
+            }
+            .hero .lead {
+                margin: 0 0 24px;
+                font-size: 14px;
+                color: var(--ink-2);
+            }
+            .hero .cta {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .hero .cta .btn {
+                justify-content: center;
+                padding-inline: 12px;
+                font-size: 14px;
+                white-space: nowrap;
+            }
+            .hero .lead code {
+                font: 500 0.95em var(--mono);
+                color: var(--ink);
+                white-space: nowrap;
+            }
+            .cta {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 16px;
+            }
+            .hero .meta {
+                margin: 16px 0 0;
+                font-size: 12px;
+                color: var(--ink-3);
+            }
+
+            .editor {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                border: 1px solid var(--line);
+                background: var(--sheet);
+            }
+            .pane-head {
+                display: flex;
+                justify-content: space-between;
+                padding: 8px 16px;
+                border-bottom: 1px solid var(--rule);
+                background: var(--paper-2);
+                font: 500 12px/1.8 var(--sans);
+                color: var(--ink-2);
+            }
+            .pane-head span:last-child {
+                color: var(--ink-3);
+                font-weight: 400;
+            }
+            .md-pane {
+                border-right: 1px solid var(--line);
+            }
+            .md {
+                padding: 16px 24px;
+                font: 400 13px/1.9 var(--mono);
+                white-space: pre-wrap;
+                overflow-wrap: anywhere;
+            }
+            .md .mk {
+                color: var(--ink-3);
+            }
+            .md .h {
+                font-weight: 700;
+            }
+            .md .id,
+            .md .link {
+                color: var(--ai);
+            }
+            .md .badge {
+                display: inline-flex;
+                flex-direction: column;
+                height: 1.7em;
+                overflow: hidden;
+                margin: 0 6px 0 2px;
+                padding: 0 6px;
+                vertical-align: 0.1em;
+                border-radius: 2px;
+                background: var(--ai-wash);
+                color: var(--ai);
+                font: 500 11px/1.7 var(--sans);
+            }
+            .md .badge > span {
+                display: block;
+                height: 1.7em;
+            }
+            .md-block {
+                overflow: hidden;
+            }
+            .md-block.new,
+            .art.new {
+                background: var(--ai-wash);
+                margin: 0 -16px;
+                padding: 0 16px;
+            }
+            .preview {
+                padding: 16px 32px;
+                font: 400 14px/2 var(--serif);
+            }
+            .preview .doc-title {
+                margin: 0 0 8px;
+                text-align: center;
+                font-weight: 700;
+                letter-spacing: 0.4em;
+            }
+            .art {
+                overflow: hidden;
+            }
+            .art .cap {
+                display: block;
+                padding-left: 1em;
+                color: var(--ink-2);
+            }
+            .art p {
+                margin: 0 0 4px;
+                padding-left: 1em;
+                text-indent: -1em;
+            }
+            .num,
+            .ref {
+                display: inline-flex;
+                flex-direction: column;
+                height: 2em;
+                overflow: hidden;
+                vertical-align: top;
+                text-indent: 0;
+            }
+            .num {
+                font-weight: 700;
+            }
+            .num > span,
+            .ref > span {
+                display: block;
+                height: 2em;
+                line-height: 2;
+            }
+            .ref {
+                color: var(--ai);
+                text-decoration: underline dashed;
+                text-underline-offset: 4px;
+            }
+            .caret {
+                display: inline-block;
+                width: 2px;
+                height: 1.1em;
+                vertical-align: -0.15em;
+                background: var(--ai);
+                animation: blink 1s steps(1) infinite;
+            }
+            @keyframes blink {
+                50% {
+                    opacity: 0;
+                }
+            }
+            .editor .status {
+                grid-column: 1 / -1;
+                margin: 0;
+                padding: 8px 16px;
+                border-top: 1px solid var(--rule);
+                font: 400 12px/1.8 var(--sans);
+                color: var(--ink-3);
+            }
+
+            section h2 {
+                margin: 0 0 16px;
+                font-size: clamp(22px, 2vw, 28px);
+                line-height: 1.5;
+            }
+            section .intro {
+                margin: 0;
+                color: var(--ink-2);
+            }
+            section .l .cta {
+                margin-top: 24px;
+            }
+
+            .dl-meta {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px 16px;
+                margin: 12px 0 0;
+                font-size: 13px;
+                color: var(--ink-3);
+            }
+            .dl-meta a {
+                color: var(--ink-2);
+            }
+            .guide h3 {
+                margin: 0 0 8px;
+                font-size: 18px;
+                line-height: 1.6;
+            }
+            .guide .intro {
+                min-height: calc(1.85em * 4);
+            }
+            .demo-note {
+                margin: 24px 0 0;
+                font-size: 13px;
+                color: var(--ink-3);
+            }
+
+            .local {
+                display: grid;
+                grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+                gap: 48px;
+                align-items: start;
+            }
+            .folder {
+                border: 1px solid var(--line);
+                background: var(--sheet);
+            }
+            .folder-head {
+                padding: 8px 16px;
+                border-bottom: 1px solid var(--rule);
+                background: var(--paper-2);
+                font: 500 13px/1.8 var(--sans);
+            }
+            .tree {
+                margin: 0;
+                padding: 8px 0;
+                list-style: none;
+                font: 400 14px/2.4 var(--mono);
+            }
+            .tree li {
+                display: flex;
+                justify-content: space-between;
+                gap: 16px;
+                padding: 0 16px;
+            }
+            .tree .n {
+                color: var(--ink);
+            }
+            .tree .dir .n::after {
+                content: '/';
+                color: var(--ink-3);
+            }
+            .tree .d {
+                font-family: var(--sans);
+                font-size: 12px;
+                color: var(--ink-3);
+            }
+            .folder-note {
+                margin: 0;
+                padding: 8px 16px;
+                border-top: 1px solid var(--rule);
+                font-size: 12px;
+                color: var(--ink-3);
+            }
+            .facts,
+            .switch {
+                display: grid;
+                grid-template-columns: max-content minmax(0, 1fr);
+                gap: 0 32px;
+                margin: 0;
+            }
+            .facts dt,
+            .facts dd,
+            .switch dt,
+            .switch dd {
+                margin: 0;
+                padding: 12px 0;
+                border-bottom: 1px solid var(--rule);
+            }
+            .facts dt,
+            .switch dt {
+                font-weight: 500;
+            }
+            .facts dd,
+            .switch dd {
+                color: var(--ink-2);
+            }
+            .switch dt,
+            .switch dd {
+                padding: 20px 0;
+            }
+            .switch dt {
+                font: 700 16px/1.7 var(--serif);
+            }
+
+            .install h3 {
+                margin: 0 0 4px;
+                font-size: 20px;
+            }
+            .install-note {
+                margin: 0 0 16px;
+                font-size: 14px;
+                color: var(--ink-3);
+            }
+            .os {
+                padding: 12px 0;
+                border-top: 1px solid var(--rule);
+            }
+            .os h4 {
+                margin: 0 0 4px;
+                font: 500 15px/1.8 var(--sans);
+            }
+            .os ol {
+                margin: 0;
+                padding-left: 1.4em;
+                font-size: 14px;
+                color: var(--ink-2);
+            }
+            .install .links {
+                margin: 12px 0 0;
+                padding-top: 12px;
+                border-top: 1px solid var(--rule);
+                font-size: 14px;
+            }
+            .req {
+                margin-top: 24px !important;
+                font-size: 14px;
+            }
+
+            .faq details {
+                border-bottom: 1px solid var(--line);
+            }
+            .faq details:first-child {
+                border-top: 1px solid var(--line);
+            }
+            .faq summary {
+                padding: 12px 0;
+                font: 500 16px/1.7 var(--sans);
+                cursor: pointer;
+            }
+            .faq summary:hover {
+                color: var(--ai);
+            }
+            .faq details p {
+                margin: 0 0 16px;
+                color: var(--ink-2);
+            }
+
+            .grp {
+                margin: 24px 0 0;
+                font: 500 12px/1.8 var(--sans);
+                color: var(--ink-3);
+            }
+            .grp + .tabs {
+                margin-top: 4px;
+            }
+            .picks button {
+                grid-template-columns: 32px minmax(0, 1fr);
+                padding-block: 6px;
+            }
+            #local-stage .panel h3 {
+                margin: 24px 0 4px;
+                font-size: 20px;
+                line-height: 1.6;
+            }
+            .lc-anim {
+                display: grid;
+                align-items: center;
+                min-height: clamp(240px, 40dvh, 380px);
+            }
+            .lc-lead {
+                margin: 0;
+                color: var(--ink);
+            }
+            .lc-detail {
+                margin: 12px 0 0;
+                padding-left: 1.2em;
+                font-size: 14px;
+                color: var(--ink-2);
+            }
+            .lc-detail li + li {
+                margin-top: 4px;
+            }
+            .lsvg {
+                display: block;
+                width: 100%;
+                max-width: 640px;
+                height: auto;
+                overflow: visible;
+            }
+            .lsvg text {
+                font: 400 13px var(--sans);
+                fill: var(--ink-2);
+            }
+            .lsvg text.b {
+                font: 700 15px var(--sans);
+                fill: var(--ink);
+            }
+            .lsvg text.note {
+                font-size: 12px;
+                fill: var(--ai);
+            }
+            .lsvg .box {
+                fill: var(--sheet);
+                stroke: var(--line);
+            }
+            .lsvg .box.key {
+                stroke: var(--ai);
+            }
+            .lsvg .box.ext {
+                stroke-dasharray: 5 4;
+            }
+            .lsvg .pc {
+                fill: color-mix(in oklab, var(--ai) 6%, transparent);
+                stroke: var(--ai);
+                stroke-dasharray: 6 4;
+            }
+            .lsvg .flow,
+            .lsvg .link {
+                fill: none;
+                stroke: var(--ai);
+                stroke-width: 2;
+            }
+            .lsvg .flow {
+                stroke-dasharray: 8 6;
+            }
+            .lsvg .head {
+                fill: none;
+                stroke: var(--ai);
+                stroke-width: 2;
+            }
+            .lsvg .off {
+                stroke: var(--line);
+                stroke-width: 2;
+                stroke-dasharray: 4 4;
+            }
+            .lsvg .pk rect {
+                fill: var(--ai);
+            }
+            .lsvg .pk text {
+                font: 700 12px var(--sans);
+                fill: var(--on-ai);
+            }
+            .lsvg .box {
+                transition: stroke 0.3s, fill 0.3s;
+            }
+            .lsvg .box.act {
+                stroke: var(--ai);
+                fill: var(--ai-wash);
+            }
+            .lsvg .sh-st.ok,
+            .lsvg .ai-res {
+                fill: var(--ink);
+            }
+            .lsvg .sh-st.ok {
+                fill: var(--ok);
+                font-weight: 700;
+            }
+            .lsvg .sw {
+                fill: var(--line);
+                transition: fill 0.3s;
+            }
+            .lsvg .knob {
+                fill: var(--sheet);
+            }
+            .lsvg .ai-sw.on .sw {
+                fill: var(--ai);
+            }
+            .lsvg .off.on {
+                stroke: var(--ai);
+                stroke-dasharray: none;
+            }
+            .lc-anim .win {
+                border: 1px solid var(--line);
+                border-radius: 6px;
+                background: var(--sheet);
+                overflow: hidden;
+                transition: border-color 0.3s, opacity 0.3s, filter 0.3s;
+            }
+            .win-head {
+                display: flex;
+                justify-content: space-between;
+                gap: 12px;
+                padding: 6px 12px;
+                border-bottom: 1px solid var(--rule);
+                background: var(--paper-2);
+                font: 500 12px/1.8 var(--sans);
+                color: var(--ink-2);
+            }
+            .win-head span:last-child:not(:first-child) {
+                color: var(--ink-3);
+                font-weight: 400;
+            }
+            .lc-anim .src {
+                margin: 0;
+                padding: 12px 16px;
+                font: 400 13px/1.9 var(--mono);
+                white-space: pre-wrap;
+                overflow-wrap: anywhere;
+                color: var(--ink);
+            }
+            .tag {
+                display: inline-block;
+                margin-right: 8px;
+                padding: 0 8px;
+                border-radius: 4px;
+                background: var(--ai);
+                color: var(--on-ai);
+                font-weight: 500;
+            }
+            .st {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+                gap: 24px;
+                align-items: start;
+            }
+            .st .tree li {
+                transition: background-color 0.3s;
+            }
+            .st .tree li.hl {
+                background: var(--ai-wash);
+            }
+            .st-new {
+                overflow: hidden;
+            }
+            .st-count {
+                color: var(--ai);
+            }
+            .st-save {
+                margin: 0;
+                padding: 8px 16px;
+                border-top: 1px solid var(--rule);
+                font-size: 13px;
+                color: var(--ink-2);
+            }
+            .fmt {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+                gap: 12px 32px;
+                align-items: center;
+            }
+            .fmt-to {
+                display: grid;
+                gap: 8px;
+            }
+            .fmt-to p,
+            .fmt-to .src {
+                margin: 0;
+                padding: 8px 12px;
+                font-size: 13px;
+                line-height: 1.8;
+            }
+            .r-cd {
+                font-family: var(--serif);
+            }
+            .r-cd .cap {
+                display: block;
+                color: var(--ink-2);
+            }
+            .r-gh b {
+                display: block;
+                font-size: 15px;
+            }
+            .fmt .kw {
+                color: var(--ai);
+            }
+            .fmt .win.dim {
+                opacity: 0.35;
+                filter: grayscale(1);
+            }
+            .fmt .win.lit {
+                border-color: var(--ai);
+            }
+            .fmt-note {
+                grid-column: 1 / -1;
+                margin: 0;
+                font-size: 14px;
+                color: var(--ai);
+            }
+            .wd {
+                font: 400 14px/2 var(--serif);
+            }
+            .wd p {
+                margin: 0;
+                padding-left: 1em;
+                text-indent: -1em;
+            }
+            .wd .ins {
+                overflow: hidden;
+                background: var(--ai-wash);
+            }
+            .wc {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                gap: 16px;
+            }
+            .wc .wd {
+                padding: 12px 16px;
+                border: 0;
+                font-size: 13px;
+                line-height: 2;
+            }
+            .wc .wd p {
+                margin: 0 0 4px;
+            }
+            .wc .num.m > span {
+                transition: background-color 0.3s;
+            }
+            .wc .num.edit {
+                background: color-mix(in oklab, var(--warn) 25%, transparent);
+            }
+            .wc .ref.miss {
+                color: var(--ink);
+                text-decoration: none;
+            }
+            .wc .ref.miss.bad {
+                color: var(--red);
+                text-decoration: underline wavy var(--red);
+            }
+            .wc-st {
+                font-weight: 700 !important;
+            }
+            .wc-st.bad {
+                color: var(--red) !important;
+            }
+            .wc-st.ok {
+                color: var(--ok) !important;
+            }
+            .fs {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                gap: 32px;
+                align-items: center;
+            }
+            .fs .old {
+                margin: 0;
+                padding: 0;
+                list-style: none;
+                font: 400 13px/2.4 var(--mono);
+                color: var(--ink-2);
+                transition: opacity 0.4s;
+            }
+            .fs .old.x span {
+                text-decoration: line-through;
+                text-decoration-color: var(--red);
+            }
+            .fs .old.x {
+                opacity: 0.45;
+            }
+            .fs .vers {
+                margin: 0;
+                padding: 0 0 0 16px;
+                list-style: none;
+                border-left: 2px solid var(--ai);
+                font-size: 13px;
+                color: var(--ink-3);
+            }
+            .fs .vers li {
+                position: relative;
+                padding: 6px 8px;
+                transition: background-color 0.3s;
+            }
+            .fs .vers li::before {
+                content: '';
+                position: absolute;
+                left: -22px;
+                top: 13px;
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: var(--ai);
+            }
+            .fs .vers li.hl {
+                background: var(--ai-wash);
+            }
+            .fs .vers b {
+                display: block;
+                color: var(--ink);
+                font-weight: 500;
+            }
+            .fs-date {
+                margin: 16px 0 0;
+                font-size: 13px;
+                color: var(--ink-2);
+            }
+            .vs {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                gap: 48px;
+                align-items: center;
+            }
+            .vs .before {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin: 0;
+                padding: 0;
+                list-style: none;
+            }
+            .vs .before li {
+                padding: 6px 12px;
+                border: 1px solid var(--line);
+                border-radius: 4px;
+                background: var(--sheet);
+                font-size: 13px;
+                color: var(--ink-2);
+            }
+            .vs-cd {
+                border-color: var(--ai) !important;
+            }
+            .vs-list {
+                margin: 0;
+                padding: 8px 16px;
+                list-style: none;
+                font-size: 14px;
+                line-height: 2.2;
+            }
+            .vs-list li::before {
+                content: '✓';
+                margin-right: 8px;
+                color: var(--ai);
+                font-weight: 700;
+            }
+            .tabs {
+                margin: 24px 0 0;
+                padding: 0;
+                list-style: none;
+                border-top: 1px solid var(--line);
+            }
+            .tabs button {
+                position: relative;
+                display: grid;
+                grid-template-columns: 40px minmax(0, 1fr);
+                width: calc(100% + 24px);
+                margin: 0 -12px;
+                padding: 8px 12px;
+                border: 0;
+                border-bottom: 1px solid var(--rule);
+                background: transparent;
+                color: var(--ink);
+                font: 500 15px/1.8 var(--sans);
+                text-align: left;
+                cursor: pointer;
+            }
+            .tabs .no {
+                font: 700 14px/1.8 var(--serif);
+                color: var(--ink-3);
+            }
+            .tabs li.on button,
+            .tabs button:hover {
+                background: var(--ai-wash);
+            }
+            .tabs li.on .no,
+            .tabs li.on .t {
+                color: var(--ai);
+            }
+            .tabs .bar {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: -1px;
+                height: 2px;
+                background: var(--ai);
+                transform: scaleX(0);
+                transform-origin: left;
+            }
+            .tabs li.on.run .bar {
+                animation: fill 7s linear forwards;
+            }
+            @keyframes fill {
+                to {
+                    transform: scaleX(1);
+                }
+            }
+            .tabs p {
+                display: none;
+                margin: 8px 0 12px 40px;
+                font-size: 14px;
+                color: var(--ink-2);
+            }
+            .tabs li.on p {
+                display: block;
+            }
+            .motion-stage {
+                display: grid;
+            }
+            .motion-stage .panel {
+                grid-area: 1 / 1;
+                align-self: center;
+                min-width: 0;
+                opacity: 0;
+                visibility: hidden;
+                transition:
+                    opacity 0.3s,
+                    visibility 0.3s;
+            }
+            .motion-stage .panel.on {
+                opacity: 1;
+                visibility: visible;
+            }
+
+            .mini {
+                display: grid;
+                grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+                border: 1px solid var(--line);
+                background: var(--sheet);
+            }
+            .mini-head {
+                grid-column: 1 / -1;
+                display: flex;
+                justify-content: space-between;
+                padding: 8px 16px;
+                border-bottom: 1px solid var(--rule);
+                background: var(--paper-2);
+                font: 500 12px/1.8 var(--sans);
+                color: var(--ink-2);
+            }
+            #proof-count {
+                color: var(--warn);
+            }
+            .mini-body {
+                padding: 16px 24px;
+                border-right: 1px solid var(--rule);
+                font: 400 14px/2.2 var(--mono);
+            }
+            .mini-body p {
+                margin: 0;
+            }
+            .mini-body .mk {
+                color: var(--ink-3);
+            }
+            .wv {
+                text-decoration: underline wavy transparent;
+                text-decoration-thickness: 1.5px;
+                text-underline-offset: 5px;
+                transition: text-decoration-color 0.3s;
+            }
+            .wv.on {
+                text-decoration-color: var(--warn);
+            }
+            .issues {
+                margin: 0;
+                padding: 12px 16px;
+                list-style: none;
+                font-size: 13px;
+                color: var(--ink-2);
+            }
+            .issues li {
+                padding: 8px 0;
+                border-bottom: 1px solid var(--rule);
+                opacity: 0;
+                transform: translateY(4px);
+                transition:
+                    opacity 0.3s,
+                    transform 0.3s;
+            }
+            .issues li.on {
+                opacity: 1;
+                transform: none;
+            }
+            .issues b {
+                display: block;
+                color: var(--warn);
+                font-weight: 500;
+            }
+
+            .tl {
+                display: block;
+                width: 100%;
+                height: auto;
+                overflow: visible;
+                font-family: var(--sans);
+            }
+            .tl .axis line {
+                stroke: var(--line);
+            }
+            .tl text {
+                font-size: 13px;
+                fill: var(--ink-2);
+            }
+            .tl text.row {
+                font: 700 15px var(--serif);
+                fill: var(--ink);
+            }
+            .tl .band {
+                fill: color-mix(in oklab, var(--ai) 28%, var(--sheet));
+                stroke: var(--sheet);
+            }
+            .tl .band.b2 {
+                fill: color-mix(in oklab, var(--ai) 60%, var(--sheet));
+            }
+            .tl .band.b3 {
+                fill: color-mix(in oklab, var(--ai) 14%, var(--sheet));
+                stroke: var(--ai);
+                stroke-dasharray: 4 3;
+            }
+            .tl text.bl {
+                font-size: 12px;
+            }
+            .tl .dia {
+                fill: var(--warn);
+            }
+            .tl .dia.late {
+                fill: var(--red);
+            }
+            .tl .today {
+                stroke: var(--red);
+                stroke-width: 1.5;
+            }
+            .tl .today-l {
+                fill: var(--red);
+                font-size: 12px;
+            }
+
+            .issue {
+                border: 1px solid var(--line);
+                background: var(--sheet);
+                padding: 24px;
+            }
+            .issue-head {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                font-size: 18px;
+            }
+            .state {
+                display: inline-grid;
+                flex: none;
+                font: 500 12px/1 var(--sans);
+            }
+            .state > span {
+                grid-area: 1 / 1;
+                padding: 6px 10px;
+                border-radius: 999px;
+                transition: opacity 0.3s;
+            }
+            .state .open {
+                background: color-mix(in oklab, #16a34a 16%, var(--sheet));
+                color: var(--ok);
+            }
+            .state .closed {
+                background: color-mix(in oklab, var(--ai) 16%, var(--sheet));
+                color: var(--ai);
+            }
+            .state.done .open,
+            .state:not(.done) .closed {
+                opacity: 0;
+            }
+            .issue-body {
+                margin: 12px 0 20px;
+                color: var(--ink-2);
+            }
+            .merge {
+                border: 1px solid var(--rule);
+                background: var(--paper);
+            }
+            .merge-head {
+                padding: 8px 16px;
+                border-bottom: 1px solid var(--rule);
+                font: 500 13px/1.8 var(--sans);
+                color: var(--ink-2);
+            }
+            .msg {
+                min-height: 5.6em;
+                margin: 0;
+                padding: 12px 16px;
+                font: 400 14px/1.8 var(--mono);
+                white-space: pre-wrap;
+            }
+            .merge-btn {
+                display: inline-block;
+                margin: 0 16px 16px;
+                padding: 6px 16px;
+                border-radius: 2px;
+                background: var(--ai);
+                color: var(--on-ai);
+                font: 500 13px/1.6 var(--sans);
+                transition: transform 0.15s;
+            }
+            .merge-btn.press {
+                transform: scale(0.94);
+            }
+            .issue-event {
+                margin: 16px 0 0;
+                font-size: 14px;
+                color: var(--ai);
+                transition: opacity 0.3s;
+            }
+            .issue-event.hide {
+                opacity: 0;
+            }
+
+            .compare {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                border: 1px solid var(--line);
+                background: var(--sheet);
+                font: 400 16px/2 var(--serif);
+            }
+            .compare > div {
+                padding: 16px 24px;
+                border-top: 1px solid var(--rule);
+            }
+            .compare > div:nth-child(odd) {
+                border-right: 1px solid var(--line);
+            }
+            .compare .h {
+                padding: 8px 24px;
+                border-top: 0;
+                border-bottom: 1px solid var(--line);
+                text-align: center;
+                font: 500 14px/1.6 var(--sans);
+                background: var(--paper-2);
+            }
+            .compare p {
+                margin: 0;
+                padding-left: 1em;
+                text-indent: -1em;
+            }
+            .compare u {
+                text-decoration: none;
+                background: linear-gradient(var(--red), var(--red)) no-repeat left bottom / var(--u, 100%) 1.5px;
+                padding-bottom: 1px;
+            }
+            .compare .gone {
+                color: var(--ink-3);
+            }
+            .caption {
+                margin: 8px 0 0;
+                font-size: 14px;
+                color: var(--ink-3);
+            }
+
+            .graph svg {
+                display: block;
+                width: 100%;
+                height: auto;
+                overflow: visible;
+            }
+            .graph .main {
+                stroke: var(--ink);
+            }
+            .graph .draft {
+                stroke: var(--ai);
+            }
+            .graph text {
+                font: 400 14px var(--sans);
+                fill: var(--ink-2);
+            }
+            .graph text.b {
+                font: 700 16px var(--serif);
+                fill: var(--ink);
+            }
+            .graph text.d {
+                fill: var(--ai);
+            }
+            .graph .dot {
+                fill: var(--sheet);
+                stroke: var(--ink);
+                stroke-width: 2;
+            }
+            .graph .dot.d {
+                stroke: var(--ai);
+            }
+            .graph .dot.eff {
+                fill: var(--ink);
+            }
+
+            .two > .r.full {
+                padding: 0;
+                justify-content: stretch;
+            }
+            .cover {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+            .cover-text {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                padding: 24px 40px;
+            }
+            .cover .title {
+                margin-bottom: 16px;
+                font-size: clamp(28px, 3vw, 44px);
+            }
+            .cover .intro {
+                max-width: 40em;
+                word-break: auto-phrase;
+                text-wrap: balance;
+            }
+            .cover .cta {
+                margin-top: 24px;
+            }
+            .cover-text {
+                align-items: center;
+                text-align: center;
+            }
+            .cover .cta,
+            .cover .dl-meta {
+                justify-content: center;
+            }
+            .peek {
+                --peek: calc((100dvh - 65px) * 0.4);
+                flex: none;
+                display: flex;
+                justify-content: center;
+                height: var(--peek);
+                padding: 0 40px;
+            }
+            .peek-win {
+                display: flex;
+                flex-direction: column;
+                flex: none;
+                height: calc(var(--peek) * 2);
+                width: min(100%, calc(var(--peek) * 3.2));
+                border: 1px solid var(--line);
+                border-radius: 6px 6px 0 0;
+                background: var(--sheet);
+                overflow: hidden;
+                text-decoration: none;
+                color: var(--ink-2);
+                transition: transform 0.3s ease;
+            }
+            .peek-win:hover,
+            .peek-win:focus-visible {
+                transform: translateY(-16px);
+            }
+            .shot {
+                flex: 1;
+                min-height: 0;
+                display: block;
+            }
+            .shot img {
+                display: block;
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                object-position: left top;
+            }
+            .shot .dark,
+            :root[data-dark] .shot .light {
+                display: none;
+            }
+            :root[data-dark] .shot .dark {
+                display: block;
+            }
+            .peek-ghost[hidden] {
+                display: none;
+            }
+            .peek-ghost {
+                position: fixed;
+                z-index: 15;
+                margin: 0;
+                transform: none;
+                transition: none;
+                pointer-events: none;
+            }
+            .demo-frame {
+                flex: 1;
+                display: flex;
+                background: var(--sheet);
+            }
+            .demo-frame iframe {
+                flex: 1;
+                display: block;
+                width: 100%;
+                border: 0;
+            }
+            .demo-mobile {
+                display: none;
+                margin: 24px;
+                padding: 16px;
+                border: 1px solid var(--line);
+                background: var(--sheet);
+                font-size: 14px;
+            }
+
+            .features {
+                margin: 24px 0 0;
+                padding: 0;
+                list-style: none;
+                border-top: 1px solid var(--line);
+            }
+            .features li {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto;
+                align-items: center;
+                margin: 0 -12px;
+                border-bottom: 1px solid var(--rule);
+            }
+            .features button {
+                display: grid;
+                grid-template-columns: 56px minmax(0, 1fr) auto;
+                gap: 8px;
+                padding: 8px 12px;
+                border: 0;
+                background: transparent;
+                color: var(--ink);
+                font: inherit;
+                text-align: left;
+            }
+            .features .go {
+                display: grid;
+                place-items: center;
+                width: 32px;
+                height: 32px;
+                margin-right: 8px;
+                border-radius: 2px;
+                color: var(--ink-3);
+            }
+            .features .go:hover {
+                background: var(--sheet);
+                color: var(--ai);
+            }
+            .features .go svg {
+                width: 16px;
+                height: 16px;
+            }
+            .features .no {
+                font: 700 14px/1.8 var(--serif);
+                color: var(--ink-3);
+            }
+            .features .t {
+                font: 500 15px/1.8 var(--sans);
+            }
+            .features .n {
+                font-size: 12px;
+                line-height: 2.2;
+                color: var(--ink-3);
+            }
+            .features li.on,
+            .features li:hover {
+                background: var(--ai-wash);
+            }
+            .features li.on .no,
+            .features li.on .t {
+                color: var(--ai);
+            }
+            .features p {
+                display: none;
+                margin: 4px 0 12px 56px;
+                font-size: 14px;
+                color: var(--ink-2);
+            }
+            .feature-view {
+                display: grid;
+            }
+            .feature-view figure {
+                grid-area: 1 / 1;
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+                margin: 0;
+                opacity: 0;
+                visibility: hidden;
+                transition:
+                    opacity 0.25s,
+                    visibility 0.25s;
+            }
+            .feature-view figure.on {
+                opacity: 1;
+                visibility: visible;
+            }
+            .feature-view img {
+                display: block;
+                width: 100%;
+                max-height: calc(100dvh - 65px - 420px);
+                object-fit: contain;
+                object-position: top left;
+                border: 1px solid var(--line);
+                background: var(--sheet);
+            }
+            .feature-view h3 {
+                margin: 0;
+                font-size: 20px;
+                line-height: 1.6;
+            }
+            .detail {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+                gap: 0 32px;
+                margin: 8px 0 0;
+                padding: 0;
+                list-style: none;
+                font-size: 14px;
+                color: var(--ink-2);
+            }
+            .detail li {
+                padding: 6px 0;
+                border-bottom: 1px solid var(--rule);
+            }
+            .detail b {
+                display: block;
+                color: var(--ink);
+                font-weight: 500;
+            }
+
+            .get dl,
+            .req {
+                display: grid;
+                grid-template-columns: max-content minmax(0, 1fr);
+                gap: 8px 32px;
+                margin: 0 0 32px;
+            }
+            .get dt {
+                font-weight: 500;
+            }
+            .get dd {
+                margin: 0;
+                color: var(--ink-2);
+            }
+
+            footer {
+                display: grid;
+                grid-template-columns: var(--cols);
+                border-top: 1px solid var(--line);
+                font-size: 14px;
+                color: var(--ink-3);
+            }
+            footer .body {
+                padding: 24px 56px;
+                background: var(--paper-2);
+            }
+            footer .h {
+                padding: 24px 40px;
+                border-right: 1px solid var(--line);
+                font: 700 16px/1.8 var(--serif);
+                color: var(--ink);
+            }
+            footer p {
+                margin: 0 0 8px;
+            }
+            footer a {
+                color: var(--ink-2);
+            }
+
+            @media (max-width: 960px) {
+                .two,
+                footer {
+                    grid-template-columns: 1fr;
+                }
+                .two > .l,
+                footer .h {
+                    border-right: 0;
+                    border-bottom: 1px solid var(--rule);
+                }
+                .two > .l,
+                .two > .r,
+                footer .h,
+                footer .body {
+                    padding: 32px 24px;
+                }
+                header.top {
+                    display: flex;
+                }
+                header.top .l {
+                    padding: 0 24px;
+                    border-right: 0;
+                }
+                header.top .r {
+                    flex: 1;
+                    padding: 0 24px;
+                    background: transparent;
+                }
+                .detail {
+                    grid-template-columns: 1fr;
+                }
+                .feature-view img {
+                    display: none;
+                }
+                .fs,
+                .st,
+                .fmt,
+                .wc,
+                .vs {
+                    grid-template-columns: 1fr;
+                }
+                .demo-frame {
+                    min-height: 70dvh;
+                }
+            }
+            @media (max-height: 900px) {
+                .two > .l,
+                .two > .r {
+                    padding-block: 24px;
+                }
+                .editor .status {
+                    padding: 4px 16px;
+                }
+                .title {
+                    margin-bottom: 16px;
+                    font-size: clamp(20px, 1.7vw, 26px);
+                }
+                .hero .lead {
+                    margin-bottom: 16px;
+                }
+                .hero .meta {
+                    display: none;
+                }
+                .preview .doc-title {
+                    display: none;
+                }
+                .md {
+                    padding: 12px 24px;
+                    font-size: 12px;
+                    line-height: 1.75;
+                }
+                .preview {
+                    padding: 12px 32px;
+                    font-size: 13px;
+                }
+                section .intro {
+                    margin-bottom: 24px;
+                }
+                .features button {
+                    padding-block: 6px;
+                }
+            }
+            @media (max-height: 760px) {
+                .pane-head {
+                    padding: 4px 16px;
+                }
+                .md {
+                    padding: 8px 20px;
+                    font-size: 11.5px;
+                    line-height: 1.65;
+                }
+                .preview {
+                    padding: 8px 28px;
+                    font-size: 12px;
+                }
+                .features button {
+                    padding-block: 4px;
+                }
+                .feature-view img {
+                    display: none;
+                }
+                .tabs button {
+                    padding-block: 4px;
+                }
+            }
+            @media (max-width: 720px), (max-height: 640px) {
+                html {
+                    scroll-snap-type: none;
+                }
+                .slide {
+                    min-height: 0;
+                }
+            }
+            @media (max-width: 720px) {
+                .cover-text {
+                    padding: 32px 16px;
+                }
+                .peek {
+                    --peek: 180px;
+                    padding: 0 16px;
+                }
+                nav.links {
+                    display: none;
+                }
+                header.top .l {
+                    padding: 0 16px;
+                }
+                header.top .r {
+                    gap: 12px;
+                    padding: 0 16px 0 0;
+                }
+                .logo {
+                    width: 120px;
+                }
+                header .btn {
+                    padding: 6px 12px;
+                    font-size: 13px;
+                }
+                .theme {
+                    margin-left: auto;
+                }
+                .editor {
+                    grid-template-columns: 1fr;
+                }
+                .md-pane {
+                    border-right: 0;
+                    border-bottom: 1px solid var(--line);
+                }
+                .md,
+                .preview {
+                    padding: 16px;
+                }
+                .compare {
+                    grid-template-columns: 1fr;
+                }
+                .compare > div:nth-child(odd) {
+                    border-right: 0;
+                }
+                .compare .h:nth-child(2) {
+                    display: none;
+                }
+                .demo-frame {
+                    display: none;
+                }
+                .demo-mobile {
+                    display: block;
+                }
+                .get dl {
+                    grid-template-columns: 1fr;
+                    gap: 0;
+                }
+                .get dd {
+                    margin-bottom: 16px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <header class="top">
+            <div class="l"><a href="./" aria-label="ClauseDown"><span class="logo" role="img" aria-label="ClauseDown"></span></a></div>
+            <div class="r">
+                <nav class="links" aria-label="ページ内">
+                    <a href="#demo">デモ</a>
+                    <a href="#motions">主な機能</a>
+                    <a class="wide" href="#local">保存と移行</a>
+                    <a class="wide" href="#features">機能の一覧</a>
+                    <a href="#get">ダウンロード</a>
+                    <a class="wide" href="#faq">よくある質問</a>
+                    <a href="docs/manual/">マニュアル</a>
+                    <a href="https://github.com/SHIOZAKI-Shota/ClauseDown">GitHub</a>
+                </nav>
+                <button class="theme" type="button" id="theme" aria-label="ダークモードにする" title="ダークモードにする">
+                    <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+                    </svg>
+                    <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="4" />
+                        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+                    </svg>
+                </button>
+                <a class="btn" data-dl="short" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest">ダウンロード</a>
+            </div>
+        </header>
+
+        <main>
+            <section id="cover" class="slide">
+                <div class="cover">
+                    <div class="cover-text">
+                        <h1 class="title">条文のための<br />統合管理編集ツール</h1>
+                        <p class="intro">「第○条」が並ぶ法律案・条例・契約書・規程を Markdown で記述し、条番号と参照の自動更新、版の履歴、新旧対照表、施行日を一元管理する Windows・macOS 用アプリです。</p>
+                        <div class="cta">
+                            <a class="btn" data-dl="main" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest">Windows・Mac 版をダウンロード</a>
+                        </div>
+                        <p class="dl-meta"><span data-rel>無料・MIT ライセンス</span><a data-dl="alt" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest">ほかの OS 版</a></p>
+                    </div>
+                    <div class="peek">
+                        <a class="peek-win" id="peek" href="#demo" aria-label="編集画面のデモを開く">
+                            <span class="shot">
+                                <img class="light" src="docs/manual/images/editor.png" alt="" />
+                                <img class="dark" src="docs/manual/images/dark-editor.png" alt="" loading="lazy" />
+                            </span>
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <section id="demo" class="slide">
+                <div class="two">
+                    <div class="l">
+                    <h2>編集画面のデモ</h2>
+                    <div class="guide" id="guide" aria-live="polite">
+                        <p class="intro">アプリと同じ編集画面を、このページで操作できます。条の追加と番号の自動更新、条の参照、改定案と新旧対照表、校正を体験できます。</p>
+                    </div>
+                    <p class="demo-note">デモの内容はこのブラウザー内にのみ保存され、「見本に戻す」で初期状態に復元できます。<a href="demo/">デモのみを表示</a></p>
+                    </div>
+                    <div class="r full">
+                    <div class="demo-frame" id="demo-frame"></div>
+                    <p class="demo-mobile">デモは横幅の広い画面向けです。パソコンで表示するか、<a href="demo/">デモのみを表示</a>からお試しください。</p>
+                    </div>
+                </div>
+            </section>
+
+            <div class="hero slide" id="top-hero">
+                <div class="two">
+                    <div class="l">
+                        <h2 class="title">条文を<br /><em>Markdown</em> で書くと、<br />条番号と参照は<br />自動で計算されます。</h2>
+                        <p class="lead">
+                            「第○条」が並ぶ法律案・条例・契約書・規程のための、Windows・macOS 用エディタです。条の見出しを <code>###</code>、項を <code>-</code>
+                            で書くだけで番号を付けて組版し、条を追加しても後続の番号と <code>[[ ]]</code> の参照を書き直す必要はありません。版の履歴、新旧対照表、施行日も併せて管理します。
+                        </p>
+                        <div class="cta">
+                            <a class="btn" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest">Windows・Mac 版をダウンロード</a>
+                            <a class="btn line" href="#demo">デモで操作してみる</a>
+                        </div>
+                        <p class="meta">無料で利用できます。MIT ライセンスで公開しています。</p>
+                    </div>
+
+                    <div class="r">
+                    <div
+                        class="editor"
+                        id="editor"
+                        role="img"
+                        aria-label="左の Markdown に番号を書かずに「### 定義」の条を挿入すると、右のプレビューで第二条が入り、後続の条番号と、[[適用]] と書いた参照が第二条から第三条に更新される様子"
+                    >
+                        <div class="md-pane">
+                            <div class="pane-head"><span>就業規則.md</span><span>Markdown（入力する内容）</span></div>
+                            <div class="md"><span class="mk">#</span> <span class="h">就業規則</span>
+
+<div class="md-block"><span class="mk">###</span><span class="badge"><span>第１条</span></span><span class="h">目的</span>
+<span class="mk">-</span> この規程は、従業員の就業に関する事項を定める。
+</div><div class="md-block new" id="md-new"><span class="mk">###</span><span class="badge"><span>第２条</span></span><span class="h" id="md-head">定義</span>
+<span class="mk">-</span> <span id="md-typed">この規程で「従業員」とは、会社と雇用契約を結んだ者をいう。</span><span class="caret" id="caret"></span>
+</div><div class="md-block"><span class="mk">###</span><span class="badge flip"><span>第２条</span><span>第３条</span></span><span class="h">適用範囲</span> <span class="id">{#適用}</span>
+<span class="mk">-</span> この規程は、すべての従業員に適用する。
+</div><div class="md-block"><span class="mk">###</span><span class="badge flip"><span>第３条</span><span>第４条</span></span><span class="h">届出</span>
+<span class="mk">-</span> 従業員は、住所を変更したときは、<span class="link">[[適用]]</span>の規定にかかわらず、速やかに届け出なければならない。</div></div>
+                        </div>
+                        <div>
+                            <div class="pane-head"><span>プレビュー</span><span>印刷・PDF・Word と同じ組版</span></div>
+                            <div class="preview">
+                                <p class="doc-title">就業規則</p>
+                                <div class="art">
+                                    <span class="cap">（目的）</span>
+                                    <p><span class="num"><span>第一条</span></span>　この規程は、従業員の就業に関する事項を定める。</p>
+                                </div>
+                                <div class="art new" id="new-art">
+                                    <span class="cap">（定義）</span>
+                                    <p><span class="num"><span>第二条</span></span>　<span id="typed">この規程で「従業員」とは、会社と雇用契約を結んだ者をいう。</span></p>
+                                </div>
+                                <div class="art">
+                                    <span class="cap">（適用範囲）</span>
+                                    <p><span class="num flip"><span>第二条</span><span>第三条</span></span>　この規程は、すべての従業員に適用する。</p>
+                                </div>
+                                <div class="art">
+                                    <span class="cap">（届出）</span>
+                                    <p>
+                                        <span class="num flip"><span>第三条</span><span>第四条</span></span>　従業員は、住所を変更したときは、<span class="ref flip"
+                                            ><span>第二条</span><span>第三条</span></span
+                                        >の規定にかかわらず、速やかに届け出なければならない。
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="status" id="editor-state">Markdown に条番号は書きません。「###」の並び順から計算し、プレビューに反映します。</p>
+                    </div>
+                    </div>
+                </div>
+            </div>
+
+            <section id="motions" class="slide">
+                <div class="two">
+                    <div class="l">
+                    <h2>主な機能の動き</h2>
+                    <p class="intro">項目にマウスを重ねると切り替わります。マウスを離しているときは、約 7 秒ごとに次の項目へ進みます。</p>
+                    <ol class="tabs" role="tablist" aria-label="主な機能" id="motion-tabs">
+                        <li class="on">
+                            <button type="button" role="tab" id="t-compare" aria-controls="m-compare" aria-selected="true">
+                                <span class="no">一</span><span class="t">新旧対照表</span><span class="bar" aria-hidden="true"></span>
+                            </button>
+                            <p>比較する2つの版を選択するだけで作成します。番号のみ移動した条は、本文の改正として扱いません。</p>
+                        </li>
+                        <li>
+                            <button type="button" role="tab" id="t-versions" aria-controls="m-versions" aria-selected="false" tabindex="-1">
+                                <span class="no">二</span><span class="t">改定案と承認</span><span class="bar" aria-hidden="true"></span>
+                            </button>
+                            <p>改定案で作業し、承認を受けてから現行版に反映します。反映した版には施行日を設定します。</p>
+                        </li>
+                        <li>
+                            <button type="button" role="tab" id="t-proof" aria-controls="m-proof" aria-selected="false" tabindex="-1">
+                                <span class="no">三</span><span class="t">校正</span><span class="bar" aria-hidden="true"></span>
+                            </button>
+                            <p>同じ助詞の連続、ら抜き言葉、法令の用字などを、入力中に波線で示します。</p>
+                        </li>
+                        <li>
+                            <button type="button" role="tab" id="t-schedule" aria-controls="m-schedule" aria-selected="false" tabindex="-1">
+                                <span class="no">四</span><span class="t">期日と有効期間</span><span class="bar" aria-hidden="true"></span>
+                            </button>
+                            <p>施行版ごとの有効期間を帯で示し、届出や更新などの期日をタイムラインに並べます。</p>
+                        </li>
+                        <li>
+                            <button type="button" role="tab" id="t-issue" aria-controls="m-issue" aria-selected="false" tabindex="-1">
+                                <span class="no">五</span><span class="t">課題の自動完了</span><span class="bar" aria-hidden="true"></span>
+                            </button>
+                            <p>版のメッセージに「Closes #2」と書いて現行版に反映すると、課題 #2 が完了します。</p>
+                        </li>
+                    </ol>
+                    </div>
+                    <div class="r">
+                    <div class="motion-stage" id="motion-stage">
+                        <div class="panel on" role="tabpanel" id="m-compare" aria-labelledby="t-compare">
+                        <div class="compare" id="compare-table">
+                            <div class="h">改正後</div>
+                            <div class="h">改正前</div>
+                            <div>
+                                <p><b>第十八条</b>　労働者が私的な負傷又は疾病のため療養する必要があるときは、病気休暇を<u>五日</u>与える。</p>
+                            </div>
+                            <div>
+                                <p><b>第十八条</b>　労働者が私的な負傷又は疾病のため療養する必要があるときは、病気休暇を<u>三日</u>与える。</p>
+                            </div>
+                            <div>
+                                <p><b>第十九条</b>　<u>会社は、顧客等からの著しい迷惑行為から労働者を守るため、必要な措置を講ずる。</u></p>
+                            </div>
+                            <div>
+                                <p class="gone">（新設）</p>
+                            </div>
+                            <div>
+                                <p><b>第<u>二十</u>条</b>　会社は、労働者の個人情報を適正に取り扱う。</p>
+                            </div>
+                            <div>
+                                <p><b>第<u>十九</u>条</b>　会社は、労働者の個人情報を適正に取り扱う。</p>
+                            </div>
+                        </div>
+                        <p class="caption">デモの「見本株式会社_就業規則」で作った新旧対照表の一部</p>
+                        </div>
+                        <div class="panel" role="tabpanel" id="m-versions" aria-labelledby="t-versions">
+                        <div class="graph">
+                        <svg viewBox="0 0 1000 230" role="img" aria-label="現行版の線から改定案が分かれ、確認と承認を経て、令和8年4月1日施行の版として合流する図">
+                            <path class="main draw" d="M20 150 H980" fill="none" stroke-width="2" />
+                            <path class="draft draw" d="M300 150 C 360 150, 360 60, 420 60 H 640 C 700 60, 700 150, 760 150" fill="none" stroke-width="2" />
+                            <g class="nodes">
+                                <circle class="dot eff" cx="80" cy="150" r="7" />
+                                <text class="b" x="80" y="190" text-anchor="middle">制定</text>
+                                <text x="80" y="212" text-anchor="middle">令和6年4月1日施行</text>
+                                <circle class="dot eff" cx="300" cy="150" r="7" />
+                                <text class="b" x="300" y="190" text-anchor="middle">改正</text>
+                                <text x="300" y="212" text-anchor="middle">令和7年4月1日施行</text>
+                                <circle class="dot d" cx="470" cy="60" r="7" />
+                                <text class="d" x="470" y="38" text-anchor="middle">カスハラの条を新設</text>
+                                <circle class="dot d" cx="590" cy="60" r="7" />
+                                <text class="d" x="590" y="38" text-anchor="middle">人事部長が承認</text>
+                                <circle class="dot eff" cx="760" cy="150" r="7" />
+                                <text class="b" x="760" y="190" text-anchor="middle">現行版に反映</text>
+                                <text x="760" y="212" text-anchor="middle">令和8年4月1日施行</text>
+                                <text class="d" x="530" y="96" text-anchor="middle">改定案</text>
+                                <text x="960" y="136" text-anchor="end">現行版</text>
+                            </g>
+                        </svg>
+                        </div>
+                        </div>
+                        <div class="panel" role="tabpanel" id="m-proof" aria-labelledby="t-proof">
+                        <div class="mini">
+                            <div class="mini-head"><span>就業規則.md</span><span id="proof-count">注意 4</span></div>
+                            <div class="mini-body">
+                                <p><span class="mk">-</span> 労働者<span class="wv on">は会社は</span>、次の事項を協議して定める。</p>
+                                <p><span class="mk">-</span> 当日に<span class="wv on">来れる</span>者は、所属長に届け出る。</p>
+                                <p><span class="mk">-</span> 書面<span class="wv on">または</span>電磁的方法により通知する。</p>
+                                <p><span class="mk">-</span> <span class="wv on">捺印</span>した書類を、人事部に提出する。</p>
+                            </div>
+                            <ul class="issues">
+                                <li class="on"><b>同じ助詞の連続</b>一文に「は」が 2 回使われています</li>
+                                <li class="on"><b>ら抜き言葉</b>「来れる」→「来られる」</li>
+                                <li class="on"><b>用字</b>「または」→「又は」</li>
+                                <li class="on"><b>法令の用字</b>「捺印」→「押印」</li>
+                            </ul>
+                        </div>
+                        </div>
+                        <div class="panel" role="tabpanel" id="m-schedule" aria-labelledby="t-schedule">
+                        <svg class="tl" viewBox="0 0 1000 330" role="img" aria-label="就業規則と業務委託契約書の有効期間の帯と、届出などの期日を並べたタイムライン">
+                            <g class="axis">
+                                <line x1="170" y1="40" x2="990" y2="40" />
+                                <text x="170" y="28">令和7年</text><text x="460" y="28">令和8年</text><text x="750" y="28">令和9年</text>
+                            </g>
+                            <line class="today" x1="640" y1="40" x2="640" y2="310" />
+                            <text class="today-l" x="640" y="325" text-anchor="middle">今日</text>
+                            <text class="row" x="10" y="110">就業規則</text>
+                            <rect class="band b1" x="170" y="120" width="190" height="18" />
+                            <rect class="band b2" x="362" y="120" width="333" height="18" />
+                            <rect class="band b3" x="697" y="120" width="293" height="18" />
+                            <text class="bl" x="176" y="154">令和7年4月1日施行</text>
+                            <text class="bl" x="368" y="154">令和8年4月1日施行（施行中）</text>
+                            <text class="bl" x="703" y="154">令和9年4月1日施行</text>
+                            <g class="ev"><path class="dia late" d="M600 86 l9 -9 9 9 -9 9z" /><text x="586" y="70" text-anchor="end">周知（期限切れ）</text></g>
+                            <g class="ev"><path class="dia" d="M668 86 l9 -9 9 9 -9 9z" /><text x="690" y="70">意見書</text></g>
+                            <g class="ev"><path class="dia" d="M740 86 l9 -9 9 9 -9 9z" /><text x="762" y="70">労基署へ届出</text></g>
+                            <text class="row" x="10" y="230">業務委託契約書</text>
+                            <rect class="band b1" x="260" y="240" width="730" height="18" />
+                            <text class="bl" x="266" y="274">令和7年10月1日施行</text>
+                            <g class="ev"><path class="dia" d="M860 206 l9 -9 9 9 -9 9z" /><text x="882" y="190">更新の申出期限</text></g>
+                        </svg>
+                        </div>
+                        <div class="panel" role="tabpanel" id="m-issue" aria-labelledby="t-issue">
+                        <div class="issue">
+                            <div class="issue-head">
+                                <span class="state" id="issue-state"><span class="open">未完了</span><span class="closed">完了</span></span>
+                                <b>#2 カスタマーハラスメント対策の規定を設ける</b>
+                            </div>
+                            <p class="issue-body">顧客からの著しい迷惑行為への対応を、就業規則に明記する。</p>
+                            <div class="merge">
+                                <div class="merge-head">改定案「カスタマーハラスメント対策」を現行版に反映</div>
+                                <pre class="msg"><span id="issue-typed">カスハラ対策の条を新設
+
+Closes #2</span><span class="caret" id="issue-caret"></span></pre>
+                                <span class="merge-btn" id="merge-btn">反映する</span>
+                            </div>
+                            <p class="issue-event" id="issue-event">人事部 田中 が版 9c047d9 で完了しました（Closes #2）</p>
+                        </div>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="local" class="slide">
+                <div class="two">
+                    <div class="l">
+                    <h2>データの保存形式と、<wbr />移行について</h2>
+                    <p class="intro">項目にマウスを重ねると、動きと説明を表示します。</p>
+                    <p class="grp">保存と共有</p>
+                    <ol class="tabs picks" role="tablist" aria-label="保存と共有">
+                        <li class="on">
+                            <button type="button" role="tab" id="lt-store" aria-controls="lp-store" aria-selected="true"><span class="no">一</span><span class="t">保存場所</span></button>
+                        </li>
+                        <li>
+                            <button type="button" role="tab" id="lt-share" aria-controls="lp-share" aria-selected="false"><span class="no">二</span><span class="t">共有</span></button>
+                        </li>
+                        <li>
+                            <button type="button" role="tab" id="lt-ai" aria-controls="lp-ai" aria-selected="false"><span class="no">三</span><span class="t">AI</span></button>
+                        </li>
+                        <li>
+                            <button type="button" role="tab" id="lt-format" aria-controls="lp-format" aria-selected="false"><span class="no">四</span><span class="t">形式</span></button>
+                        </li>
+                    </ol>
+                    <p class="grp">乗り換え</p>
+                    <ol class="tabs picks" role="tablist" aria-label="乗り換え">
+                        <li>
+                            <button type="button" role="tab" id="lt-word" aria-controls="lp-word" aria-selected="false"><span class="no">五</span><span class="t">Word で条番号を手で直している方</span></button>
+                        </li>
+                        <li>
+                            <button type="button" role="tab" id="lt-files" aria-controls="lp-files" aria-selected="false"><span class="no">六</span><span class="t">ファイル名で版を管理している方</span></button>
+                        </li>
+                        <li>
+                            <button type="button" role="tab" id="lt-vscode" aria-controls="lp-vscode" aria-selected="false"><span class="no">七</span><span class="t">VS Code と Markdown で書いている方</span></button>
+                        </li>
+                    </ol>
+                    </div>
+                    <div class="r">
+                    <div class="motion-stage" id="local-stage">
+                        <div class="panel on" role="tabpanel" id="lp-store" aria-labelledby="lt-store">
+                            <div class="lc-anim">
+                            <div class="st">
+                                <div class="win">
+                                    <div class="win-head"><span>見本株式会社_就業規則</span><span>フォルダ</span></div>
+                                    <ul class="tree">
+                                        <li class="dir st-git"><span class="n">.git</span><span class="d">版の履歴 <b class="st-count">13</b> 件</span></li>
+                                        <li class="st-main"><span class="n">就業規則.md</span><span class="d">本文</span></li>
+                                        <li><span class="n">賃金規程.md</span><span class="d">本文</span></li>
+                                        <li><span class="n">育児介護休業規程.md</span><span class="d">本文</span></li>
+                                        <li class="st-new"><span class="n">服務規程.md</span><span class="d">新しい文書</span></li>
+                                    </ul>
+                                </div>
+                                <div class="win st-file">
+                                    <div class="win-head"><span>就業規則.md</span><span>メモ帳で開いた場合</span></div>
+                                    <pre class="src">### 年次有給休暇
+- 会社は、所定の年次有給休暇を与える。
+
+### 病気休暇
+- <span id="st-typed">従業員は、年5日の病気休暇を取得できる。</span></pre>
+                                    <p class="st-save"><span class="tag">版を保存</span>病気休暇を新設</p>
+                                </div>
+                            </div>
+                            </div>
+                            <h3>保存場所</h3>
+                            <p class="lc-lead">自分で選んだフォルダに、Markdown のファイルとして保存します。</p>
+                            <ul class="lc-detail">
+                                <li>クラウドへの登録は不要です。</li>
+                                <li>フォルダは、エクスプローラーや Finder でそのまま扱えます。</li>
+                                <li>版の履歴は、同じフォルダの .git に記録されます。</li>
+                            </ul>
+                        </div>
+                        <div class="panel" role="tabpanel" id="lp-share" aria-labelledby="lt-share">
+                            <div class="lc-anim">
+                            <svg class="lsvg sh" viewBox="0 0 600 260" role="img" aria-label="人事部の PC で保存した版を社内の GitLab に送り、確認依頼を経て総務部の PC が受け取る図">
+                                <text class="note" x="295" y="40" text-anchor="middle">同期（リポジトリごとに選択）</text>
+                                <rect class="box sh-a" x="10" y="20" width="180" height="64" /><text class="b" x="100" y="48" text-anchor="middle">人事部 田中の PC</text><text class="sh-sa" x="100" y="70" text-anchor="middle">病気休暇を新設</text>
+                                <rect class="box sh-b" x="10" y="176" width="180" height="64" /><text class="b" x="100" y="204" text-anchor="middle">総務部 佐藤の PC</text><text class="sh-sb" x="100" y="226" text-anchor="middle">最新の版を受信</text>
+                                <rect class="box key sh-g" x="400" y="20" width="190" height="64" /><text class="b" x="495" y="48" text-anchor="middle">GitLab（社内）</text><text x="495" y="70" text-anchor="middle">GitHub にも対応</text>
+                                <path class="flow" d="M190 52 H400" />
+                                <path class="flow" d="M400 76 L190 196" />
+                                <g class="sh-mr"><rect class="box" x="400" y="150" width="190" height="90" /><text class="note" x="414" y="174">確認依頼 !4</text><text class="b" x="414" y="200">病気休暇を新設</text><text class="sh-st" x="414" y="226">承認済み（佐藤）</text></g>
+                                <g class="pk sh-pk"><rect x="-18" y="-11" width="36" height="22" rx="4" /><text x="0" y="5" text-anchor="middle">版</text></g>
+                            </svg>
+                            </div>
+                            <h3>共有</h3>
+                            <p class="lc-lead">GitHub・GitLab と同期するかどうかは、リポジトリごとに選択できます。</p>
+                            <ul class="lc-detail">
+                                <li>社内の GitLab にも接続できます。</li>
+                                <li>同期しなければ、文書は PC の外に出ません。</li>
+                                <li>確認依頼は、プルリクエスト・マージリクエストとしても作成されます。</li>
+                            </ul>
+                        </div>
+                        <div class="panel" role="tabpanel" id="lp-ai" aria-labelledby="lt-ai">
+                            <div class="lc-anim">
+                            <svg class="lsvg ai" viewBox="0 0 600 260" role="img" aria-label="外部の AI を使わない設定では PC の中の Ollama だけに文書を渡し、使う設定にしたときだけ外部の AI に渡す図">
+                                <rect class="pc" x="10" y="10" width="400" height="240" /><text class="note" x="24" y="32">この PC</text>
+                                <rect class="box key" x="30" y="50" width="150" height="90" /><text class="b" x="105" y="90" text-anchor="middle">ClauseDown</text><text x="105" y="114" text-anchor="middle">就業規則.md</text>
+                                <rect class="box ai-o" x="240" y="40" width="150" height="60" /><text class="b" x="315" y="66" text-anchor="middle">Ollama</text><text x="315" y="88" text-anchor="middle">手元で動作</text>
+                                <rect class="box ext ai-e" x="440" y="40" width="150" height="100" /><text class="b" x="515" y="80" text-anchor="middle">外部の AI</text><text x="515" y="104" text-anchor="middle">Claude・OpenAI 互換</text>
+                                <path class="link" d="M180 70 H240" />
+                                <path class="off ai-path" d="M180 120 H440" />
+                                <text x="440" y="176">外部の AI を使う</text>
+                                <g class="ai-sw"><rect class="sw" x="440" y="188" width="44" height="24" rx="12" /><circle class="knob" cx="452" cy="200" r="8" /></g>
+                                <text class="ai-swt" x="494" y="205">使わない</text>
+                                <rect class="box" x="30" y="160" width="360" height="74" /><text class="note" x="44" y="184">AI の指摘</text>
+                                <text class="ai-res" x="44" y="212">第5条：「及び」「並びに」の使い分けを確認</text>
+                                <g class="pk ai-pk"><rect x="-14" y="-9" width="28" height="18" rx="3" /></g>
+                            </svg>
+                            </div>
+                            <h3>AI</h3>
+                            <p class="lc-lead">AI を使うかどうかは、設定で選択します。</p>
+                            <ul class="lc-detail">
+                                <li>Claude・OpenAI 互換のサービスに接続できます。</li>
+                                <li>手元で動作する Ollama を使えば、文書は PC の外に出ません。</li>
+                                <li>社内のサーバーで動作する Ollama にも接続できます（試験中の機能）。</li>
+                            </ul>
+                        </div>
+                        <div class="panel" role="tabpanel" id="lp-format" aria-labelledby="lt-format">
+                            <div class="lc-anim">
+                            <div class="fmt">
+                                <div class="win fmt-src">
+                                    <div class="win-head"><span>就業規則.md</span></div>
+                                    <pre class="src">### 目的
+- この規則は、従業員の就業に関する事項を定める。</pre>
+                                </div>
+                                <div class="fmt-to">
+                                    <div class="win fmt-cd"><div class="win-head"><span>ClauseDown</span></div><p class="r-cd"><span class="cap">（目的）</span><b>第一条</b>　この規則は、従業員の就業に関する事項を定める。</p></div>
+                                    <div class="win fmt-v"><div class="win-head"><span>VS Code・ほかのエディタ</span></div><pre class="src"><span class="kw">### 目的</span>
+- この規則は、従業員の就業に関する…</pre></div>
+                                    <div class="win fmt-v"><div class="win-head"><span>GitHub・GitLab の画面</span></div><p class="r-gh"><b>目的</b>・この規則は、従業員の就業に関する事項を定める。</p></div>
+                                </div>
+                                <p class="fmt-note">ClauseDown を使用しなくなっても、他のツールでそのまま閲覧できます。</p>
+                            </div>
+                            </div>
+                            <h3>形式</h3>
+                            <p class="lc-lead">形式は Markdown と Git です。</p>
+                            <ul class="lc-detail">
+                                <li>ClauseDown を使わなくなっても、文書と履歴はそのまま読めます。</li>
+                                <li>ほかのエディタや、GitHub・GitLab の画面でも開けます。</li>
+                                <li>独自の形式には変換しません。</li>
+                            </ul>
+                        </div>
+                        <div class="panel" role="tabpanel" id="lp-word" aria-labelledby="lt-word">
+                            <div class="lc-anim">
+                            <div class="wc">
+                                <div class="win wc-w">
+                                    <div class="win-head"><span>Word で手作業で修正</span><span class="wc-st bad">参照の修正漏れ</span></div>
+                                    <div class="wd">
+                                        <p>第一条　この規程は、就業に関する事項を定める。</p>
+                                        <p class="ins">第二条　この規程で「従業員」とは、雇用契約を結んだ者をいう。</p>
+                                        <p><span class="num m"><span>第二条</span><span>第三条</span></span>　この規程は、すべての従業員に適用する。</p>
+                                        <p><span class="num m"><span>第三条</span><span>第四条</span></span>　従業員は、<span class="ref miss"><span>第二条</span></span>の規定にかかわらず、届け出る。</p>
+                                    </div>
+                                </div>
+                                <div class="win wc-c">
+                                    <div class="win-head"><span>ClauseDown</span><span class="wc-st ok">自動で更新</span></div>
+                                    <div class="wd">
+                                        <p>第一条　この規程は、就業に関する事項を定める。</p>
+                                        <p class="ins">第二条　この規程で「従業員」とは、雇用契約を結んだ者をいう。</p>
+                                        <p><span class="num flip"><span>第二条</span><span>第三条</span></span>　この規程は、すべての従業員に適用する。</p>
+                                        <p><span class="num flip"><span>第三条</span><span>第四条</span></span>　従業員は、<span class="ref flip"><span>第二条</span><span>第三条</span></span>の規定にかかわらず、届け出る。</p>
+                                    </div>
+                                </div>
+                            </div>
+                            </div>
+                            <h3>Word で条番号を手で直している方</h3>
+                            <p class="lc-lead">条を追加・削除しても、条番号と「第○条」の参照は自動で更新されます。</p>
+                            <ul class="lc-detail">
+                                <li>新旧対照表は、比較する2つの版を選択するだけで作成できます。</li>
+                                <li>Word・PDF への出力に対応しています。</li>
+                                <li>Word からの取り込みには対応していません。本文を貼り付けて使います。</li>
+                            </ul>
+                        </div>
+                        <div class="panel" role="tabpanel" id="lp-files" aria-labelledby="lt-files">
+                            <div class="lc-anim">
+                            <div class="fs">
+                                <ul class="old">
+                                    <li><span>就業規則_最終.docx</span></li>
+                                    <li><span>就業規則_最終_修正.docx</span></li>
+                                    <li><span>就業規則_最終_修正2（佐藤）.docx</span></li>
+                                    <li><span>就業規則_最終_修正2（佐藤）_確定.docx</span></li>
+                                </ul>
+                                <div>
+                                    <ol class="vers">
+                                        <li><b>制定</b>令和6年4月1日施行・人事部 田中</li>
+                                        <li class="fs-hit"><b>勤務間インターバル制度を導入</b>令和7年4月1日施行・人事部 田中</li>
+                                        <li><b>病気休暇を5日に拡充</b>令和8年4月1日施行・総務部 佐藤</li>
+                                    </ol>
+                                    <p class="fs-date"><span class="tag">令和7年10月1日</span>に効力のあった版を開く</p>
+                                </div>
+                            </div>
+                            </div>
+                            <h3>ファイル名で版を管理している方</h3>
+                            <p class="lc-lead">ファイル名の代わりに、版にメッセージと施行日を付けて記録します。</p>
+                            <ul class="lc-detail">
+                                <li>誰がいつ何を変えたかを、改定履歴で確認できます。</li>
+                                <li>指定した日に効力のあった版を開けます。</li>
+                                <li>過去の版に戻すこともできます。</li>
+                            </ul>
+                        </div>
+                        <div class="panel" role="tabpanel" id="lp-vscode" aria-labelledby="lt-vscode">
+                            <div class="lc-anim">
+                            <div class="vs">
+                                <ul class="before">
+                                    <li>Markdown のプレビュー</li>
+                                    <li>採番のスクリプト</li>
+                                    <li>textlint</li>
+                                    <li>Git の拡張機能</li>
+                                    <li>PDF の出力</li>
+                                </ul>
+                                <div class="win vs-cd">
+                                    <div class="win-head"><span>ClauseDown</span></div>
+                                    <ul class="vs-list">
+                                        <li>組版したプレビュー</li>
+                                        <li>条番号と参照の自動計算</li>
+                                        <li>法令の書き方に合わせた校正</li>
+                                        <li>版・改定案・施行日</li>
+                                        <li>PDF・Word の書き出し</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            </div>
+                            <h3>VS Code と Markdown で書いている方</h3>
+                            <p class="lc-lead">拡張機能を組み合わせずに、採番・条参照・校正・施行日の管理を利用できます。</p>
+                            <ul class="lc-detail">
+                                <li>ファイルは、これまでどおり VS Code でも開けます。</li>
+                                <li>版は Git として記録されるので、VS Code の Git の機能もそのまま使えます。</li>
+                                <li>画面に Git の用語が出ないので、事務担当者とも共有しやすくなります。</li>
+                            </ul>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="features" class="slide">
+                <div class="two">
+                    <div class="l">
+                    <h2>機能の一覧</h2>
+                    <p class="intro">章にマウスを重ねると、その章の機能を表示します。右端のアイコンから、操作マニュアルの該当章を開けます。</p>
+                    <ol class="features" id="feature-list">
+                        <li class="on">
+                            <button type="button"><span class="no">第一章</span><span class="t">条文の作成</span><span class="n">9 機能</span></button><a class="go" href="docs/manual/#6-条文を書く" aria-label="第一章 条文の作成の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
+                        </li>
+                        <li>
+                            <button type="button"><span class="no">第二章</span><span class="t">版と改定案</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#7-版を保存する" aria-label="第二章 版と改定案の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
+                        </li>
+                        <li>
+                            <button type="button"><span class="no">第三章</span><span class="t">施行日・期日・納品</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#11-施行日を記録し納品する" aria-label="第三章 施行日・期日・納品の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
+                        </li>
+                        <li>
+                            <button type="button"><span class="no">第四章</span><span class="t">共有と課題</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#14-ほかの-pcほかの人と共有する" aria-label="第四章 共有と課題の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
+                        </li>
+                        <li>
+                            <button type="button"><span class="no">第五章</span><span class="t">書き出し・取り込み・AI</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#16-ai-に確認や書き直しを頼む" aria-label="第五章 書き出し・取り込み・AIの操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
+                        </li>
+                    </ol>
+                    </div>
+                    <div class="r">
+                    <div class="feature-view" aria-live="polite">
+                        <figure class="on">
+                            <img src="docs/manual/images/feature-editor.png" alt="条文の作成の画面" loading="lazy" />
+                            <figcaption>
+                                <h3>第一章　条文の作成</h3>
+                                <ul class="detail">
+                                <li><b>条・項・号の自動採番</b>条を追加・削除すると、後続の番号を更新</li>
+                                <li><b>条参照</b>「[[ ]]」で書いた参照は、番号が変わっても追随</li>
+                                <li><b>参照元</b>その条を参照している条を、条見出しの横に表示</li>
+                                <li><b>条の沿革</b>その条を制定・改正した施行版を、編集画面に表示</li>
+                                <li><b>番号の書式</b>法令式・契約書式、漢数字・算用数字などを選択</li>
+                                <li><b>校正</b>同じ助詞の連続、ら抜き言葉、法令の用字・送り仮名</li>
+                                <li><b>定義語のチェック</b>二重の定義、定義前の使用、未使用の定義を指摘</li>
+                                <li><b>表・数式・画像</b>表のセルの結合、LaTeX の数式、画像の挿入</li>
+                                <li><b>検索</b>文書・条・操作を名前で探す。編集の欄で検索と置換</li>
+                                </ul>
+                            </figcaption>
+                        </figure>
+                        <figure>
+                            <img src="docs/manual/images/feature-history.png" alt="版と改定案の画面" loading="lazy" />
+                            <figcaption>
+                                <h3>第二章　版と改定案</h3>
+                                <ul class="detail">
+                                <li><b>版の保存</b>区切りごとに、メッセージを付けて記録</li>
+                                <li><b>改定履歴</b>過去の版の閲覧、版どうしの比較、復元</li>
+                                <li><b>新旧対照表</b>新旧対照表形式と Diff 形式。変更のない条は（略）に</li>
+                                <li><b>改定案</b>現行版を止めずに、別の案で書き直し</li>
+                                <li><b>確認依頼と承認</b>承認者を決め、承認を受けてから現行版に反映</li>
+                                <li><b>統合</b>重なった変更は、1 か所ずつ選んで統合</li>
+                                </ul>
+                            </figcaption>
+                        </figure>
+                        <figure>
+                            <img src="docs/manual/images/feature-releases.png" alt="施行日・期日・納品の画面" loading="lazy" />
+                            <figcaption>
+                                <h3>第三章　施行日・期日・納品</h3>
+                                <ul class="detail">
+                                <li><b>施行日</b>版に施行日を設定し、施行中の版を表示</li>
+                                <li><b>有効期間</b>施行版ごとの有効期間を帯で示し、指定した日の版を開く</li>
+                                <li><b>期日</b>公布・提出・届出・更新などを登録。毎年・毎月の繰り返しも</li>
+                                <li><b>通知</b>期日が近づくと、デスクトップに通知</li>
+                                <li><b>カレンダー</b>期日を iCalendar（.ics）に書き出し</li>
+                                <li><b>納品</b>条文と新旧対照表を PDF・Word にまとめ、納品先と日付を記録</li>
+                                </ul>
+                            </figcaption>
+                        </figure>
+                        <figure>
+                            <img src="docs/manual/images/feature-sync.png" alt="共有と課題の画面" loading="lazy" />
+                            <figcaption>
+                                <h3>第四章　共有と課題</h3>
+                                <ul class="detail">
+                                <li><b>同期</b>GitHub・GitLab（社内の GitLab を含む）と同期</li>
+                                <li><b>プルリクエスト</b>確認依頼を、プルリクエスト・マージリクエストとしても作成</li>
+                                <li><b>課題</b>「#1」で版と関連付け、「Closes #1」で完了</li>
+                                <li><b>コメント</b>課題ごとに、コメントで議論</li>
+                                <li><b>複製・フォーク</b>リポジトリを複製し、別の案件に流用</li>
+                                <li><b>セクション</b>リポジトリを会社・案件ごとにまとめて表示</li>
+                                </ul>
+                            </figcaption>
+                        </figure>
+                        <figure>
+                            <img src="docs/manual/images/feature-ai.png" alt="書き出し・取り込み・AIの画面" loading="lazy" />
+                            <figcaption>
+                                <h3>第五章　書き出し・取り込み・AI</h3>
+                                <ul class="detail">
+                                <li><b>PDF・Word・HTML</b>印刷と同じ組版で書き出し</li>
+                                <li><b>印刷プレビュー</b>改ページ・余白・ページ番号を確認</li>
+                                <li><b>書式設定</b>章・項の番号、改ページ、文字の大きさと寄せを指定</li>
+                                <li><b>houritsu</b>e-Gov 法令検索の法令を Markdown にした形式で、取り込みと書き出し</li>
+                                <li><b>AI</b>Claude・OpenAI 互換のサービス・Ollama に、確認や修正を依頼</li>
+                                <li><b>MCP</b>Claude Desktop・Claude Code から、ClauseDown の文書を操作</li>
+                                </ul>
+                            </figcaption>
+                        </figure>
+                    </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="get slide" id="get">
+                <div class="two">
+                    <div class="l">
+                    <h2>ダウンロード</h2>
+                    <p class="intro">無料で利用できます。MIT ライセンスのもと、ソースコードを GitHub で公開しています。</p>
+                    <div class="cta">
+                        <a class="btn" data-dl="main" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest">Windows・Mac 版をダウンロード</a>
+                    </div>
+                    <p class="dl-meta"><span data-rel>最新版はリリースのページから入手できます</span><a data-dl="alt" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest">ほかの OS 版</a></p>
+                    <dl class="req">
+                        <dt>対応 OS</dt>
+                        <dd>Windows（64 ビット）、macOS（Apple シリコン）</dd>
+                        <dt>更新</dt>
+                        <dd>新しい版の公開時には、アプリ内で通知します。</dd>
+                        <dt>窓口</dt>
+                        <dd><a href="https://github.com/SHIOZAKI-Shota/ClauseDown/issues">GitHub の Issues</a>（質問・不具合の報告）</dd>
+                    </dl>
+                    </div>
+                    <div class="r">
+                    <div class="install">
+                        <h3>インストール</h3>
+                        <p class="install-note">配布ファイルには署名がないため、初回だけ OS の警告が表示されます。</p>
+                        <div class="os">
+                            <h4>Windows</h4>
+                            <ol>
+                                <li>ダウンロードした「ClauseDown-Setup-（版）.exe」を開きます。</li>
+                                <li>「Windows によって PC が保護されました」と表示されたら、「詳細情報」→「実行」を押します。</li>
+                                <li>インストール先を選び、完了したら ClauseDown を起動します。</li>
+                            </ol>
+                        </div>
+                        <div class="os">
+                            <h4>macOS</h4>
+                            <ol>
+                                <li>ダウンロードした「ClauseDown-（版）-arm64.dmg」を開き、ClauseDown を「アプリケーション」フォルダにドラッグします。</li>
+                                <li>初回の起動で開けないと表示されたら、「システム設定」→「プライバシーとセキュリティ」の「このまま開く」を押します。</li>
+                            </ol>
+                        </div>
+                        <p class="links"><a data-changelog href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest">最新版の変更点</a>　<a href="docs/manual/">操作マニュアル</a></p>
+                    </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="faq" class="slide">
+                <div class="two">
+                    <div class="l">
+                    <h2>よくある質問</h2>
+                    <p class="intro">ほかの質問や不具合は、<a href="https://github.com/SHIOZAKI-Shota/ClauseDown/issues">GitHub の Issues</a> で受け付けています。</p>
+                    </div>
+                    <div class="r">
+                    <div class="faq">
+                        <details>
+                            <summary>Git の知識は必要ですか？</summary>
+                            <p>必要ありません。画面に Git の用語は表示されず、「版の保存」「改定案」「現行版に反映」などの言葉で操作します。</p>
+                        </details>
+                        <details>
+                            <summary>インターネットに接続していなくても使えますか？</summary>
+                            <p>使えます。GitHub・GitLab との同期と、外部の AI サービスを使うときだけ、接続が必要です。</p>
+                        </details>
+                        <details>
+                            <summary>Word の文書から始められますか？</summary>
+                            <p>Word からの取り込みには対応していません。本文を貼り付け、条の見出しを「###」、項を「-」に直すと、番号は ClauseDown が付けます。Word への出力には対応しています。</p>
+                        </details>
+                        <details>
+                            <summary>文書はどこに保存されますか？</summary>
+                            <p>自分で選んだフォルダ（リポジトリ）に、Markdown のファイルとして保存されます。ClauseDown の運営者のサーバーには保存されません。</p>
+                        </details>
+                        <details>
+                            <summary>料金はかかりますか？</summary>
+                            <p>かかりません。MIT ライセンスで公開しているオープンソースのアプリです。</p>
+                        </details>
+                        <details>
+                            <summary>Intel の Mac で使えますか？</summary>
+                            <p>現在は Apple シリコンの Mac 用の版のみを配布しています。</p>
+                        </details>
+                    </div>
+                    </div>
+                </div>
+            <footer>
+                    <div class="h">附則</div>
+                    <div class="body">
+                        <p>© 2026 SHIOZAKI Shota。MIT ライセンスで公開しています。</p>
+                        <p>
+                            <a href="https://github.com/SHIOZAKI-Shota/ClauseDown">GitHub</a>　<a href="docs/manual/">操作マニュアル</a>　<a
+                                href="https://github.com/SHIOZAKI-Shota/ClauseDown/blob/master/LICENSE"
+                                >ライセンス</a
+                            >
+                        </p>
+                    </div>
+            </footer>
+            </section>
+        </main>
+
+
+        <script>
+            const THEME_KEY = 'clausedown-site-theme'
+            const root = document.documentElement
+            const button = document.getElementById('theme')
+            const media = matchMedia('(prefers-color-scheme: dark)')
+            const isDark = () => (root.dataset.theme ? root.dataset.theme === 'dark' : media.matches)
+            const demoFrame = () => document.querySelector('#demo iframe')
+            function render() {
+                const dark = isDark()
+                root.toggleAttribute('data-dark', dark)
+                const label = dark ? 'ライトモードにする' : 'ダークモードにする'
+                button.setAttribute('aria-label', label)
+                button.title = label
+            }
+            function setTheme(theme, fromDemo) {
+                root.dataset.theme = theme
+                try {
+                    localStorage.setItem(THEME_KEY, theme)
+                } catch {}
+                render()
+                if (!fromDemo) demoFrame()?.contentWindow?.postMessage({ type: 'clausedown-theme', theme }, location.origin)
+            }
+            button.addEventListener('click', () => setTheme(isDark() ? 'light' : 'dark'))
+            media.addEventListener('change', render)
+            addEventListener('message', (e) => {
+                if (e.origin !== location.origin || e.data?.type !== 'clausedown-theme') return
+                if (e.data.theme !== (isDark() ? 'dark' : 'light')) setTheme(e.data.theme, true)
+            })
+            render()
+
+            if (matchMedia('(min-width: 721px)').matches) {
+                const frame = document.createElement('iframe')
+                frame.src = 'demo/'
+                frame.title = 'ClauseDown の編集画面のデモ'
+                frame.allow = 'clipboard-read; clipboard-write'
+                document.getElementById('demo-frame').append(frame)
+            }
+
+            const SPLIT = [25, 100 / 3]
+            const peek = document.getElementById('peek')
+            const demoBox = document.getElementById('demo-frame')
+            const header = document.querySelector('header.top')
+            const morphOn = () => root.classList.contains('motion') && demoBox.offsetWidth > 0
+            const ghost = peek.cloneNode(true)
+            ghost.removeAttribute('id')
+            ghost.removeAttribute('href')
+            ghost.setAttribute('aria-hidden', 'true')
+            ghost.classList.add('peek-ghost')
+            ghost.hidden = true
+            document.body.append(ghost)
+            let morph = null
+            const docRect = (el) => {
+                const r = el.getBoundingClientRect()
+                return { left: r.left, top: r.top + scrollY, width: r.width, height: r.height }
+            }
+            const measure = () => {
+                const hover = peek.style.transform
+                const lw = root.style.getPropertyValue('--lw')
+                peek.style.transform = 'none'
+                root.style.setProperty('--lw', `${SPLIT[0]}%`)
+                const top = header.offsetHeight
+                const cover = docRect(peek.parentElement)
+                const from = docRect(peek)
+                const to = docRect(demoBox)
+                peek.style.transform = hover
+                root.style.setProperty('--lw', lw)
+                const start = docRect(document.getElementById('cover')).top - top
+                const end = docRect(document.getElementById('demo')).top - top
+                morph = {
+                    start,
+                    end,
+                    from: { ...from, top: from.top - start, clip: Math.max(0, from.top + from.height - (cover.top + cover.height)) },
+                    to: { ...to, top: to.top - end, clip: 0 },
+                }
+            }
+            const lerp = (a, b, t) => a + (b - a) * t
+            const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2)
+            const setVisible = (el, on) => (el.style.visibility = on ? '' : 'hidden')
+            function updateMorph() {
+                if (!morphOn()) {
+                    ghost.hidden = true
+                    setVisible(peek, true)
+                    setVisible(demoBox, true)
+                    return
+                }
+                if (!morph) measure()
+                const { start, end, from, to } = morph
+                const p = Math.min(1, Math.max(0, (scrollY - start) / (end - start)))
+                const moving = p > 0 && p < 1
+                ghost.hidden = !moving
+                setVisible(peek, !moving)
+                setVisible(demoBox, !moving || p > 0.85)
+                if (!moving) return
+                const t = ease(p)
+                Object.assign(ghost.style, {
+                    left: `${lerp(from.left, to.left, t)}px`,
+                    top: `${lerp(from.top, to.top, t)}px`,
+                    width: `${lerp(from.width, to.width, t)}px`,
+                    height: `${lerp(from.height, to.height, t)}px`,
+                    borderRadius: `${lerp(6, 0, t)}px ${lerp(6, 0, t)}px 0 0`,
+                    clipPath: `inset(0 0 ${lerp(from.clip, to.clip, t)}px 0)`,
+                    opacity: p > 0.85 ? (1 - p) / 0.15 : 1,
+                })
+            }
+            let split = null
+            function updateSplit() {
+                if (!split) {
+                    const top = header.offsetHeight
+                    split = { from: docRect(document.getElementById('demo')).top - top, to: docRect(document.getElementById('top-hero')).top - top }
+                }
+                const q = Math.min(1, Math.max(0, (scrollY - split.from) / (split.to - split.from)))
+                root.style.setProperty('--lw', `${lerp(SPLIT[0], SPLIT[1], ease(q))}%`)
+            }
+            let morphFrame = 0
+            const queueMorph = () => {
+                if (!morphFrame) morphFrame = requestAnimationFrame(() => ((morphFrame = 0), updateSplit(), updateMorph()))
+            }
+            const remeasure = () => ((morph = null), (split = null), queueMorph())
+            addEventListener('scroll', queueMorph, { passive: true })
+            addEventListener('resize', remeasure)
+            addEventListener('load', remeasure)
+            updateSplit()
+            updateMorph()
+            peek.addEventListener('click', (e) => {
+                if (!morphOn()) return
+                e.preventDefault()
+                if (!morph) measure()
+                scrollTo({ top: morph.end, behavior: 'smooth' })
+            })
+
+            const GUIDE = {
+                home: ['初期ページ', 'すべてのリポジトリと、今後の期日・有効期間、あなたの確認待ちの改定案を一覧表示します。リポジトリは会社や案件ごとにセクションで分類できます。'],
+                docs: ['リポジトリホーム', 'リポジトリ内の文書の一覧です。メモ、作業中の改定案、このリポジトリの期日・有効期間も表示します。文書を選択すると編集画面が開きます。'],
+                editor: ['条文の編集', '左に Markdown を入力すると、右のプレビューに組版結果を表示します。条番号は「###」の順序から算出するので、本文には記述しません。'],
+                history: ['改定履歴', '保存した版と改定案の分岐を図で表示します。版を選択すると、その時点の本文と変更点を確認でき、施行日の設定や、その版への復元もできます。'],
+                compare: ['新旧対照表', '2 つの版の差分を、改正後と改正前の対照表にします。変更のない条は（略）に集約され、PDF や Word に出力できます。'],
+                releases: ['期日・有効期間・納品', 'この文書の施行日ごとの有効期間を帯で示し、提出や届出などの期日と、納品の記録を表示します。日付を指定すると、その日に効力のあった版を開けます。'],
+                schedule: ['期日・有効期間', 'リポジトリ内のすべての文書の期日と有効期間を表示します。公布・提出・届出・更新などの期日は、毎年・毎月の繰り返しも登録できます。'],
+                issues: ['課題', '修正したい点や相談事項を課題として記録し、コメントで議論します。版を保存するときに「Closes #番号」と記述すると、その版で課題を解決済みにできます。'],
+                repo: ['リポジトリの設定', 'リポジトリの名称、期日の種類、確認の規則などを設定します。'],
+                setup: ['設定', 'アプリ全体の表示や動作を設定します。'],
+                about: ['このアプリについて', 'バージョン、ライセンス、マニュアルへのリンクを表示します。'],
+                add: ['条・項・号の追加', 'カーソル位置に条・項・号・号の細分を追加します。番号は記述せずに挿入し、後続の番号はプレビューで自動的に再採番されます。'],
+                insert: ['挿入', '章、枝番号の条、削除された条、附則、別表、表、数式、画像、条参照などを、カーソルの位置に挿入します。'],
+                config: ['書式設定', '条番号の表記（漢数字・算用数字・全角数字）、項の字下げ、号の記号などを文書ごとに設定します。設定は文書の先頭のコメントに記録されます。'],
+                ai: ['AI', 'AI に条文の編集や点検を依頼する欄を開きます。アプリでは、使用する AI サービスを設定で選択できます。'],
+                export: ['書き出し', 'プレビューと同じ組版で、PDF・Word・HTML に出力します。'],
+                save: ['版を保存', '現在の本文を、説明を付けて版として保存します。保存した版は改定履歴に並び、後から比較や復元ができます。'],
+                branch: ['現行版と改定案', '現行版から改定案を作成すると、現行版に影響を与えずに改正案を記述できます。案が完成したら、現行版に反映します。'],
+                outline: ['文書・目次', 'リポジトリ内の文書の切り替えと、章・条の目次です。目次の条を選択すると、その条へ移動します。'],
+                search: ['検索', '文書・条・操作を名前で検索して開きます。Ctrl＋K（Mac は ⌘＋K）でも起動できます。'],
+                proofread: ['校正', '表記の誤りや、法令の用字・用語に合わない表現に下線を表示します。下の欄の件数を押すと一覧が開き、矢印で順に移動できます。'],
+                markdown: ['Markdown', '「###」で条、「-」で項、字下げした「-」で号を記述します。「[[」と入力すると条を選択して参照でき、参照先の番号が変わっても自動で追従します。'],
+                preview: ['プレビュー', '印刷・PDF・Word と同じ組版で表示します。条番号と参照の番号は、ここで算出した結果です。'],
+                reset: ['見本に戻す', 'デモで加えた変更を破棄し、見本の初期状態に復元します。'],
+                get: ['アプリを入手', 'Windows・macOS 版のダウンロードページを開きます。'],
+                repos: ['リポジトリの切り替え', 'リポジトリは文書をまとめる単位です。デモには、会社の規程、契約書、市の条例などの見本を収録しています。'],
+                effective: ['施行日', '版に施行日を設定すると、その日から次の施行日の前日までが、その版の有効期間になります。'],
+                deliver: ['納品', '条文と新旧対照表を PDF・Word にまとめ、納品先と日付を記録します。'],
+                restore: ['この版に戻す', '選択した版の本文に復元します。復元前の内容も履歴に残ります。'],
+                undo: ['元に戻す・やり直す', '直前の編集を取り消したり、やり直したりします。'],
+                zoom: ['プレビューの倍率', 'プレビューを拡大・縮小します。エディタの拡縮と同期することもできます。'],
+                trail: ['条の沿革', 'カーソルのある条が、どの版で追加・改正されたかを表示します。'],
+                graph: ['版の図', '丸が版、線が分岐です。改定案は現行版から分岐し、反映すると合流します。'],
+                timeline: ['期日と有効期間の帯', '施行日ごとの有効期間を帯で、期日を印で示します。'],
+            }
+            const guide = document.getElementById('guide')
+            addEventListener('message', (e) => {
+                if (e.origin !== location.origin || e.data?.type !== 'clausedown-guide') return
+                const item = GUIDE[e.data.topic] ?? GUIDE[e.data.view]
+                if (!item) return
+                const h = document.createElement('h3')
+                const p = document.createElement('p')
+                h.textContent = item[0]
+                p.className = 'intro'
+                p.textContent = item[1]
+                guide.replaceChildren(h, p)
+            })
+
+            const featureItems = [...document.querySelectorAll('#feature-list li')]
+            const featureViews = [...document.querySelectorAll('.feature-view figure')]
+            const pickFeature = (i) => {
+                featureItems.forEach((li, j) => li.classList.toggle('on', i === j))
+                featureViews.forEach((f, j) => f.classList.toggle('on', i === j))
+            }
+            featureItems.forEach((li, i) => {
+                li.addEventListener('mouseenter', () => pickFeature(i))
+                for (const el of li.querySelectorAll('button, a')) el.addEventListener('focus', () => pickFeature(i))
+                li.querySelector('button').addEventListener('click', () => pickFeature(i))
+            })
+
+            const ua = navigator.userAgent
+            const myOs = /Mac/i.test(ua) && !/iPhone|iPad/i.test(ua) ? 'mac' : /Windows/i.test(ua) ? 'win' : null
+            const OS_LABEL = { win: 'Windows 版', mac: 'macOS 版' }
+            const setDownloads = (urls, rel) => {
+                const other = myOs === 'win' ? 'mac' : 'win'
+                for (const a of document.querySelectorAll('[data-dl="main"]')) {
+                    if (myOs) a.textContent = `${OS_LABEL[myOs]}をダウンロード${rel ? `（${rel.tag_name}）` : ''}`
+                    if (myOs && urls[myOs]) a.href = urls[myOs]
+                }
+                for (const a of document.querySelectorAll('[data-dl="short"]')) if (myOs && urls[myOs]) a.href = urls[myOs]
+                for (const a of document.querySelectorAll('[data-dl="alt"]')) {
+                    if (myOs) a.textContent = other === 'mac' ? 'macOS（Apple シリコン）版はこちら' : 'Windows 版はこちら'
+                    if (myOs && urls[other]) a.href = urls[other]
+                }
+                if (!rel) return
+                const d = new Date(rel.published_at)
+                for (const el of document.querySelectorAll('[data-rel]'))
+                    el.textContent = `最新版 ${rel.tag_name}（${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日公開）`
+                for (const a of document.querySelectorAll('[data-changelog]')) {
+                    a.href = rel.html_url
+                    a.textContent = `${rel.tag_name} の変更点`
+                }
+            }
+            setDownloads({}, null)
+            fetch('https://api.github.com/repos/SHIOZAKI-Shota/ClauseDown/releases/latest')
+                .then((r) => (r.ok ? r.json() : null))
+                .then((rel) => {
+                    if (!rel) return
+                    const find = (re) => rel.assets?.find((x) => re.test(x.name))?.browser_download_url
+                    setDownloads({ win: find(/\.exe$/), mac: find(/\.dmg$/) }, rel)
+                })
+                .catch(() => {})
+
+            const localTabs = [...document.querySelectorAll('#local .picks button')]
+            const localPanels = [...document.querySelectorAll('#local-stage .panel')]
+            let localIndex = 0
+            let localPlay = null
+            let localFns = []
+            const showLocal = (i) => {
+                localIndex = i
+                localTabs.forEach((t, j) => {
+                    t.parentElement.classList.toggle('on', i === j)
+                    t.setAttribute('aria-selected', String(i === j))
+                })
+                localPanels.forEach((p, j) => p.classList.toggle('on', i === j))
+                localPlay?.kill()
+                localPlay = localFns[i] ? localFns[i]() : null
+            }
+            localTabs.forEach((t, i) => {
+                for (const ev of ['mouseenter', 'focus', 'click']) t.addEventListener(ev, () => i !== localIndex && showLocal(i))
+            })
+            new IntersectionObserver(([e]) => e.isIntersecting && showLocal(localIndex), { threshold: 0.6 }).observe(document.getElementById('local'))
+
+            const motionTabs = [...document.querySelectorAll('#motion-tabs button')]
+            const motionPanels = [...document.querySelectorAll('#motion-stage .panel')]
+            const motionSection = document.getElementById('motions')
+            const AUTO = root.classList.contains('motion')
+            let motionIndex = 0
+            let motionTimer
+            let motionPlay = null
+            let motionVisible = false
+            let motionHover = false
+            let motionFns = []
+            function showMotion(i, focus) {
+                motionIndex = i
+                motionTabs.forEach((t, j) => {
+                    t.setAttribute('aria-selected', String(i === j))
+                    t.tabIndex = i === j ? 0 : -1
+                    t.parentElement.classList.toggle('on', i === j)
+                    t.parentElement.classList.remove('run')
+                })
+                motionPanels.forEach((p, j) => p.classList.toggle('on', i === j))
+                if (focus) motionTabs[i].focus()
+                motionPlay?.kill()
+                motionPlay = motionFns[i] ? motionFns[i]() : null
+                scheduleMotion()
+            }
+            function scheduleMotion() {
+                clearTimeout(motionTimer)
+                const li = motionTabs[motionIndex].parentElement
+                li.classList.remove('run')
+                if (!AUTO || !motionVisible || motionHover) return
+                void li.offsetWidth
+                li.classList.add('run')
+                motionTimer = setTimeout(() => showMotion((motionIndex + 1) % motionTabs.length), 7000)
+            }
+            motionTabs.forEach((t, i) => {
+                t.addEventListener('click', () => showMotion(i))
+                t.addEventListener('mouseenter', () => i !== motionIndex && showMotion(i))
+                t.addEventListener('focus', () => i !== motionIndex && showMotion(i))
+                t.addEventListener('keydown', (e) => {
+                    const d = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key]
+                    if (!d) return
+                    e.preventDefault()
+                    showMotion((i + d + motionTabs.length) % motionTabs.length, true)
+                })
+            })
+            motionSection.addEventListener('mouseenter', () => {
+                motionHover = true
+                scheduleMotion()
+            })
+            motionSection.addEventListener('mouseleave', () => {
+                motionHover = false
+                scheduleMotion()
+            })
+            new IntersectionObserver(
+                ([e]) => {
+                    const was = motionVisible
+                    motionVisible = e.isIntersecting
+                    if (motionVisible && !was) showMotion(motionIndex)
+                    else scheduleMotion()
+                },
+                { threshold: 0.6 },
+            ).observe(motionSection)
+
+            function motionsReady(gsap) {
+                const q = (sel) => gsap.utils.toArray(sel)
+                motionFns = [
+                    () => gsap.fromTo('#m-compare u', { '--u': '0%' }, { '--u': '100%', duration: 0.6, ease: 'power1.inOut', stagger: 0.3, delay: 0.3 }),
+                    () => {
+                        const lines = q('#m-versions .draw')
+                        lines.forEach((p) => {
+                            const len = p.getTotalLength()
+                            gsap.set(p, { strokeDasharray: len, strokeDashoffset: len })
+                        })
+                        return gsap
+                            .timeline()
+                            .to('#m-versions .main', { strokeDashoffset: 0, ease: 'power1.inOut', duration: 1.4 })
+                            .to('#m-versions .draft', { strokeDashoffset: 0, ease: 'power1.inOut', duration: 1.2 }, 0.8)
+                            .fromTo('#m-versions .nodes > *', { opacity: 0 }, { opacity: 1, duration: 0.3, stagger: 0.03 }, 0.2)
+                    },
+                    () => {
+                        const marks = q('#m-proof .wv')
+                        const items = q('#m-proof .issues li')
+                        const count = document.getElementById('proof-count')
+                        marks.forEach((m) => m.classList.remove('on'))
+                        items.forEach((m) => m.classList.remove('on'))
+                        count.textContent = '注意 0'
+                        const tl = gsap.timeline({ delay: 0.4 })
+                        marks.forEach((m, i) =>
+                            tl.call(
+                                () => {
+                                    m.classList.add('on')
+                                    items[i].classList.add('on')
+                                    count.textContent = `注意 ${i + 1}`
+                                },
+                                null,
+                                i * 0.7,
+                            ),
+                        )
+                        return tl
+                    },
+                    () =>
+                        gsap
+                            .timeline()
+                            .fromTo('#m-schedule .band', { scaleX: 0, transformOrigin: 'left center' }, { scaleX: 1, duration: 0.6, ease: 'power2.out', stagger: 0.15 })
+                            .fromTo('#m-schedule .bl', { opacity: 0 }, { opacity: 1, duration: 0.3, stagger: 0.1 }, 0.3)
+                            .fromTo('#m-schedule .today', { attr: { y2: 40 } }, { attr: { y2: 310 }, duration: 0.5, ease: 'power2.out' }, 0.6)
+                            .fromTo('#m-schedule .ev', { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.35, ease: 'back.out(2)', stagger: 0.18 }, 0.9),
+                    () => {
+                        const typed = document.getElementById('issue-typed')
+                        const full = 'カスハラ対策の条を新設\n\nCloses #2'
+                        const state = document.getElementById('issue-state')
+                        const btn = document.getElementById('merge-btn')
+                        const ev = document.getElementById('issue-event')
+                        const t = { n: 0 }
+                        state.classList.remove('done')
+                        ev.classList.add('hide')
+                        typed.textContent = ''
+                        return gsap
+                            .timeline({ delay: 0.3 })
+                            .to(t, { n: full.length, duration: 1.8, ease: 'none', onUpdate: () => (typed.textContent = full.slice(0, Math.round(t.n))) })
+                            .call(() => btn.classList.add('press'), null, '+=0.4')
+                            .call(() => btn.classList.remove('press'), null, '+=0.15')
+                            .call(() => {
+                                state.classList.add('done')
+                                ev.classList.remove('hide')
+                            }, null, '+=0.2')
+                    },
+                ]
+                const $ = (sel) => document.querySelector(sel)
+                const cls = (el, name, on) => () => (typeof el === 'string' ? q(el) : [el]).forEach((e) => e.classList.toggle(name, on))
+                const typer = (el) => {
+                    const full = (el.dataset.full ??= el.textContent)
+                    const t = { n: 0 }
+                    return {
+                        reset: () => ((t.n = 0), (el.textContent = '')),
+                        tween: (duration) => ({ target: t, vars: { n: full.length, duration, ease: 'none', onUpdate: () => (el.textContent = full.slice(0, Math.round(t.n))) } }),
+                    }
+                }
+                localFns = [
+                    () => {
+                        const ty = typer($('#st-typed'))
+                        const count = $('#lp-store .st-count')
+                        const tw = ty.tween(1.6)
+                        return gsap
+                            .timeline({ repeat: -1, repeatDelay: 1 })
+                            .call(() => {
+                                ty.reset()
+                                count.textContent = '12'
+                                q('#lp-store .tree li').forEach((li) => li.classList.remove('hl'))
+                            })
+                            .set('#lp-store .st-new', { height: 0, opacity: 0 })
+                            .set('#lp-store .st-save', { opacity: 0, y: 8 })
+                            .fromTo('#lp-store .tree li:not(.st-new)', { opacity: 0, x: -12 }, { opacity: 1, x: 0, duration: 0.3, stagger: 0.1 })
+                            .call(cls('#lp-store .st-main', 'hl', true))
+                            .fromTo('#lp-store .st-file', { opacity: 0, x: 24 }, { opacity: 1, x: 0, duration: 0.4, ease: 'power2.out' })
+                            .to(tw.target, tw.vars, '+=0.2')
+                            .to('#lp-store .st-save', { opacity: 1, y: 0, duration: 0.3, ease: 'back.out(2)' }, '+=0.3')
+                            .call(cls('#lp-store .st-git', 'hl', true), null, '+=0.3')
+                            .fromTo(count, { scale: 1 }, { scale: 1.6, duration: 0.15, yoyo: true, repeat: 1, onStart: () => (count.textContent = '13') })
+                            .call(cls('#lp-store .tree li', 'hl', false), null, '+=0.8')
+                            .to('#lp-store .st-new', { height: 'auto', opacity: 1, duration: 0.4, ease: 'power2.out' }, '+=0.2')
+                            .call(cls('#lp-store .st-new', 'hl', true))
+                            .to({}, { duration: 2.5 })
+                    },
+                    () => {
+                        const st = $('#lp-share .sh-st')
+                        return gsap
+                            .timeline({ repeat: -1, repeatDelay: 0.8 })
+                            .call(() => {
+                                q('#lp-share .box').forEach((b) => b.classList.remove('act'))
+                                st.classList.remove('ok')
+                                st.textContent = '確認待ち'
+                            })
+                            .set('#lp-share .sh-mr', { opacity: 0, y: 12 })
+                            .set('#lp-share .sh-pk', { opacity: 0, x: 190, y: 52 })
+                            .call(cls('#lp-share .sh-a', 'act', true), null, 0.4)
+                            .to('#lp-share .sh-pk', { opacity: 1, duration: 0.2 }, '+=0.4')
+                            .to('#lp-share .sh-pk', { x: 400, duration: 1, ease: 'power2.inOut' })
+                            .call(cls('#lp-share .sh-g', 'act', true))
+                            .to('#lp-share .sh-pk', { opacity: 0, duration: 0.15 })
+                            .to('#lp-share .sh-mr', { opacity: 1, y: 0, duration: 0.4, ease: 'back.out(2)' }, '+=0.2')
+                            .set('#lp-share .sh-pk', { x: 400, y: 76 }, '+=0.6')
+                            .to('#lp-share .sh-pk', { opacity: 1, duration: 0.15 })
+                            .to('#lp-share .sh-pk', { x: 190, y: 196, duration: 1, ease: 'power2.inOut' })
+                            .call(cls('#lp-share .sh-b', 'act', true))
+                            .to('#lp-share .sh-pk', { opacity: 0, duration: 0.15 })
+                            .call(() => {
+                                st.classList.add('ok')
+                                st.textContent = '承認済み（佐藤）'
+                            }, null, '+=0.6')
+                            .fromTo(st, { opacity: 0 }, { opacity: 1, duration: 0.3 }, '<')
+                            .to({}, { duration: 2.5 })
+                    },
+                    () => {
+                        const res = $('#lp-ai .ai-res')
+                        const swt = $('#lp-ai .ai-swt')
+                        const path = $('#lp-ai .ai-path')
+                        const sw = $('#lp-ai .ai-sw')
+                        const use = (on) => () => {
+                            sw.classList.toggle('on', on)
+                            path.classList.toggle('on', on)
+                            $('#lp-ai .ai-e').classList.toggle('act', on)
+                            swt.textContent = on ? '使う' : '使わない'
+                        }
+                        const tl = gsap.timeline({ repeat: -1, repeatDelay: 0.8 })
+                        tl.call(use(false))
+                            .set('#lp-ai .knob', { x: 0 })
+                            .set(res, { opacity: 0 })
+                            .set('#lp-ai .ai-pk', { opacity: 0, x: 180, y: 70 })
+                            .to('#lp-ai .ai-pk', { opacity: 1, duration: 0.2 }, 0.5)
+                            .to('#lp-ai .ai-pk', { x: 240, duration: 0.6, ease: 'power2.inOut' })
+                            .call(cls('#lp-ai .ai-o', 'act', true))
+                            .to('#lp-ai .ai-pk', { x: 180, duration: 0.6, ease: 'power2.inOut' }, '+=0.4')
+                            .to('#lp-ai .ai-pk', { opacity: 0, duration: 0.15 })
+                            .call(() => (res.textContent = '第5条：「及び」「並びに」の使い分けを確認'))
+                            .to(res, { opacity: 1, duration: 0.3 })
+                            .call(cls('#lp-ai .ai-o', 'act', false), null, '+=1.6')
+                            .to(res, { opacity: 0, duration: 0.2 }, '<')
+                            .to('#lp-ai .knob', { x: 20, duration: 0.25, onStart: use(true) }, '+=0.3')
+                            .set('#lp-ai .ai-pk', { x: 180, y: 120 }, '+=0.3')
+                            .to('#lp-ai .ai-pk', { opacity: 1, duration: 0.15 })
+                            .to('#lp-ai .ai-pk', { x: 440, duration: 1, ease: 'power2.inOut' })
+                            .to('#lp-ai .ai-pk', { x: 180, duration: 1, ease: 'power2.inOut' }, '+=0.4')
+                            .to('#lp-ai .ai-pk', { opacity: 0, duration: 0.15 })
+                            .call(() => (res.textContent = '第12条：「速やかに」の期限を日数で示す案'))
+                            .to(res, { opacity: 1, duration: 0.3 })
+                            .to('#lp-ai .knob', { x: 0, duration: 0.25, onStart: use(false) }, '+=2')
+                            .to({}, { duration: 0.6 })
+                        return tl
+                    },
+                    () =>
+                        gsap
+                            .timeline({ repeat: -1, repeatDelay: 0.8 })
+                            .call(() => q('#lp-format .win').forEach((w) => w.classList.remove('dim', 'lit')))
+                            .set('#lp-format .fmt-note', { opacity: 0 })
+                            .fromTo('#lp-format .fmt-src', { opacity: 0, x: -16 }, { opacity: 1, x: 0, duration: 0.4 })
+                            .fromTo('#lp-format .fmt-to .win', { opacity: 0, x: -40 }, { opacity: 1, x: 0, duration: 0.45, stagger: 0.25, ease: 'power2.out' }, '+=0.2')
+                            .call(cls('#lp-format .fmt-cd', 'dim', true), null, '+=1.4')
+                            .call(cls('#lp-format .fmt-v', 'lit', true), null, '+=0.3')
+                            .to('#lp-format .fmt-note', { opacity: 1, duration: 0.4 })
+                            .to({}, { duration: 2.5 }),
+                    () => {
+                        const w = '#lp-word .wc-w'
+                        const c = '#lp-word .wc-c'
+                        const nums = q(`${w} .num.m`)
+                        const miss = $(`${w} .ref.miss`)
+                        const tl = gsap
+                            .timeline({ repeat: -1, repeatDelay: 1 })
+                            .call(() => {
+                                miss.classList.remove('bad')
+                                nums.forEach((n) => n.classList.remove('edit'))
+                            })
+                            .set(`${w} .num.m > span, ${c} .flip > span`, { yPercent: 0 })
+                            .set('#lp-word .wc-st', { opacity: 0 })
+                            .set('#lp-word .ins', { height: 0, opacity: 0 })
+                            .to('#lp-word .ins', { height: 'auto', opacity: 1, duration: 0.5, ease: 'power2.inOut' }, 0.5)
+                            .to(`${c} .flip > span`, { yPercent: -100, duration: 0.45, ease: 'power2.inOut', stagger: 0.05 }, '+=0.2')
+                            .to(`${c} .wc-st`, { opacity: 1, duration: 0.3 })
+                        nums.forEach((n) => {
+                            tl.call(() => n.classList.add('edit'), null, '+=0.5')
+                                .to(n.children, { yPercent: -100, duration: 0.25 }, '+=0.7')
+                                .call(() => n.classList.remove('edit'), null, '+=0.2')
+                        })
+                        return tl
+                            .call(() => miss.classList.add('bad'), null, '+=0.5')
+                            .to(`${w} .wc-st`, { opacity: 1, duration: 0.3 }, '<')
+                            .to({}, { duration: 3 })
+                    },
+                    () =>
+                        gsap
+                            .timeline({ repeat: -1, repeatDelay: 0.8 })
+                            .call(() => {
+                                $('#lp-files .old').classList.remove('x')
+                                $('#lp-files .fs-hit').classList.remove('hl')
+                            })
+                            .set('#lp-files .vers li, #lp-files .fs-date', { opacity: 0 })
+                            .fromTo('#lp-files .old li', { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.3, stagger: 0.45 })
+                            .call(cls('#lp-files .old', 'x', true), null, '+=0.6')
+                            .fromTo('#lp-files .vers li', { opacity: 0, x: -12 }, { opacity: 1, x: 0, duration: 0.35, stagger: 0.3 }, '+=0.3')
+                            .fromTo('#lp-files .fs-date', { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.3 }, '+=0.5')
+                            .call(cls('#lp-files .fs-hit', 'hl', true), null, '+=0.4')
+                            .to({}, { duration: 2.8 }),
+                    () => {
+                        const chips = q('#lp-vscode .before li')
+                        const items = q('#lp-vscode .vs-list li')
+                        const box = $('#lp-vscode .vs-cd')
+                        gsap.set(chips, { clearProps: 'all' })
+                        const tl = gsap.timeline({ repeat: -1, repeatDelay: 1 })
+                        tl.set(chips, { opacity: 1, x: 0, y: 0, scale: 1 }).set(items, { opacity: 0, x: -8 })
+                        chips.forEach((chip, i) => {
+                            tl.to(chip, {
+                                x: () => box.getBoundingClientRect().left + 24 - chip.getBoundingClientRect().left + gsap.getProperty(chip, 'x'),
+                                y: () => items[i].getBoundingClientRect().top - chip.getBoundingClientRect().top + gsap.getProperty(chip, 'y'),
+                                scale: 0.8,
+                                opacity: 0,
+                                duration: 0.6,
+                                ease: 'power2.in',
+                            }, i ? '+=0.15' : 0.6).to(items[i], { opacity: 1, x: 0, duration: 0.3 }, '-=0.1')
+                        })
+                        return tl.to({}, { duration: 3 })
+                    },
+                ]
+                if (motionVisible) showMotion(motionIndex)
+            }
+
+            function showAll() {
+                root.classList.remove('motion')
+                document.getElementById('caret')?.remove()
+                document.getElementById('issue-caret')?.remove()
+            }
+            function startMotion() {
+                const { gsap, ScrollTrigger } = window
+                if (!root.classList.contains('motion') || !gsap || !ScrollTrigger) return showAll()
+                gsap.registerPlugin(ScrollTrigger)
+
+                const mdNew = document.getElementById('md-new')
+                const art = document.getElementById('new-art')
+                const head = document.getElementById('md-head')
+                const mdTyped = document.getElementById('md-typed')
+                const typed = document.getElementById('typed')
+                const headText = head.textContent
+                const bodyText = mdTyped.textContent
+                const state = document.getElementById('editor-state')
+                const flips = gsap.utils.toArray('#editor .flip > span')
+                const t = { h: 0, b: 0 }
+                const say = (s) => () => (state.textContent = s)
+                const show = () => {
+                    head.textContent = headText.slice(0, Math.round(t.h))
+                    mdTyped.textContent = bodyText.slice(0, Math.round(t.b))
+                    typed.textContent = mdTyped.textContent
+                }
+                gsap.set([mdNew, art], { height: 0 })
+                show()
+                gsap.timeline({ repeat: -1, repeatDelay: 1.5, delay: 1 })
+                    .call(say('Markdown に「### 定義」と入力します。条番号は書きません。'))
+                    .to(mdNew, { height: 'auto', duration: 0.4, ease: 'power2.inOut' })
+                    .to(t, { h: headText.length, duration: 0.5, ease: 'none', onUpdate: show })
+                    .to(art, { height: 'auto', duration: 0.4, ease: 'power2.inOut' })
+                    .to(t, { b: bodyText.length, duration: 1.6, ease: 'none', onUpdate: show })
+                    .call(say('後続の条番号と、[[適用]] が指す「第二条」を「第三条」に更新しました。Markdown の [[適用]] は書き直していません。'))
+                    .to(flips, { yPercent: -100, duration: 0.5, ease: 'power2.inOut', stagger: 0.05 }, '+=0.2')
+                    .to({}, { duration: 3.2 })
+                    .call(say('「### 定義」を削除すると、番号は元に戻ります。'))
+                    .to(flips, { yPercent: 0, duration: 0.45, ease: 'power2.inOut', stagger: 0.04 })
+                    .to([mdNew, art], { height: 0, duration: 0.5, ease: 'power2.inOut' }, '<0.1')
+                    .call(() => {
+                        t.h = 0
+                        t.b = 0
+                        show()
+                    })
+
+                motionsReady(gsap)
+            }
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js" onload="startMotion()" onerror="showAll()"></script>
+    </body>
+</html>

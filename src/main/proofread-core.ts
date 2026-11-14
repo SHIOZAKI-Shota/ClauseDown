@@ -55,6 +55,12 @@ let lint: Promise<Lint> | null = null
 
 const LOCAL_RULES: Record<string, unknown> = { 'no-hankaku-kana': noHankakuKana }
 
+type RuleLoader = (pkg: string) => Promise<unknown>
+let loadRule: RuleLoader = (pkg) => import(pkg)
+export function setRuleLoader(fn: RuleLoader) {
+    loadRule = fn
+}
+
 // CommonJS の規則を ESM から読むと { default: { default: 規則 } } のように何重にも包まれることがある
 function unwrap(m: unknown): unknown {
     let cur = m
@@ -74,7 +80,7 @@ function optionsOf(id: string, config: ProofreadConfig): unknown {
 async function load(): Promise<Lint> {
     const { TextlintKernel } = await import('@textlint/kernel')
     const markdown = unwrap(await import('@textlint/textlint-plugin-markdown'))
-    const modules = new Map(await Promise.all(PROOFREAD_RULES.map(async (r) => [r.id, r.pkg ? unwrap(await import(r.pkg)) : LOCAL_RULES[r.id]] as const)))
+    const modules = new Map(await Promise.all(PROOFREAD_RULES.map(async (r) => [r.id, r.pkg ? unwrap(await loadRule(r.pkg)) : LOCAL_RULES[r.id]] as const)))
     const kernel = new TextlintKernel()
     return async (text, config) => {
         const rules = PROOFREAD_RULES.filter((r) => ruleOn(r.id, config.rules)).map((r) => ({
