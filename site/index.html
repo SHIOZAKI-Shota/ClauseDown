@@ -306,7 +306,11 @@
                 font-size: 14px;
                 white-space: nowrap;
             }
-            .hero .lead code {
+            section h2 em {
+                font-style: normal;
+                color: var(--ai);
+            }
+            .hero .intro code {
                 font: 500 0.95em var(--mono);
                 color: var(--ink);
                 white-space: nowrap;
@@ -342,19 +346,56 @@
                 font-weight: 400;
             }
             .md-pane {
+                display: flex;
+                flex-direction: column;
                 border-right: 1px solid var(--line);
             }
             .md {
-                padding: 16px 24px;
+                flex: 1;
+                padding: 12px 0;
                 font: 400 13px/1.9 var(--mono);
+                counter-reset: line;
+                background: linear-gradient(to right, var(--paper-2) 48px, transparent 48px);
+            }
+            .md .ln {
+                position: relative;
+                display: grid;
+                grid-template-columns: 48px minmax(0, 1fr);
+                min-height: 1lh;
+                counter-increment: line;
+            }
+            .md .ln::before {
+                content: counter(line);
+                padding-right: 18px;
+                text-align: right;
+                font-size: 12px;
+                color: var(--ink-3);
+            }
+            .md .fold::after {
+                content: '';
+                position: absolute;
+                left: 35px;
+                top: 0.75em;
+                width: 4px;
+                height: 4px;
+                border-right: 1.5px solid var(--ink-3);
+                border-bottom: 1.5px solid var(--ink-3);
+                transform: rotate(45deg);
+            }
+            .md .c {
+                padding: 0 16px 0 10px;
                 white-space: pre-wrap;
                 overflow-wrap: anywhere;
+            }
+            .md-block.new:not(.shown) .ln {
+                counter-increment: none;
             }
             .md .mk {
                 color: var(--ink-3);
             }
             .md .h {
                 font-weight: 700;
+                color: var(--ai);
             }
             .md .id,
             .md .link {
@@ -380,7 +421,151 @@
             .md-block {
                 overflow: hidden;
             }
-            .md-block.new,
+            .preview .chap {
+                margin: 0 0 4px;
+                text-align: center;
+                font-weight: 700;
+            }
+            .preview .art p.item {
+                padding-left: 2em;
+            }
+            .preview .art p.sub {
+                padding-left: 3em;
+            }
+            .md-frame {
+                height: calc(100dvh - 65px - 380px);
+                min-height: 190px;
+                overflow: hidden;
+            }
+            .md-frame .md,
+            .md-frame .preview {
+                overflow: hidden;
+            }
+            .md-frame .preview {
+                padding: 12px 24px;
+                font-size: 13px;
+            }
+            .md-frame .preview .doc-title {
+                display: block;
+            }
+            .preview .pre {
+                margin: 0 0 4px;
+                text-indent: 1em;
+            }
+            .preview .chap.left {
+                text-align: left;
+            }
+            .preview .right {
+                margin: 0;
+                text-align: right;
+            }
+            .preview table {
+                width: 100%;
+                margin: 4px 0;
+                border-collapse: collapse;
+                font-size: 12px;
+            }
+            .preview th,
+            .preview td {
+                padding: 2px 8px;
+                border: 1px solid var(--ink-3);
+                text-align: left;
+            }
+            .preview .math {
+                margin: 6px 0;
+                text-align: center;
+                font-style: italic;
+            }
+            .frac {
+                display: inline-flex;
+                flex-direction: column;
+                vertical-align: middle;
+                font-style: normal;
+                line-height: 1.2;
+                text-align: center;
+            }
+            .frac > span + span {
+                border-top: 1px solid currentColor;
+            }
+            .flowbox {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                margin: 8px 0;
+                font-family: var(--sans);
+                font-size: 12px;
+            }
+            .flowbox span {
+                padding: 4px 12px;
+                border: 1px solid var(--ink-2);
+                border-radius: 4px;
+            }
+            .flowbox i {
+                width: 24px;
+                height: 1px;
+                background: var(--ink-2);
+            }
+            .img-ph {
+                display: grid;
+                place-items: center;
+                height: 72px;
+                margin: 6px 0;
+                border: 1px dashed var(--line);
+                background: var(--paper-2);
+                font: 400 12px var(--sans);
+                color: var(--ink-3);
+            }
+            .pbreak {
+                margin: 8px -24px;
+                border-top: 1px dashed var(--ink-3);
+                text-align: center;
+                font: 400 11px/1 var(--sans);
+                color: var(--ink-3);
+            }
+            .pbreak span {
+                position: relative;
+                top: -0.6em;
+                padding: 0 8px;
+                background: var(--sheet);
+            }
+            .mdx-desc {
+                min-height: calc(1.85em * 2);
+                margin: 12px 0 4px;
+                color: var(--ink);
+            }
+            .detail.mdx-list {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 0 12px;
+                margin: 0;
+            }
+            .mdx-list li {
+                padding-block: 2px;
+            }
+            .mdx-list .dt {
+                display: flex;
+                align-items: baseline;
+                gap: 8px;
+                min-width: 0;
+            }
+            .mdx-list b {
+                flex: none;
+            }
+            .mdx-list .ds {
+                overflow: hidden;
+                font: 400 11.5px/1.6 var(--mono);
+                color: var(--ink-3);
+                white-space: pre;
+                text-overflow: ellipsis;
+            }
+            .ref-s {
+                color: var(--ai);
+                text-decoration: underline dashed;
+                text-underline-offset: 4px;
+            }
+            .md-block.new {
+                background: var(--ai-wash);
+            }
             .art.new {
                 background: var(--ai-wash);
                 margin: 0 -16px;
@@ -445,13 +630,10 @@
                     opacity: 0;
                 }
             }
-            .editor .status {
-                grid-column: 1 / -1;
+            .hero .status {
+                min-height: calc(1.85em * 2);
                 margin: 0;
-                padding: 8px 16px;
-                border-top: 1px solid var(--rule);
-                font: 400 12px/1.8 var(--sans);
-                color: var(--ink-3);
+                color: var(--ink);
             }
 
             section h2 {
@@ -631,11 +813,8 @@
             .grp + .tabs {
                 margin-top: 4px;
             }
-            .picks button {
-                grid-template-columns: 32px minmax(0, 1fr);
-                padding-block: 6px;
-            }
-            #local-stage .panel h3 {
+            .motion-stage .panel > h3,
+            .hero-cap h3 {
                 margin: 24px 0 4px;
                 font-size: 20px;
                 line-height: 1.6;
@@ -1042,7 +1221,10 @@
                 transform-origin: left;
             }
             .tabs li.on.run .bar {
-                animation: fill 7s linear forwards;
+                animation: fill var(--dur, 7s) linear var(--delay, 0ms) forwards;
+            }
+            .tabs li.on.paused .bar {
+                animation-play-state: paused;
             }
             @keyframes fill {
                 to {
@@ -1393,14 +1575,35 @@
                 flex: none;
                 margin: 0;
                 height: 36px;
-                font-size: 13px;
-                line-height: 24px;
-                color: var(--ink-3);
+                font: 700 16px/28px var(--sans);
+                letter-spacing: 0.06em;
+                color: var(--ai);
                 text-align: center;
-                transition: color 0.3s;
+                transform-origin: 50% 100%;
+            }
+            .motion .peek-hint {
+                animation: peek-hop 2.4s ease-in-out infinite;
             }
             .peek:has(.peek-win:hover, .peek-win:focus-visible) .peek-hint {
-                color: var(--ai);
+                animation: none;
+                transform: translateY(-6px) scale(1.08);
+                transition: transform 0.2s;
+            }
+            @keyframes peek-hop {
+                0%,
+                70%,
+                100% {
+                    transform: translateY(0);
+                }
+                80% {
+                    transform: translateY(-6px);
+                }
+                90% {
+                    transform: translateY(0);
+                }
+                95% {
+                    transform: translateY(-2px);
+                }
             }
             .peek-win {
                 display: flex;
@@ -1689,6 +1892,9 @@
                 .detail {
                     grid-template-columns: 1fr;
                 }
+                .detail.mdx-list {
+                    grid-template-columns: 1fr 1fr;
+                }
                 .feature-view .shot-frame {
                     display: none;
                 }
@@ -1708,8 +1914,8 @@
                 .two > .r {
                     padding-block: 24px;
                 }
-                .editor .status {
-                    padding: 4px 16px;
+                .hero-cap h3 {
+                    margin-top: 16px;
                 }
                 .title {
                     margin-bottom: 16px;
@@ -1725,7 +1931,7 @@
                     display: none;
                 }
                 .md {
-                    padding: 12px 24px;
+                    padding: 12px 0;
                     font-size: 12px;
                     line-height: 1.75;
                 }
@@ -1741,11 +1947,14 @@
                 }
             }
             @media (max-height: 760px) {
+                .peek {
+                    --peek: calc((100dvh - 65px) * 0.36);
+                }
                 .pane-head {
                     padding: 4px 16px;
                 }
                 .md {
-                    padding: 8px 20px;
+                    padding: 8px 0;
                     font-size: 11.5px;
                     line-height: 1.65;
                 }
@@ -1761,6 +1970,13 @@
                 }
                 .detail .ds {
                     display: none;
+                }
+                .md-frame {
+                    height: calc(100dvh - 65px - 290px);
+                }
+                .mdx-desc {
+                    min-height: 1.85em;
+                    margin-top: 8px;
                 }
                 .detail li {
                     padding-block: 4px;
@@ -1812,7 +2028,9 @@
                     border-right: 0;
                     border-bottom: 1px solid var(--line);
                 }
-                .md,
+                .md {
+                    padding: 12px 0;
+                }
                 .preview {
                     padding: 16px;
                 }
@@ -1880,7 +2098,7 @@
                         <p class="dl-meta"><span data-rel>無料・MIT ライセンス</span><a data-dl="alt" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest" target="_blank" rel="noreferrer noopener">ほかの OS 版</a></p>
                     </div>
                     <div class="peek">
-                        <p class="peek-hint" aria-hidden="true">下の画面を押すか、スクロールすると、このページで編集画面を操作できます</p>
+                        <p class="peek-hint" aria-hidden="true">\ クリックしてデモを見る /</p>
                         <a class="peek-win" id="peek" href="#demo" aria-label="編集画面のデモを開く">
                             <span class="shot">
                                 <img class="light" src="docs/manual/images/editor.png" alt="" />
@@ -1907,22 +2125,23 @@
                 </div>
             </section>
 
-            <div class="hero slide" id="top-hero">
+            <section class="hero slide" id="top-hero">
                 <div class="two">
                     <div class="l">
-                        <h2 class="title">条文を<br /><em>Markdown</em> で書くと、<br />条番号と参照は<br />自動で計算されます。</h2>
-                        <p class="lead">
-                            「第○条」が並ぶ法律案・条例・契約書・規程のための、Windows・macOS 用エディタです。条の見出しを <code>###</code>、項を <code>-</code>
-                            で書くだけで番号を付けて組版し、条を追加しても後続の番号と <code>[[ ]]</code> の参照を書き直す必要はありません。版の履歴、新旧対照表、施行日も併せて管理します。
-                        </p>
-                        <div class="cta">
-                            <a class="btn" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest" target="_blank" rel="noreferrer noopener">Windows・Mac 版をダウンロード</a>
-                            <a class="btn line" href="#demo">デモで操作してみる</a>
-                        </div>
-                        <p class="meta">無料で利用できます。<br>MIT ライセンスで公開しています。</p>
+                    <h2>条文を <em>Markdown</em> で書くと、<wbr />条番号と参照は<wbr />自動で計算されます。</h2>
+                    <p class="intro">条の見出しを <code>###</code>、項を <code>-</code> で書くだけで、番号を付けて組版します。項目にマウスを重ねると切り替わります。マウスを離しているときは、順に次の項目へ進みます。</p>
+                    <ol class="tabs" role="tablist" aria-label="条文の書き方">
+                        <li class="on">
+                            <button type="button" role="tab" id="ht-num" aria-controls="hp-num" aria-selected="true"><span class="no">一</span><span class="t">条参照・条採番</span><span class="bar" aria-hidden="true"></span></button>
+                        </li>
+                        <li>
+                            <button type="button" role="tab" id="ht-md" aria-controls="hp-md" aria-selected="false" tabindex="-1"><span class="no">二</span><span class="t">Markdown の記法</span><span class="bar" aria-hidden="true"></span></button>
+                        </li>
+                    </ol>
                     </div>
-
                     <div class="r">
+                    <div class="motion-stage" id="hero-stage">
+                        <div class="panel on" role="tabpanel" id="hp-num" aria-labelledby="ht-num">
                     <div
                         class="editor"
                         id="editor"
@@ -1931,16 +2150,26 @@
                     >
                         <div class="md-pane">
                             <div class="pane-head"><span>就業規則.md</span><span>Markdown（入力する内容）</span></div>
-                            <div class="md"><span class="mk">#</span> <span class="h">就業規則</span>
-
-<div class="md-block"><span class="mk">###</span><span class="badge"><span>第１条</span></span><span class="h">目的</span>
-<span class="mk">-</span> この規程は、従業員の就業に関する事項を定める。
-</div><div class="md-block new" id="md-new"><span class="mk">###</span><span class="badge"><span>第２条</span></span><span class="h" id="md-head">定義</span>
-<span class="mk">-</span> <span id="md-typed">この規程で「従業員」とは、会社と雇用契約を結んだ者をいう。</span><span class="caret" id="caret"></span>
-</div><div class="md-block"><span class="mk">###</span><span class="badge flip"><span>第２条</span><span>第３条</span></span><span class="h">適用範囲</span> <span class="id">{#適用}</span>
-<span class="mk">-</span> この規程は、すべての従業員に適用する。
-</div><div class="md-block"><span class="mk">###</span><span class="badge flip"><span>第３条</span><span>第４条</span></span><span class="h">届出</span>
-<span class="mk">-</span> 従業員は、住所を変更したときは、<span class="link">[[適用]]</span>の規定にかかわらず、速やかに届け出なければならない。</div></div>
+                            <div class="md">
+                                <div class="ln fold"><span class="c"><span class="mk">#</span> <span class="h">就業規則</span></span></div>
+                                <div class="ln"><span class="c"></span></div>
+                                <div class="md-block">
+                                    <div class="ln fold"><span class="c"><span class="mk">###</span> <span class="badge"><span>第1条</span></span><span class="h">目的</span></span></div>
+                                    <div class="ln"><span class="c"><span class="mk">-</span> この規程は、従業員の就業に関する事項を定める。</span></div>
+                                </div>
+                                <div class="md-block new shown" id="md-new">
+                                    <div class="ln fold"><span class="c"><span class="mk">###</span> <span class="badge"><span>第2条</span></span><span class="h" id="md-head">定義</span></span></div>
+                                    <div class="ln"><span class="c"><span class="mk">-</span> <span id="md-typed">この規程で「従業員」とは、会社と雇用契約を結んだ者をいう。</span><span class="caret" id="caret"></span></span></div>
+                                </div>
+                                <div class="md-block">
+                                    <div class="ln fold"><span class="c"><span class="mk">###</span> <span class="badge flip"><span>第2条</span><span>第3条</span></span><span class="h">適用範囲</span> <span class="id">{#適用}</span></span></div>
+                                    <div class="ln"><span class="c"><span class="mk">-</span> この規程は、すべての従業員に適用する。</span></div>
+                                </div>
+                                <div class="md-block">
+                                    <div class="ln fold"><span class="c"><span class="mk">###</span> <span class="badge flip"><span>第3条</span><span>第4条</span></span><span class="h">届出</span></span></div>
+                                    <div class="ln"><span class="c"><span class="mk">-</span> 従業員は、住所を変更したときは、<span class="link">[[適用]]</span>の規定にかかわらず、速やかに届け出なければならない。</span></div>
+                                </div>
+                            </div>
                         </div>
                         <div>
                             <div class="pane-head"><span>プレビュー</span><span>印刷・PDF・Word と同じ組版</span></div>
@@ -1968,47 +2197,82 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                    <div class="hero-cap" aria-live="polite">
+                        <h3 id="editor-step">条番号は書かない</h3>
                         <p class="status" id="editor-state">Markdown に条番号は書きません。「###」の並び順から計算し、プレビューに反映します。</p>
+                    </div>
+                        </div>
+                        <div class="panel" role="tabpanel" id="hp-md" aria-labelledby="ht-md">
+                        <div class="editor md-frame" aria-live="polite">
+                            <div class="md-pane">
+                                <div class="pane-head"><span>Markdown</span><span>入力する内容</span></div>
+                                <div class="md" id="mdx-src"></div>
+                            </div>
+                            <div>
+                                <div class="pane-head"><span>プレビュー</span><span>組版した結果</span></div>
+                                <div class="preview" id="mdx-pv"></div>
+                            </div>
+                        </div>
+                        <p class="mdx-desc" id="mdx-desc"></p>
+                        <ul class="detail mdx-list" id="mdx-list">
+                                <li><span class="dt"><b>題名</b><code class="ds"># 題名</code></span><a class="go" href="docs/manual/#条項号の書き方" target="_blank" rel="noreferrer noopener" aria-label="題名の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li><span class="dt"><b>前文</b><code class="ds">題名と章の間</code></span><a class="go" href="docs/manual/#ボタンで条項号を足す" target="_blank" rel="noreferrer noopener" aria-label="前文の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li><span class="dt"><b>章</b><code class="ds">## 章</code></span><a class="go" href="docs/manual/#条項号の書き方" target="_blank" rel="noreferrer noopener" aria-label="章の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li><span class="dt"><b>条</b><code class="ds">### 見出し</code></span><a class="go" href="docs/manual/#条項号の書き方" target="_blank" rel="noreferrer noopener" aria-label="条の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li><span class="dt"><b>項</b><code class="ds">- 本文</code></span><a class="go" href="docs/manual/#条項号の書き方" target="_blank" rel="noreferrer noopener" aria-label="項の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li><span class="dt"><b>号</b><code class="ds">  - 号</code></span><a class="go" href="docs/manual/#条項号の書き方" target="_blank" rel="noreferrer noopener" aria-label="号の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li><span class="dt"><b>号の細分</b><code class="ds">    - 細分</code></span><a class="go" href="docs/manual/#条項号の書き方" target="_blank" rel="noreferrer noopener" aria-label="号の細分の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li><span class="dt"><b>番号の指定</b><code class="ds">{n=10}</code></span><a class="go" href="docs/manual/#条項号の書き方" target="_blank" rel="noreferrer noopener" aria-label="番号の指定の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li><span class="dt"><b>枝番号の条</b><code class="ds">{branch}</code></span><a class="go" href="docs/manual/#ボタンで条項号を足す" target="_blank" rel="noreferrer noopener" aria-label="枝番号の条の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li><span class="dt"><b>削除された条</b><code class="ds">### {deleted}</code></span><a class="go" href="docs/manual/#ボタンで条項号を足す" target="_blank" rel="noreferrer noopener" aria-label="削除された条の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li><span class="dt"><b>条参照</b><code class="ds">[[名前]]</code></span><a class="go" href="docs/manual/#条参照ほかの条を番号で指す" target="_blank" rel="noreferrer noopener" aria-label="条参照の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li><span class="dt"><b>附則</b><code class="ds">{supplement}</code></span><a class="go" href="docs/manual/#ボタンで条項号を足す" target="_blank" rel="noreferrer noopener" aria-label="附則の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li><span class="dt"><b>後文・署名欄</b><code class="ds">## {closing}</code></span><a class="go" href="docs/manual/#ボタンで条項号を足す" target="_blank" rel="noreferrer noopener" aria-label="後文・署名欄の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li><span class="dt"><b>別表</b><code class="ds">{appendix}</code></span><a class="go" href="docs/manual/#ボタンで条項号を足す" target="_blank" rel="noreferrer noopener" aria-label="別表の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li><span class="dt"><b>表とセルの結合</b><code class="ds">| > | ^ |</code></span><a class="go" href="docs/manual/#表のセルを結合する" target="_blank" rel="noreferrer noopener" aria-label="表とセルの結合の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li><span class="dt"><b>数式</b><code class="ds">$…$</code></span><a class="go" href="docs/manual/#数式を書く" target="_blank" rel="noreferrer noopener" aria-label="数式の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li><span class="dt"><b>図</b><code class="ds">```mermaid</code></span><a class="go" href="docs/manual/#ボタンで条項号を足す" target="_blank" rel="noreferrer noopener" aria-label="図の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li><span class="dt"><b>画像</b><code class="ds">![図](…)</code></span><a class="go" href="docs/manual/#ボタンで条項号を足す" target="_blank" rel="noreferrer noopener" aria-label="画像の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li><span class="dt"><b>文字の書式</b><code class="ds">[…]{size=12pt}</code></span><a class="go" href="docs/manual/#改ページ文字の大きさ寄せを指定する" target="_blank" rel="noreferrer noopener" aria-label="文字の書式の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li><span class="dt"><b>改ページ</b><code class="ds">{break}</code></span><a class="go" href="docs/manual/#改ページ文字の大きさ寄せを指定する" target="_blank" rel="noreferrer noopener" aria-label="改ページの操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                        </ul>
+                        </div>
                     </div>
                     </div>
                 </div>
-            </div>
+            </section>
 
             <section id="motions" class="slide">
                 <div class="two">
                     <div class="l">
                     <h2>主な機能の動き</h2>
-                    <p class="intro">項目にマウスを重ねると切り替わります。マウスを離しているときは、約 7 秒ごとに次の項目へ進みます。</p>
+                    <p class="intro">項目にマウスを重ねると切り替わります。マウスを離しているときは、順に次の項目へ進みます。</p>
                     <ol class="tabs" role="tablist" aria-label="主な機能" id="motion-tabs">
                         <li class="on">
                             <button type="button" role="tab" id="t-compare" aria-controls="m-compare" aria-selected="true">
                                 <span class="no">一</span><span class="t">新旧対照表</span><span class="bar" aria-hidden="true"></span>
                             </button>
-                            <p>比較する2つの版を選択するだけで作成します。番号のみ移動した条は、本文の改正として扱いません。</p>
                         </li>
                         <li>
                             <button type="button" role="tab" id="t-versions" aria-controls="m-versions" aria-selected="false" tabindex="-1">
                                 <span class="no">二</span><span class="t">改定案と承認</span><span class="bar" aria-hidden="true"></span>
                             </button>
-                            <p>改定案で作業し、承認を受けてから現行版に反映します。反映した版には施行日を設定します。</p>
                         </li>
                         <li>
                             <button type="button" role="tab" id="t-proof" aria-controls="m-proof" aria-selected="false" tabindex="-1">
                                 <span class="no">三</span><span class="t">校正</span><span class="bar" aria-hidden="true"></span>
                             </button>
-                            <p>同じ助詞の連続、ら抜き言葉、法令の用字などを、入力中に波線で示します。</p>
                         </li>
                         <li>
                             <button type="button" role="tab" id="t-schedule" aria-controls="m-schedule" aria-selected="false" tabindex="-1">
                                 <span class="no">四</span><span class="t">期日と有効期間</span><span class="bar" aria-hidden="true"></span>
                             </button>
-                            <p>施行版ごとの有効期間を帯で示し、届出や更新などの期日をタイムラインに並べます。</p>
                         </li>
                         <li>
                             <button type="button" role="tab" id="t-issue" aria-controls="m-issue" aria-selected="false" tabindex="-1">
                                 <span class="no">五</span><span class="t">課題の自動完了</span><span class="bar" aria-hidden="true"></span>
                             </button>
-                            <p>版のメッセージに「Closes #2」と書いて現行版に反映すると、課題 #2 が完了します。</p>
                         </li>
                     </ol>
                     </div>
@@ -2037,6 +2301,8 @@
                                 <p><b>第<u>十九</u>条</b>　会社は、労働者の個人情報を適正に取り扱う。</p>
                             </div>
                         </div>
+                        <h3>新旧対照表</h3>
+                        <p class="lc-lead">比較する2つの版を選択するだけで作成します。番号のみ移動した条は、本文の改正として扱いません。</p>
                         <p class="caption">デモの「見本株式会社_就業規則」で作った新旧対照表の一部</p>
                         </div>
                         <div class="panel" role="tabpanel" id="m-versions" aria-labelledby="t-versions">
@@ -2063,6 +2329,8 @@
                             </g>
                         </svg>
                         </div>
+                        <h3>改定案と承認</h3>
+                        <p class="lc-lead">改定案で作業し、承認を受けてから現行版に反映します。反映した版には施行日を設定します。</p>
                         </div>
                         <div class="panel" role="tabpanel" id="m-proof" aria-labelledby="t-proof">
                         <div class="mini">
@@ -2080,6 +2348,8 @@
                                 <li class="on"><b>法令の用字</b>「捺印」→「押印」</li>
                             </ul>
                         </div>
+                        <h3>校正</h3>
+                        <p class="lc-lead">同じ助詞の連続、ら抜き言葉、法令の用字などを、入力中に波線で示します。</p>
                         </div>
                         <div class="panel" role="tabpanel" id="m-schedule" aria-labelledby="t-schedule">
                         <svg class="tl" viewBox="0 0 1000 330" role="img" aria-label="就業規則と業務委託契約書の有効期間の帯と、届出などの期日を並べたタイムライン">
@@ -2104,6 +2374,8 @@
                             <text class="bl" x="266" y="274">令和7年10月1日施行</text>
                             <g class="ev"><path class="dia" d="M860 206 l9 -9 9 9 -9 9z" /><text x="882" y="190">更新の申出期限</text></g>
                         </svg>
+                        <h3>期日と有効期間</h3>
+                        <p class="lc-lead">施行版ごとの有効期間を帯で示し、届出や更新などの期日をタイムラインに並べます。</p>
                         </div>
                         <div class="panel" role="tabpanel" id="m-issue" aria-labelledby="t-issue">
                         <div class="issue">
@@ -2121,6 +2393,8 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                             </div>
                             <p class="issue-event" id="issue-event">人事部 田中 が版 9c047d9 で完了しました（Closes #2）</p>
                         </div>
+                        <h3>課題の自動完了</h3>
+                        <p class="lc-lead">版のメッセージに「Closes #2」と書いて現行版に反映すると、課題 #2 が完了します。</p>
                         </div>
                     </div>
                     </div>
@@ -2131,32 +2405,32 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                 <div class="two">
                     <div class="l">
                     <h2>データの保存形式と、<wbr />移行について</h2>
-                    <p class="intro">項目にマウスを重ねると、動きと説明を表示します。</p>
+                    <p class="intro">項目にマウスを重ねると切り替わります。マウスを離しているときは、順に次の項目へ進みます。</p>
                     <p class="grp">保存と共有</p>
-                    <ol class="tabs picks" role="tablist" aria-label="保存と共有">
+                    <ol class="tabs" role="tablist" aria-label="保存と共有">
                         <li class="on">
-                            <button type="button" role="tab" id="lt-store" aria-controls="lp-store" aria-selected="true"><span class="no">一</span><span class="t">保存場所</span></button>
+                            <button type="button" role="tab" id="lt-store" aria-controls="lp-store" aria-selected="true"><span class="no">一</span><span class="t">保存場所</span><span class="bar" aria-hidden="true"></span></button>
                         </li>
                         <li>
-                            <button type="button" role="tab" id="lt-share" aria-controls="lp-share" aria-selected="false"><span class="no">二</span><span class="t">共有</span></button>
+                            <button type="button" role="tab" id="lt-share" aria-controls="lp-share" aria-selected="false"><span class="no">二</span><span class="t">共有</span><span class="bar" aria-hidden="true"></span></button>
                         </li>
                         <li>
-                            <button type="button" role="tab" id="lt-ai" aria-controls="lp-ai" aria-selected="false"><span class="no">三</span><span class="t">AI</span></button>
+                            <button type="button" role="tab" id="lt-ai" aria-controls="lp-ai" aria-selected="false"><span class="no">三</span><span class="t">AI</span><span class="bar" aria-hidden="true"></span></button>
                         </li>
                         <li>
-                            <button type="button" role="tab" id="lt-format" aria-controls="lp-format" aria-selected="false"><span class="no">四</span><span class="t">形式</span></button>
+                            <button type="button" role="tab" id="lt-format" aria-controls="lp-format" aria-selected="false"><span class="no">四</span><span class="t">形式</span><span class="bar" aria-hidden="true"></span></button>
                         </li>
                     </ol>
                     <p class="grp">乗り換え</p>
-                    <ol class="tabs picks" role="tablist" aria-label="乗り換え">
+                    <ol class="tabs" role="tablist" aria-label="乗り換え">
                         <li>
-                            <button type="button" role="tab" id="lt-word" aria-controls="lp-word" aria-selected="false"><span class="no">五</span><span class="t">Word で条番号を手で直している方</span></button>
+                            <button type="button" role="tab" id="lt-word" aria-controls="lp-word" aria-selected="false"><span class="no">五</span><span class="t">Word で条番号を手で直している方</span><span class="bar" aria-hidden="true"></span></button>
                         </li>
                         <li>
-                            <button type="button" role="tab" id="lt-files" aria-controls="lp-files" aria-selected="false"><span class="no">六</span><span class="t">ファイル名で版を管理している方</span></button>
+                            <button type="button" role="tab" id="lt-files" aria-controls="lp-files" aria-selected="false"><span class="no">六</span><span class="t">ファイル名で版を管理している方</span><span class="bar" aria-hidden="true"></span></button>
                         </li>
                         <li>
-                            <button type="button" role="tab" id="lt-vscode" aria-controls="lp-vscode" aria-selected="false"><span class="no">七</span><span class="t">VS Code と Markdown で書いている方</span></button>
+                            <button type="button" role="tab" id="lt-vscode" aria-controls="lp-vscode" aria-selected="false"><span class="no">七</span><span class="t">VS Code と Markdown で書いている方</span><span class="bar" aria-hidden="true"></span></button>
                         </li>
                     </ol>
                     </div>
@@ -2362,7 +2636,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                 <div class="two">
                     <div class="l">
                     <h2>機能の一覧</h2>
-                    <p class="intro">章や機能にマウスを重ねると、画面写真を切り替えます。マウスを離しているときは、順に次の機能へ進みます。右端のアイコンから、操作マニュアルの該当箇所を開けます。</p>
+                    <p class="intro">章や機能にマウスを重ねると切り替わります。マウスを離しているときは、順に次の機能へ進みます。右端のアイコンから、操作マニュアルの該当箇所を開けます。</p>
                     <ol class="features" id="feature-list">
                         <li class="on">
                             <button type="button"><span class="no">第一章</span><span class="t">条文の作成</span><span class="n">9 機能</span></button><a class="go" href="docs/manual/#6-条文を書く" aria-label="第一章 条文の作成の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
@@ -2823,91 +3097,175 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                 })
                 .catch(() => {})
 
-            const localTabs = [...document.querySelectorAll('#local .picks button')]
-            const localPanels = [...document.querySelectorAll('#local-stage .panel')]
-            let localIndex = 0
-            let localPlay = null
-            let localFns = []
-            const showLocal = (i) => {
-                localIndex = i
-                localTabs.forEach((t, j) => {
-                    t.parentElement.classList.toggle('on', i === j)
-                    t.setAttribute('aria-selected', String(i === j))
-                })
-                localPanels.forEach((p, j) => p.classList.toggle('on', i === j))
-                localPlay?.kill()
-                localPlay = localFns[i] ? localFns[i]() : null
-            }
-            localTabs.forEach((t, i) => {
-                for (const ev of ['mouseenter', 'focus', 'click']) t.addEventListener(ev, () => i !== localIndex && showLocal(i))
-            })
-            new IntersectionObserver(([e]) => e.isIntersecting && showLocal(localIndex), { threshold: 0.6 }).observe(document.getElementById('local'))
-
-            const motionTabs = [...document.querySelectorAll('#motion-tabs button')]
-            const motionPanels = [...document.querySelectorAll('#motion-stage .panel')]
-            const motionSection = document.getElementById('motions')
             const AUTO = root.classList.contains('motion')
-            let motionIndex = 0
-            let motionTimer
-            let motionPlay = null
-            let motionVisible = false
-            let motionHover = false
-            let motionFns = []
-            function showMotion(i, focus) {
-                motionIndex = i
-                motionTabs.forEach((t, j) => {
-                    t.setAttribute('aria-selected', String(i === j))
-                    t.tabIndex = i === j ? 0 : -1
-                    t.parentElement.classList.toggle('on', i === j)
-                    t.parentElement.classList.remove('run')
+            function tabSet(section, intervals) {
+                const tabs = [...section.querySelectorAll('[role="tab"]')]
+                const panels = tabs.map((t) => document.getElementById(t.getAttribute('aria-controls')))
+                const set = { index: 0, fns: [], play: null, timer: 0, visible: false, hover: false, left: 0, since: 0 }
+                const wait = (i) => (Array.isArray(intervals) ? intervals[i] : intervals)
+                const run = () => {
+                    set.play?.kill()
+                    set.play = set.fns[set.index]?.() ?? null
+                }
+                const li = () => tabs[set.index].parentElement
+                const restart = () => {
+                    clearTimeout(set.timer)
+                    tabs.forEach((t) => t.parentElement.classList.remove('run', 'paused'))
+                    set.left = wait(set.index)
+                    if (!AUTO) return
+                    void li().offsetWidth
+                    li().style.setProperty('--dur', `${set.left}ms`)
+                    li().style.setProperty('--delay', '0ms')
+                    li().classList.add('run', 'paused')
+                    schedule()
+                }
+                const schedule = () => {
+                    clearTimeout(set.timer)
+                    if (!AUTO || !li().classList.contains('run')) return
+                    if (!set.visible || set.hover) {
+                        if (!li().classList.contains('paused')) set.left -= performance.now() - set.since
+                        li().classList.add('paused')
+                        return
+                    }
+                    li().classList.remove('paused')
+                    set.since = performance.now()
+                    set.timer = setTimeout(() => set.show((set.index + 1) % tabs.length), Math.max(0, set.left))
+                }
+                set.show = (i, focus) => {
+                    set.index = i
+                    tabs.forEach((t, j) => {
+                        t.setAttribute('aria-selected', String(i === j))
+                        t.tabIndex = i === j ? 0 : -1
+                        t.parentElement.classList.toggle('on', i === j)
+                    })
+                    panels.forEach((p, j) => p.classList.toggle('on', i === j))
+                    if (focus) tabs[i].focus()
+                    run()
+                    restart()
+                }
+                set.ready = (fns) => {
+                    fns.forEach((f, i) => f && (set.fns[i] = f))
+                    if (set.visible) run()
+                }
+                set.elapsed = () => (!AUTO || !li().classList.contains('run') ? 0 : wait(set.index) - (li().classList.contains('paused') ? set.left : set.left - (performance.now() - set.since)))
+                set.seek = (ms) => {
+                    if (!AUTO) return
+                    const paused = li().classList.contains('paused')
+                    li().classList.remove('run')
+                    void li().offsetWidth
+                    li().style.setProperty('--delay', `-${ms}ms`)
+                    li().classList.add('run')
+                    li().classList.toggle('paused', paused)
+                    set.left = wait(set.index) - ms
+                    schedule()
+                }
+                tabs.forEach((t, i) => {
+                    t.addEventListener('click', () => set.show(i))
+                    t.addEventListener('mouseenter', () => i !== set.index && set.show(i))
+                    t.addEventListener('focus', () => i !== set.index && set.show(i))
+                    t.addEventListener('keydown', (e) => {
+                        const d = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key]
+                        if (!d) return
+                        e.preventDefault()
+                        set.show((i + d + tabs.length) % tabs.length, true)
+                    })
                 })
-                motionPanels.forEach((p, j) => p.classList.toggle('on', i === j))
-                if (focus) motionTabs[i].focus()
-                motionPlay?.kill()
-                motionPlay = motionFns[i] ? motionFns[i]() : null
-                scheduleMotion()
-            }
-            function scheduleMotion() {
-                clearTimeout(motionTimer)
-                const li = motionTabs[motionIndex].parentElement
-                li.classList.remove('run')
-                if (!AUTO || !motionVisible || motionHover) return
-                void li.offsetWidth
-                li.classList.add('run')
-                motionTimer = setTimeout(() => showMotion((motionIndex + 1) % motionTabs.length), 7000)
-            }
-            motionTabs.forEach((t, i) => {
-                t.addEventListener('click', () => showMotion(i))
-                t.addEventListener('mouseenter', () => i !== motionIndex && showMotion(i))
-                t.addEventListener('focus', () => i !== motionIndex && showMotion(i))
-                t.addEventListener('keydown', (e) => {
-                    const d = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key]
-                    if (!d) return
-                    e.preventDefault()
-                    showMotion((i + d + motionTabs.length) % motionTabs.length, true)
+                section.addEventListener('mouseenter', () => {
+                    set.hover = true
+                    schedule()
                 })
-            })
-            motionSection.addEventListener('mouseenter', () => {
-                motionHover = true
-                scheduleMotion()
-            })
-            motionSection.addEventListener('mouseleave', () => {
-                motionHover = false
-                scheduleMotion()
-            })
-            new IntersectionObserver(
-                ([e]) => {
-                    const was = motionVisible
-                    motionVisible = e.isIntersecting
-                    if (motionVisible && !was) showMotion(motionIndex)
-                    else scheduleMotion()
+                section.addEventListener('mouseleave', () => {
+                    set.hover = false
+                    schedule()
+                })
+                new IntersectionObserver(
+                    ([e]) => {
+                        const was = set.visible
+                        set.visible = e.isIntersecting
+                        if (set.visible && !was) set.show(set.index)
+                        else if (!set.visible) set.play?.pause?.()
+                        schedule()
+                    },
+                    { threshold: 0.6 },
+                ).observe(section)
+                return set
+            }
+            const MDX_STEP = 3000
+            const MDX = [
+                { d: '行頭に「#」を付けた行が、文書の題名になります。', md: ['# 就業規則'], pv: '<p class="doc-title">就業規則</p>' },
+                { d: '題名と最初の章の間に書いた文は、前文になります。', md: ['# 就業規則', '', 'この規則は、従業員の就業に関し必要な事項を定める。', '', '## 総則'], pv: '<p class="doc-title">就業規則</p><p class="pre">この規則は、従業員の就業に関し必要な事項を定める。</p><p class="chap">第一章　総則</p>' },
+                { d: '「##」で章を立てます。章番号は自動で付きます。', md: ['## 総則', '### 目的', '- この規則は、就業に関する事項を定める。', '## 採用'], pv: '<p class="chap">第一章　総則</p><div class="art"><span class="cap">（目的）</span><p><b>第一条</b>　この規則は、就業に関する事項を定める。</p></div><p class="chap">第二章　採用</p>' },
+                { d: '「###」の後ろの言葉が条の見出しになります。条番号は書きません。', md: ['### 目的', '- この規則は、就業に関する事項を定める。', '### 適用範囲', '- この規則は、すべての従業員に適用する。'], pv: '<div class="art"><span class="cap">（目的）</span><p><b>第一条</b>　この規則は、就業に関する事項を定める。</p></div><div class="art"><span class="cap">（適用範囲）</span><p><b>第二条</b>　この規則は、すべての従業員に適用する。</p></div>' },
+                { d: '「-」で項を書きます。2 つ目の項から番号が付きます。', md: ['### 休日', '- 休日は、土曜日及び日曜日とする。', '- 業務の都合により、休日を振り替えることがある。'], pv: '<div class="art"><span class="cap">（休日）</span><p><b>第一条</b>　休日は、土曜日及び日曜日とする。</p><p>２　業務の都合により、休日を振り替えることがある。</p></div>' },
+                { d: '項の下で 2 文字下げた「-」は号になり、「一」「二」と番号が付きます。', md: ['### 適用範囲', '- 次に掲げる者に適用する。', '  - 正社員', '  - 契約社員'], pv: '<div class="art"><span class="cap">（適用範囲）</span><p><b>第一条</b>　次に掲げる者に適用する。</p><p class="item">一　正社員</p><p class="item">二　契約社員</p></div>' },
+                { d: '号の下でさらに 2 文字下げると号の細分になり、「イ」「ロ」と番号が付きます。', md: ['### 適用範囲', '- 次に掲げる者に適用する。', '  - 契約社員', '    - 有期の者', '    - 無期に転換した者'], pv: '<div class="art"><span class="cap">（適用範囲）</span><p><b>第一条</b>　次に掲げる者に適用する。</p><p class="item">一　契約社員</p><p class="sub">イ　有期の者</p><p class="sub">ロ　無期に転換した者</p></div>' },
+                { d: '条の見出しの後ろに「{n=10}」と書くと第十条に、「{n=10 b=2}」と書くと第十条の二になります。', md: ['### 特例 {n=10}', '- 前条の規定にかかわらず、…', '### 経過措置 {n=10 b=2}', '- この規則の施行前に、…'], pv: '<div class="art"><span class="cap">（特例）</span><p><b>第十条</b>　前条の規定にかかわらず、…</p></div><div class="art"><span class="cap">（経過措置）</span><p><b>第十条の二</b>　この規則の施行前に、…</p></div>' },
+                { d: '「{branch}」を付けた条は直前の条の枝番号になり、後ろの条の番号は変わりません。', md: ['### 届出', '- 住所を変更したときは、届け出る。', '### 届出の特例 {branch}', '- 在宅勤務の者は、…', '### 懲戒', '- …'], pv: '<div class="art"><span class="cap">（届出）</span><p><b>第一条</b>　住所を変更したときは、届け出る。</p></div><div class="art"><span class="cap">（届出の特例）</span><p><b>第一条の二</b>　在宅勤務の者は、…</p></div><div class="art"><span class="cap">（懲戒）</span><p><b>第二条</b>　…</p></div>' },
+                { d: '「### {deleted}」は「第○条　削除」と表示し、後ろの条の番号を保ちます。', md: ['### 目的', '- …', '### {deleted}', '### 届出', '- …'], pv: '<div class="art"><span class="cap">（目的）</span><p><b>第一条</b>　…</p></div><div class="art"><p><b>第二条</b>　削除</p></div><div class="art"><span class="cap">（届出）</span><p><b>第三条</b>　…</p></div>' },
+                { d: '条に「{#届出}」で名前を付けて「[[届出]]」と書くと、その条の番号に置き換わります。条が増えても追従します。', md: ['### 届出 {#届出}', '- 住所を変更したときは、届け出る。', '### 懲戒', '- [[届出]]に違反した者は、懲戒する。'], pv: '<div class="art"><span class="cap">（届出）</span><p><b>第一条</b>　住所を変更したときは、届け出る。</p></div><div class="art"><span class="cap">（懲戒）</span><p><b>第二条</b>　<span class="ref-s">第一条</span>に違反した者は、懲戒する。</p></div>' },
+                { d: '「## 附則 {supplement}」から後ろは附則になり、本則とは別に扱います。', md: ['## 附則 {supplement}', '- この規則は、令和8年4月1日から施行する。'], pv: '<p class="chap">附　則</p><p class="pre">この規則は、令和8年4月1日から施行する。</p>' },
+                { d: '「## {closing}」から後ろは、契約書の末尾の後文と署名欄になります。', md: ['## {closing}', '本契約の成立を証するため、本書2通を作成する。', '', '令和8年4月1日', '', '甲　見本株式会社', '乙　見本出版株式会社'], pv: '<p class="pre">本契約の成立を証するため、本書2通を作成する。</p><p class="pre">令和8年4月1日</p><p class="right">甲　見本株式会社</p><p class="right">乙　見本出版株式会社</p>' },
+                { d: '「{appendix}」を付けた章は別表になり、本文の後ろに置きます。', md: ['## 別表第一 {appendix}', '| 区分 | 日数 |', '|---|---|', '| 年次有給休暇 | 10日 |', '| 特別休暇 | 5日 |'], pv: '<p class="chap left">別表第一</p><table><tr><th>区分</th><th>日数</th></tr><tr><td>年次有給休暇</td><td>10日</td></tr><tr><td>特別休暇</td><td>5日</td></tr></table>' },
+                { d: 'セルに「>」だけを書くと右隣と、「^」だけを書くと上のセルと結合します。', md: ['| 区分 | > | 内容 |', '|---|---|---|', '| 正社員 | 月給 | 期間の定めなし |', '| ^ | 時給 | 試用期間中 |'], pv: '<table><tr><th colspan="2">区分</th><th>内容</th></tr><tr><td rowspan="2">正社員</td><td>月給</td><td>期間の定めなし</td></tr><tr><td>時給</td><td>試用期間中</td></tr></table>' },
+                { d: 'LaTeX 記法の数式を、文の中や独立した行に書けます。', md: ['- 補助金の額は、次の式による。', '$$S = \\frac{2}{3}C$$'], pv: '<div class="art"><p><b>第一条</b>　補助金の額は、次の式による。</p></div><p class="math">S = <span class="frac"><span>2</span><span>3</span></span> C</p>' },
+                { d: 'Mermaid の記法で、流れ図などを描けます。', md: ['```mermaid', 'flowchart LR', '  A[申請] --> B[承認]', '  B --> C[実施]', '```'], pv: '<div class="flowbox"><span>申請</span><i></i><span>承認</span><i></i><span>実施</span></div>' },
+                { d: '画像を貼り付けるかドロップすると、文書と同じ場所に保存して挿入します。', md: ['- 組織は、次の図のとおりとする。', '![組織図](images/就業規則/組織図.png)'], pv: '<div class="art"><p><b>第一条</b>　組織は、次の図のとおりとする。</p></div><div class="img-ph">組織図</div>' },
+                { d: '「[文字]{size=14pt}」で文字の大きさを、「{right}」だけの行で次の行の寄せを指定できます。', md: ['{right}', '令和8年4月1日改正', '- [秘密]{size=14pt}を漏らしてはならない。'], pv: '<p class="right">令和8年4月1日改正</p><div class="art"><p><b>第一条</b>　<span style="font-size: 1.3em">秘密</span>を漏らしてはならない。</p></div>' },
+                { d: '「{break}」だけの行を書くと、次の要素から新しいページになります。', md: ['### 服務', '- 従業員は、誠実に職務を行う。', '{break}', '## 賃金'], pv: '<div class="art"><span class="cap">（服務）</span><p><b>第一条</b>　従業員は、誠実に職務を行う。</p></div><div class="pbreak"><span>改ページ</span></div><p class="chap">第二章　賃金</p>' },
+            ]
+            const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            const mdLine = (raw) => {
+                let t = esc(raw)
+                t = t.replace(/\[\[([^\]]+)\]\]/g, '<span class="link">[[$1]]</span>')
+                t = t.replace(/\{[^}]*\}/g, (m) => `<span class="id">${m}</span>`)
+                t = t.replace(/(\$\$?)([^$]+)\1/g, '<span class="id">$&</span>')
+                t = t.replace(/^(#{1,3})( )(.*)$/, (m, h, sp, rest) => {
+                    const i = rest.indexOf('<span class="id">')
+                    const head = i < 0 ? rest : rest.slice(0, i)
+                    return `<span class="mk">${h}</span>${sp}<span class="h">${head}</span>${i < 0 ? '' : rest.slice(i)}`
+                })
+                t = t.replace(/^(\s*)(-)( )/, '$1<span class="mk">$2</span>$3')
+                t = t.replace(/^(```\w*)$/, '<span class="mk">$1</span>')
+                t = t.replace(/\|/g, '<span class="mk">|</span>')
+                return `<div class="ln${/^#/.test(raw) ? ' fold' : ''}"><span class="c">${t}</span></div>`
+            }
+            const mdxItems = [...document.querySelectorAll('#mdx-list li')]
+            let mdxAt = -1
+            const showMdx = (i) => {
+                if (i === mdxAt) return
+                mdxAt = i
+                const it = MDX[i]
+                document.getElementById('mdx-src').innerHTML = it.md.map(mdLine).join('')
+                document.getElementById('mdx-pv').innerHTML = it.pv
+                document.getElementById('mdx-desc').textContent = it.d
+                mdxItems.forEach((li, j) => li.classList.toggle('on', i === j))
+            }
+            showMdx(0)
+            const heroTabs = tabSet(document.getElementById('top-hero'), [12000, MDX.length * MDX_STEP])
+            const motionTabs = tabSet(document.getElementById('motions'), 7000)
+            heroTabs.ready([
+                ,
+                () => {
+                    mdxAt = -1
+                    const tick = () => showMdx(Math.min(MDX.length - 1, Math.floor(Math.max(0, heroTabs.elapsed()) / MDX_STEP)))
+                    tick()
+                    const id = setInterval(tick, 100)
+                    return { kill: () => clearInterval(id) }
                 },
-                { threshold: 0.6 },
-            ).observe(motionSection)
+            ])
+            mdxItems.forEach((li, i) => {
+                const pick = () => {
+                    showMdx(i)
+                    heroTabs.seek(i * MDX_STEP)
+                }
+                li.addEventListener('mouseenter', pick)
+                li.querySelector('a').addEventListener('focus', pick)
+            })
+            const localTabs = tabSet(document.getElementById('local'), 10000)
 
             function motionsReady(gsap) {
                 const q = (sel) => gsap.utils.toArray(sel)
-                motionFns = [
+                motionTabs.ready([
                     () => gsap.fromTo('#m-compare u', { '--u': '0%' }, { '--u': '100%', duration: 0.6, ease: 'power1.inOut', stagger: 0.3, delay: 0.3 }),
                     () => {
                         const lines = q('#m-versions .draw')
@@ -2969,7 +3327,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                                 ev.classList.remove('hide')
                             }, null, '+=0.2')
                     },
-                ]
+                ])
                 const $ = (sel) => document.querySelector(sel)
                 const cls = (el, name, on) => () => (typeof el === 'string' ? q(el) : [el]).forEach((e) => e.classList.toggle(name, on))
                 const typer = (el) => {
@@ -2980,7 +3338,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                         tween: (duration) => ({ target: t, vars: { n: full.length, duration, ease: 'none', onUpdate: () => (el.textContent = full.slice(0, Math.round(t.n))) } }),
                     }
                 }
-                localFns = [
+                localTabs.ready([
                     () => {
                         const ty = typer($('#st-typed'))
                         const count = $('#lp-store .st-count')
@@ -3143,8 +3501,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                         })
                         return tl.to({}, { duration: 3 })
                     },
-                ]
-                if (motionVisible) showMotion(motionIndex)
+                ])
             }
 
             function showAll() {
@@ -3165,33 +3522,46 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                 const headText = head.textContent
                 const bodyText = mdTyped.textContent
                 const state = document.getElementById('editor-state')
+                const step = document.getElementById('editor-step')
                 const flips = gsap.utils.toArray('#editor .flip > span')
                 const t = { h: 0, b: 0 }
-                const say = (s) => () => (state.textContent = s)
+                const say = (h, s) => () => {
+                    step.textContent = h
+                    state.textContent = s
+                }
                 const show = () => {
                     head.textContent = headText.slice(0, Math.round(t.h))
                     mdTyped.textContent = bodyText.slice(0, Math.round(t.b))
                     typed.textContent = mdTyped.textContent
                 }
-                gsap.set([mdNew, art], { height: 0 })
-                show()
-                gsap.timeline({ repeat: -1, repeatDelay: 1.5, delay: 1 })
-                    .call(say('Markdown に「### 定義」と入力します。条番号は書きません。'))
-                    .to(mdNew, { height: 'auto', duration: 0.4, ease: 'power2.inOut' })
-                    .to(t, { h: headText.length, duration: 0.5, ease: 'none', onUpdate: show })
-                    .to(art, { height: 'auto', duration: 0.4, ease: 'power2.inOut' })
-                    .to(t, { b: bodyText.length, duration: 1.6, ease: 'none', onUpdate: show })
-                    .call(say('後続の条番号と、[[適用]] が指す「第二条」を「第三条」に更新しました。Markdown の [[適用]] は書き直していません。'))
-                    .to(flips, { yPercent: -100, duration: 0.5, ease: 'power2.inOut', stagger: 0.05 }, '+=0.2')
-                    .to({}, { duration: 3.2 })
-                    .call(say('「### 定義」を削除すると、番号は元に戻ります。'))
-                    .to(flips, { yPercent: 0, duration: 0.45, ease: 'power2.inOut', stagger: 0.04 })
-                    .to([mdNew, art], { height: 0, duration: 0.5, ease: 'power2.inOut' }, '<0.1')
-                    .call(() => {
-                        t.h = 0
-                        t.b = 0
-                        show()
-                    })
+                const reset = () => {
+                    t.h = 0
+                    t.b = 0
+                    show()
+                    mdNew.classList.remove('shown')
+                }
+                const heroNum = () => {
+                    gsap.set([mdNew, art], { height: 0 })
+                    gsap.set(flips, { yPercent: 0 })
+                    reset()
+                    say('条番号は書かない', 'Markdown に条番号は書きません。「###」の並び順から計算し、プレビューに反映します。')()
+                    return gsap
+                        .timeline({ repeat: -1, repeatDelay: 1.5, delay: 1 })
+                        .call(say('条を挿入する', 'Markdown に「### 定義」と入力します。条番号は書きません。'))
+                        .call(() => mdNew.classList.add('shown'))
+                        .to(mdNew, { height: 'auto', duration: 0.4, ease: 'power2.inOut' })
+                        .to(t, { h: headText.length, duration: 0.5, ease: 'none', onUpdate: show })
+                        .to(art, { height: 'auto', duration: 0.4, ease: 'power2.inOut' })
+                        .to(t, { b: bodyText.length, duration: 1.6, ease: 'none', onUpdate: show })
+                        .call(say('番号と参照が更新される', '後続の条番号と、[[適用]] が指す「第二条」を「第三条」に更新しました。Markdown の [[適用]] は書き直していません。'))
+                        .to(flips, { yPercent: -100, duration: 0.5, ease: 'power2.inOut', stagger: 0.05 }, '+=0.2')
+                        .to({}, { duration: 3.2 })
+                        .call(say('削除すると元に戻る', '「### 定義」を削除すると、番号は元に戻ります。'))
+                        .to(flips, { yPercent: 0, duration: 0.45, ease: 'power2.inOut', stagger: 0.04 })
+                        .to([mdNew, art], { height: 0, duration: 0.5, ease: 'power2.inOut' }, '<0.1')
+                        .call(reset)
+                }
+                heroTabs.ready([heroNum])
 
                 motionsReady(gsap)
             }
