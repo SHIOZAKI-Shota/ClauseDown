@@ -53,6 +53,7 @@
                 --serif: 'Noto Serif JP', 'Hiragino Mincho ProN', 'Yu Mincho', serif;
                 --sans: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic UI', system-ui, sans-serif;
                 --mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'BIZ UDGothic', 'Noto Sans JP', monospace;
+                --radius: 2px;
                 color-scheme: light dark;
                 --lw: 33.333%;
                 --cols: max(300px, var(--lw)) minmax(0, 1fr);
@@ -73,8 +74,8 @@
                     --ai-wash: #232254;
                     --on-ai: #121318;
                     --red: #ff7b7b;
-                --warn: #fbbf24;
-                --ok: #4ade80;
+                    --warn: #fbbf24;
+                    --ok: #4ade80;
                 }
             }
             :root[data-theme='light'] {
@@ -211,7 +212,7 @@
                 height: 32px;
                 padding: 0;
                 border: 1px solid var(--rule);
-                border-radius: 2px;
+                border-radius: var(--radius);
                 background: transparent;
                 color: var(--ink);
                 cursor: pointer;
@@ -233,7 +234,7 @@
                 align-items: center;
                 padding: 12px 24px;
                 border: 1px solid var(--ai);
-                border-radius: 2px;
+                border-radius: var(--radius);
                 background: var(--ai);
                 color: var(--on-ai);
                 font: 500 16px/1.2 var(--sans);
@@ -246,15 +247,6 @@
             .btn:hover {
                 background: var(--ai-strong);
                 border-color: var(--ai-strong);
-            }
-            .btn.line {
-                border-color: var(--line);
-                background: var(--sheet);
-                color: var(--ink);
-            }
-            .btn.line:hover {
-                border-color: var(--ai);
-                background: var(--ai-wash);
             }
             header .btn {
                 padding: 8px 16px;
@@ -290,25 +282,6 @@
                 font-size: clamp(22px, 1.9vw, 30px);
                 line-height: 1.5;
             }
-            .title em {
-                font-style: normal;
-                color: var(--ai);
-            }
-            .hero .lead {
-                margin: 0 0 24px;
-                font-size: 14px;
-                color: var(--ink-2);
-            }
-            .hero .cta {
-                flex-direction: column;
-                gap: 8px;
-            }
-            .hero .cta .btn {
-                justify-content: center;
-                padding-inline: 12px;
-                font-size: 14px;
-                white-space: nowrap;
-            }
             section h2 .ch {
                 display: block;
                 font-size: 14px;
@@ -329,30 +302,29 @@
                 flex-wrap: wrap;
                 gap: 16px;
             }
-            .hero .meta {
-                margin: 16px 0 0;
-                font-size: 12px;
-                color: var(--ink-3);
-            }
 
-            .editor {
-                display: grid;
-                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            .win {
                 border: 1px solid var(--line);
                 background: var(--sheet);
+                overflow: hidden;
             }
-            .pane-head {
+            .win-head {
                 display: flex;
                 justify-content: space-between;
+                gap: 12px;
                 padding: 8px 16px;
                 border-bottom: 1px solid var(--rule);
                 background: var(--paper-2);
                 font: 500 12px/1.8 var(--sans);
                 color: var(--ink-2);
             }
-            .pane-head span:last-child {
+            .win-head span:last-child:not(:first-child) {
                 color: var(--ink-3);
                 font-weight: 400;
+            }
+            .editor {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
             }
             .md-pane {
                 display: flex;
@@ -418,7 +390,7 @@
                 margin: 0 6px 0 2px;
                 padding: 0 6px;
                 vertical-align: 0.1em;
-                border-radius: 2px;
+                border-radius: var(--radius);
                 background: var(--ai-wash);
                 color: var(--ai);
                 font: 500 11px/1.7 var(--sans);
@@ -538,10 +510,45 @@
                 padding: 0 8px;
                 background: var(--sheet);
             }
-            .mdx-desc {
+            .motion #mdx-src .ln {
+                animation: mdx-show 0s var(--d) both;
+            }
+            .motion #mdx-src .c {
+                animation: mdx-type var(--t) steps(var(--n), end) var(--d) both;
+            }
+            .motion #mdx-pv > * {
+                animation: mdx-in 0.4s ease var(--d) both;
+            }
+            .motion #mdx-desc > span {
+                animation: mdx-show-fade 0.3s ease both;
+            }
+            @keyframes mdx-show {
+                from {
+                    visibility: hidden;
+                }
+            }
+            @keyframes mdx-type {
+                from {
+                    clip-path: inset(0 100% 0 0);
+                }
+                to {
+                    clip-path: inset(0);
+                }
+            }
+            @keyframes mdx-in {
+                from {
+                    opacity: 0;
+                    transform: translateY(6px);
+                }
+            }
+            @keyframes mdx-show-fade {
+                from {
+                    opacity: 0;
+                }
+            }
+            .lead.mdx-desc {
                 min-height: calc(1.85em * 2);
                 margin: 12px 0 4px;
-                color: var(--ink);
             }
             .detail.mdx-list {
                 grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -566,11 +573,6 @@
                 color: var(--ink-3);
                 white-space: pre;
                 text-overflow: ellipsis;
-            }
-            .ref-s {
-                color: var(--ai);
-                text-decoration: underline dashed;
-                text-underline-offset: 4px;
             }
             .md-block.new {
                 background: var(--ai-wash);
@@ -621,6 +623,7 @@
                 height: 2em;
                 line-height: 2;
             }
+            .ref-s,
             .ref {
                 color: var(--ai);
                 text-decoration: underline dashed;
@@ -641,8 +644,6 @@
             }
             .hero .status {
                 min-height: calc(1.85em * 2);
-                margin: 0;
-                color: var(--ink);
             }
 
             section h2 {
@@ -671,34 +672,20 @@
             }
             .guide h3 {
                 margin: 0 0 8px;
-                font-size: 18px;
-                line-height: 1.6;
             }
             .guide .intro {
                 min-height: calc(1.85em * 4);
             }
-            .demo-note {
-                margin: 24px 0 0;
+            .caption,
+            .demo-note,
+            .install-note {
                 font-size: 13px;
                 color: var(--ink-3);
             }
+            .demo-note {
+                margin: 24px 0 0;
+            }
 
-            .local {
-                display: grid;
-                grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-                gap: 48px;
-                align-items: start;
-            }
-            .folder {
-                border: 1px solid var(--line);
-                background: var(--sheet);
-            }
-            .folder-head {
-                padding: 8px 16px;
-                border-bottom: 1px solid var(--rule);
-                background: var(--paper-2);
-                font: 500 13px/1.8 var(--sans);
-            }
             .tree {
                 margin: 0;
                 padding: 8px 0;
@@ -723,52 +710,12 @@
                 font-size: 12px;
                 color: var(--ink-3);
             }
-            .folder-note {
-                margin: 0;
-                padding: 8px 16px;
-                border-top: 1px solid var(--rule);
-                font-size: 12px;
-                color: var(--ink-3);
-            }
-            .facts,
-            .switch {
-                display: grid;
-                grid-template-columns: max-content minmax(0, 1fr);
-                gap: 0 32px;
-                margin: 0;
-            }
-            .facts dt,
-            .facts dd,
-            .switch dt,
-            .switch dd {
-                margin: 0;
-                padding: 12px 0;
-                border-bottom: 1px solid var(--rule);
-            }
-            .facts dt,
-            .switch dt {
-                font-weight: 500;
-            }
-            .facts dd,
-            .switch dd {
-                color: var(--ink-2);
-            }
-            .switch dt,
-            .switch dd {
-                padding: 20px 0;
-            }
-            .switch dt {
-                font: 700 16px/1.7 var(--serif);
-            }
 
             .install h3 {
                 margin: 0 0 4px;
-                font-size: 20px;
             }
             .install-note {
                 margin: 0 0 16px;
-                font-size: 14px;
-                color: var(--ink-3);
             }
             .os {
                 padding: 12px 0;
@@ -788,10 +735,6 @@
                 margin: 12px 0 0;
                 padding-top: 12px;
                 border-top: 1px solid var(--rule);
-                font-size: 14px;
-            }
-            .req {
-                margin-top: 24px !important;
                 font-size: 14px;
             }
 
@@ -819,31 +762,37 @@
                 font: 500 12px/1.8 var(--sans);
                 color: var(--ink-3);
             }
-            .grp + .tabs {
+            .grp + .menu {
                 margin-top: 4px;
+            }
+            .motion-stage .panel > h3,
+            .hero-cap h3,
+            .feature-view h3,
+            .guide h3,
+            .install h3 {
+                font-size: 20px;
+                line-height: 1.6;
             }
             .motion-stage .panel > h3,
             .hero-cap h3 {
                 margin: 24px 0 4px;
-                font-size: 20px;
-                line-height: 1.6;
             }
             .lc-anim {
                 display: grid;
                 align-items: center;
                 min-height: clamp(240px, 40dvh, 380px);
             }
-            .lc-lead {
+            .lead {
                 margin: 0;
                 color: var(--ink);
             }
-            .lc-detail {
+            .points {
                 margin: 12px 0 0;
                 padding-left: 1.2em;
                 font-size: 14px;
                 color: var(--ink-2);
             }
-            .lc-detail li + li {
+            .points li + li {
                 margin-top: 4px;
             }
             .lsvg {
@@ -868,6 +817,7 @@
             .lsvg .box {
                 fill: var(--sheet);
                 stroke: var(--line);
+                transition: stroke 0.3s, fill 0.3s;
             }
             .lsvg .box.key {
                 stroke: var(--ai);
@@ -906,9 +856,6 @@
                 font: 700 12px var(--sans);
                 fill: var(--on-ai);
             }
-            .lsvg .box {
-                transition: stroke 0.3s, fill 0.3s;
-            }
             .lsvg .box.act {
                 stroke: var(--ai);
                 fill: var(--ai-wash);
@@ -936,25 +883,7 @@
                 stroke-dasharray: none;
             }
             .lc-anim .win {
-                border: 1px solid var(--line);
-                border-radius: 6px;
-                background: var(--sheet);
-                overflow: hidden;
                 transition: border-color 0.3s, opacity 0.3s, filter 0.3s;
-            }
-            .win-head {
-                display: flex;
-                justify-content: space-between;
-                gap: 12px;
-                padding: 6px 12px;
-                border-bottom: 1px solid var(--rule);
-                background: var(--paper-2);
-                font: 500 12px/1.8 var(--sans);
-                color: var(--ink-2);
-            }
-            .win-head span:last-child:not(:first-child) {
-                color: var(--ink-3);
-                font-weight: 400;
             }
             .lc-anim .src {
                 margin: 0;
@@ -968,7 +897,7 @@
                 display: inline-block;
                 margin-right: 8px;
                 padding: 0 8px;
-                border-radius: 4px;
+                border-radius: var(--radius);
                 background: var(--ai);
                 color: var(--on-ai);
                 font-weight: 500;
@@ -1165,7 +1094,7 @@
             .vs .before li {
                 padding: 6px 12px;
                 border: 1px solid var(--line);
-                border-radius: 4px;
+                border-radius: var(--radius);
                 background: var(--sheet);
                 font-size: 13px;
                 color: var(--ink-2);
@@ -1186,50 +1115,60 @@
                 color: var(--ai);
                 font-weight: 700;
             }
-            .tabs {
+            .menu {
                 margin: 24px 0 0;
                 padding: 0;
                 list-style: none;
                 border-top: 1px solid var(--line);
             }
-            .tabs button {
+            .menu li {
                 position: relative;
                 display: grid;
-                grid-template-columns: 56px minmax(0, 1fr);
-                width: calc(100% + 24px);
+                grid-template-columns: minmax(0, 1fr) auto;
+                align-items: center;
                 margin: 0 -12px;
+                border-bottom: 1px solid var(--rule);
+            }
+            .menu button {
+                display: grid;
+                grid-template-columns: 56px minmax(0, 1fr) auto;
+                gap: 8px;
                 padding: 8px 12px;
                 border: 0;
-                border-bottom: 1px solid var(--rule);
                 background: transparent;
                 color: var(--ink);
                 font: 500 15px/1.8 var(--sans);
                 text-align: left;
                 cursor: pointer;
             }
-            .tabs .no {
+            .menu .no {
                 font: 700 14px/1.8 var(--serif);
                 color: var(--ink-3);
             }
-            .tabs li.on button,
-            .tabs button:hover {
+            .menu .n {
+                font-size: 12px;
+                line-height: 2.2;
+                color: var(--ink-3);
+            }
+            .menu li.on,
+            .menu li:hover {
                 background: var(--ai-wash);
             }
-            .tabs li.on .no,
-            .tabs li.on .t {
+            .menu li.on .no,
+            .menu li.on .t {
                 color: var(--ai);
             }
-            .tabs .bar {
+            .menu .bar {
                 position: absolute;
                 left: 0;
                 right: 0;
                 bottom: -1px;
                 height: 2px;
             }
-            .tabs li.on.run .bar {
-                background: color-mix(in srgb, var(--ai) 25%, transparent);
+            .menu li.on.run .bar {
+                background: color-mix(in oklab, var(--ai) 25%, transparent);
             }
-            .tabs .bar::before {
+            .menu .bar::before {
                 content: '';
                 position: absolute;
                 inset: 0;
@@ -1237,25 +1176,16 @@
                 transform: scaleX(0);
                 transform-origin: left;
             }
-            .tabs li.on.run .bar::before {
+            .menu li.on.run .bar::before {
                 animation: fill var(--dur, 7s) linear var(--delay, 0ms) forwards;
             }
-            .tabs li.on.paused .bar::before {
+            .menu li.on.paused .bar::before {
                 animation-play-state: paused;
             }
             @keyframes fill {
                 to {
                     transform: scaleX(1);
                 }
-            }
-            .tabs p {
-                display: none;
-                margin: 8px 0 12px 40px;
-                font-size: 14px;
-                color: var(--ink-2);
-            }
-            .tabs li.on p {
-                display: block;
             }
             .motion-stage {
                 display: grid;
@@ -1278,18 +1208,9 @@
             .mini {
                 display: grid;
                 grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-                border: 1px solid var(--line);
-                background: var(--sheet);
             }
-            .mini-head {
+            .mini .win-head {
                 grid-column: 1 / -1;
-                display: flex;
-                justify-content: space-between;
-                padding: 8px 16px;
-                border-bottom: 1px solid var(--rule);
-                background: var(--paper-2);
-                font: 500 12px/1.8 var(--sans);
-                color: var(--ink-2);
             }
             #proof-count {
                 color: var(--warn);
@@ -1389,8 +1310,6 @@
             }
 
             .issue {
-                border: 1px solid var(--line);
-                background: var(--sheet);
                 padding: 24px;
             }
             .issue-head {
@@ -1411,7 +1330,7 @@
                 transition: opacity 0.3s;
             }
             .state .open {
-                background: color-mix(in oklab, #16a34a 16%, var(--sheet));
+                background: color-mix(in oklab, var(--ok) 16%, var(--sheet));
                 color: var(--ok);
             }
             .state .closed {
@@ -1427,14 +1346,8 @@
                 color: var(--ink-2);
             }
             .merge {
-                border: 1px solid var(--rule);
+                border-color: var(--rule);
                 background: var(--paper);
-            }
-            .merge-head {
-                padding: 8px 16px;
-                border-bottom: 1px solid var(--rule);
-                font: 500 13px/1.8 var(--sans);
-                color: var(--ink-2);
             }
             .msg {
                 min-height: 5.6em;
@@ -1447,10 +1360,10 @@
                 display: inline-block;
                 margin: 0 16px 16px;
                 padding: 6px 16px;
-                border-radius: 2px;
+                border-radius: var(--radius);
                 background: var(--ai);
                 color: var(--on-ai);
-                font: 500 13px/1.6 var(--sans);
+                font: 500 14px/1.6 var(--sans);
                 transition: transform 0.15s;
             }
             .merge-btn.press {
@@ -1469,8 +1382,6 @@
             .compare {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
-                border: 1px solid var(--line);
-                background: var(--sheet);
                 font: 400 16px/2 var(--serif);
             }
             .compare > div {
@@ -1483,9 +1394,10 @@
             .compare .h {
                 padding: 8px 24px;
                 border-top: 0;
-                border-bottom: 1px solid var(--line);
+                border-bottom: 1px solid var(--rule);
                 text-align: center;
-                font: 500 14px/1.6 var(--sans);
+                font: 500 12px/1.8 var(--sans);
+                color: var(--ink-2);
                 background: var(--paper-2);
             }
             .compare p {
@@ -1503,8 +1415,6 @@
             }
             .caption {
                 margin: 8px 0 0;
-                font-size: 14px;
-                color: var(--ink-3);
             }
 
             .graph svg {
@@ -1557,7 +1467,9 @@
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
+                align-items: center;
                 padding: 24px 40px;
+                text-align: center;
             }
             .cover .title {
                 margin-bottom: 16px;
@@ -1570,10 +1482,6 @@
             }
             .cover .cta {
                 margin-top: 24px;
-            }
-            .cover-text {
-                align-items: center;
-                text-align: center;
             }
             .cover .cta,
             .cover .dl-meta {
@@ -1628,10 +1536,7 @@
                 flex: none;
                 height: calc(var(--peek) * 2);
                 width: min(100%, calc(var(--peek) * 3.2));
-                border: 1px solid var(--line);
-                border-radius: 6px 6px 0 0;
-                background: var(--sheet);
-                overflow: hidden;
+                border-bottom: 0;
                 text-decoration: none;
                 color: var(--ink-2);
                 transition: transform 0.3s ease;
@@ -1685,35 +1590,9 @@
                 display: none;
                 margin: 24px;
                 padding: 16px;
-                border: 1px solid var(--line);
-                background: var(--sheet);
                 font-size: 14px;
             }
 
-            .features {
-                margin: 24px 0 0;
-                padding: 0;
-                list-style: none;
-                border-top: 1px solid var(--line);
-            }
-            .features li {
-                display: grid;
-                grid-template-columns: minmax(0, 1fr) auto;
-                align-items: center;
-                margin: 0 -12px;
-                border-bottom: 1px solid var(--rule);
-            }
-            .features button {
-                display: grid;
-                grid-template-columns: 56px minmax(0, 1fr) auto;
-                gap: 8px;
-                padding: 8px 12px;
-                border: 0;
-                background: transparent;
-                color: var(--ink);
-                font: inherit;
-                text-align: left;
-            }
             .features .go,
             .detail .go {
                 display: grid;
@@ -1721,7 +1600,7 @@
                 width: 32px;
                 height: 32px;
                 margin-right: 8px;
-                border-radius: 2px;
+                border-radius: var(--radius);
                 color: var(--ink-3);
             }
             .features .go:hover,
@@ -1733,32 +1612,6 @@
             .detail .go svg {
                 width: 16px;
                 height: 16px;
-            }
-            .features .no {
-                font: 700 14px/1.8 var(--serif);
-                color: var(--ink-3);
-            }
-            .features .t {
-                font: 500 15px/1.8 var(--sans);
-            }
-            .features .n {
-                font-size: 12px;
-                line-height: 2.2;
-                color: var(--ink-3);
-            }
-            .features li.on,
-            .features li:hover {
-                background: var(--ai-wash);
-            }
-            .features li.on .no,
-            .features li.on .t {
-                color: var(--ai);
-            }
-            .features p {
-                display: none;
-                margin: 4px 0 12px 56px;
-                font-size: 14px;
-                color: var(--ink-2);
             }
             .feature-view {
                 display: grid;
@@ -1782,9 +1635,6 @@
             .shot-frame {
                 height: calc(100dvh - 65px - 440px);
                 min-height: 200px;
-                border: 1px solid var(--line);
-                background: var(--sheet);
-                overflow: hidden;
             }
             .feature-view img {
                 display: block;
@@ -1803,8 +1653,6 @@
             }
             .feature-view h3 {
                 margin: 0;
-                font-size: 20px;
-                line-height: 1.6;
             }
             .detail {
                 display: grid;
@@ -1839,12 +1687,15 @@
                 font-weight: 500;
             }
 
-            .get dl,
-            .req {
+            .get dl {
                 display: grid;
                 grid-template-columns: max-content minmax(0, 1fr);
                 gap: 8px 32px;
                 margin: 0 0 32px;
+            }
+            .get .req {
+                margin: 24px 0 0;
+                font-size: 14px;
             }
             .get dt {
                 font-weight: 500;
@@ -1938,12 +1789,6 @@
                     margin-bottom: 16px;
                     font-size: clamp(20px, 1.7vw, 26px);
                 }
-                .hero .lead {
-                    margin-bottom: 16px;
-                }
-                .hero .meta {
-                    display: none;
-                }
                 .preview .doc-title {
                     display: none;
                 }
@@ -1959,7 +1804,7 @@
                 section .intro {
                     margin-bottom: 24px;
                 }
-                .features button {
+                .menu button {
                     padding-block: 6px;
                 }
             }
@@ -1967,8 +1812,8 @@
                 .peek {
                     --peek: calc((100dvh - 65px) * 0.36);
                 }
-                .pane-head {
-                    padding: 4px 16px;
+                .win-head {
+                    padding-block: 4px;
                 }
                 .md {
                     padding: 8px 0;
@@ -1979,7 +1824,7 @@
                     padding: 8px 28px;
                     font-size: 12px;
                 }
-                .features button {
+                .menu button {
                     padding-block: 4px;
                 }
                 .shot-frame {
@@ -1991,14 +1836,11 @@
                 .md-frame {
                     height: calc(100dvh - 65px - 290px);
                 }
-                .mdx-desc {
+                .lead.mdx-desc {
                     min-height: 1.85em;
                     margin-top: 8px;
                 }
                 .detail li {
-                    padding-block: 4px;
-                }
-                .tabs button {
                     padding-block: 4px;
                 }
             }
@@ -2116,7 +1958,7 @@
                     </div>
                     <div class="peek">
                         <p class="peek-hint" aria-hidden="true">\ クリックしてデモを見る /</p>
-                        <a class="peek-win" id="peek" href="#demo" aria-label="編集画面のデモを開く">
+                        <a class="win peek-win" id="peek" href="#demo" aria-label="編集画面のデモを開く">
                             <span class="shot">
                                 <img class="light" src="docs/manual/images/editor.png" alt="" />
                                 <img class="dark" src="docs/manual/images/dark-editor.png" alt="" loading="lazy" />
@@ -2137,7 +1979,7 @@
                     </div>
                     <div class="r full">
                     <div class="demo-frame" id="demo-frame"></div>
-                    <p class="demo-mobile">デモは横幅の広い画面向けです。パソコンで表示するか、<a href="demo/" target="_blank" rel="noreferrer noopener">デモのみを表示</a>からお試しください。</p>
+                    <p class="win demo-mobile">デモは横幅の広い画面向けです。パソコンで表示するか、<a href="demo/" target="_blank" rel="noreferrer noopener">デモのみを表示</a>からお試しください。</p>
                     </div>
                 </div>
             </section>
@@ -2147,7 +1989,7 @@
                     <div class="l">
                     <h2><span class="ch">第二条</span>条文を <em>Markdown</em> で書くと、<wbr />条番号と参照は<wbr />自動で計算されます。</h2>
                     <p class="intro">条の見出しを <code>###</code>、項を <code>-</code> で書くだけで、番号を付けて組版します。</p>
-                    <ol class="tabs" role="tablist" aria-label="条文の書き方">
+                    <ol class="menu tabs" role="tablist" aria-label="条文の書き方">
                         <li class="on">
                             <button type="button" role="tab" id="ht-num" aria-controls="hp-num" aria-selected="true"><span class="no">第一項</span><span class="t">条参照・条採番</span><span class="bar" aria-hidden="true"></span></button>
                         </li>
@@ -2160,13 +2002,13 @@
                     <div class="motion-stage" id="hero-stage">
                         <div class="panel on" role="tabpanel" id="hp-num" aria-labelledby="ht-num">
                     <div
-                        class="editor"
+                        class="win editor"
                         id="editor"
                         role="img"
                         aria-label="左の Markdown に番号を書かずに「### 定義」の条を挿入すると、右のプレビューで第二条が入り、後続の条番号と、[[適用]] と書いた参照が第二条から第三条に更新される様子"
                     >
                         <div class="md-pane">
-                            <div class="pane-head"><span>就業規則.md</span><span>Markdown（入力する内容）</span></div>
+                            <div class="win-head"><span>就業規則.md</span><span>Markdown（入力する内容）</span></div>
                             <div class="md">
                                 <div class="ln fold"><span class="c"><span class="mk">#</span> <span class="h">就業規則</span></span></div>
                                 <div class="ln"><span class="c"></span></div>
@@ -2189,7 +2031,7 @@
                             </div>
                         </div>
                         <div>
-                            <div class="pane-head"><span>プレビュー</span><span>印刷・PDF・Word と同じ組版</span></div>
+                            <div class="win-head"><span>プレビュー</span><span>印刷・PDF・Word と同じ組版</span></div>
                             <div class="preview">
                                 <p class="doc-title">就業規則</p>
                                 <div class="art">
@@ -2217,21 +2059,21 @@
                     </div>
                     <div class="hero-cap" aria-live="polite">
                         <h3 id="editor-step">条番号は書かない</h3>
-                        <p class="status" id="editor-state">Markdown に条番号は書きません。「###」の並び順から計算し、プレビューに反映します。</p>
+                        <p class="lead status" id="editor-state">Markdown に条番号は書きません。「###」の並び順から計算し、プレビューに反映します。</p>
                     </div>
                         </div>
                         <div class="panel" role="tabpanel" id="hp-md" aria-labelledby="ht-md">
-                        <div class="editor md-frame" aria-live="polite">
+                        <div class="win editor md-frame" aria-live="polite">
                             <div class="md-pane">
-                                <div class="pane-head"><span>Markdown</span><span>入力する内容</span></div>
+                                <div class="win-head"><span>Markdown</span><span>入力する内容</span></div>
                                 <div class="md" id="mdx-src"></div>
                             </div>
                             <div>
-                                <div class="pane-head"><span>プレビュー</span><span>組版した結果</span></div>
+                                <div class="win-head"><span>プレビュー</span><span>組版した結果</span></div>
                                 <div class="preview" id="mdx-pv"></div>
                             </div>
                         </div>
-                        <p class="mdx-desc" id="mdx-desc"></p>
+                        <p class="lead mdx-desc" id="mdx-desc"></p>
                         <ul class="detail mdx-list" id="mdx-list">
                                 <li><span class="dt"><b>題名</b><code class="ds"># 題名</code></span><a class="go" href="docs/manual/#条項号の書き方" target="_blank" rel="noreferrer noopener" aria-label="題名の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
                                 <li><span class="dt"><b>前文</b><code class="ds">題名と章の間</code></span><a class="go" href="docs/manual/#ボタンで条項号を足す" target="_blank" rel="noreferrer noopener" aria-label="前文の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
@@ -2265,7 +2107,7 @@
                     <div class="l">
                     <h2><span class="ch">第三条</span>主な機能の動き</h2>
                     <p class="intro">項目にマウスを重ねると切り替わります。マウスを離しているときは、順に次の項目へ進みます。</p>
-                    <ol class="tabs" role="tablist" aria-label="主な機能" id="motion-tabs">
+                    <ol class="menu tabs" role="tablist" aria-label="主な機能" id="motion-tabs">
                         <li class="on">
                             <button type="button" role="tab" id="t-compare" aria-controls="m-compare" aria-selected="true">
                                 <span class="no">第一項</span><span class="t">新旧対照表</span><span class="bar" aria-hidden="true"></span>
@@ -2296,7 +2138,7 @@
                     <div class="r">
                     <div class="motion-stage" id="motion-stage">
                         <div class="panel on" role="tabpanel" id="m-compare" aria-labelledby="t-compare">
-                        <div class="compare" id="compare-table">
+                        <div class="win compare" id="compare-table">
                             <div class="h">改正後</div>
                             <div class="h">改正前</div>
                             <div>
@@ -2319,7 +2161,7 @@
                             </div>
                         </div>
                         <h3>新旧対照表</h3>
-                        <p class="lc-lead">比較する2つの版を選択するだけで作成します。番号のみ移動した条は、本文の改正として扱いません。</p>
+                        <p class="lead">比較する2つの版を選択するだけで作成します。番号のみ移動した条は、本文の改正として扱いません。</p>
                         <p class="caption">デモの「見本株式会社_就業規則」で作った新旧対照表の一部</p>
                         </div>
                         <div class="panel" role="tabpanel" id="m-versions" aria-labelledby="t-versions">
@@ -2347,11 +2189,11 @@
                         </svg>
                         </div>
                         <h3>改定案と承認</h3>
-                        <p class="lc-lead">改定案で作業し、承認を受けてから現行版に反映します。反映した版には施行日を設定します。</p>
+                        <p class="lead">改定案で作業し、承認を受けてから現行版に反映します。反映した版には施行日を設定します。</p>
                         </div>
                         <div class="panel" role="tabpanel" id="m-proof" aria-labelledby="t-proof">
-                        <div class="mini">
-                            <div class="mini-head"><span>就業規則.md</span><span id="proof-count">注意 4</span></div>
+                        <div class="win mini">
+                            <div class="win-head"><span>就業規則.md</span><span id="proof-count">注意 4</span></div>
                             <div class="mini-body">
                                 <p><span class="mk">-</span> 労働者<span class="wv on">は会社は</span>、次の事項を協議して定める。</p>
                                 <p><span class="mk">-</span> 当日に<span class="wv on">来れる</span>者は、所属長に届け出る。</p>
@@ -2366,7 +2208,7 @@
                             </ul>
                         </div>
                         <h3>校正</h3>
-                        <p class="lc-lead">同じ助詞の連続、ら抜き言葉、法令の用字などを、入力中に波線で示します。</p>
+                        <p class="lead">同じ助詞の連続、ら抜き言葉、法令の用字などを、入力中に波線で示します。</p>
                         </div>
                         <div class="panel" role="tabpanel" id="m-schedule" aria-labelledby="t-schedule">
                         <svg class="tl" viewBox="0 0 1000 330" role="img" aria-label="就業規則と業務委託契約書の有効期間の帯と、届出などの期日を並べたタイムライン">
@@ -2392,17 +2234,17 @@
                             <g class="ev"><path class="dia" d="M860 206 l9 -9 9 9 -9 9z" /><text x="882" y="190">更新の申出期限</text></g>
                         </svg>
                         <h3>期日と有効期間</h3>
-                        <p class="lc-lead">施行版ごとの有効期間を帯で示し、届出や更新などの期日をタイムラインに並べます。</p>
+                        <p class="lead">施行版ごとの有効期間を帯で示し、届出や更新などの期日をタイムラインに並べます。</p>
                         </div>
                         <div class="panel" role="tabpanel" id="m-issue" aria-labelledby="t-issue">
-                        <div class="issue">
+                        <div class="win issue">
                             <div class="issue-head">
                                 <span class="state" id="issue-state"><span class="open">未完了</span><span class="closed">完了</span></span>
                                 <b>#2 カスタマーハラスメント対策の規定を設ける</b>
                             </div>
                             <p class="issue-body">顧客からの著しい迷惑行為への対応を、就業規則に明記する。</p>
-                            <div class="merge">
-                                <div class="merge-head">改定案「カスタマーハラスメント対策」を現行版に反映</div>
+                            <div class="win merge">
+                                <div class="win-head">改定案「カスタマーハラスメント対策」を現行版に反映</div>
                                 <pre class="msg"><span id="issue-typed">カスハラ対策の条を新設
 
 Closes #2</span><span class="caret" id="issue-caret"></span></pre>
@@ -2411,7 +2253,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                             <p class="issue-event" id="issue-event">人事部 田中 が版 9c047d9 で完了しました（Closes #2）</p>
                         </div>
                         <h3>課題の自動完了</h3>
-                        <p class="lc-lead">版のメッセージに「Closes #2」と書いて現行版に反映すると、課題 #2 が完了します。</p>
+                        <p class="lead">版のメッセージに「Closes #2」と書いて現行版に反映すると、課題 #2 が完了します。</p>
                         </div>
                     </div>
                     </div>
@@ -2424,7 +2266,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                     <h2><span class="ch">第四条</span>データの保存形式と、<wbr />移行について</h2>
                     <p class="intro">項目にマウスを重ねると切り替わります。マウスを離しているときは、順に次の項目へ進みます。</p>
                     <p class="grp">保存と共有</p>
-                    <ol class="tabs" role="tablist" aria-label="保存と共有">
+                    <ol class="menu tabs" role="tablist" aria-label="保存と共有">
                         <li class="on">
                             <button type="button" role="tab" id="lt-store" aria-controls="lp-store" aria-selected="true"><span class="no">第一項</span><span class="t">保存場所</span><span class="bar" aria-hidden="true"></span></button>
                         </li>
@@ -2439,7 +2281,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                         </li>
                     </ol>
                     <p class="grp">乗り換え</p>
-                    <ol class="tabs" role="tablist" aria-label="乗り換え">
+                    <ol class="menu tabs" role="tablist" aria-label="乗り換え">
                         <li>
                             <button type="button" role="tab" id="lt-word" aria-controls="lp-word" aria-selected="false"><span class="no">第五項</span><span class="t">Word で条番号を手で直している方</span><span class="bar" aria-hidden="true"></span></button>
                         </li>
@@ -2478,8 +2320,8 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                             </div>
                             </div>
                             <h3>保存場所</h3>
-                            <p class="lc-lead">自分で選んだフォルダに、Markdown のファイルとして保存します。</p>
-                            <ul class="lc-detail">
+                            <p class="lead">自分で選んだフォルダに、Markdown のファイルとして保存します。</p>
+                            <ul class="points">
                                 <li>クラウドへの登録は不要です。</li>
                                 <li>フォルダは、エクスプローラーや Finder でそのまま扱えます。</li>
                                 <li>版の履歴は、同じフォルダの .git に記録されます。</li>
@@ -2499,8 +2341,8 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                             </svg>
                             </div>
                             <h3>共有</h3>
-                            <p class="lc-lead">GitHub・GitLab と同期するかどうかは、リポジトリごとに選択できます。</p>
-                            <ul class="lc-detail">
+                            <p class="lead">GitHub・GitLab と同期するかどうかは、リポジトリごとに選択できます。</p>
+                            <ul class="points">
                                 <li>社内の GitLab にも接続できます。</li>
                                 <li>同期しなければ、文書は PC の外に出ません。</li>
                                 <li>確認依頼は、プルリクエスト・マージリクエストとしても作成されます。</li>
@@ -2524,8 +2366,8 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                             </svg>
                             </div>
                             <h3>AI</h3>
-                            <p class="lc-lead">AI を使うかどうかは、設定で選択します。</p>
-                            <ul class="lc-detail">
+                            <p class="lead">AI を使うかどうかは、設定で選択します。</p>
+                            <ul class="points">
                                 <li>Claude・OpenAI 互換のサービスに接続できます。</li>
                                 <li>手元で動作する Ollama を使えば、文書は PC の外に出ません。</li>
                                 <li>社内のサーバーで動作する Ollama にも接続できます（試験中の機能）。</li>
@@ -2549,8 +2391,8 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                             </div>
                             </div>
                             <h3>形式</h3>
-                            <p class="lc-lead">形式は Markdown と Git です。</p>
-                            <ul class="lc-detail">
+                            <p class="lead">形式は Markdown と Git です。</p>
+                            <ul class="points">
                                 <li>ClauseDown を使わなくなっても、文書と履歴はそのまま読めます。</li>
                                 <li>ほかのエディタや、GitHub・GitLab の画面でも開けます。</li>
                                 <li>独自の形式には変換しません。</li>
@@ -2580,8 +2422,8 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                             </div>
                             </div>
                             <h3>Word で条番号を手で直している方</h3>
-                            <p class="lc-lead">条を追加・削除しても、条番号と「第○条」の参照は自動で更新されます。</p>
-                            <ul class="lc-detail">
+                            <p class="lead">条を追加・削除しても、条番号と「第○条」の参照は自動で更新されます。</p>
+                            <ul class="points">
                                 <li>新旧対照表は、比較する2つの版を選択するだけで作成できます。</li>
                                 <li>Word・PDF への出力に対応しています。</li>
                                 <li>Word からの取り込みには対応していません。本文を貼り付けて使います。</li>
@@ -2607,8 +2449,8 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                             </div>
                             </div>
                             <h3>ファイル名で版を管理している方</h3>
-                            <p class="lc-lead">ファイル名の代わりに、版にメッセージと施行日を付けて記録します。</p>
-                            <ul class="lc-detail">
+                            <p class="lead">ファイル名の代わりに、版にメッセージと施行日を付けて記録します。</p>
+                            <ul class="points">
                                 <li>誰がいつ何を変えたかを、改定履歴で確認できます。</li>
                                 <li>指定した日に効力のあった版を開けます。</li>
                                 <li>過去の版に戻すこともできます。</li>
@@ -2637,8 +2479,8 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                             </div>
                             </div>
                             <h3>VS Code と Markdown で書いている方</h3>
-                            <p class="lc-lead">拡張機能を組み合わせずに、採番・条参照・校正・施行日の管理を利用できます。</p>
-                            <ul class="lc-detail">
+                            <p class="lead">拡張機能を組み合わせずに、採番・条参照・校正・施行日の管理を利用できます。</p>
+                            <ul class="points">
                                 <li>ファイルは、これまでどおり VS Code でも開けます。</li>
                                 <li>版は Git として記録されるので、VS Code の Git の機能もそのまま使えます。</li>
                                 <li>画面に Git の用語が出ないので、事務担当者とも共有しやすくなります。</li>
@@ -2654,28 +2496,28 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                     <div class="l">
                     <h2><span class="ch">第五条</span>機能の一覧</h2>
                     <p class="intro">項や機能にマウスを重ねると切り替わります。マウスを離しているときは、順に次の機能へ進みます。右端のアイコンから、操作マニュアルの該当箇所を開けます。</p>
-                    <ol class="features" id="feature-list">
+                    <ol class="menu features" id="feature-list">
                         <li class="on">
-                            <button type="button"><span class="no">第一項</span><span class="t">条文の作成</span><span class="n">9 機能</span></button><a class="go" href="docs/manual/#6-条文を書く" aria-label="第一項 条文の作成の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
+                            <button type="button"><span class="no">第一項</span><span class="t">条文の作成</span><span class="n">9 機能</span></button><a class="go" href="docs/manual/#6-条文を書く" aria-label="第一項 条文の作成の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a><span class="bar" aria-hidden="true"></span>
                         </li>
                         <li>
-                            <button type="button"><span class="no">第二項</span><span class="t">版と改定案</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#7-版を保存する" aria-label="第二項 版と改定案の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
+                            <button type="button"><span class="no">第二項</span><span class="t">版と改定案</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#7-版を保存する" aria-label="第二項 版と改定案の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a><span class="bar" aria-hidden="true"></span>
                         </li>
                         <li>
-                            <button type="button"><span class="no">第三項</span><span class="t">施行日・期日・納品</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#11-施行日を記録し納品する" aria-label="第三項 施行日・期日・納品の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
+                            <button type="button"><span class="no">第三項</span><span class="t">施行日・期日・納品</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#11-施行日を記録し納品する" aria-label="第三項 施行日・期日・納品の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a><span class="bar" aria-hidden="true"></span>
                         </li>
                         <li>
-                            <button type="button"><span class="no">第四項</span><span class="t">共有と課題</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#14-ほかの-pcほかの人と共有する" aria-label="第四項 共有と課題の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
+                            <button type="button"><span class="no">第四項</span><span class="t">共有と課題</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#14-ほかの-pcほかの人と共有する" aria-label="第四項 共有と課題の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a><span class="bar" aria-hidden="true"></span>
                         </li>
                         <li>
-                            <button type="button"><span class="no">第五項</span><span class="t">書き出し・取り込み・AI</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#16-ai-に確認や書き直しを頼む" aria-label="第五項 書き出し・取り込み・AIの操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
+                            <button type="button"><span class="no">第五項</span><span class="t">書き出し・取り込み・AI</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#16-ai-に確認や書き直しを頼む" aria-label="第五項 書き出し・取り込み・AIの操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a><span class="bar" aria-hidden="true"></span>
                         </li>
                     </ol>
                     </div>
                     <div class="r">
                     <div class="feature-view" aria-live="polite">
                         <figure class="on">
-                            <div class="shot-frame"><img src="docs/manual/images/feature-editor.png" alt="条文の作成の画面" loading="lazy" /></div>
+                            <div class="win shot-frame"><img src="docs/manual/images/feature-editor.png" alt="条文の作成の画面" loading="lazy" /></div>
                             <figcaption>
                                 <h3>第一項　条文の作成</h3>
                                 <ul class="detail">
@@ -2692,7 +2534,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                             </figcaption>
                         </figure>
                         <figure>
-                            <div class="shot-frame"><img src="docs/manual/images/feature-history.png" alt="版と改定案の画面" loading="lazy" /></div>
+                            <div class="win shot-frame"><img src="docs/manual/images/feature-history.png" alt="版と改定案の画面" loading="lazy" /></div>
                             <figcaption>
                                 <h3>第二項　版と改定案</h3>
                                 <ul class="detail">
@@ -2706,7 +2548,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                             </figcaption>
                         </figure>
                         <figure>
-                            <div class="shot-frame"><img src="docs/manual/images/feature-releases.png" alt="施行日・期日・納品の画面" loading="lazy" /></div>
+                            <div class="win shot-frame"><img src="docs/manual/images/feature-releases.png" alt="施行日・期日・納品の画面" loading="lazy" /></div>
                             <figcaption>
                                 <h3>第三項　施行日・期日・納品</h3>
                                 <ul class="detail">
@@ -2720,7 +2562,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                             </figcaption>
                         </figure>
                         <figure>
-                            <div class="shot-frame"><img src="docs/manual/images/feature-sync.png" alt="共有と課題の画面" loading="lazy" /></div>
+                            <div class="win shot-frame"><img src="docs/manual/images/feature-sync.png" alt="共有と課題の画面" loading="lazy" /></div>
                             <figcaption>
                                 <h3>第四項　共有と課題</h3>
                                 <ul class="detail">
@@ -2734,7 +2576,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                             </figcaption>
                         </figure>
                         <figure>
-                            <div class="shot-frame"><img src="docs/manual/images/feature-ai.png" alt="書き出し・取り込み・AIの画面" loading="lazy" /></div>
+                            <div class="win shot-frame"><img src="docs/manual/images/feature-ai.png" alt="書き出し・取り込み・AIの画面" loading="lazy" /></div>
                             <figcaption>
                                 <h3>第五項　書き出し・取り込み・AI</h3>
                                 <ul class="detail">
@@ -3043,9 +2885,12 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
             const featureItems = [...document.querySelectorAll('#feature-list li')]
             const featureViews = [...document.querySelectorAll('.feature-view figure')]
             const featureDetails = featureViews.map((f) => [...f.querySelectorAll('.detail li')])
+            const FEATURE_STEP = 3500
             let featureAt = [0, 0]
             let featureTimer = 0
             let featureVisible = false
+            let featureLeft = 0
+            let featureSince = 0
             const showShot = (img, li) => {
                 const src = li.dataset.img
                 if (img.getAttribute('src') === src) return
@@ -3065,16 +2910,33 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                 featureViews.forEach((f, k) => f.classList.toggle('on', i === k))
                 featureDetails[i].forEach((li, k) => li.classList.toggle('on', j === k))
                 showShot(featureViews[i].querySelector('img'), featureDetails[i][j])
+                clearTimeout(featureTimer)
+                featureItems.forEach((li) => li.classList.remove('run', 'paused'))
+                featureLeft = FEATURE_STEP
+                if (!root.classList.contains('motion')) return
+                const li = featureItems[i]
+                void li.offsetWidth
+                li.style.setProperty('--dur', `${featureDetails[i].length * FEATURE_STEP}ms`)
+                li.style.setProperty('--delay', `-${j * FEATURE_STEP}ms`)
+                li.classList.add('run', 'paused')
                 scheduleFeature()
             }
             function scheduleFeature() {
                 clearTimeout(featureTimer)
-                if (!featureVisible || featureHover() || !root.classList.contains('motion')) return
+                const li = featureItems[featureAt[0]]
+                if (!li.classList.contains('run')) return
+                if (!li.classList.contains('paused')) featureLeft -= performance.now() - featureSince
+                if (!featureVisible || featureHover() || !root.classList.contains('motion')) {
+                    li.classList.add('paused')
+                    return
+                }
+                li.classList.remove('paused')
+                featureSince = performance.now()
                 featureTimer = setTimeout(() => {
                     const [i, j] = featureAt
                     if (j + 1 < featureDetails[i].length) pickFeature(i, j + 1)
                     else pickFeature((i + 1) % featureItems.length, 0)
-                }, 3500)
+                }, Math.max(0, featureLeft))
             }
             featureItems.forEach((li, i) => {
                 li.addEventListener('mouseenter', () => featureAt[0] !== i && pickFeature(i))
@@ -3212,7 +3074,6 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                 ).observe(section)
                 return set
             }
-            const MDX_STEP = 3000
             const MDX = [
                 { d: '行頭に「#」を付けた行が、文書の題名になります。', md: ['# 就業規則'], pv: '<p class="doc-title">就業規則</p>' },
                 { d: '題名と最初の章の間に書いた文は、前文になります。', md: ['# 就業規則', '', 'この規則は、従業員の就業に関し必要な事項を定める。', '', '## 総則'], pv: '<p class="doc-title">就業規則</p><p class="pre">この規則は、従業員の就業に関し必要な事項を定める。</p><p class="chap">第一章　総則</p>' },
@@ -3236,7 +3097,21 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                 { d: '「{break}」だけの行を書くと、次の要素から新しいページになります。', md: ['### 服務', '- 従業員は、誠実に職務を行う。', '{break}', '## 賃金'], pv: '<div class="art"><span class="cap">（服務）</span><p><b>第一条</b>　従業員は、誠実に職務を行う。</p></div><div class="pbreak"><span>改ページ</span></div><p class="chap">第二章　賃金</p>' },
             ]
             const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            const mdLine = (raw) => {
+            const MDX_CHAR = 32
+            const MDX_GAP = 120
+            const MDX_READ = 2400
+            const mdxPlan = MDX.map((it) => {
+                let t = 0
+                const lines = it.md.map((raw) => {
+                    const n = Math.max(1, [...raw].length)
+                    const line = { d: t, t: raw ? n * MDX_CHAR : 0, n }
+                    t += line.t + MDX_GAP
+                    return line
+                })
+                return { lines, pv: t, total: t + MDX_READ + 400 }
+            })
+            const mdxStart = mdxPlan.reduce((a, p) => [...a, a.at(-1) + p.total], [0])
+            const mdLine = (raw, plan) => {
                 let t = esc(raw)
                 t = t.replace(/\[\[([^\]]+)\]\]/g, '<span class="link">[[$1]]</span>')
                 t = t.replace(/\{[^}]*\}/g, (m) => `<span class="id">${m}</span>`)
@@ -3249,7 +3124,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                 t = t.replace(/^(\s*)(-)( )/, '$1<span class="mk">$2</span>$3')
                 t = t.replace(/^(```\w*)$/, '<span class="mk">$1</span>')
                 t = t.replace(/\|/g, '<span class="mk">|</span>')
-                return `<div class="ln${/^#/.test(raw) ? ' fold' : ''}"><span class="c">${t}</span></div>`
+                return `<div class="ln${/^#/.test(raw) ? ' fold' : ''}" style="--d: ${plan.d}ms; --t: ${plan.t}ms; --n: ${plan.n}"><span class="c">${t}</span></div>`
             }
             const mdxItems = [...document.querySelectorAll('#mdx-list li')]
             let mdxAt = -1
@@ -3257,19 +3132,25 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                 if (i === mdxAt) return
                 mdxAt = i
                 const it = MDX[i]
-                document.getElementById('mdx-src').innerHTML = it.md.map(mdLine).join('')
-                document.getElementById('mdx-pv').innerHTML = it.pv
-                document.getElementById('mdx-desc').textContent = it.d
+                const plan = mdxPlan[i]
+                const pv = document.getElementById('mdx-pv')
+                document.getElementById('mdx-src').innerHTML = it.md.map((raw, k) => mdLine(raw, plan.lines[k])).join('')
+                pv.innerHTML = it.pv
+                ;[...pv.children].forEach((el, k) => el.style.setProperty('--d', `${plan.pv + k * MDX_GAP}ms`))
+                document.getElementById('mdx-desc').innerHTML = `<span>${esc(it.d)}</span>`
                 mdxItems.forEach((li, j) => li.classList.toggle('on', i === j))
             }
             showMdx(0)
-            const heroTabs = tabSet(document.getElementById('top-hero'), [12000, MDX.length * MDX_STEP])
+            const heroTabs = tabSet(document.getElementById('top-hero'), [12000, mdxStart.at(-1)])
             const motionTabs = tabSet(document.getElementById('motions'), 7000)
             heroTabs.ready([
                 ,
                 () => {
                     mdxAt = -1
-                    const tick = () => showMdx(Math.min(MDX.length - 1, Math.floor(Math.max(0, heroTabs.elapsed()) / MDX_STEP)))
+                    const tick = () => {
+                        const e = Math.max(0, heroTabs.elapsed())
+                        showMdx(Math.max(0, Math.min(MDX.length - 1, mdxStart.findLastIndex((s) => s <= e))))
+                    }
                     tick()
                     const id = setInterval(tick, 100)
                     return { kill: () => clearInterval(id) }
@@ -3278,7 +3159,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
             mdxItems.forEach((li, i) => {
                 const pick = () => {
                     showMdx(i)
-                    heroTabs.seek(i * MDX_STEP)
+                    heroTabs.seek(mdxStart[i])
                 }
                 li.addEventListener('mouseenter', pick)
                 li.querySelector('a').addEventListener('focus', pick)
