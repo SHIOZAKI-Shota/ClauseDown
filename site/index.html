@@ -8,9 +8,17 @@
             name="description"
             content="法律案・条例・契約書・規程など「第○条」が並ぶ文書のための Windows・macOS 用エディタ。条を追加すると後続の条番号と条参照を自動で更新し、版の履歴・新旧対照表・施行日を一元管理します。無料、MIT ライセンス。"
         />
-        <meta property="og:title" content="ClauseDown" />
-        <meta property="og:description" content="条文のための統合管理編集ツール。「第○条」が並ぶ文書のための Windows・macOS 用アプリ" />
-        <meta property="og:image" content="docs/manual/images/editor.png" />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="ClauseDown" />
+        <meta property="og:locale" content="ja_JP" />
+        <meta property="og:url" content="https://shiozaki-shota.github.io/ClauseDown/" />
+        <meta property="og:title" content="ClauseDown｜条文のための統合管理編集ツール" />
+        <meta property="og:description" content="条文のための統合管理編集ツール。「第○条」が並ぶ法律案・条例・契約書・規程を Markdown で記述し、条番号と参照の自動更新、版の履歴、新旧対照表、施行日を一元管理する Windows・macOS 用アプリ。無料、MIT ライセンス。" />
+        <meta property="og:image" content="https://shiozaki-shota.github.io/ClauseDown/og.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="ClauseDown の編集画面。左に Markdown、右に組版したプレビュー" />
+        <meta name="twitter:card" content="summary_large_image" />
         <script>
             try {
                 const t = localStorage.getItem('clausedown-site-theme')
@@ -1376,9 +1384,23 @@
                 --peek: calc((100dvh - 65px) * 0.4);
                 flex: none;
                 display: flex;
-                justify-content: center;
-                height: var(--peek);
+                flex-direction: column;
+                align-items: center;
+                height: calc(var(--peek) + 36px);
                 padding: 0 40px;
+            }
+            .peek-hint {
+                flex: none;
+                margin: 0;
+                height: 36px;
+                font-size: 13px;
+                line-height: 24px;
+                color: var(--ink-3);
+                text-align: center;
+                transition: color 0.3s;
+            }
+            .peek:has(.peek-win:hover, .peek-win:focus-visible) .peek-hint {
+                color: var(--ai);
             }
             .peek-win {
                 display: flex;
@@ -1472,7 +1494,8 @@
                 font: inherit;
                 text-align: left;
             }
-            .features .go {
+            .features .go,
+            .detail .go {
                 display: grid;
                 place-items: center;
                 width: 32px;
@@ -1481,11 +1504,13 @@
                 border-radius: 2px;
                 color: var(--ink-3);
             }
-            .features .go:hover {
+            .features .go:hover,
+            .detail .go:hover {
                 background: var(--sheet);
                 color: var(--ai);
             }
-            .features .go svg {
+            .features .go svg,
+            .detail .go svg {
                 width: 16px;
                 height: 16px;
             }
@@ -1534,14 +1559,27 @@
                 opacity: 1;
                 visibility: visible;
             }
+            .shot-frame {
+                height: calc(100dvh - 65px - 440px);
+                min-height: 200px;
+                border: 1px solid var(--line);
+                background: var(--sheet);
+                overflow: hidden;
+            }
             .feature-view img {
                 display: block;
                 width: 100%;
-                max-height: calc(100dvh - 65px - 420px);
+                height: 100%;
+                object-fit: cover;
+                object-position: left top;
+                transition: opacity 0.2s;
+            }
+            .feature-view img.fit {
                 object-fit: contain;
-                object-position: top left;
-                border: 1px solid var(--line);
-                background: var(--sheet);
+                object-position: center;
+            }
+            .feature-view img.swap {
+                opacity: 0;
             }
             .feature-view h3 {
                 margin: 0;
@@ -1559,8 +1597,21 @@
                 color: var(--ink-2);
             }
             .detail li {
-                padding: 6px 0;
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto;
+                align-items: center;
+                gap: 8px;
+                padding: 6px 8px;
                 border-bottom: 1px solid var(--rule);
+                transition: background-color 0.2s;
+            }
+            .detail li.on {
+                background: var(--ai-wash);
+            }
+            .detail .go {
+                width: 28px;
+                height: 28px;
+                margin-right: 0;
             }
             .detail b {
                 display: block;
@@ -1638,7 +1689,7 @@
                 .detail {
                     grid-template-columns: 1fr;
                 }
-                .feature-view img {
+                .feature-view .shot-frame {
                     display: none;
                 }
                 .fs,
@@ -1705,8 +1756,14 @@
                 .features button {
                     padding-block: 4px;
                 }
-                .feature-view img {
+                .shot-frame {
+                    height: calc(100dvh - 65px - 300px);
+                }
+                .detail .ds {
                     display: none;
+                }
+                .detail li {
+                    padding-block: 4px;
                 }
                 .tabs button {
                     padding-block: 4px;
@@ -1795,8 +1852,8 @@
                     <a class="wide" href="#features">機能の一覧</a>
                     <a href="#get">ダウンロード</a>
                     <a class="wide" href="#faq">よくある質問</a>
-                    <a href="docs/manual/">マニュアル</a>
-                    <a href="https://github.com/SHIOZAKI-Shota/ClauseDown">GitHub</a>
+                    <a href="docs/manual/" target="_blank" rel="noreferrer noopener">マニュアル</a>
+                    <a href="https://github.com/SHIOZAKI-Shota/ClauseDown" target="_blank" rel="noreferrer noopener">GitHub</a>
                 </nav>
                 <button class="theme" type="button" id="theme" aria-label="ダークモードにする" title="ダークモードにする">
                     <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -1807,7 +1864,7 @@
                         <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
                     </svg>
                 </button>
-                <a class="btn" data-dl="short" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest">ダウンロード</a>
+                <a class="btn" data-dl="short" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest" target="_blank" rel="noreferrer noopener">ダウンロード</a>
             </div>
         </header>
 
@@ -1818,11 +1875,12 @@
                         <h1 class="title">条文のための<br />統合管理編集ツール</h1>
                         <p class="intro">「第○条」が並ぶ法律案・条例・契約書・規程を Markdown で記述し、条番号と参照の自動更新、版の履歴、新旧対照表、施行日を一元管理する Windows・macOS 用アプリです。</p>
                         <div class="cta">
-                            <a class="btn" data-dl="main" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest">Windows・Mac 版をダウンロード</a>
+                            <a class="btn" data-dl="main" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest" target="_blank" rel="noreferrer noopener">Windows・Mac 版をダウンロード</a>
                         </div>
-                        <p class="dl-meta"><span data-rel>無料・MIT ライセンス</span><a data-dl="alt" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest">ほかの OS 版</a></p>
+                        <p class="dl-meta"><span data-rel>無料・MIT ライセンス</span><a data-dl="alt" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest" target="_blank" rel="noreferrer noopener">ほかの OS 版</a></p>
                     </div>
                     <div class="peek">
+                        <p class="peek-hint" aria-hidden="true">下の画面を押すか、スクロールすると、このページで編集画面を操作できます</p>
                         <a class="peek-win" id="peek" href="#demo" aria-label="編集画面のデモを開く">
                             <span class="shot">
                                 <img class="light" src="docs/manual/images/editor.png" alt="" />
@@ -1840,11 +1898,11 @@
                     <div class="guide" id="guide" aria-live="polite">
                         <p class="intro">アプリと同じ編集画面を、このページで操作できます。条の追加と番号の自動更新、条の参照、改定案と新旧対照表、校正を体験できます。</p>
                     </div>
-                    <p class="demo-note">デモの内容はこのブラウザー内にのみ保存され、「見本に戻す」で初期状態に復元できます。<a href="demo/">デモのみを表示</a></p>
+                    <p class="demo-note">デモの内容はこのブラウザー内にのみ保存され、「見本に戻す」で初期状態に復元できます。<a href="demo/" target="_blank" rel="noreferrer noopener">デモのみを表示</a></p>
                     </div>
                     <div class="r full">
                     <div class="demo-frame" id="demo-frame"></div>
-                    <p class="demo-mobile">デモは横幅の広い画面向けです。パソコンで表示するか、<a href="demo/">デモのみを表示</a>からお試しください。</p>
+                    <p class="demo-mobile">デモは横幅の広い画面向けです。パソコンで表示するか、<a href="demo/" target="_blank" rel="noreferrer noopener">デモのみを表示</a>からお試しください。</p>
                     </div>
                 </div>
             </section>
@@ -1858,10 +1916,10 @@
                             で書くだけで番号を付けて組版し、条を追加しても後続の番号と <code>[[ ]]</code> の参照を書き直す必要はありません。版の履歴、新旧対照表、施行日も併せて管理します。
                         </p>
                         <div class="cta">
-                            <a class="btn" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest">Windows・Mac 版をダウンロード</a>
+                            <a class="btn" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest" target="_blank" rel="noreferrer noopener">Windows・Mac 版をダウンロード</a>
                             <a class="btn line" href="#demo">デモで操作してみる</a>
                         </div>
-                        <p class="meta">無料で利用できます。MIT ライセンスで公開しています。</p>
+                        <p class="meta">無料で利用できます。<br>MIT ライセンスで公開しています。</p>
                     </div>
 
                     <div class="r">
@@ -2304,97 +2362,97 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                 <div class="two">
                     <div class="l">
                     <h2>機能の一覧</h2>
-                    <p class="intro">章にマウスを重ねると、その章の機能を表示します。右端のアイコンから、操作マニュアルの該当章を開けます。</p>
+                    <p class="intro">章や機能にマウスを重ねると、画面写真を切り替えます。マウスを離しているときは、順に次の機能へ進みます。右端のアイコンから、操作マニュアルの該当箇所を開けます。</p>
                     <ol class="features" id="feature-list">
                         <li class="on">
-                            <button type="button"><span class="no">第一章</span><span class="t">条文の作成</span><span class="n">9 機能</span></button><a class="go" href="docs/manual/#6-条文を書く" aria-label="第一章 条文の作成の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
+                            <button type="button"><span class="no">第一章</span><span class="t">条文の作成</span><span class="n">9 機能</span></button><a class="go" href="docs/manual/#6-条文を書く" aria-label="第一章 条文の作成の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
                         </li>
                         <li>
-                            <button type="button"><span class="no">第二章</span><span class="t">版と改定案</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#7-版を保存する" aria-label="第二章 版と改定案の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
+                            <button type="button"><span class="no">第二章</span><span class="t">版と改定案</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#7-版を保存する" aria-label="第二章 版と改定案の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
                         </li>
                         <li>
-                            <button type="button"><span class="no">第三章</span><span class="t">施行日・期日・納品</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#11-施行日を記録し納品する" aria-label="第三章 施行日・期日・納品の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
+                            <button type="button"><span class="no">第三章</span><span class="t">施行日・期日・納品</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#11-施行日を記録し納品する" aria-label="第三章 施行日・期日・納品の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
                         </li>
                         <li>
-                            <button type="button"><span class="no">第四章</span><span class="t">共有と課題</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#14-ほかの-pcほかの人と共有する" aria-label="第四章 共有と課題の操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
+                            <button type="button"><span class="no">第四章</span><span class="t">共有と課題</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#14-ほかの-pcほかの人と共有する" aria-label="第四章 共有と課題の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
                         </li>
                         <li>
-                            <button type="button"><span class="no">第五章</span><span class="t">書き出し・取り込み・AI</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#16-ai-に確認や書き直しを頼む" aria-label="第五章 書き出し・取り込み・AIの操作マニュアルを開く" title="操作マニュアルを開く"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
+                            <button type="button"><span class="no">第五章</span><span class="t">書き出し・取り込み・AI</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#16-ai-に確認や書き直しを頼む" aria-label="第五章 書き出し・取り込み・AIの操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
                         </li>
                     </ol>
                     </div>
                     <div class="r">
                     <div class="feature-view" aria-live="polite">
                         <figure class="on">
-                            <img src="docs/manual/images/feature-editor.png" alt="条文の作成の画面" loading="lazy" />
+                            <div class="shot-frame"><img src="docs/manual/images/feature-editor.png" alt="条文の作成の画面" loading="lazy" /></div>
                             <figcaption>
                                 <h3>第一章　条文の作成</h3>
                                 <ul class="detail">
-                                <li><b>条・項・号の自動採番</b>条を追加・削除すると、後続の番号を更新</li>
-                                <li><b>条参照</b>「[[ ]]」で書いた参照は、番号が変わっても追随</li>
-                                <li><b>参照元</b>その条を参照している条を、条見出しの横に表示</li>
-                                <li><b>条の沿革</b>その条を制定・改正した施行版を、編集画面に表示</li>
-                                <li><b>番号の書式</b>法令式・契約書式、漢数字・算用数字などを選択</li>
-                                <li><b>校正</b>同じ助詞の連続、ら抜き言葉、法令の用字・送り仮名</li>
-                                <li><b>定義語のチェック</b>二重の定義、定義前の使用、未使用の定義を指摘</li>
-                                <li><b>表・数式・画像</b>表のセルの結合、LaTeX の数式、画像の挿入</li>
-                                <li><b>検索</b>文書・条・操作を名前で探す。編集の欄で検索と置換</li>
+                                <li data-img="docs/manual/images/editor-insert.png" data-fit="fit"><span class="dt"><b>条・項・号の自動採番</b><span class="ds">条を追加・削除すると、後続の番号を更新</span></span><a class="go" href="docs/manual/#ボタンで条項号を足す" aria-label="条・項・号の自動採番の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/editor-ref.png"><span class="dt"><b>条参照</b><span class="ds">「[[ ]]」で書いた参照は、番号が変わっても追随</span></span><a class="go" href="docs/manual/#条参照ほかの条を番号で指す" aria-label="条参照の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/editor-backref.png" data-fit="fit"><span class="dt"><b>参照元</b><span class="ds">その条を参照している条を、条見出しの横に表示</span></span><a class="go" href="docs/manual/#条参照ほかの条を番号で指す" aria-label="参照元の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/editor-trail.png" data-fit="fit"><span class="dt"><b>条の沿革</b><span class="ds">その条を制定・改正した施行版を、編集画面に表示</span></span><a class="go" href="docs/manual/#条の沿革" aria-label="条の沿革の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/editor-config.png"><span class="dt"><b>番号の書式</b><span class="ds">法令式・契約書式、漢数字・算用数字などを選択</span></span><a class="go" href="docs/manual/#書式設定章や項の番号の付け方を変える" aria-label="番号の書式の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/editor-proofread.png" data-fit="fit"><span class="dt"><b>校正</b><span class="ds">同じ助詞の連続、ら抜き言葉、法令の用字・送り仮名</span></span><a class="go" href="docs/manual/#校閲" aria-label="校正の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/editor-definitions.png" data-fit="fit"><span class="dt"><b>定義語のチェック</b><span class="ds">二重の定義、定義前の使用、未使用の定義を指摘</span></span><a class="go" href="docs/manual/#定義語のチェック" aria-label="定義語のチェックの操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/editor-math.png" data-fit="fit"><span class="dt"><b>表・数式・画像</b><span class="ds">表のセルの結合、LaTeX の数式、画像の挿入</span></span><a class="go" href="docs/manual/#数式を書く" aria-label="表・数式・画像の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/palette.png"><span class="dt"><b>検索</b><span class="ds">文書・条・操作を名前で探す。編集の欄で検索と置換</span></span><a class="go" href="docs/manual/#文書条改定案操作を名前で探す" aria-label="検索の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
                                 </ul>
                             </figcaption>
                         </figure>
                         <figure>
-                            <img src="docs/manual/images/feature-history.png" alt="版と改定案の画面" loading="lazy" />
+                            <div class="shot-frame"><img src="docs/manual/images/feature-history.png" alt="版と改定案の画面" loading="lazy" /></div>
                             <figcaption>
                                 <h3>第二章　版と改定案</h3>
                                 <ul class="detail">
-                                <li><b>版の保存</b>区切りごとに、メッセージを付けて記録</li>
-                                <li><b>改定履歴</b>過去の版の閲覧、版どうしの比較、復元</li>
-                                <li><b>新旧対照表</b>新旧対照表形式と Diff 形式。変更のない条は（略）に</li>
-                                <li><b>改定案</b>現行版を止めずに、別の案で書き直し</li>
-                                <li><b>確認依頼と承認</b>承認者を決め、承認を受けてから現行版に反映</li>
-                                <li><b>統合</b>重なった変更は、1 か所ずつ選んで統合</li>
+                                <li data-img="docs/manual/images/save-version.png"><span class="dt"><b>版の保存</b><span class="ds">区切りごとに、メッセージを付けて記録</span></span><a class="go" href="docs/manual/#7-版を保存する" aria-label="版の保存の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/history.png"><span class="dt"><b>改定履歴</b><span class="ds">過去の版の閲覧、版どうしの比較、復元</span></span><a class="go" href="docs/manual/#8-改定履歴で過去の版を見る" aria-label="改定履歴の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/compare.png"><span class="dt"><b>新旧対照表</b><span class="ds">新旧対照表形式と Diff 形式。変更のない条は（略）に</span></span><a class="go" href="docs/manual/#9-新旧対照表を作る" aria-label="新旧対照表の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/draft-editor.png"><span class="dt"><b>改定案</b><span class="ds">現行版を止めずに、別の案で書き直し</span></span><a class="go" href="docs/manual/#改定案を作る" aria-label="改定案の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/review-modal.png"><span class="dt"><b>確認依頼と承認</b><span class="ds">承認者を決め、承認を受けてから現行版に反映</span></span><a class="go" href="docs/manual/#確認を依頼する確認する" aria-label="確認依頼と承認の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/merge-modal.png"><span class="dt"><b>統合</b><span class="ds">重なった変更は、1 か所ずつ選んで統合</span></span><a class="go" href="docs/manual/#現行版に反映する" aria-label="統合の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
                                 </ul>
                             </figcaption>
                         </figure>
                         <figure>
-                            <img src="docs/manual/images/feature-releases.png" alt="施行日・期日・納品の画面" loading="lazy" />
+                            <div class="shot-frame"><img src="docs/manual/images/feature-releases.png" alt="施行日・期日・納品の画面" loading="lazy" /></div>
                             <figcaption>
                                 <h3>第三章　施行日・期日・納品</h3>
                                 <ul class="detail">
-                                <li><b>施行日</b>版に施行日を設定し、施行中の版を表示</li>
-                                <li><b>有効期間</b>施行版ごとの有効期間を帯で示し、指定した日の版を開く</li>
-                                <li><b>期日</b>公布・提出・届出・更新などを登録。毎年・毎月の繰り返しも</li>
-                                <li><b>通知</b>期日が近づくと、デスクトップに通知</li>
-                                <li><b>カレンダー</b>期日を iCalendar（.ics）に書き出し</li>
-                                <li><b>納品</b>条文と新旧対照表を PDF・Word にまとめ、納品先と日付を記録</li>
+                                <li data-img="docs/manual/images/effective-modal.png"><span class="dt"><b>施行日</b><span class="ds">版に施行日を設定し、施行中の版を表示</span></span><a class="go" href="docs/manual/#施行日を付ける" aria-label="施行日の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/releases.png"><span class="dt"><b>有効期間</b><span class="ds">施行版ごとの有効期間を帯で示し、指定した日の版を開く</span></span><a class="go" href="docs/manual/#有効期間と指定した日の版" aria-label="有効期間の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/due-modal.png"><span class="dt"><b>期日</b><span class="ds">公布・提出・届出・更新などを登録。毎年・毎月の繰り返しも</span></span><a class="go" href="docs/manual/#期日の追加" aria-label="期日の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/setup-due.png"><span class="dt"><b>通知</b><span class="ds">期日が近づくと、デスクトップに通知</span></span><a class="go" href="docs/manual/#デスクトップへの通知" aria-label="通知の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/schedule.png"><span class="dt"><b>カレンダー</b><span class="ds">期日を iCalendar（.ics）に書き出し</span></span><a class="go" href="docs/manual/#カレンダーのアプリに書き出す" aria-label="カレンダーの操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/deliver-modal.png"><span class="dt"><b>納品</b><span class="ds">条文と新旧対照表を PDF・Word にまとめ、納品先と日付を記録</span></span><a class="go" href="docs/manual/#納品する" aria-label="納品の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
                                 </ul>
                             </figcaption>
                         </figure>
                         <figure>
-                            <img src="docs/manual/images/feature-sync.png" alt="共有と課題の画面" loading="lazy" />
+                            <div class="shot-frame"><img src="docs/manual/images/feature-sync.png" alt="共有と課題の画面" loading="lazy" /></div>
                             <figcaption>
                                 <h3>第四章　共有と課題</h3>
                                 <ul class="detail">
-                                <li><b>同期</b>GitHub・GitLab（社内の GitLab を含む）と同期</li>
-                                <li><b>プルリクエスト</b>確認依頼を、プルリクエスト・マージリクエストとしても作成</li>
-                                <li><b>課題</b>「#1」で版と関連付け、「Closes #1」で完了</li>
-                                <li><b>コメント</b>課題ごとに、コメントで議論</li>
-                                <li><b>複製・フォーク</b>リポジトリを複製し、別の案件に流用</li>
-                                <li><b>セクション</b>リポジトリを会社・案件ごとにまとめて表示</li>
+                                <li data-img="docs/manual/images/sync-menu.png"><span class="dt"><b>同期</b><span class="ds">GitHub・GitLab（社内の GitLab を含む）と同期</span></span><a class="go" href="docs/manual/#同期する" aria-label="同期の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/feature-review.png"><span class="dt"><b>プルリクエスト</b><span class="ds">確認依頼を、プルリクエスト・マージリクエストとしても作成</span></span><a class="go" href="docs/manual/#確認を依頼する確認する" aria-label="プルリクエストの操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/issue-link.png"><span class="dt"><b>課題</b><span class="ds">「#1」で版と関連付け、「Closes #1」で完了</span></span><a class="go" href="docs/manual/#版と課題を結び付ける" aria-label="課題の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/issue-comments.png"><span class="dt"><b>コメント</b><span class="ds">課題ごとに、コメントで議論</span></span><a class="go" href="docs/manual/#コメントで話し合う" aria-label="コメントの操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/repo-fork.png"><span class="dt"><b>複製・フォーク</b><span class="ds">リポジトリを複製し、別の案件に流用</span></span><a class="go" href="docs/manual/#リポジトリをフォークする" aria-label="複製・フォークの操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/repo-sections.png" data-fit="fit"><span class="dt"><b>セクション</b><span class="ds">リポジトリを会社・案件ごとにまとめて表示</span></span><a class="go" href="docs/manual/#セクションでまとめる" aria-label="セクションの操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
                                 </ul>
                             </figcaption>
                         </figure>
                         <figure>
-                            <img src="docs/manual/images/feature-ai.png" alt="書き出し・取り込み・AIの画面" loading="lazy" />
+                            <div class="shot-frame"><img src="docs/manual/images/feature-ai.png" alt="書き出し・取り込み・AIの画面" loading="lazy" /></div>
                             <figcaption>
                                 <h3>第五章　書き出し・取り込み・AI</h3>
                                 <ul class="detail">
-                                <li><b>PDF・Word・HTML</b>印刷と同じ組版で書き出し</li>
-                                <li><b>印刷プレビュー</b>改ページ・余白・ページ番号を確認</li>
-                                <li><b>書式設定</b>章・項の番号、改ページ、文字の大きさと寄せを指定</li>
-                                <li><b>houritsu</b>e-Gov 法令検索の法令を Markdown にした形式で、取り込みと書き出し</li>
-                                <li><b>AI</b>Claude・OpenAI 互換のサービス・Ollama に、確認や修正を依頼</li>
-                                <li><b>MCP</b>Claude Desktop・Claude Code から、ClauseDown の文書を操作</li>
+                                <li data-img="docs/manual/images/editor-export.png" data-fit="fit"><span class="dt"><b>PDF・Word・HTML</b><span class="ds">印刷と同じ組版で書き出し</span></span><a class="go" href="docs/manual/#pdfwordhtml-に書き出す" aria-label="PDF・Word・HTMLの操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/editor-print.png"><span class="dt"><b>印刷プレビュー</b><span class="ds">改ページ・余白・ページ番号を確認</span></span><a class="go" href="docs/manual/#pdfwordhtml-に書き出す" aria-label="印刷プレビューの操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/format-modal.png"><span class="dt"><b>書式設定</b><span class="ds">章・項の番号、改ページ、文字の大きさと寄せを指定</span></span><a class="go" href="docs/manual/#改ページ文字の大きさ寄せを指定する" aria-label="書式設定の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/houritsu-doc.png"><span class="dt"><b>houritsu</b><span class="ds">e-Gov 法令検索の法令を Markdown にした形式で、取り込みと書き出し</span></span><a class="go" href="docs/manual/#15-houritsu-の法令を取り込む書き出す" aria-label="houritsuの操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/editor-ai.png"><span class="dt"><b>AI</b><span class="ds">Claude・OpenAI 互換のサービス・Ollama に、確認や修正を依頼</span></span><a class="go" href="docs/manual/#16-ai-に確認や書き直しを頼む" aria-label="AIの操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
+                                <li data-img="docs/manual/images/setup-developer.png"><span class="dt"><b>MCP</b><span class="ds">Claude Desktop・Claude Code から、ClauseDown の文書を操作</span></span><a class="go" href="docs/manual/#claude-desktopclaude-code-から使う" aria-label="MCPの操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
                                 </ul>
                             </figcaption>
                         </figure>
@@ -2409,16 +2467,16 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                     <h2>ダウンロード</h2>
                     <p class="intro">無料で利用できます。MIT ライセンスのもと、ソースコードを GitHub で公開しています。</p>
                     <div class="cta">
-                        <a class="btn" data-dl="main" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest">Windows・Mac 版をダウンロード</a>
+                        <a class="btn" data-dl="main" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest" target="_blank" rel="noreferrer noopener">Windows・Mac 版をダウンロード</a>
                     </div>
-                    <p class="dl-meta"><span data-rel>最新版はリリースのページから入手できます</span><a data-dl="alt" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest">ほかの OS 版</a></p>
+                    <p class="dl-meta"><span data-rel>最新版はリリースのページから入手できます</span><a data-dl="alt" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest" target="_blank" rel="noreferrer noopener">ほかの OS 版</a></p>
                     <dl class="req">
                         <dt>対応 OS</dt>
                         <dd>Windows（64 ビット）、macOS（Apple シリコン）</dd>
                         <dt>更新</dt>
                         <dd>新しい版の公開時には、アプリ内で通知します。</dd>
                         <dt>窓口</dt>
-                        <dd><a href="https://github.com/SHIOZAKI-Shota/ClauseDown/issues">GitHub の Issues</a>（質問・不具合の報告）</dd>
+                        <dd><a href="https://github.com/SHIOZAKI-Shota/ClauseDown/issues" target="_blank" rel="noreferrer noopener">GitHub の Issues</a>（質問・不具合の報告）</dd>
                     </dl>
                     </div>
                     <div class="r">
@@ -2440,7 +2498,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                                 <li>初回の起動で開けないと表示されたら、「システム設定」→「プライバシーとセキュリティ」の「このまま開く」を押します。</li>
                             </ol>
                         </div>
-                        <p class="links"><a data-changelog href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest">最新版の変更点</a>　<a href="docs/manual/">操作マニュアル</a></p>
+                        <p class="links"><a data-changelog href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest" target="_blank" rel="noreferrer noopener">最新版の変更点</a>　<a href="docs/manual/" target="_blank" rel="noreferrer noopener">操作マニュアル</a></p>
                     </div>
                     </div>
                 </div>
@@ -2450,7 +2508,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                 <div class="two">
                     <div class="l">
                     <h2>よくある質問</h2>
-                    <p class="intro">ほかの質問や不具合は、<a href="https://github.com/SHIOZAKI-Shota/ClauseDown/issues">GitHub の Issues</a> で受け付けています。</p>
+                    <p class="intro">ほかの質問や不具合は、<a href="https://github.com/SHIOZAKI-Shota/ClauseDown/issues" target="_blank" rel="noreferrer noopener">GitHub の Issues</a> で受け付けています。</p>
                     </div>
                     <div class="r">
                     <div class="faq">
@@ -2484,11 +2542,11 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
             <footer>
                     <div class="h">附則</div>
                     <div class="body">
-                        <p>© 2026 SHIOZAKI Shota。MIT ライセンスで公開しています。</p>
+                        <p>© 2026 SHIOZAKI Shota.</p>
                         <p>
-                            <a href="https://github.com/SHIOZAKI-Shota/ClauseDown">GitHub</a>　<a href="docs/manual/">操作マニュアル</a>　<a
+                            <a href="https://github.com/SHIOZAKI-Shota/ClauseDown" target="_blank" rel="noreferrer noopener">GitHub</a>　<a href="docs/manual/" target="_blank" rel="noreferrer noopener">操作マニュアル</a>　<a
                                 href="https://github.com/SHIOZAKI-Shota/ClauseDown/blob/master/LICENSE"
-                                >ライセンス</a
+                                 target="_blank" rel="noreferrer noopener">ライセンス</a
                             >
                         </p>
                     </div>
@@ -2678,15 +2736,59 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
 
             const featureItems = [...document.querySelectorAll('#feature-list li')]
             const featureViews = [...document.querySelectorAll('.feature-view figure')]
-            const pickFeature = (i) => {
-                featureItems.forEach((li, j) => li.classList.toggle('on', i === j))
-                featureViews.forEach((f, j) => f.classList.toggle('on', i === j))
+            const featureDetails = featureViews.map((f) => [...f.querySelectorAll('.detail li')])
+            let featureAt = [0, 0]
+            let featureTimer = 0
+            let featureVisible = false
+            const showShot = (img, li) => {
+                const src = li.dataset.img
+                if (img.getAttribute('src') === src) return
+                img.classList.add('swap')
+                const next = new Image()
+                next.src = src
+                next.decode().catch(() => {}).finally(() => {
+                    img.src = src
+                    img.alt = `${li.querySelector('b').textContent}の画面`
+                    img.classList.toggle('fit', li.dataset.fit === 'fit')
+                    img.classList.remove('swap')
+                })
+            }
+            const pickFeature = (i, j = 0) => {
+                featureAt = [i, j]
+                featureItems.forEach((li, k) => li.classList.toggle('on', i === k))
+                featureViews.forEach((f, k) => f.classList.toggle('on', i === k))
+                featureDetails[i].forEach((li, k) => li.classList.toggle('on', j === k))
+                showShot(featureViews[i].querySelector('img'), featureDetails[i][j])
+                scheduleFeature()
+            }
+            function scheduleFeature() {
+                clearTimeout(featureTimer)
+                if (!featureVisible || !root.classList.contains('motion')) return
+                featureTimer = setTimeout(() => {
+                    const [i, j] = featureAt
+                    if (j + 1 < featureDetails[i].length) pickFeature(i, j + 1)
+                    else pickFeature((i + 1) % featureItems.length, 0)
+                }, 3500)
             }
             featureItems.forEach((li, i) => {
-                li.addEventListener('mouseenter', () => pickFeature(i))
-                for (const el of li.querySelectorAll('button, a')) el.addEventListener('focus', () => pickFeature(i))
+                li.addEventListener('mouseenter', () => featureAt[0] !== i && pickFeature(i))
+                for (const el of li.querySelectorAll('button, a')) el.addEventListener('focus', () => featureAt[0] !== i && pickFeature(i))
                 li.querySelector('button').addEventListener('click', () => pickFeature(i))
             })
+            featureDetails.forEach((items, i) =>
+                items.forEach((li, j) => {
+                    li.addEventListener('mouseenter', () => pickFeature(i, j))
+                    li.querySelector('a').addEventListener('focus', () => pickFeature(i, j))
+                }),
+            )
+            const featureSection = document.getElementById('features')
+            featureSection.addEventListener('mouseenter', () => clearTimeout(featureTimer))
+            featureSection.addEventListener('mouseleave', scheduleFeature)
+            new IntersectionObserver(([e]) => {
+                featureVisible = e.isIntersecting
+                scheduleFeature()
+            }, { threshold: 0.6 }).observe(featureSection)
+            pickFeature(0, 0)
 
             const ua = navigator.userAgent
             const myOs = /Mac/i.test(ua) && !/iPhone|iPad/i.test(ua) ? 'mac' : /Windows/i.test(ua) ? 'win' : null

@@ -48,6 +48,7 @@ jobs:
               run: |
                   sudo cp -r out/demo _site/demo
                   sudo cp site/index.html _site/index.html
+                  sudo cp site/og.png _site/og.png
 
             - uses: actions/upload-pages-artifact@v3
 
