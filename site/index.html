@@ -1729,7 +1729,92 @@
                 color: var(--ink-2);
             }
 
+            .pager {
+                position: fixed;
+                left: calc(max(300px, var(--lw)) / 2);
+                bottom: 16px;
+                z-index: 20;
+                display: flex;
+                gap: 2px;
+                padding: 4px 8px;
+                border: 1px solid var(--line);
+                border-radius: 999px;
+                background: color-mix(in oklab, var(--sheet) 88%, transparent);
+                backdrop-filter: blur(8px);
+                transform: translateX(-50%);
+            }
+            .motion .pager {
+                transition:
+                    transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1),
+                    opacity 0.2s,
+                    visibility 0.45s;
+            }
+            .pager.away {
+                opacity: 0;
+                visibility: hidden;
+                transform: translate(-50%, calc(100% + 32px));
+            }
+            .motion .pager.away {
+                transition:
+                    transform 0.3s ease-in,
+                    opacity 0.3s ease-in,
+                    visibility 0.3s;
+            }
+            .pager a {
+                position: relative;
+                display: grid;
+                place-items: center;
+                width: 20px;
+                height: 20px;
+            }
+            .pager a::before {
+                content: '';
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: color-mix(in oklab, var(--ink-3) 45%, transparent);
+                transition:
+                    background 0.2s,
+                    transform 0.2s;
+            }
+            .pager a:hover::before {
+                background: var(--ink-3);
+                transform: scale(1.25);
+            }
+            .pager a[aria-current='true']::before {
+                background: var(--ai);
+                transform: scale(1.25);
+            }
+            .pager a::after {
+                content: attr(data-tip);
+                position: absolute;
+                bottom: calc(100% + 10px);
+                left: 50%;
+                padding: 4px 10px;
+                border-radius: var(--radius);
+                background: var(--ink);
+                color: var(--paper);
+                font: 500 12px/1.6 var(--sans);
+                white-space: nowrap;
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
+                transform: translate(-50%, 4px);
+                transition:
+                    opacity 0.15s,
+                    transform 0.15s,
+                    visibility 0.15s;
+            }
+            .pager a:hover::after,
+            .pager a:focus-visible::after {
+                opacity: 1;
+                visibility: visible;
+                transform: translate(-50%, 0);
+            }
             @media (max-width: 960px) {
+                .pager {
+                    left: 50%;
+                }
                 .two,
                 footer {
                     grid-template-columns: 1fr;
@@ -2686,6 +2771,16 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
             </footer>
             </section>
         </main>
+        <nav class="pager away" aria-label="ページの位置">
+            <a href="#cover" data-tip="トップ" aria-label="トップ"></a>
+            <a href="#demo" data-tip="デモ" aria-label="デモ"></a>
+            <a href="#top-hero" data-tip="条文の書き方" aria-label="条文の書き方"></a>
+            <a href="#motions" data-tip="主な機能" aria-label="主な機能"></a>
+            <a href="#local" data-tip="保存と移行" aria-label="保存と移行"></a>
+            <a href="#features" data-tip="機能の一覧" aria-label="機能の一覧"></a>
+            <a href="#get" data-tip="ダウンロード" aria-label="ダウンロード"></a>
+            <a href="#faq" data-tip="よくある質問" aria-label="よくある質問"></a>
+        </nav>
 
 
         <script>
@@ -3165,6 +3260,20 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                 li.querySelector('a').addEventListener('focus', pick)
             })
             const localTabs = tabSet(document.getElementById('local'), 10000)
+
+            const pager = document.querySelector('.pager')
+            const pagerDots = [...pager.querySelectorAll('a')]
+            const pagerPages = pagerDots.map((a) => document.getElementById(a.hash.slice(1)))
+            const pagerAt = () => {
+                const mid = innerHeight / 2
+                let at = 0
+                pagerPages.forEach((sec, i) => sec.getBoundingClientRect().top <= mid && (at = i))
+                pagerDots.forEach((a, i) => a.setAttribute('aria-current', String(i === at)))
+                pager.classList.toggle('away', at === 0)
+            }
+            addEventListener('scroll', pagerAt, { passive: true })
+            addEventListener('resize', pagerAt)
+            pagerAt()
 
             function motionsReady(gsap) {
                 const q = (sel) => gsap.utils.toArray(sel)
