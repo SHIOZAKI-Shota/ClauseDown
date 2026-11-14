@@ -19,6 +19,9 @@
         <meta property="og:image:height" content="630" />
         <meta property="og:image:alt" content="ClauseDown の編集画面。左に Markdown、右に組版したプレビュー" />
         <meta name="twitter:card" content="summary_large_image" />
+        <link rel="icon" href="favicon.ico" sizes="any" />
+        <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="apple-touch-icon.png" />
         <script>
             try {
                 const t = localStorage.getItem('clausedown-site-theme')
@@ -305,6 +308,12 @@
                 padding-inline: 12px;
                 font-size: 14px;
                 white-space: nowrap;
+            }
+            section h2 .ch {
+                display: block;
+                font-size: 14px;
+                letter-spacing: 0.08em;
+                color: var(--ink-3);
             }
             section h2 em {
                 font-style: normal;
@@ -1186,7 +1195,7 @@
             .tabs button {
                 position: relative;
                 display: grid;
-                grid-template-columns: 40px minmax(0, 1fr);
+                grid-template-columns: 56px minmax(0, 1fr);
                 width: calc(100% + 24px);
                 margin: 0 -12px;
                 padding: 8px 12px;
@@ -1216,14 +1225,22 @@
                 right: 0;
                 bottom: -1px;
                 height: 2px;
+            }
+            .tabs li.on.run .bar {
+                background: color-mix(in srgb, var(--ai) 25%, transparent);
+            }
+            .tabs .bar::before {
+                content: '';
+                position: absolute;
+                inset: 0;
                 background: var(--ai);
                 transform: scaleX(0);
                 transform-origin: left;
             }
-            .tabs li.on.run .bar {
+            .tabs li.on.run .bar::before {
                 animation: fill var(--dur, 7s) linear var(--delay, 0ms) forwards;
             }
-            .tabs li.on.paused .bar {
+            .tabs li.on.paused .bar::before {
                 animation-play-state: paused;
             }
             @keyframes fill {
@@ -2112,7 +2129,7 @@
             <section id="demo" class="slide">
                 <div class="two">
                     <div class="l">
-                    <h2>編集画面のデモ</h2>
+                    <h2><span class="ch">第一条</span>編集画面のデモ</h2>
                     <div class="guide" id="guide" aria-live="polite">
                         <p class="intro">アプリと同じ編集画面を、このページで操作できます。条の追加と番号の自動更新、条の参照、改定案と新旧対照表、校正を体験できます。</p>
                     </div>
@@ -2128,14 +2145,14 @@
             <section class="hero slide" id="top-hero">
                 <div class="two">
                     <div class="l">
-                    <h2>条文を <em>Markdown</em> で書くと、<wbr />条番号と参照は<wbr />自動で計算されます。</h2>
-                    <p class="intro">条の見出しを <code>###</code>、項を <code>-</code> で書くだけで、番号を付けて組版します。項目にマウスを重ねると切り替わります。マウスを離しているときは、順に次の項目へ進みます。</p>
+                    <h2><span class="ch">第二条</span>条文を <em>Markdown</em> で書くと、<wbr />条番号と参照は<wbr />自動で計算されます。</h2>
+                    <p class="intro">条の見出しを <code>###</code>、項を <code>-</code> で書くだけで、番号を付けて組版します。</p>
                     <ol class="tabs" role="tablist" aria-label="条文の書き方">
                         <li class="on">
-                            <button type="button" role="tab" id="ht-num" aria-controls="hp-num" aria-selected="true"><span class="no">一</span><span class="t">条参照・条採番</span><span class="bar" aria-hidden="true"></span></button>
+                            <button type="button" role="tab" id="ht-num" aria-controls="hp-num" aria-selected="true"><span class="no">第一項</span><span class="t">条参照・条採番</span><span class="bar" aria-hidden="true"></span></button>
                         </li>
                         <li>
-                            <button type="button" role="tab" id="ht-md" aria-controls="hp-md" aria-selected="false" tabindex="-1"><span class="no">二</span><span class="t">Markdown の記法</span><span class="bar" aria-hidden="true"></span></button>
+                            <button type="button" role="tab" id="ht-md" aria-controls="hp-md" aria-selected="false" tabindex="-1"><span class="no">第二項</span><span class="t">Markdown の記法</span><span class="bar" aria-hidden="true"></span></button>
                         </li>
                     </ol>
                     </div>
@@ -2246,32 +2263,32 @@
             <section id="motions" class="slide">
                 <div class="two">
                     <div class="l">
-                    <h2>主な機能の動き</h2>
+                    <h2><span class="ch">第三条</span>主な機能の動き</h2>
                     <p class="intro">項目にマウスを重ねると切り替わります。マウスを離しているときは、順に次の項目へ進みます。</p>
                     <ol class="tabs" role="tablist" aria-label="主な機能" id="motion-tabs">
                         <li class="on">
                             <button type="button" role="tab" id="t-compare" aria-controls="m-compare" aria-selected="true">
-                                <span class="no">一</span><span class="t">新旧対照表</span><span class="bar" aria-hidden="true"></span>
+                                <span class="no">第一項</span><span class="t">新旧対照表</span><span class="bar" aria-hidden="true"></span>
                             </button>
                         </li>
                         <li>
                             <button type="button" role="tab" id="t-versions" aria-controls="m-versions" aria-selected="false" tabindex="-1">
-                                <span class="no">二</span><span class="t">改定案と承認</span><span class="bar" aria-hidden="true"></span>
+                                <span class="no">第二項</span><span class="t">改定案と承認</span><span class="bar" aria-hidden="true"></span>
                             </button>
                         </li>
                         <li>
                             <button type="button" role="tab" id="t-proof" aria-controls="m-proof" aria-selected="false" tabindex="-1">
-                                <span class="no">三</span><span class="t">校正</span><span class="bar" aria-hidden="true"></span>
+                                <span class="no">第三項</span><span class="t">校正</span><span class="bar" aria-hidden="true"></span>
                             </button>
                         </li>
                         <li>
                             <button type="button" role="tab" id="t-schedule" aria-controls="m-schedule" aria-selected="false" tabindex="-1">
-                                <span class="no">四</span><span class="t">期日と有効期間</span><span class="bar" aria-hidden="true"></span>
+                                <span class="no">第四項</span><span class="t">期日と有効期間</span><span class="bar" aria-hidden="true"></span>
                             </button>
                         </li>
                         <li>
                             <button type="button" role="tab" id="t-issue" aria-controls="m-issue" aria-selected="false" tabindex="-1">
-                                <span class="no">五</span><span class="t">課題の自動完了</span><span class="bar" aria-hidden="true"></span>
+                                <span class="no">第五項</span><span class="t">課題の自動完了</span><span class="bar" aria-hidden="true"></span>
                             </button>
                         </li>
                     </ol>
@@ -2404,33 +2421,33 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
             <section id="local" class="slide">
                 <div class="two">
                     <div class="l">
-                    <h2>データの保存形式と、<wbr />移行について</h2>
+                    <h2><span class="ch">第四条</span>データの保存形式と、<wbr />移行について</h2>
                     <p class="intro">項目にマウスを重ねると切り替わります。マウスを離しているときは、順に次の項目へ進みます。</p>
                     <p class="grp">保存と共有</p>
                     <ol class="tabs" role="tablist" aria-label="保存と共有">
                         <li class="on">
-                            <button type="button" role="tab" id="lt-store" aria-controls="lp-store" aria-selected="true"><span class="no">一</span><span class="t">保存場所</span><span class="bar" aria-hidden="true"></span></button>
+                            <button type="button" role="tab" id="lt-store" aria-controls="lp-store" aria-selected="true"><span class="no">第一項</span><span class="t">保存場所</span><span class="bar" aria-hidden="true"></span></button>
                         </li>
                         <li>
-                            <button type="button" role="tab" id="lt-share" aria-controls="lp-share" aria-selected="false"><span class="no">二</span><span class="t">共有</span><span class="bar" aria-hidden="true"></span></button>
+                            <button type="button" role="tab" id="lt-share" aria-controls="lp-share" aria-selected="false"><span class="no">第二項</span><span class="t">共有</span><span class="bar" aria-hidden="true"></span></button>
                         </li>
                         <li>
-                            <button type="button" role="tab" id="lt-ai" aria-controls="lp-ai" aria-selected="false"><span class="no">三</span><span class="t">AI</span><span class="bar" aria-hidden="true"></span></button>
+                            <button type="button" role="tab" id="lt-ai" aria-controls="lp-ai" aria-selected="false"><span class="no">第三項</span><span class="t">AI</span><span class="bar" aria-hidden="true"></span></button>
                         </li>
                         <li>
-                            <button type="button" role="tab" id="lt-format" aria-controls="lp-format" aria-selected="false"><span class="no">四</span><span class="t">形式</span><span class="bar" aria-hidden="true"></span></button>
+                            <button type="button" role="tab" id="lt-format" aria-controls="lp-format" aria-selected="false"><span class="no">第四項</span><span class="t">形式</span><span class="bar" aria-hidden="true"></span></button>
                         </li>
                     </ol>
                     <p class="grp">乗り換え</p>
                     <ol class="tabs" role="tablist" aria-label="乗り換え">
                         <li>
-                            <button type="button" role="tab" id="lt-word" aria-controls="lp-word" aria-selected="false"><span class="no">五</span><span class="t">Word で条番号を手で直している方</span><span class="bar" aria-hidden="true"></span></button>
+                            <button type="button" role="tab" id="lt-word" aria-controls="lp-word" aria-selected="false"><span class="no">第五項</span><span class="t">Word で条番号を手で直している方</span><span class="bar" aria-hidden="true"></span></button>
                         </li>
                         <li>
-                            <button type="button" role="tab" id="lt-files" aria-controls="lp-files" aria-selected="false"><span class="no">六</span><span class="t">ファイル名で版を管理している方</span><span class="bar" aria-hidden="true"></span></button>
+                            <button type="button" role="tab" id="lt-files" aria-controls="lp-files" aria-selected="false"><span class="no">第六項</span><span class="t">ファイル名で版を管理している方</span><span class="bar" aria-hidden="true"></span></button>
                         </li>
                         <li>
-                            <button type="button" role="tab" id="lt-vscode" aria-controls="lp-vscode" aria-selected="false"><span class="no">七</span><span class="t">VS Code と Markdown で書いている方</span><span class="bar" aria-hidden="true"></span></button>
+                            <button type="button" role="tab" id="lt-vscode" aria-controls="lp-vscode" aria-selected="false"><span class="no">第七項</span><span class="t">VS Code と Markdown で書いている方</span><span class="bar" aria-hidden="true"></span></button>
                         </li>
                     </ol>
                     </div>
@@ -2635,23 +2652,23 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
             <section id="features" class="slide">
                 <div class="two">
                     <div class="l">
-                    <h2>機能の一覧</h2>
-                    <p class="intro">章や機能にマウスを重ねると切り替わります。マウスを離しているときは、順に次の機能へ進みます。右端のアイコンから、操作マニュアルの該当箇所を開けます。</p>
+                    <h2><span class="ch">第五条</span>機能の一覧</h2>
+                    <p class="intro">項や機能にマウスを重ねると切り替わります。マウスを離しているときは、順に次の機能へ進みます。右端のアイコンから、操作マニュアルの該当箇所を開けます。</p>
                     <ol class="features" id="feature-list">
                         <li class="on">
-                            <button type="button"><span class="no">第一章</span><span class="t">条文の作成</span><span class="n">9 機能</span></button><a class="go" href="docs/manual/#6-条文を書く" aria-label="第一章 条文の作成の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
+                            <button type="button"><span class="no">第一項</span><span class="t">条文の作成</span><span class="n">9 機能</span></button><a class="go" href="docs/manual/#6-条文を書く" aria-label="第一項 条文の作成の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
                         </li>
                         <li>
-                            <button type="button"><span class="no">第二章</span><span class="t">版と改定案</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#7-版を保存する" aria-label="第二章 版と改定案の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
+                            <button type="button"><span class="no">第二項</span><span class="t">版と改定案</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#7-版を保存する" aria-label="第二項 版と改定案の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
                         </li>
                         <li>
-                            <button type="button"><span class="no">第三章</span><span class="t">施行日・期日・納品</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#11-施行日を記録し納品する" aria-label="第三章 施行日・期日・納品の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
+                            <button type="button"><span class="no">第三項</span><span class="t">施行日・期日・納品</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#11-施行日を記録し納品する" aria-label="第三項 施行日・期日・納品の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
                         </li>
                         <li>
-                            <button type="button"><span class="no">第四章</span><span class="t">共有と課題</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#14-ほかの-pcほかの人と共有する" aria-label="第四章 共有と課題の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
+                            <button type="button"><span class="no">第四項</span><span class="t">共有と課題</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#14-ほかの-pcほかの人と共有する" aria-label="第四項 共有と課題の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
                         </li>
                         <li>
-                            <button type="button"><span class="no">第五章</span><span class="t">書き出し・取り込み・AI</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#16-ai-に確認や書き直しを頼む" aria-label="第五章 書き出し・取り込み・AIの操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
+                            <button type="button"><span class="no">第五項</span><span class="t">書き出し・取り込み・AI</span><span class="n">6 機能</span></button><a class="go" href="docs/manual/#16-ai-に確認や書き直しを頼む" aria-label="第五項 書き出し・取り込み・AIの操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a>
                         </li>
                     </ol>
                     </div>
@@ -2660,7 +2677,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                         <figure class="on">
                             <div class="shot-frame"><img src="docs/manual/images/feature-editor.png" alt="条文の作成の画面" loading="lazy" /></div>
                             <figcaption>
-                                <h3>第一章　条文の作成</h3>
+                                <h3>第一項　条文の作成</h3>
                                 <ul class="detail">
                                 <li data-img="docs/manual/images/editor-insert.png" data-fit="fit"><span class="dt"><b>条・項・号の自動採番</b><span class="ds">条を追加・削除すると、後続の番号を更新</span></span><a class="go" href="docs/manual/#ボタンで条項号を足す" aria-label="条・項・号の自動採番の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
                                 <li data-img="docs/manual/images/editor-ref.png"><span class="dt"><b>条参照</b><span class="ds">「[[ ]]」で書いた参照は、番号が変わっても追随</span></span><a class="go" href="docs/manual/#条参照ほかの条を番号で指す" aria-label="条参照の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
@@ -2677,7 +2694,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                         <figure>
                             <div class="shot-frame"><img src="docs/manual/images/feature-history.png" alt="版と改定案の画面" loading="lazy" /></div>
                             <figcaption>
-                                <h3>第二章　版と改定案</h3>
+                                <h3>第二項　版と改定案</h3>
                                 <ul class="detail">
                                 <li data-img="docs/manual/images/save-version.png"><span class="dt"><b>版の保存</b><span class="ds">区切りごとに、メッセージを付けて記録</span></span><a class="go" href="docs/manual/#7-版を保存する" aria-label="版の保存の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
                                 <li data-img="docs/manual/images/history.png"><span class="dt"><b>改定履歴</b><span class="ds">過去の版の閲覧、版どうしの比較、復元</span></span><a class="go" href="docs/manual/#8-改定履歴で過去の版を見る" aria-label="改定履歴の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
@@ -2691,7 +2708,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                         <figure>
                             <div class="shot-frame"><img src="docs/manual/images/feature-releases.png" alt="施行日・期日・納品の画面" loading="lazy" /></div>
                             <figcaption>
-                                <h3>第三章　施行日・期日・納品</h3>
+                                <h3>第三項　施行日・期日・納品</h3>
                                 <ul class="detail">
                                 <li data-img="docs/manual/images/effective-modal.png"><span class="dt"><b>施行日</b><span class="ds">版に施行日を設定し、施行中の版を表示</span></span><a class="go" href="docs/manual/#施行日を付ける" aria-label="施行日の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
                                 <li data-img="docs/manual/images/releases.png"><span class="dt"><b>有効期間</b><span class="ds">施行版ごとの有効期間を帯で示し、指定した日の版を開く</span></span><a class="go" href="docs/manual/#有効期間と指定した日の版" aria-label="有効期間の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
@@ -2705,7 +2722,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                         <figure>
                             <div class="shot-frame"><img src="docs/manual/images/feature-sync.png" alt="共有と課題の画面" loading="lazy" /></div>
                             <figcaption>
-                                <h3>第四章　共有と課題</h3>
+                                <h3>第四項　共有と課題</h3>
                                 <ul class="detail">
                                 <li data-img="docs/manual/images/sync-menu.png"><span class="dt"><b>同期</b><span class="ds">GitHub・GitLab（社内の GitLab を含む）と同期</span></span><a class="go" href="docs/manual/#同期する" aria-label="同期の操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
                                 <li data-img="docs/manual/images/feature-review.png"><span class="dt"><b>プルリクエスト</b><span class="ds">確認依頼を、プルリクエスト・マージリクエストとしても作成</span></span><a class="go" href="docs/manual/#確認を依頼する確認する" aria-label="プルリクエストの操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
@@ -2719,7 +2736,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                         <figure>
                             <div class="shot-frame"><img src="docs/manual/images/feature-ai.png" alt="書き出し・取り込み・AIの画面" loading="lazy" /></div>
                             <figcaption>
-                                <h3>第五章　書き出し・取り込み・AI</h3>
+                                <h3>第五項　書き出し・取り込み・AI</h3>
                                 <ul class="detail">
                                 <li data-img="docs/manual/images/editor-export.png" data-fit="fit"><span class="dt"><b>PDF・Word・HTML</b><span class="ds">印刷と同じ組版で書き出し</span></span><a class="go" href="docs/manual/#pdfwordhtml-に書き出す" aria-label="PDF・Word・HTMLの操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
                                 <li data-img="docs/manual/images/editor-print.png"><span class="dt"><b>印刷プレビュー</b><span class="ds">改ページ・余白・ページ番号を確認</span></span><a class="go" href="docs/manual/#pdfwordhtml-に書き出す" aria-label="印刷プレビューの操作マニュアルを開く" title="操作マニュアルを開く" target="_blank" rel="noreferrer noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg></a></li>
@@ -2738,7 +2755,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
             <section class="get slide" id="get">
                 <div class="two">
                     <div class="l">
-                    <h2>ダウンロード</h2>
+                    <h2><span class="ch">第六条</span>ダウンロード</h2>
                     <p class="intro">無料で利用できます。MIT ライセンスのもと、ソースコードを GitHub で公開しています。</p>
                     <div class="cta">
                         <a class="btn" data-dl="main" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest" target="_blank" rel="noreferrer noopener">Windows・Mac 版をダウンロード</a>
@@ -2781,7 +2798,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
             <section id="faq" class="slide">
                 <div class="two">
                     <div class="l">
-                    <h2>よくある質問</h2>
+                    <h2><span class="ch">第七条</span>よくある質問</h2>
                     <p class="intro">ほかの質問や不具合は、<a href="https://github.com/SHIOZAKI-Shota/ClauseDown/issues" target="_blank" rel="noreferrer noopener">GitHub の Issues</a> で受け付けています。</p>
                     </div>
                     <div class="r">
@@ -3008,6 +3025,21 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                 guide.replaceChildren(h, p)
             })
 
+            const watchHover = (els, onChange) => {
+                let on = false
+                const check = () => {
+                    const now = els.some((el) => el.matches(':hover'))
+                    if (now !== on) {
+                        on = now
+                        onChange(on)
+                    }
+                }
+                for (const el of els) {
+                    el.addEventListener('mouseover', check)
+                    el.addEventListener('mouseleave', () => requestAnimationFrame(check))
+                }
+                return () => on
+            }
             const featureItems = [...document.querySelectorAll('#feature-list li')]
             const featureViews = [...document.querySelectorAll('.feature-view figure')]
             const featureDetails = featureViews.map((f) => [...f.querySelectorAll('.detail li')])
@@ -3037,7 +3069,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
             }
             function scheduleFeature() {
                 clearTimeout(featureTimer)
-                if (!featureVisible || !root.classList.contains('motion')) return
+                if (!featureVisible || featureHover() || !root.classList.contains('motion')) return
                 featureTimer = setTimeout(() => {
                     const [i, j] = featureAt
                     if (j + 1 < featureDetails[i].length) pickFeature(i, j + 1)
@@ -3056,8 +3088,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                 }),
             )
             const featureSection = document.getElementById('features')
-            featureSection.addEventListener('mouseenter', () => clearTimeout(featureTimer))
-            featureSection.addEventListener('mouseleave', scheduleFeature)
+            const featureHover = watchHover([...featureSection.querySelectorAll('#feature-list, .feature-view')], scheduleFeature)
             new IntersectionObserver(([e]) => {
                 featureVisible = e.isIntersecting
                 scheduleFeature()
@@ -3101,7 +3132,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
             function tabSet(section, intervals) {
                 const tabs = [...section.querySelectorAll('[role="tab"]')]
                 const panels = tabs.map((t) => document.getElementById(t.getAttribute('aria-controls')))
-                const set = { index: 0, fns: [], play: null, timer: 0, visible: false, hover: false, left: 0, since: 0 }
+                const set = { index: 0, fns: [], play: null, timer: 0, visible: false, hover: () => false, left: 0, since: 0 }
                 const wait = (i) => (Array.isArray(intervals) ? intervals[i] : intervals)
                 const run = () => {
                     set.play?.kill()
@@ -3122,8 +3153,8 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                 const schedule = () => {
                     clearTimeout(set.timer)
                     if (!AUTO || !li().classList.contains('run')) return
-                    if (!set.visible || set.hover) {
-                        if (!li().classList.contains('paused')) set.left -= performance.now() - set.since
+                    if (!li().classList.contains('paused')) set.left -= performance.now() - set.since
+                    if (!set.visible || set.hover()) {
                         li().classList.add('paused')
                         return
                     }
@@ -3150,12 +3181,10 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                 set.elapsed = () => (!AUTO || !li().classList.contains('run') ? 0 : wait(set.index) - (li().classList.contains('paused') ? set.left : set.left - (performance.now() - set.since)))
                 set.seek = (ms) => {
                     if (!AUTO) return
-                    const paused = li().classList.contains('paused')
                     li().classList.remove('run')
                     void li().offsetWidth
                     li().style.setProperty('--delay', `-${ms}ms`)
-                    li().classList.add('run')
-                    li().classList.toggle('paused', paused)
+                    li().classList.add('run', 'paused')
                     set.left = wait(set.index) - ms
                     schedule()
                 }
@@ -3170,14 +3199,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                         set.show((i + d + tabs.length) % tabs.length, true)
                     })
                 })
-                section.addEventListener('mouseenter', () => {
-                    set.hover = true
-                    schedule()
-                })
-                section.addEventListener('mouseleave', () => {
-                    set.hover = false
-                    schedule()
-                })
+                set.hover = watchHover([...section.querySelectorAll('.tabs, [role="tabpanel"]')], schedule)
                 new IntersectionObserver(
                     ([e]) => {
                         const was = set.visible
