@@ -422,9 +422,26 @@
             .md-frame .preview {
                 overflow: hidden;
             }
+            .md-frame .pv-pane {
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
+            }
             .md-frame .preview {
-                padding: 12px 24px;
+                flex: 1;
+                min-height: 0;
+                padding: 16px;
+                background: var(--paper-2);
                 font-size: 13px;
+            }
+            .sheet {
+                padding: 20px 28px;
+                border: 1px solid var(--line);
+                background: var(--sheet);
+                box-shadow: 0 1px 4px rgb(0 0 0 / 0.06);
+            }
+            .sheet + .sheet {
+                margin-top: 16px;
             }
             .md-frame .preview .doc-title {
                 display: block;
@@ -455,91 +472,78 @@
             .preview .math {
                 margin: 6px 0;
                 text-align: center;
-                font-style: italic;
+                overflow: hidden;
             }
-            .frac {
-                display: inline-flex;
-                flex-direction: column;
-                vertical-align: middle;
-                font-style: normal;
-                line-height: 1.2;
-                text-align: center;
+            .preview math {
+                font-family: 'Cambria Math', 'STIX Two Math', math;
             }
-            .frac > span + span {
-                border-top: 1px solid currentColor;
+            .preview .tex {
+                font: 400 12px var(--mono);
+                color: var(--ink-3);
             }
-            .flowbox {
+            .preview {
+                --pele-bg: transparent;
+                --pele-fg: var(--ink);
+                --pele-muted: var(--ink-2);
+                --pele-line: var(--ink-2);
+                --pele-surface: var(--paper);
+                --pele-surface-alt: var(--paper-2);
+                --pele-border: var(--line);
+                --pele-accent: var(--ai);
+            }
+            .preview .mmd {
                 display: flex;
-                align-items: center;
                 justify-content: center;
-                gap: 8px;
                 margin: 8px 0;
-                font-family: var(--sans);
-                font-size: 12px;
             }
-            .flowbox span {
-                padding: 4px 12px;
-                border: 1px solid var(--ink-2);
-                border-radius: 4px;
+            .preview .mmd svg {
+                max-width: 100%;
+                height: auto;
             }
-            .flowbox i {
-                width: 24px;
-                height: 1px;
-                background: var(--ink-2);
+            .preview .fig {
+                display: block;
+                max-width: 100%;
+                margin: 8px auto;
             }
-            .img-ph {
-                display: grid;
-                place-items: center;
-                height: 72px;
-                margin: 6px 0;
-                border: 1px dashed var(--line);
-                background: var(--paper-2);
-                font: 400 12px var(--sans);
-                color: var(--ink-3);
-            }
-            .pbreak {
-                margin: 8px -24px;
-                border-top: 1px dashed var(--ink-3);
-                text-align: center;
-                font: 400 11px/1 var(--sans);
-                color: var(--ink-3);
-            }
-            .pbreak span {
+            .md .ac-at {
                 position: relative;
-                top: -0.6em;
-                padding: 0 8px;
+            }
+            .md .ac {
+                position: absolute;
+                top: 1.6em;
+                left: 0;
+                z-index: 2;
+                min-width: 12em;
+                padding: 4px 0;
+                border: 1px solid var(--line);
+                border-radius: var(--radius);
                 background: var(--sheet);
+                box-shadow: 0 6px 16px rgb(0 0 0 / 0.14);
+                font: 400 12px/1.9 var(--sans);
+                white-space: nowrap;
             }
-            .motion #mdx-src .ln {
-                animation: mdx-show 0s var(--d) both;
+            .md .ac > span {
+                display: block;
+                padding: 0 12px;
+                color: var(--ink-2);
             }
-            .motion #mdx-src .c {
-                animation: mdx-type var(--t) steps(var(--n), end) var(--d) both;
+            .md .ac > .on {
+                background: var(--ai);
+                color: var(--on-ai);
             }
-            .motion #mdx-pv > * {
-                animation: mdx-in 0.4s ease var(--d) both;
+            .mdx-desc a {
+                color: var(--ai);
+                text-underline-offset: 3px;
+                white-space: nowrap;
+            }
+            .mdx-desc a svg {
+                width: 0.85em;
+                height: 0.85em;
+                margin-left: 3px;
+                vertical-align: -0.05em;
             }
             .motion #mdx-desc > span {
                 animation: mdx-show-fade 0.3s ease both;
-            }
-            @keyframes mdx-show {
-                from {
-                    visibility: hidden;
-                }
-            }
-            @keyframes mdx-type {
-                from {
-                    clip-path: inset(0 100% 0 0);
-                }
-                to {
-                    clip-path: inset(0);
-                }
-            }
-            @keyframes mdx-in {
-                from {
-                    opacity: 0;
-                    transform: translateY(6px);
-                }
             }
             @keyframes mdx-show-fade {
                 from {
@@ -2076,7 +2080,7 @@
                     <p class="intro">条の見出しを <code>###</code>、項を <code>-</code> で書くだけで、番号を付けて組版します。</p>
                     <ol class="menu tabs" role="tablist" aria-label="条文の書き方">
                         <li class="on">
-                            <button type="button" role="tab" id="ht-num" aria-controls="hp-num" aria-selected="true"><span class="no">第一項</span><span class="t">条参照・条採番</span><span class="bar" aria-hidden="true"></span></button>
+                            <button type="button" role="tab" id="ht-num" aria-controls="hp-num" aria-selected="true"><span class="no">第一項</span><span class="t">追従参照・自動採番</span><span class="bar" aria-hidden="true"></span></button>
                         </li>
                         <li>
                             <button type="button" role="tab" id="ht-md" aria-controls="hp-md" aria-selected="false" tabindex="-1"><span class="no">第二項</span><span class="t">Markdown の記法</span><span class="bar" aria-hidden="true"></span></button>
@@ -2148,12 +2152,12 @@
                     </div>
                         </div>
                         <div class="panel" role="tabpanel" id="hp-md" aria-labelledby="ht-md">
-                        <div class="win editor md-frame" aria-live="polite">
+                        <div class="win editor md-frame">
                             <div class="md-pane">
                                 <div class="win-head"><span>Markdown</span><span>入力する内容</span></div>
                                 <div class="md" id="mdx-src"></div>
                             </div>
-                            <div>
+                            <div class="pv-pane">
                                 <div class="win-head"><span>プレビュー</span><span>組版した結果</span></div>
                                 <div class="preview" id="mdx-pv"></div>
                             </div>
@@ -3170,43 +3174,83 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                 return set
             }
             const MDX = [
-                { d: '行頭に「#」を付けた行が、文書の題名になります。', md: ['# 就業規則'], pv: '<p class="doc-title">就業規則</p>' },
-                { d: '題名と最初の章の間に書いた文は、前文になります。', md: ['# 就業規則', '', 'この規則は、従業員の就業に関し必要な事項を定める。', '', '## 総則'], pv: '<p class="doc-title">就業規則</p><p class="pre">この規則は、従業員の就業に関し必要な事項を定める。</p><p class="chap">第一章　総則</p>' },
-                { d: '「##」で章を立てます。章番号は自動で付きます。', md: ['## 総則', '### 目的', '- この規則は、就業に関する事項を定める。', '## 採用'], pv: '<p class="chap">第一章　総則</p><div class="art"><span class="cap">（目的）</span><p><b>第一条</b>　この規則は、就業に関する事項を定める。</p></div><p class="chap">第二章　採用</p>' },
-                { d: '「###」の後ろの言葉が条の見出しになります。条番号は書きません。', md: ['### 目的', '- この規則は、就業に関する事項を定める。', '### 適用範囲', '- この規則は、すべての従業員に適用する。'], pv: '<div class="art"><span class="cap">（目的）</span><p><b>第一条</b>　この規則は、就業に関する事項を定める。</p></div><div class="art"><span class="cap">（適用範囲）</span><p><b>第二条</b>　この規則は、すべての従業員に適用する。</p></div>' },
-                { d: '「-」で項を書きます。2 つ目の項から番号が付きます。', md: ['### 休日', '- 休日は、土曜日及び日曜日とする。', '- 業務の都合により、休日を振り替えることがある。'], pv: '<div class="art"><span class="cap">（休日）</span><p><b>第一条</b>　休日は、土曜日及び日曜日とする。</p><p>２　業務の都合により、休日を振り替えることがある。</p></div>' },
-                { d: '項の下で 2 文字下げた「-」は号になり、「一」「二」と番号が付きます。', md: ['### 適用範囲', '- 次に掲げる者に適用する。', '  - 正社員', '  - 契約社員'], pv: '<div class="art"><span class="cap">（適用範囲）</span><p><b>第一条</b>　次に掲げる者に適用する。</p><p class="item">一　正社員</p><p class="item">二　契約社員</p></div>' },
-                { d: '号の下でさらに 2 文字下げると号の細分になり、「イ」「ロ」と番号が付きます。', md: ['### 適用範囲', '- 次に掲げる者に適用する。', '  - 契約社員', '    - 有期の者', '    - 無期に転換した者'], pv: '<div class="art"><span class="cap">（適用範囲）</span><p><b>第一条</b>　次に掲げる者に適用する。</p><p class="item">一　契約社員</p><p class="sub">イ　有期の者</p><p class="sub">ロ　無期に転換した者</p></div>' },
-                { d: '条の見出しの後ろに「{n=10}」と書くと第十条に、「{n=10 b=2}」と書くと第十条の二になります。', md: ['### 特例 {n=10}', '- 前条の規定にかかわらず、…', '### 経過措置 {n=10 b=2}', '- この規則の施行前に、…'], pv: '<div class="art"><span class="cap">（特例）</span><p><b>第十条</b>　前条の規定にかかわらず、…</p></div><div class="art"><span class="cap">（経過措置）</span><p><b>第十条の二</b>　この規則の施行前に、…</p></div>' },
-                { d: '「{branch}」を付けた条は直前の条の枝番号になり、後ろの条の番号は変わりません。', md: ['### 届出', '- 住所を変更したときは、届け出る。', '### 届出の特例 {branch}', '- 在宅勤務の者は、…', '### 懲戒', '- …'], pv: '<div class="art"><span class="cap">（届出）</span><p><b>第一条</b>　住所を変更したときは、届け出る。</p></div><div class="art"><span class="cap">（届出の特例）</span><p><b>第一条の二</b>　在宅勤務の者は、…</p></div><div class="art"><span class="cap">（懲戒）</span><p><b>第二条</b>　…</p></div>' },
-                { d: '「### {deleted}」は「第○条　削除」と表示し、後ろの条の番号を保ちます。', md: ['### 目的', '- …', '### {deleted}', '### 届出', '- …'], pv: '<div class="art"><span class="cap">（目的）</span><p><b>第一条</b>　…</p></div><div class="art"><p><b>第二条</b>　削除</p></div><div class="art"><span class="cap">（届出）</span><p><b>第三条</b>　…</p></div>' },
-                { d: '条に「{#届出}」で名前を付けて「[[届出]]」と書くと、その条の番号に置き換わります。条が増えても追従します。', md: ['### 届出 {#届出}', '- 住所を変更したときは、届け出る。', '### 懲戒', '- [[届出]]に違反した者は、懲戒する。'], pv: '<div class="art"><span class="cap">（届出）</span><p><b>第一条</b>　住所を変更したときは、届け出る。</p></div><div class="art"><span class="cap">（懲戒）</span><p><b>第二条</b>　<span class="ref-s">第一条</span>に違反した者は、懲戒する。</p></div>' },
-                { d: '「## 附則 {supplement}」から後ろは附則になり、本則とは別に扱います。', md: ['## 附則 {supplement}', '- この規則は、令和8年4月1日から施行する。'], pv: '<p class="chap">附　則</p><p class="pre">この規則は、令和8年4月1日から施行する。</p>' },
-                { d: '「## {closing}」から後ろは、契約書の末尾の後文と署名欄になります。', md: ['## {closing}', '本契約の成立を証するため、本書2通を作成する。', '', '令和8年4月1日', '', '甲　見本株式会社', '乙　見本出版株式会社'], pv: '<p class="pre">本契約の成立を証するため、本書2通を作成する。</p><p class="pre">令和8年4月1日</p><p class="right">甲　見本株式会社</p><p class="right">乙　見本出版株式会社</p>' },
-                { d: '「{appendix}」を付けた章は別表になり、本文の後ろに置きます。', md: ['## 別表第一 {appendix}', '| 区分 | 日数 |', '|---|---|', '| 年次有給休暇 | 10日 |', '| 特別休暇 | 5日 |'], pv: '<p class="chap left">別表第一</p><table><tr><th>区分</th><th>日数</th></tr><tr><td>年次有給休暇</td><td>10日</td></tr><tr><td>特別休暇</td><td>5日</td></tr></table>' },
-                { d: 'セルに「>」だけを書くと右隣と、「^」だけを書くと上のセルと結合します。', md: ['| 区分 | > | 内容 |', '|---|---|---|', '| 正社員 | 月給 | 期間の定めなし |', '| ^ | 時給 | 試用期間中 |'], pv: '<table><tr><th colspan="2">区分</th><th>内容</th></tr><tr><td rowspan="2">正社員</td><td>月給</td><td>期間の定めなし</td></tr><tr><td>時給</td><td>試用期間中</td></tr></table>' },
-                { d: 'LaTeX 記法の数式を、文の中や独立した行に書けます。', md: ['- 補助金の額は、次の式による。', '$$S = \\frac{2}{3}C$$'], pv: '<div class="art"><p><b>第一条</b>　補助金の額は、次の式による。</p></div><p class="math">S = <span class="frac"><span>2</span><span>3</span></span> C</p>' },
-                { d: 'Mermaid の記法で、流れ図などを描けます。', md: ['```mermaid', 'flowchart LR', '  A[申請] --> B[承認]', '  B --> C[実施]', '```'], pv: '<div class="flowbox"><span>申請</span><i></i><span>承認</span><i></i><span>実施</span></div>' },
-                { d: '画像を貼り付けるかドロップすると、文書と同じ場所に保存して挿入します。', md: ['- 組織は、次の図のとおりとする。', '![組織図](images/就業規則/組織図.png)'], pv: '<div class="art"><p><b>第一条</b>　組織は、次の図のとおりとする。</p></div><div class="img-ph">組織図</div>' },
-                { d: '「[文字]{size=14pt}」で文字の大きさを、「{right}」だけの行で次の行の寄せを指定できます。', md: ['{right}', '令和8年4月1日改正', '- [秘密]{size=14pt}を漏らしてはならない。'], pv: '<p class="right">令和8年4月1日改正</p><div class="art"><p><b>第一条</b>　<span style="font-size: 1.3em">秘密</span>を漏らしてはならない。</p></div>' },
-                { d: '「{break}」だけの行を書くと、次の要素から新しいページになります。', md: ['### 服務', '- 従業員は、誠実に職務を行う。', '{break}', '## 賃金'], pv: '<div class="art"><span class="cap">（服務）</span><p><b>第一条</b>　従業員は、誠実に職務を行う。</p></div><div class="pbreak"><span>改ページ</span></div><p class="chap">第二章　賃金</p>' },
+                { d: '行頭に「#」を付けた行が、文書の題名になります。', md: ['# 就業規則'] },
+                { d: '題名と最初の章の間に書いた文は、前文になります。', md: ['# 就業規則', '', 'この規則は、従業員の就業に関し必要な事項を定める。', '', '## 総則'] },
+                { d: '「##」で章を立てます。章番号は自動で付きます。', md: ['## 総則', '### 目的', '- この規則は、就業に関する事項を定める。', '## 採用'] },
+                { d: '「###」の後ろの言葉が条の見出しになります。条番号は書きません。', md: ['### 目的', '- この規則は、就業に関する事項を定める。', '### 適用範囲', '- この規則は、すべての従業員に適用する。'] },
+                { d: '「-」で項を書きます。2 つ目の項から番号が付きます。', md: ['### 休日', '- 休日は、土曜日及び日曜日とする。', '- 業務の都合により、休日を振り替えることがある。'] },
+                { d: '項の下で 2 文字下げた「-」は号になり、「一」「二」と番号が付きます。', md: ['### 適用範囲', '- 次に掲げる者に適用する。', '  - 正社員', '  - 契約社員'] },
+                { d: '号の下でさらに 2 文字下げると号の細分になり、「イ」「ロ」と番号が付きます。', md: ['### 適用範囲', '- 次に掲げる者に適用する。', '  - 契約社員', '    - 有期の者', '    - 無期に転換した者'] },
+                { d: '条の見出しの後ろに「{n=10}」と書くと第十条に、「{n=10 b=2}」と書くと第十条の二になります。', md: ['### 特例 {n=10}', '- 前条の規定にかかわらず、…', '### 経過措置 {n=10 b=2}', '- この規則の施行前に、…'] },
+                { d: '「{branch}」を付けた条は直前の条の枝番号になり、後ろの条の番号は変わりません。', md: ['### 届出', '- 住所を変更したときは、届け出る。', '### 届出の特例 {branch}', '- 在宅勤務の者は、…', '### 懲戒', '- …'] },
+                { d: '「### {deleted}」は「第○条　削除」と表示し、後ろの条の番号を保ちます。', md: ['### 目的', '- …', '### {deleted}', '### 届出', '- …'] },
+                { pick: { line: 3, at: 4, filter: 1, anchor: 0 }, d: '「[[」と打つと条の候補が出ます。選ぶと「[[届出]]」が入り、参照先の条には「{#届出}」の名前が付きます。プレビューではその条の番号になり、条が増えても追従します。', md: ['### 届出 {#届出}', '- 住所を変更したときは、届け出る。', '### 懲戒', '- [[届出]]に違反した者は、懲戒する。'] },
+                { d: '「## 附則 {supplement}」から後ろは附則になり、本則とは別に扱います。', md: ['## 附則 {supplement}', '- この規則は、令和8年4月1日から施行する。'] },
+                { d: '「## {closing}」から後ろは、契約書の末尾の後文と署名欄になります。', md: ['## {closing}', '本契約の成立を証するため、本書2通を作成する。', '', '令和8年4月1日', '', '甲　見本株式会社', '乙　見本出版株式会社'] },
+                { d: '「{appendix}」を付けた章は別表になり、本文の後ろに置きます。', md: ['## 別表第一 {appendix}', '| 区分 | 日数 |', '|---|---|', '| 年次有給休暇 | 10日 |', '| 特別休暇 | 5日 |'] },
+                { d: 'セルに「>」だけを書くと右隣と、「^」だけを書くと上のセルと結合します。', md: ['| 区分 | > | 内容 |', '|---|---|---|', '| 正社員 | 月給 | 期間の定めなし |', '| ^ | 時給 | 試用期間中 |'] },
+                {
+                    d: '[LaTeX](https://www.latex-project.org/) 記法で数式を書けます。文の中は「$…$」、1 行の式は「$$…$$」、複数行の式は「```math」で囲みます。',
+                    md: ['### 補助金の額', '- 補助金の額は、対象経費$C$に3分の2を乗じて得た額とする。', '  $$S = \\frac{2}{3}C$$', '### 交付率', '- 交付率は、次の区分による。', '  ```math', '  r = \\begin{cases}', '    \\dfrac{2}{3} & (C < 300\\text{万円}) \\\\', '    \\dfrac{1}{2} & (C \\ge 300\\text{万円})', '  \\end{cases}', '  ```'],
+                },
+                {
+                    d: '[Mermaid](https://pele.run/examples) 記法で、流れ図やシーケンス図などを描けます。',
+                    md: ['```mermaid', 'flowchart LR', '  A[申請] --> B{審査}', '  B -->|可| C[交付決定]', '  B -->|否| D[不交付]', '```', '```mermaid', 'sequenceDiagram', '  甲->>乙: 業務を委託する', '  乙-->>甲: 成果物を納品する', '```'],
+                },
+                { paste: [1], d: '画像を貼り付けるかドロップすると、文書と同じ場所に保存して挿入します。', md: ['- 組織は、次の図のとおりとする。', '![組織図](images/就業規則/組織図.png)'] },
+                {
+                    d: '「[文字]{size=13pt}」で文字に、「::: {…}」から「:::」までの行に書式を付けます。「{right}」「{center}」だけの行は、次の行の寄せを決めます。',
+                    md: ['{right}', '令和8年4月1日改正', '### 秘密の保持', '- 従業員は、[業務上知り得た秘密]{size=13pt}を漏らしてはならない。', '- 前項の規定は、[退職した後]{font="BIZ UDゴシック"}も同様とする。', '::: {size=9pt}', '- 違反した者は、懲戒の対象とする。', ':::', '{center}', '以上'],
+                },
+                { ch: 1, d: '「{break}」だけの行を書くと、次の要素から新しいページになります。', md: ['### 服務', '- 従業員は、誠実に職務を行う。', '{break}', '## 賃金', '### 賃金の構成', '- 賃金は、基本給及び諸手当とする。'] },
             ]
             const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            const LINK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>'
+            const descHtml = (d) => esc(d).replace(/\[([^\]]+)\]\((https:[^)\s]+)\)/g, `<a href="$2" target="_blank" rel="noreferrer noopener">$1${LINK_ICON}</a>`)
             const MDX_CHAR = 32
             const MDX_GAP = 120
             const MDX_READ = 2400
             const mdxPlan = MDX.map((it) => {
                 let t = 0
-                const lines = it.md.map((raw) => {
-                    const n = Math.max(1, [...raw].length)
-                    const line = { d: t, t: raw ? n * MDX_CHAR : 0, n }
-                    t += line.t + MDX_GAP
-                    return line
+                let anchorSteps = null
+                const lines = it.md.map((raw, k) => {
+                    const anchor = it.pick?.anchor === k
+                    const chars = [...(anchor ? raw.slice(0, raw.indexOf(' {#')) : raw)]
+                    const upto = (i) => chars.slice(0, i).join('')
+                    const steps = [{ t, s: '' }]
+                    if (anchor) anchorSteps = steps
+                    if (it.paste?.includes(k)) {
+                        t += 240
+                        steps.push({ t, s: raw })
+                    } else {
+                        const pick = it.pick?.line === k ? it.pick : null
+                        for (let i = 0; i < chars.length; ) {
+                            if (pick && i === pick.at) {
+                                steps.at(-1).menu = ''
+                                t += 700
+                                for (let f = 0; f < pick.filter; f++) {
+                                    i++
+                                    t += MDX_CHAR * 3
+                                    steps.push({ t, s: upto(i), menu: upto(i).slice(pick.at) })
+                                }
+                                t += 700
+                                i = chars.indexOf(']', i) + 2
+                                steps.push({ t, s: upto(i) })
+                                anchorSteps?.push({ t, s: it.md[pick.anchor] })
+                                continue
+                            }
+                            i++
+                            t += MDX_CHAR
+                            steps.push({ t, s: upto(i) })
+                        }
+                    }
+                    t += MDX_GAP
+                    return { d: steps[0].t, steps }
                 })
-                return { lines, pv: t, total: t + MDX_READ + 400 }
+                return { lines, end: t, total: t + MDX_READ + 400 }
             })
             const mdxStart = mdxPlan.reduce((a, p) => [...a, a.at(-1) + p.total], [0])
-            const mdLine = (raw, plan) => {
+            const mdLine = (raw, caret, menu) => {
                 let t = esc(raw)
                 t = t.replace(/\[\[([^\]]+)\]\]/g, '<span class="link">[[$1]]</span>')
                 t = t.replace(/\{[^}]*\}/g, (m) => `<span class="id">${m}</span>`)
@@ -3217,23 +3261,387 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                     return `<span class="mk">${h}</span>${sp}<span class="h">${head}</span>${i < 0 ? '' : rest.slice(i)}`
                 })
                 t = t.replace(/^(\s*)(-)( )/, '$1<span class="mk">$2</span>$3')
-                t = t.replace(/^(```\w*)$/, '<span class="mk">$1</span>')
+                t = t.replace(/^(\s*)(```\w*|:::)/, '$1<span class="mk">$2</span>')
                 t = t.replace(/\|/g, '<span class="mk">|</span>')
-                return `<div class="ln${/^#/.test(raw) ? ' fold' : ''}" style="--d: ${plan.d}ms; --t: ${plan.t}ms; --n: ${plan.n}"><span class="c">${t}</span></div>`
+                const pop = menu ? `<span class="ac">${menu.map((m, i) => `<span${i ? '' : ' class="on"'}>${m}</span>`).join('')}</span>` : ''
+                const cur = caret ? `<span class="ac-at"><span class="caret"></span>${pop}</span>` : ''
+                return `<div class="ln${/^#/.test(raw) ? ' fold' : ''}"><span class="c">${t}${cur}</span></div>`
+            }
+            const KAN = '〇一二三四五六七八九'
+            const kan = (n) => (n < 10 ? KAN[n] : (n >= 20 ? KAN[Math.floor(n / 10)] : '') + '十' + (n % 10 ? KAN[n % 10] : ''))
+            const zen = (n) => String(n).replace(/\d/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0xfee0))
+            const IROHA = 'イロハニホヘトチリヌ'
+            const attrList = (s) => {
+                const a = {}
+                for (const m of s.matchAll(/#(\S+)|([\w-]+)(?:=("[^"]*"|[^\s"]+))?/g)) {
+                    if (m[1]) a.id = m[1]
+                    else a[m[2]] = m[3] ? m[3].replace(/^"|"$/g, '') : true
+                }
+                return a
+            }
+            const attrCss = (a) => {
+                const s = []
+                const size = a.size ?? a['font-size']
+                if (size) {
+                    const pt = String(size).match(/^([\d.]+)(pt)?$/)
+                    s.push(`font-size: ${pt ? `${(pt[1] / 10.5).toFixed(2)}em` : size}`)
+                }
+                const font = a.font ?? a['font-family']
+                if (font) s.push(`font-family: '${font}', var(--sans)`)
+                const align = ['left', 'center', 'right'].find((k) => a[k]) ?? a['text-align']
+                if (align) s.push(`text-align: ${align}`, 'text-indent: 0')
+                const line = a.line ?? a['line-height']
+                if (line) s.push(`line-height: ${line}`)
+                return s.join('; ')
+            }
+            const styleAttr = (s) => (s ? ` style="${s}"` : '')
+            const mdxGood = {}
+            let mdxRedraw = () => {}
+            let temmlLib = null
+            let temmlLoad = null
+            const needTemml = () => {
+                temmlLoad ??= new Promise((ok, ng) => {
+                    const s = document.createElement('script')
+                    s.src = 'https://cdn.jsdelivr.net/npm/temml@0.11.2/dist/temml.min.js'
+                    s.onload = ok
+                    s.onerror = ng
+                    document.head.append(s)
+                }).then(
+                    () => {
+                        temmlLib = window.temml
+                        mdxRedraw()
+                    },
+                    () => {},
+                )
+            }
+            const tex = (src, display, slot) => {
+                if (!temmlLib) {
+                    needTemml()
+                    return `<code class="tex">${esc(src)}</code>`
+                }
+                try {
+                    const h = temmlLib.renderToString(src, { displayMode: display, throwOnError: true })
+                    if (slot) mdxGood[slot] = h
+                    return h
+                } catch {
+                    return slot ? (mdxGood[slot] ?? '') : esc(src)
+                }
+            }
+            const mmdCache = new Map()
+            let peleLoad = null
+            let mmdBusy = false
+            let mmdNext = null
+            let mmdN = 0
+            const pumpMermaid = async () => {
+                if (mmdBusy || mmdNext === null) return
+                mmdBusy = true
+                const src = mmdNext
+                mmdNext = null
+                try {
+                    peleLoad ??= import('https://cdn.jsdelivr.net/npm/pele@1.13.0/dist/esm/lazy.js')
+                    const pele = await peleLoad
+                    const { svg } = await pele.renderAsync(src, {
+                        idPrefix: `mdx-fig-${++mmdN}-`,
+                        maxWidth: 620,
+                        autoDirection: true,
+                        fontFamily: '"Yu Gothic UI", "Meiryo UI", "Hiragino Sans", sans-serif',
+                    })
+                    mmdCache.set(src, svg)
+                } catch {
+                    mmdCache.set(src, '')
+                }
+                mmdBusy = false
+                mdxRedraw()
+                pumpMermaid()
+            }
+            const mermaidSvg = (src, slot) => {
+                if (mmdCache.has(src)) {
+                    if (mmdCache.get(src)) mdxGood[slot] = mmdCache.get(src)
+                } else {
+                    mmdNext = src
+                    pumpMermaid()
+                }
+                return mdxGood[slot] ?? ''
+            }
+            const unfinished = (s) =>
+                s
+                    .replace(/\[\[[^\]]*\]?$/, '')
+                    .replace(/\{[^}]*$/, '')
+                    .replace(/\[[^\]]*\]?$/, '')
+                    .replace(/\$[^$]*$/, (m, off, str) => ((str.slice(0, off).split('$').length - 1) % 2 ? m : ''))
+            const inline = (s) =>
+                unfinished(s)
+                    .split(/(\$[^$]+\$)/)
+                    .map((part, i) =>
+                        i % 2
+                            ? tex(part.slice(1, -1), false)
+                            : esc(part)
+                                  .replace(/\[\[([^\]]+)\]\]/g, '\u0001$1\u0002')
+                                  .replace(/\[([^\]]+)\]\{([^}]*)\}/g, (m, x, a) => `<span${styleAttr(attrCss(attrList(a)))}>${x}</span>`),
+                    )
+                    .join('')
+            const parseHead = (rest) => {
+                let a = {}
+                const title = rest.replace(/\s*\{([^}]*)\}/g, (m, x) => {
+                    a = { ...a, ...attrList(x) }
+                    return ''
+                })
+                return { title: esc(unfinished(title).trim()), a, pending: /\{[^}]*$/.test(rest) }
+            }
+            const mdxTable = ({ rows, head, style }) => {
+                const grid = []
+                const out = rows.map((cells, r) => {
+                    grid[r] = []
+                    const list = []
+                    cells.forEach((v, c) => {
+                        const left = grid[r][c - 1]
+                        const up = grid[r - 1]?.[c]
+                        if (v === '>' && left) {
+                            left.cs++
+                            grid[r][c] = left
+                        } else if (v === '^' && up) {
+                            up.rs++
+                            grid[r][c] = up
+                        } else {
+                            grid[r][c] = { v, cs: 1, rs: 1, tag: r <= head ? 'th' : 'td' }
+                            list.push(grid[r][c])
+                        }
+                    })
+                    return list
+                })
+                const cell = (x) => `<${x.tag}${x.cs > 1 ? ` colspan="${x.cs}"` : ''}${x.rs > 1 ? ` rowspan="${x.rs}"` : ''}>${inline(x.v)}</${x.tag}>`
+                return `<table${style}>${out.map((list) => `<tr>${list.map(cell).join('')}</tr>`).join('')}</table>`
+            }
+            const mdxRender = (lines, { ch = 0, key = 0 } = {}) => {
+                const pages = [[]]
+                let out = pages[0]
+                const ids = {}
+                const arts = []
+                let chap = ch
+                let art = 0
+                let br = 0
+                let label = ''
+                let open = null
+                let para = 0
+                let item = 0
+                let sub = 0
+                let mode = ''
+                let next = ''
+                let block = ''
+                let table = null
+                let fence = null
+                let slot = 0
+                const st = () => {
+                    const s = [block, next].filter(Boolean).join('; ')
+                    next = ''
+                    return styleAttr(s)
+                }
+                const num = () => `第${kan(art)}条${br ? `の${kan(br)}` : ''}`
+                const put = (h) => (open ? open.html : out).push(h)
+                const close = () => {
+                    if (open) out.push(`<div class="art"${open.style}>${open.html.join('')}</div>`)
+                    open = null
+                }
+                const endTable = () => {
+                    if (table) put(mdxTable(table))
+                    table = null
+                }
+                const newPage = () => {
+                    close()
+                    out = []
+                    pages.push(out)
+                }
+                const drawFence = () => {
+                    const src = fence.lines.map((l) => l.trim()).join('\n')
+                    if (fence.kind === 'mermaid') fence.box[fence.i] = `<div class="mmd">${mermaidSvg(src, fence.slot)}</div>`
+                    else if (fence.kind === 'math') fence.box[fence.i] = src ? `<div class="math"${fence.style}>${tex(src, true, fence.slot)}</div>` : ''
+                }
+                for (const raw of lines) {
+                    const t = raw.trimStart()
+                    if (fence) {
+                        if (/^```/.test(t)) fence = null
+                        else {
+                            fence.lines.push(raw)
+                            drawFence()
+                        }
+                        continue
+                    }
+                    if (/^\|/.test(t)) {
+                        table ??= { rows: [], head: -1, style: st() }
+                        if (/^\|[\s|:]*-[\s|:-]*$/.test(t)) table.head = table.rows.length - 1
+                        else if (t.length > 1) {
+                            const cells = t.replace(/^\|/, '').split('|').map((c) => c.trim())
+                            if (t.endsWith('|') || cells.at(-1) === '') cells.pop()
+                            table.rows.push(cells)
+                        }
+                        continue
+                    }
+                    endTable()
+                    if (t === ':::') {
+                        block = ''
+                        continue
+                    }
+                    const blk = t.match(/^:::\s*\{([^}]*)\}$/)
+                    if (blk) {
+                        block = attrCss(attrList(blk[1]))
+                        continue
+                    }
+                    if (!t || /^(#{1,3}|-|`{1,2}|\$\$?|!|:{1,3}.*|\{[^}]*)$/.test(t)) continue
+                    if (/^```/.test(t)) {
+                        const box = open ? open.html : out
+                        fence = { box, i: box.length, lines: [], kind: t.slice(3).trim(), slot: `${key}:${slot++}`, style: st() }
+                        box.push('')
+                        continue
+                    }
+                    const one = t.match(/^\{([^}]*)\}$/)
+                    if (one) {
+                        const a = attrList(one[1])
+                        if (a.break) newPage()
+                        next = attrCss(a)
+                        continue
+                    }
+                    const h = raw.match(/^(#{1,3}) (.*)$/)
+                    if (h) {
+                        const { title, a, pending } = parseHead(h[2])
+                        if (pending && !title) continue
+                        close()
+                        if (a.break) newPage()
+                        if (h[1].length === 1) {
+                            if (title) out.push(`<p class="doc-title"${st()}>${title}</p>`)
+                        } else if (h[1].length === 2) {
+                            if (a.supplement) {
+                                mode = 'sup'
+                                out.push(`<p class="chap"${st()}>附　則</p>`)
+                            } else if (a.closing) mode = 'closing'
+                            else if (a.appendix) {
+                                mode = 'app'
+                                if (title) out.push(`<p class="chap left"${st()}>${title}</p>`)
+                            } else out.push(`<p class="chap"${st()}>第${kan(++chap)}章${title ? `　${title}` : ''}</p>`)
+                        } else {
+                            if (a.n) {
+                                art = +a.n
+                                br = +(a.b || 0)
+                            } else if (a.branch) br = br ? br + 1 : 2
+                            else {
+                                art++
+                                br = 0
+                            }
+                            label = num()
+                            if (a.id) ids[esc(a.id)] = label
+                            if (title) {
+                                ids[title] ??= label
+                                arts.push({ label, title })
+                            }
+                            if (a.deleted) out.push(`<div class="art"${st()}><p><b>${label}</b>　削除</p></div>`)
+                            else {
+                                open = { style: st(), html: title ? [`<span class="cap">（${title}）</span>`] : [] }
+                                para = 0
+                            }
+                        }
+                        continue
+                    }
+                    const l = raw.match(/^( *)- (.*)$/)
+                    if (l) {
+                        const text = inline(l[2])
+                        const depth = Math.floor(l[1].length / 2)
+                        if (depth === 0) {
+                            if (!open && mode) {
+                                out.push(`<p class="pre"${st()}>${text}</p>`)
+                                continue
+                            }
+                            if (!open) {
+                                art++
+                                br = 0
+                                label = num()
+                                open = { style: '', html: [] }
+                                para = 0
+                            }
+                            para++
+                            item = 0
+                            open.html.push(para === 1 ? `<p${st()}><b>${label}</b>　${text}</p>` : `<p${st()}>${zen(para)}　${text}</p>`)
+                        } else if (depth === 1) {
+                            sub = 0
+                            open?.html.push(`<p class="item"${st()}>${kan(++item)}　${text}</p>`)
+                        } else open?.html.push(`<p class="sub"${st()}>${IROHA[sub++]}　${text}</p>`)
+                        continue
+                    }
+                    const math = t.match(/^\$\$(.+)\$\$$/)
+                    if (math) {
+                        put(`<div class="math"${st()}>${tex(math[1], true, `${key}:${slot++}`)}</div>`)
+                        continue
+                    }
+                    if (/^\$\$/.test(t)) continue
+                    const img = t.match(/^!\[([^\]]*)\]\(([^)]*)\)$/)
+                    if (img) {
+                        put(`<img class="fig" src="${esc(img[2])}" alt="${esc(img[1])}"${st()} />`)
+                        continue
+                    }
+                    if (/^!/.test(t)) continue
+                    close()
+                    const cls = mode === 'closing' && /^[甲乙丙丁]　/.test(t) ? 'pre right' : 'pre'
+                    out.push(`<p class="${cls}"${st()}>${inline(raw)}</p>`)
+                }
+                close()
+                endTable()
+                const html = pages
+                    .map((p) => `<div class="sheet">${p.join('')}</div>`)
+                    .join('')
+                    .replace(/\u0001([^\u0002]*)\u0002/g, (m, k) => `<span class="ref-s">${ids[k] ?? k}</span>`)
+                return { html, arts }
             }
             const mdxItems = [...document.querySelectorAll('#mdx-list li')]
+            const mdxSrc = document.getElementById('mdx-src')
+            const mdxPv = document.getElementById('mdx-pv')
             let mdxAt = -1
+            let mdxRaf = 0
             const showMdx = (i) => {
                 if (i === mdxAt) return
                 mdxAt = i
+                cancelAnimationFrame(mdxRaf)
+                for (const k in mdxGood) delete mdxGood[k]
                 const it = MDX[i]
                 const plan = mdxPlan[i]
-                const pv = document.getElementById('mdx-pv')
-                document.getElementById('mdx-src').innerHTML = it.md.map((raw, k) => mdLine(raw, plan.lines[k])).join('')
-                pv.innerHTML = it.pv
-                ;[...pv.children].forEach((el, k) => el.style.setProperty('--d', `${plan.pv + k * MDX_GAP}ms`))
-                document.getElementById('mdx-desc').innerHTML = `<span>${esc(it.d)}</span>`
+                document.getElementById('mdx-desc').innerHTML = `<span>${descHtml(it.d)}</span>`
                 mdxItems.forEach((li, j) => li.classList.toggle('on', i === j))
+                const t0 = performance.now()
+                const motion = document.documentElement.classList.contains('motion')
+                let last = null
+                const draw = () => {
+                    const e = motion ? performance.now() - t0 : Infinity
+                    const typed = []
+                    let menu = null
+                    it.md.forEach((raw, k) => {
+                        const { d, steps } = plan.lines[k]
+                        if (e < d) return
+                        let s = steps[0]
+                        for (const x of steps) {
+                            if (x.t > e) break
+                            s = x
+                        }
+                        typed.push(s.s)
+                        if ('menu' in s) menu = s.menu
+                    })
+                    const done = e >= plan.end
+                    const key = `${typed.join('\n')}\n${done}\n${menu}`
+                    if (key !== last) {
+                        last = key
+                        const r = mdxRender(typed, { ch: it.ch, key: i })
+                        const items = menu === null ? null : r.arts.filter((a) => a.title.includes(esc(menu))).map((a) => `${a.label}（${a.title}）`)
+                        mdxSrc.innerHTML = typed.map((t, k) => mdLine(t, !done && k === typed.length - 1, k === typed.length - 1 ? items : null)).join('')
+                        mdxPv.innerHTML = r.html
+                        mdxSrc.scrollTop = mdxSrc.scrollHeight
+                        mdxPv.scrollTop = mdxPv.scrollHeight
+                    }
+                    return done
+                }
+                const frame = () => {
+                    if (!draw()) mdxRaf = requestAnimationFrame(frame)
+                }
+                mdxRedraw = () => {
+                    last = null
+                    draw()
+                }
+                frame()
             }
             showMdx(0)
             const heroTabs = tabSet(document.getElementById('top-hero'), [12000, mdxStart.at(-1)])
