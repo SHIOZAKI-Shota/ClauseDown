@@ -33,6 +33,7 @@ import { keyName, resolveAi } from './ai/provider'
 import { listAiModels } from './ai/models'
 import { loginOpenRouter } from './ai/openrouter-auth'
 import { aiBaseOf, cleanAiConfig, type AiConfig, type AiProvider } from '../shared/ai-providers'
+import { isEnabled } from '../shared/experiments'
 import { applyMcp, mcpState, mcpToken, regenerateMcpToken } from './mcp-server'
 import { desktopStatus, registerDesktop, unregisterDesktop } from './claude-desktop'
 
@@ -276,7 +277,7 @@ async function aiStatus(): Promise<AiStatus> {
 }
 
 async function setAiKey(provider: AiProvider, key: unknown, baseUrl?: string): Promise<AiStatus> {
-    const config = cleanAiConfig({ provider, baseUrl })
+    const config = cleanAiConfig({ provider, baseUrl }, { lan: isEnabled(await loadSettings(), 'lanAi') })
     const name = keyName(config.provider, aiBaseOf(config))
     if (!name) throw new Error('この接続先には API キーを保存できません')
     await saveSecret(name, typeof key === 'string' ? key.trim() : '')
@@ -284,7 +285,7 @@ async function setAiKey(provider: AiProvider, key: unknown, baseUrl?: string): P
 }
 
 async function setAiConfig(config: AiConfig): Promise<AiStatus> {
-    await updateSettings((s) => ({ ...s, ai: cleanAiConfig(config) }))
+    await updateSettings((s) => ({ ...s, ai: cleanAiConfig(config, { lan: isEnabled(s, 'lanAi') }) }))
     return aiStatus()
 }
 
@@ -497,7 +498,7 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
     aiStatus,
     setAiKey,
     setAiConfig,
-    listAiModels: (config: AiConfig) => listAiModels(cleanAiConfig(config)),
+    listAiModels: async (config: AiConfig) => listAiModels(cleanAiConfig(config, { lan: isEnabled(await loadSettings(), 'lanAi') })),
     aiLoginOpenRouter: async () => {
         const key = await loginOpenRouter((url) => shell.openExternal(url))
         await saveSecret('ai-key-openrouter', key)

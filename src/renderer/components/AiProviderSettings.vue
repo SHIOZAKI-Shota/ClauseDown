@@ -19,6 +19,11 @@ const testing = ref(false)
 const loggingIn = ref(false)
 
 const info = computed(() => AI_PROVIDERS[provider.value])
+const providerNote = computed(() =>
+    provider.value === 'ollama' && status.value && !status.value.local
+        ? 'LAN 内 の Ollama を使用します。API キーは不要です。道具（tools）に対応したモデル（qwen3、llama3.1、gpt-oss など）が必要です。'
+        : info.value.description,
+)
 const providerItems = (Object.keys(AI_PROVIDERS) as AiProvider[]).map((p) => ({ label: AI_PROVIDERS[p].label, value: p }))
 const OTHER = 'other'
 const presetItems = [...OPENAI_PRESETS.map((p) => ({ label: p.label, value: p.url })), { label: 'その他（URL を入力）', value: OTHER }]
@@ -116,7 +121,7 @@ async function test() {
 </script>
 
 <template>
-    <SettingRow label="使う AI" :description="info.description">
+    <SettingRow label="使う AI" :description="providerNote">
         <USelect :model-value="provider" :items="providerItems" class="cd-w-input" @update:model-value="(v) => onProvider(v as AiProvider)" />
     </SettingRow>
 

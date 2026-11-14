@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import type { AppSettings } from '../shared/api'
 import { cleanGitLabHosts, GITHUB_BASE, type ForgeKind } from '../shared/forge'
 import { cleanAiConfig } from '../shared/ai-providers'
+import { isEnabled } from '../shared/experiments'
 import { cleanStyle, DEFAULT_PREFS } from '../shared/prefs'
 import { writeAtomic } from './atomic'
 
@@ -18,7 +19,7 @@ function normalize(saved: Partial<AppSettings>): AppSettings {
         ...DEFAULT,
         ...saved,
         gitlabHosts: cleanGitLabHosts(saved.gitlabHosts),
-        ai: cleanAiConfig(saved.ai),
+        ai: cleanAiConfig(saved.ai, { lan: isEnabled(saved, 'lanAi') }),
         prefs: { ...prefs, docStyle: cleanStyle(prefs.docStyle) },
     } as AppSettings
 }

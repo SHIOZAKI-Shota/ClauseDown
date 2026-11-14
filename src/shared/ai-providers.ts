@@ -63,12 +63,29 @@ export const OPENAI_PRESETS: { label: string; url: string }[] = [
 
 const LOOPBACK = ['127.0.0.1', 'localhost', '[::1]']
 
-export function safeAiBase(url: unknown): boolean {
+export interface BaseRules {
+    lan?: boolean
+}
+
+export function isLanHost(host: string): boolean {
+    const h = host.toLowerCase()
+    const v4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(h)
+    if (v4) {
+        const [a, b] = [Number(v4[1]), Number(v4[2])]
+        if (v4.slice(1).some((n) => Number(n) > 255)) return false
+        return a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254)
+    }
+    if (h.startsWith('[')) return /^\[(f[cd][0-9a-f]{2}|fe[89ab][0-9a-f]):/.test(h)
+    return /^[a-z0-9-]+$/.test(h) || /\.(local|lan|home\.arpa|internal)$/.test(h)
+}
+
+export function safeAiBase(url: unknown, rules: BaseRules = {}): boolean {
     if (typeof url !== 'string') return false
     try {
         const u = new URL(url)
         if (u.username || u.password || u.search || u.hash) return false
-        return u.protocol === 'https:' || (u.protocol === 'http:' && LOOPBACK.includes(u.hostname))
+        if (u.protocol === 'https:') return true
+        return u.protocol === 'http:' && (LOOPBACK.includes(u.hostname) || (!!rules.lan && isLanHost(u.hostname)))
     } catch {
         return false
     }
@@ -82,7 +99,7 @@ export function isLocalBase(url: string): boolean {
     }
 }
 
-export function cleanAiConfig(raw: unknown): AiConfig {
+export function cleanAiConfig(raw: unknown, rules: BaseRules = {}): AiConfig {
     const r = (raw ?? {}) as Partial<AiConfig>
     const provider: AiProvider = r.provider && r.provider in AI_PROVIDERS ? r.provider : 'anthropic'
     const out: AiConfig = { provider }
@@ -90,7 +107,7 @@ export function cleanAiConfig(raw: unknown): AiConfig {
     if (model && /^[\w.:/@+-]+$/.test(model)) out.model = model
     if (provider === 'openai' || provider === 'ollama') {
         const base = typeof r.baseUrl === 'string' ? r.baseUrl.trim().replace(/\/+$/, '') : ''
-        if (base && safeAiBase(base)) out.baseUrl = base
+        if (base && safeAiBase(base, rules)) out.baseUrl = base
     }
     return out
 }

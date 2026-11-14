@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { AI_PROVIDERS, aiBaseOf, aiShortLabel, cleanAiConfig, isLocalBase, safeAiBase, type AiConfig, type AiProvider } from '../../shared/ai-providers'
 import { GITHUB_BASE } from '../../shared/forge'
 import { getToken, loadSecret, loadSettings, type SecretName } from '../settings'
+import { isEnabled } from '../../shared/experiments'
 
 export interface ResolvedAi {
     config: AiConfig
@@ -23,7 +24,9 @@ export function keyName(provider: AiProvider, base: string): SecretName | null {
 }
 
 export async function resolveAi(override?: AiConfig): Promise<ResolvedAi> {
-    const config = cleanAiConfig(override ?? (await loadSettings()).ai)
+    const settings = await loadSettings()
+    const rules = { lan: isEnabled(settings, 'lanAi') }
+    const config = cleanAiConfig(override ?? settings.ai, rules)
     const info = AI_PROVIDERS[config.provider]
     const base = aiBaseOf(config)
     const model = config.model ?? info.model ?? ''
@@ -42,7 +45,12 @@ export async function resolveAi(override?: AiConfig): Promise<ResolvedAi> {
         ready: true,
     }
     const fail = (reason: string) => ({ ...r, ready: false, reason })
-    if (config.provider !== 'anthropic' && !safeAiBase(base)) return fail('接続先の URL は https か、ローカル の中（http://127.0.0.1）にしてください')
+    if (config.provider !== 'anthropic' && !safeAiBase(base, rules))
+        return fail(
+            rules.lan
+                ? '接続先の URL は https か、ローカル の中（http://127.0.0.1）か LAN 内（http://192.168.x.x など）にしてください'
+                : '接続先の URL は https か、ローカル の中（http://127.0.0.1）にしてください',
+        )
     if (info.auth === 'key' && !key) {
         return fail(config.provider === 'anthropic' ? 'Claude の API キーが設定されていません' : 'この接続先の API キーが設定されていません')
     }
