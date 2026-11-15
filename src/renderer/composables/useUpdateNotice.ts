@@ -26,12 +26,17 @@ export function useUpdateNotice() {
         toast.add({
             id: 'update',
             title: `ClauseDown ${u.version} が出ました`,
-            description: `今お使いのバージョンは ${u.current} です`,
+            description: `今お使いのバージョンは ${u.current} です${u.via === 'brew' ? '。Homebrew で更新します' : ''}`,
             icon: 'i-lucide-circle-arrow-up',
             color: 'primary',
             duration: 0,
             actions: [
-                { label: IS_MAC ? '配布ページを開く' : 'ダウンロード', icon: 'i-lucide-download', size: 'sm', onClick: () => void download() },
+                {
+                    label: u.via === 'brew' ? '更新する' : IS_MAC ? '配布ページを開く' : 'ダウンロード',
+                    icon: 'i-lucide-download',
+                    size: 'sm',
+                    onClick: () => void download(),
+                },
                 { label: '変更点を見る', size: 'sm', color: 'neutral', variant: 'outline', onClick: () => (app.view = 'about') },
             ],
         })
@@ -41,7 +46,7 @@ export function useUpdateNotice() {
         toast.add({
             id: 'update',
             title: `ClauseDown ${u.version} の準備ができました`,
-            description: '再起動すると新しいバージョンになります',
+            description: u.via === 'brew' ? '再起動すると、Homebrew で新しいバージョンに更新して起動し直します' : '再起動すると新しいバージョンになります',
             icon: 'i-lucide-circle-arrow-up',
             color: 'primary',
             duration: 0,
@@ -62,6 +67,11 @@ export function useUpdateNotice() {
         // About の画面でダウンロードしたときは、そこに「再起動して更新」が出るので知らせない
         off = window.api.onUpdateState((u) => {
             if (u.state === 'ready' && (fromToast || app.view !== 'about')) showReady(u)
+        })
+        void window.api.updateState().then((u) => {
+            if (u.via === 'brew' && u.state === 'error' && u.message) {
+                toast.add({ id: 'update', title: '更新できませんでした', description: u.message, icon: 'i-lucide-circle-alert', color: 'error', duration: 0 })
+            }
         })
     })
     onBeforeUnmount(() => {

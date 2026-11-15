@@ -1,0 +1,65 @@
+name: パッケージマネージャーへの配布
+
+on:
+    release:
+        types: [published]
+    workflow_dispatch:
+        inputs:
+            tag:
+                description: 配布するリリースのタグ（例：v0.7.0）
+                required: true
+
+permissions:
+    contents: read
+
+env:
+    TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
+jobs:
+    winget:
+        if: github.event_name == 'release'
+        runs-on: ubuntu-latest
+        steps:
+            - uses: vedantmgoyal9/winget-releaser@v2
+              with:
+                  identifier: ShiozakiShota.ClauseDown
+                  installers-regex: 'ClauseDown-Setup-[\d.]+\.exe$'
+                  release-tag: ${{ env.TAG }}
+                  token: ${{ secrets.DISTRIBUTE_TOKEN }}
+
+    homebrew:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: dmg の sha256 を出す
+              id: dmg
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  version="${TAG#v}"
+                  gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "ClauseDown-${version}-arm64.dmg" --dir dl
+                  echo "version=$version" >> "$GITHUB_OUTPUT"
+                  echo "sha256=$(sha256sum "dl/ClauseDown-${version}-arm64.dmg" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+            - name: tap の cask を更新する
+              env:
+                  TOKEN: ${{ secrets.DISTRIBUTE_TOKEN }}
+                  VERSION: ${{ steps.dmg.outputs.version }}
+                  SHA256: ${{ steps.dmg.outputs.sha256 }}
+              run: |
+                  git clone --depth 1 "https://x-access-token:${TOKEN}@github.com/SHIOZAKI-Shota/homebrew-tap.git" tap
+                  mkdir -p tap/Casks
+                  sed -e "s/^  version \".*\"/  version \"${VERSION}\"/" \
+                      -e "s/^  sha256 \".*\"/  sha256 \"${SHA256}\"/" \
+                      packaging/homebrew/clausedown.rb > tap/Casks/clausedown.rb
+                  cd tap
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                  git add Casks/clausedown.rb
+                  if git diff --cached --quiet; then
+                      echo "変更はありません"
+                      exit 0
+                  fi
+                  git commit -m "clausedown ${VERSION}"
+                  git push origin HEAD

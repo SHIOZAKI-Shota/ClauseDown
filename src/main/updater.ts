@@ -1,18 +1,25 @@
+import { spawn } from 'node:child_process'
+import fs from 'node:fs'
+import path from 'node:path'
 import { app, shell } from 'electron'
 import electronUpdater, { type UpdateInfo } from 'electron-updater'
 import type { UpdateState } from '../shared/api'
+import { appBundleOf, BREW_UPGRADE, brewFailure, brewUpgradeScript, isBrewInstall } from './brew'
 
 const { autoUpdater } = electronUpdater
 
-let state: UpdateState = { state: 'idle', current: app.getVersion() }
+const VIA: UpdateState['via'] = process.platform === 'darwin' && app.isPackaged && isBrewInstall(process.execPath) ? 'brew' : undefined
+
+let state: UpdateState = { state: 'idle', current: app.getVersion(), via: VIA }
 let notify: (s: UpdateState) => void = () => {}
 let ready = false
 
-const MANUAL = process.platform === 'darwin'
+const MANUAL = process.platform === 'darwin' && !VIA
+const brewLog = () => path.join(app.getPath('userData'), 'update.log')
 const RELEASES_URL = 'https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest'
 
-function set(next: Omit<UpdateState, 'current'>) {
-    state = { ...next, current: app.getVersion() }
+function set(next: Omit<UpdateState, 'current' | 'via'>) {
+    state = { ...next, current: app.getVersion(), via: VIA }
     notify(state)
 }
 
@@ -60,6 +67,16 @@ function friendly(e: unknown): string {
 
 export function initUpdater(send: (s: UpdateState) => void) {
     notify = send
+    if (!VIA) return
+    let log: string
+    try {
+        log = fs.readFileSync(brewLog(), 'utf8')
+        fs.rmSync(brewLog(), { force: true })
+    } catch {
+        return
+    }
+    const failure = brewFailure(log)
+    if (failure) set({ state: 'error', message: `Homebrew での更新に失敗しました：${failure}。ターミナルで「${BREW_UPGRADE}」を実行してください` })
 }
 
 export const updateState = (): UpdateState => state
@@ -87,6 +104,10 @@ export async function downloadUpdate(): Promise<UpdateState> {
         await shell.openExternal(RELEASES_URL)
         return state
     }
+    if (VIA) {
+        set({ state: 'ready', version: state.version, notes: state.notes, date: state.date })
+        return state
+    }
     setup()
     set({ state: 'downloading', version: state.version, notes: state.notes, date: state.date, percent: 0 })
     try {
@@ -99,5 +120,16 @@ export async function downloadUpdate(): Promise<UpdateState> {
 
 export function installUpdate() {
     if (state.state !== 'ready') return
+    if (VIA) {
+        const bundle = appBundleOf(process.execPath)
+        if (!bundle) return
+        spawn('/bin/sh', ['-c', brewUpgradeScript(process.pid, bundle, brewLog())], {
+            detached: true,
+            stdio: 'ignore',
+            env: { ...process.env, PATH: `/opt/homebrew/bin:${process.env.PATH ?? '/usr/bin:/bin:/usr/sbin:/sbin'}` },
+        }).unref()
+        setImmediate(() => app.quit())
+        return
+    }
     setImmediate(() => autoUpdater.quitAndInstall(false, true))
 }

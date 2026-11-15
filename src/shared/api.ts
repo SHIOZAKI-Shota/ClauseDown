@@ -237,6 +237,7 @@ export interface UpdateState {
     date?: string
     percent?: number
     message?: string
+    via?: 'brew'
 }
 
 export interface OpenScheduleEvent {

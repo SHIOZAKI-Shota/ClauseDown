@@ -49,6 +49,7 @@ jobs:
                   sudo cp -r out/demo _site/demo
                   sudo cp site/index.html _site/index.html
                   sudo cp site/og.png _site/og.png
+                  sudo cp site/install.ps1 site/install.sh _site/
                   sudo cp site/favicon.ico site/favicon.svg site/apple-touch-icon.png _site/
                   sudo cp site/sitemap.xml site/robots.txt _site/
                   sudo cp -r site/images _site/images
