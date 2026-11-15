@@ -16,10 +16,11 @@ import type {
 import { canApprove, DEFAULT_RULES, reviewStatus, type Reviewer, type ReviewStatus } from '@shared/review'
 import { FORGE_LABEL, type ForgeKind } from '@shared/forge'
 import { DEFAULT_PREFS, type AppPrefs, type DocStyle, type RecentDoc } from '@shared/prefs'
+import { messagesOf, resolveLocale, setLocale } from '@shared/i18n'
 import { resolveStyle, type StyleLayers } from '@shared/folder-style'
 import { toPlain } from '~/utils/ipc'
 import { todayISO } from '~/utils/format'
-import { IS_MAC } from '~/utils/platform'
+import { revealLabel } from '~/utils/platform'
 import { dissolveSection, placeRepo, renameSection } from '@shared/repo-sections'
 import { addDays } from '@shared/schedule'
 import { useStoredRef } from '~/composables/useStoredRef'
@@ -92,6 +93,10 @@ export const useApp = defineStore('app', () => {
     const me = computed(() => identity.value?.name ?? '')
     const reviewer = computed<Reviewer>(() => ({ name: me.value || undefined, login: identity.value?.login }))
     const prefs = computed<AppPrefs>(() => ({ ...DEFAULT_PREFS, ...settings.value?.prefs }))
+    const systemLanguages = ref<string[]>([...navigator.languages])
+    const locale = computed(() => resolveLocale(prefs.value.language, systemLanguages.value))
+    watch(locale, (l) => setLocale(l), { immediate: true, flush: 'sync' })
+    const t = computed(() => messagesOf(locale.value))
     const styleFor = (path: string) => resolveStyle(prefs.value.docStyle, styleLayers.value, path).style
     const style = computed<DocStyle>(() => styleFor(currentPath.value ?? ''))
 
@@ -144,9 +149,9 @@ export const useApp = defineStore('app', () => {
             icon: 'i-lucide-circle-check',
             duration: 8000,
             actions: [
-                { label: '開く', icon: 'i-lucide-external-link', size: 'sm', onClick: () => void run(() => window.api.openExported(path)) },
+                { label: t.value.common.open, icon: 'i-lucide-external-link', size: 'sm', onClick: () => void run(() => window.api.openExported(path)) },
                 {
-                    label: IS_MAC ? 'Finder で表示' : 'エクスプローラーで表示',
+                    label: revealLabel(),
                     size: 'sm',
                     color: 'neutral',
                     variant: 'outline',
@@ -192,6 +197,7 @@ export const useApp = defineStore('app', () => {
     })
 
     async function load() {
+        systemLanguages.value = await window.api.systemLanguages().catch(() => systemLanguages.value)
         settings.value = await window.api.getSettings()
         window.api.onOpenSchedule((e) => void (e.dir ? openSchedule(e.dir, e.docPath) : openScheduleAll()))
         await refreshAccounts()
@@ -218,8 +224,8 @@ export const useApp = defineStore('app', () => {
         const dir = await window.api.pickFolder()
         if (!dir) return
         const r = await window.api.openRepo(dir)
-        if (!r.ok) return notify(`選んだフォルダはリポジトリではありません（${r.message}）。移動先のリポジトリのフォルダを選んでください`, true)
-        if (settings.value.repos.some((x) => x.dir === dir && x.dir !== oldDir)) return notify('そのフォルダはすでに一覧にあります', true)
+        if (!r.ok) return notify(t.value.shell.notify.notRepo(r.message ?? ''), true)
+        if (settings.value.repos.some((x) => x.dir === dir && x.dir !== oldDir)) return notify(t.value.shell.notify.alreadyListed, true)
         const repos = settings.value.repos.map((x) => (x.dir === oldDir ? { ...x, dir } : x))
         await saveSettings({ ...settings.value, repos, current: settings.value.current === oldDir ? dir : settings.value.current })
         await checkRepos()
@@ -227,7 +233,7 @@ export const useApp = defineStore('app', () => {
             await refreshDocs()
             view.value = 'docs'
         }
-        notify('リポジトリの場所を更新しました')
+        notify(t.value.shell.notify.relocated)
     }
 
     async function forgetRepo(dir: string) {
@@ -240,7 +246,7 @@ export const useApp = defineStore('app', () => {
         if (wasCurrent) await flushEditor()
         await saveSettings({ ...settings.value, repos, current, prefs: { ...prefs.value, recentDocs } })
         await checkRepos()
-        notify(`「${name}」を一覧から外しました（フォルダや版は残っています）`)
+        notify(t.value.shell.notify.forgot(name))
         if (!wasCurrent) return
         currentPath.value = null
         syncState.value = null
@@ -256,9 +262,9 @@ export const useApp = defineStore('app', () => {
     }
 
     async function openRecent(r: RecentDoc) {
-        if (repoStates.value[r.dir] && repoStates.value[r.dir] !== 'ok') return notify('この文書のリポジトリが見つかりません', true)
+        if (repoStates.value[r.dir] && repoStates.value[r.dir] !== 'ok') return notify(t.value.shell.notify.recentRepoMissing, true)
         if (r.dir !== repoDir.value) await switchRepo(r.dir)
-        if (!docs.value.some((d) => d.path === r.path)) return notify(`「${r.title}」が見つかりません。名前の変更や削除がされた可能性があります`, true)
+        if (!docs.value.some((d) => d.path === r.path)) return notify(t.value.shell.notify.recentDocMissing(r.title), true)
         openDoc(r.path)
     }
 
@@ -341,7 +347,7 @@ export const useApp = defineStore('app', () => {
         await refreshDocs()
         reloadKey.value++
         if (currentPath.value && !docs.value.some((d) => d.path === currentPath.value)) {
-            notify('この改定案にはこの文書がありません。リポジトリホームに戻ります')
+            notify(t.value.shell.notify.docNotInBranch)
             currentPath.value = null
             view.value = 'docs'
         }
@@ -365,7 +371,7 @@ export const useApp = defineStore('app', () => {
         await flushEditor()
         if (!(await runOk(() => window.api.switchBranch(repoDir.value!, name)))) return false
         await afterBranchChange()
-        notify(`「${branches.value.find((b) => b.name === name)?.label ?? name}」に切り替えました`)
+        notify(t.value.shell.notify.switched(branches.value.find((b) => b.name === name)?.label ?? name))
         return true
     }
 
@@ -426,7 +432,7 @@ export const useApp = defineStore('app', () => {
         await saveSettings({ ...settings.value, repos: settings.value.repos.map((r) => (r.dir === dir ? { ...r, url: saved } : r)) })
         await refreshDocs()
         syncState.value = await window.api.sync(dir)
-        notify('共有を始めました。これからは「リモート」を押すと同期します')
+        notify(t.value.shell.notify.published)
         return true
     }
 
@@ -444,7 +450,7 @@ export const useApp = defineStore('app', () => {
         await setRepoUrl(dir, saved)
         await refreshDocs()
         syncState.value = await window.api.sync(dir)
-        notify('リモートを変更しました')
+        notify(t.value.shell.notify.remoteChanged)
         return true
     }
 
@@ -455,7 +461,7 @@ export const useApp = defineStore('app', () => {
         await setRepoUrl(dir, undefined)
         await refreshDocs()
         syncState.value = { state: 'local' }
-        notify('リモートを外しました。ローカル だけで管理します')
+        notify(t.value.shell.notify.remoteRemoved)
         return true
     }
 
@@ -475,7 +481,7 @@ export const useApp = defineStore('app', () => {
             if (s.state === 'behind') {
                 await afterBranchChange()
                 syncState.value = { state: 'upToDate' }
-                notify('最新の版を取得しました')
+                notify(t.value.shell.notify.pulled)
             } else {
                 await refreshDocs()
             }
@@ -552,11 +558,12 @@ export const useApp = defineStore('app', () => {
         { immediate: true },
     )
     function labelForReturn(v: View) {
-        if (DOC_VIEWS.includes(v)) return `${currentDoc.value?.title ?? '文書'}に戻る`
-        if (v === 'docs') return 'リポジトリホームに戻る'
-        if (v === 'schedule') return '期日・有効期間の画面に戻る'
-        if (v === 'issues') return '課題の画面に戻る'
-        return 'トップページに戻る'
+        const r = t.value.shell.returnTo
+        if (DOC_VIEWS.includes(v)) return r.doc(currentDoc.value?.title ?? r.docFallback)
+        if (v === 'docs') return r.repoHome
+        if (v === 'schedule') return r.schedule
+        if (v === 'issues') return r.issues
+        return r.home
     }
     function goBack() {
         view.value = backTarget.value
@@ -566,6 +573,8 @@ export const useApp = defineStore('app', () => {
     }
 
     return {
+        locale,
+        t,
         settings,
         view,
         settingsTab,

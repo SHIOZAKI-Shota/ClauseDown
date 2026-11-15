@@ -9,6 +9,9 @@ export const PROJECT = {
     manual: 'https://shiozaki-shota.github.io/ClauseDown/docs/manual/',
 } as const
 
+/** 画面の言語に合ったマニュアルの URL。英語版は manual/en/ にある */
+export const manualUrl = (locale: 'ja' | 'en'): string => (locale === 'en' ? `${PROJECT.manual}en/` : PROJECT.manual)
+
 export const GITHUB_APP = {
     clientId: 'Iv23liL1XTDcvEkXRTXl',
     installUrl: 'https://github.com/apps/clausedown/installations/new',

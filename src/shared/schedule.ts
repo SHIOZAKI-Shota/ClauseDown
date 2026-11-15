@@ -1,3 +1,6 @@
+import { t, type Messages } from './i18n'
+import { liveRecord } from './i18n/live'
+
 export interface EventKind {
     id: string
     label: string
@@ -71,34 +74,37 @@ export const KIND_COLORS = {
     slate: '#64748b',
 } as const
 export type KindColor = keyof typeof KIND_COLORS
-export const COLOR_LABEL: Record<KindColor, string> = {
-    blue: '青',
-    sky: '空',
-    teal: '青緑',
-    green: '緑',
-    amber: '黄',
-    orange: '橙',
-    red: '赤',
-    pink: '桃',
-    violet: '紫',
-    slate: '灰',
-}
+// 読むたびに今の言語で返す
+export const COLOR_LABEL: Record<KindColor, string> = liveRecord(Object.keys(KIND_COLORS) as KindColor[], (c) => t().labels.colors[c])
 
 export const EFFECTIVE_KIND = 'effective'
 export const DELIVERY_KIND = 'delivery'
 
+type KindName = keyof Messages['labels']['kinds']
+
+// 既定の種類の名前は今の言語で返す。{ ...k } で写すと、その時点の言語の名前で固まる（保存される）
+const kind = (id: KindName, color: KindColor, task: boolean, remind: number): EventKind => ({
+    id,
+    get label() {
+        return t().labels.kinds[id]
+    },
+    color,
+    task,
+    remind,
+})
+
 export const DEFAULT_KINDS: EventKind[] = [
-    { id: EFFECTIVE_KIND, label: '施行', color: 'blue', task: false, remind: 30 },
-    { id: 'promulgate', label: '公布', color: 'violet', task: false, remind: 0 },
-    { id: 'submit', label: '提出', color: 'orange', task: true, remind: 7 },
-    { id: 'notify', label: '届出', color: 'amber', task: true, remind: 14 },
-    { id: 'apply', label: '申請', color: 'pink', task: true, remind: 14 },
-    { id: 'start', label: '開始', color: 'green', task: false, remind: 0 },
-    { id: 'end', label: '終了', color: 'slate', task: false, remind: 30 },
-    { id: 'renew', label: '更新', color: 'teal', task: true, remind: 60 },
-    { id: 'deadline', label: '期限', color: 'red', task: true, remind: 7 },
+    kind(EFFECTIVE_KIND, 'blue', false, 30),
+    kind('promulgate', 'violet', false, 0),
+    kind('submit', 'orange', true, 7),
+    kind('notify', 'amber', true, 14),
+    kind('apply', 'pink', true, 14),
+    kind('start', 'green', false, 0),
+    kind('end', 'slate', false, 30),
+    kind('renew', 'teal', true, 60),
+    kind('deadline', 'red', true, 7),
 ]
-const DELIVERY: EventKind = { id: DELIVERY_KIND, label: '納品', color: 'sky', task: false, remind: -1 }
+const DELIVERY: EventKind = kind(DELIVERY_KIND, 'sky', false, -1)
 
 export function cleanKinds(v: unknown): EventKind[] {
     if (!Array.isArray(v)) return DEFAULT_KINDS.map((k) => ({ ...k }))
@@ -125,7 +131,7 @@ export function cleanKinds(v: unknown): EventKind[] {
 
 export function kindMap(kinds: EventKind[]): (id: string) => EventKind {
     const m = new Map([...kinds, DELIVERY].map((k) => [k.id, k]))
-    return (id) => m.get(id) ?? { id, label: '予定', color: 'slate', task: false, remind: 0 }
+    return (id) => m.get(id) ?? { id, label: t().labels.kinds.fallback, color: 'slate', task: false, remind: 0 }
 }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
@@ -148,21 +154,22 @@ export function addMonths(s: string, months: number): string {
 }
 
 export function cleanEventInput(v: DueEventInput): DueEventInput {
-    if (!v || typeof v !== 'object') throw new Error('期日の内容が正しくありません')
-    if (typeof v.kind !== 'string' || !v.kind) throw new Error('種類を選んでください')
-    if (!isDate(v.date)) throw new Error('日付が正しくありません')
-    if (v.end !== undefined && v.end !== '' && !isDate(v.end)) throw new Error('終了日が正しくありません')
+    const err = t().labels.eventErrors
+    if (!v || typeof v !== 'object') throw new Error(err.invalid)
+    if (typeof v.kind !== 'string' || !v.kind) throw new Error(err.noKind)
+    if (!isDate(v.date)) throw new Error(err.badDate)
+    if (v.end !== undefined && v.end !== '' && !isDate(v.end)) throw new Error(err.badEnd)
     const end = v.end && v.end !== v.date ? v.end : undefined
-    if (end && end < v.date) throw new Error('終了日は開始日以降にしてください')
+    if (end && end < v.date) throw new Error(err.endBeforeStart)
     let repeat: DueEvent['repeat']
     if (v.repeat) {
-        if (v.repeat.every !== 'year' && v.repeat.every !== 'month') throw new Error('繰り返しが正しくありません')
+        if (v.repeat.every !== 'year' && v.repeat.every !== 'month') throw new Error(err.badRepeat)
         const until = v.repeat.until || undefined
-        if (until !== undefined && (!isDate(until) || until < v.date)) throw new Error('繰り返しの終わりが正しくありません')
+        if (until !== undefined && (!isDate(until) || until < v.date)) throw new Error(err.badUntil)
         repeat = { every: v.repeat.every, ...(until ? { until } : {}) }
     }
     const docPath = typeof v.docPath === 'string' ? v.docPath : ''
-    if (docPath.includes('..') || docPath.startsWith('/')) throw new Error('文書の指定が正しくありません')
+    if (docPath.includes('..') || docPath.startsWith('/')) throw new Error(err.badDoc)
     const str = (s: unknown, max: number) => (typeof s === 'string' && s.trim() ? s.trim().slice(0, max) : undefined)
     const remind = v.remind === undefined || v.remind === null ? undefined : Math.max(-1, Math.min(365, Math.trunc(Number(v.remind)) || 0))
     return {

@@ -3,6 +3,7 @@ import { todayISO } from '~/utils/format'
 import { useApp } from '~/stores/app'
 import type { Issue } from '@shared/api'
 import { withIssueLines } from '@shared/issue-refs'
+import { useT } from '~/composables/useT'
 
 export interface SaveRequest {
     message: string
@@ -12,11 +13,12 @@ export interface SaveRequest {
 
 const props = defineProps<{ busy: boolean; branchLabel: string; onMain: boolean; hasHistory: boolean; newDoc: boolean; docTitle: string }>()
 const emit = defineEmits<{ close: []; save: [SaveRequest] }>()
+const t = useT()
 const message = ref('')
 const withDate = ref(false)
 const date = ref(todayISO())
 const target = ref<'here' | 'draft'>(props.newDoc ? 'draft' : 'here')
-const draftName = ref(props.newDoc ? `${props.docTitle}の作成` : '')
+const draftName = ref(props.newDoc ? t.value.history.save.defaultDraftName(props.docTitle) : '')
 
 const app = useApp()
 const aiReady = ref(false)
@@ -107,71 +109,60 @@ function save() {
 </script>
 
 <template>
-    <UModal
-        :open="true"
-        title="版を保存"
-        description="今の内容を一つの版として記録します（リモートがあれば、設定に従って送信します）。あとから改定履歴で見返したり、新旧対照表を作ったりできます。"
-        @update:open="(v) => !v && emit('close')"
-    >
+    <UModal :open="true" :title="t.history.save.title" :description="t.history.save.description" @update:open="(v) => !v && emit('close')">
         <template #body>
             <div class="cd-form">
-                <UFormField v-if="onMain" label="保存先">
+                <UFormField v-if="onMain" :label="t.history.save.target">
                     <SegmentSwitch
                         v-model="target"
-                        aria-label="保存先"
+                        :aria-label="t.history.save.target"
                         :items="
                             !newDoc
                                 ? [
                                       {
                                           value: 'here',
-                                          label: '現行版に保存',
+                                          label: t.history.save.toCurrent,
                                           icon: 'i-lucide-badge-check',
-                                          description: 'すぐに正式な版になります。誤字の修正など、確認がいらない変更に',
+                                          description: t.history.save.toCurrentDesc,
                                       },
                                       {
                                           value: 'draft',
-                                          label: '新しい改定案として保存',
+                                          label: t.history.save.newDraft,
                                           icon: 'i-lucide-git-branch',
-                                          description: '現行版はそのまま。確認が済んだら「現行版に反映」します',
+                                          description: t.history.save.newDraftDesc,
                                       },
                                   ]
                                 : [
                                       {
                                           value: 'draft',
-                                          label: '改定案として保存',
+                                          label: t.history.save.asDraft,
                                           icon: 'i-lucide-git-branch',
-                                          description: '書きかけのまま区切りごとに保存できます。完成して確認が済んだら「現行版に反映」します',
+                                          description: t.history.save.asDraftDesc,
                                       },
                                       {
                                           value: 'here',
-                                          label: hasHistory ? '現行版に保存' : '現行版として保存',
+                                          label: hasHistory ? t.history.save.toCurrent : t.history.save.asCurrent,
                                           icon: 'i-lucide-badge-check',
-                                          description: 'すでに完成している内容を、そのまま現行版に入れます',
+                                          description: t.history.save.asCurrentDesc,
                                       },
                                   ]
                         "
                     />
                 </UFormField>
-                <UFormField v-if="target === 'draft'" label="改定案の名前" description="例：2026年4月改定">
+                <UFormField v-if="target === 'draft'" :label="t.history.save.draftName" :description="t.history.save.draftNameExample">
                     <UInput v-model="draftName" class="cd-full" />
                 </UFormField>
-                <UAlert
-                    v-if="!onMain"
-                    color="warning"
-                    variant="subtle"
-                    icon="i-lucide-file-pen-line"
-                    :title="`保存先：改定案「${branchLabel}」（現行版には影響しません）`"
-                />
-                <UFormField label="何を変えたか" description="例：第12条 契約期間を2年に変更">
+                <UAlert v-if="!onMain" color="warning" variant="subtle" icon="i-lucide-file-pen-line" :title="t.history.save.savingToDraft(branchLabel)" />
+                <UFormField :label="t.history.save.whatChanged" :description="t.history.save.whatChangedExample">
                     <template v-if="aiReady" #hint>
                         <UButton
-                            label="AI で下書き"
+                            :label="t.history.save.aiDraft"
                             icon="i-lucide-sparkles"
                             size="xs"
                             color="neutral"
                             variant="ghost"
                             :loading="drafting"
-                            title="保存していない変更を AI に渡して、説明を作ります"
+                            :title="t.history.save.aiDraftTitle"
                             @click="draftMessage"
                         />
                     </template>
@@ -186,21 +177,21 @@ function save() {
                 </UFormField>
                 <UFormField
                     v-if="openIssues.length"
-                    label="課題"
-                    :description="toDraft ? '「解決する」課題は、この改定案を現行版に反映したときに閉じます。' : '「解決する」課題は、保存すると閉じます。'"
+                    :label="t.history.save.issues"
+                    :description="toDraft ? t.history.save.closeOnMerge : t.history.save.closeOnSave"
                 >
                     <div class="issues">
                         <div v-for="p in picked" :key="p.n" class="chip">
                             <UButton
-                                :label="p.how === 'close' ? '解決する' : '関連する'"
+                                :label="p.how === 'close' ? t.history.save.closes : t.history.save.relates"
                                 size="xs"
                                 :color="p.how === 'close' ? 'primary' : 'neutral'"
                                 variant="soft"
-                                title="押すと「解決する」と「関連する」を切り替えます"
+                                :title="t.history.save.toggleHow"
                                 @click="flip(p)"
                             />
                             <span class="num">#{{ p.n }}</span><span class="ttl">{{ titleOf(p.n) }}</span>
-                            <UButton icon="i-lucide-x" size="xs" color="neutral" variant="ghost" aria-label="外す" @click="unpick(p.n)" />
+                            <UButton icon="i-lucide-x" size="xs" color="neutral" variant="ghost" :aria-label="t.history.save.unpick" @click="unpick(p.n)" />
                         </div>
                         <USelectMenu
                             v-if="pickable.length"
@@ -209,24 +200,24 @@ function save() {
                             :items="pickable"
                             value-key="value"
                             size="sm"
-                            placeholder="課題を選ぶ…"
+                            :placeholder="t.history.save.pickIssue"
                             icon="i-lucide-list-todo"
                             class="cd-full"
-                            :search-input="{ placeholder: '番号・題名で探す' }"
+                            :search-input="{ placeholder: t.history.save.searchIssue }"
                             @update:model-value="pick"
                         />
                     </div>
                 </UFormField>
                 <div v-if="target === 'here'" class="row">
-                    <UCheckbox v-model="withDate" label="施行日を記録する" />
+                    <UCheckbox v-model="withDate" :label="t.history.save.recordEffective" data-guide="effective" />
                     <DateField v-if="withDate" v-model="date" />
                 </div>
             </div>
         </template>
         <template #footer>
             <div class="cd-modal-foot">
-                <UButton label="やめる" color="neutral" variant="outline" @click="emit('close')" />
-                <UButton label="保存" :disabled="!canSave" :loading="busy" @click="save" />
+                <UButton :label="t.history.save.cancel" color="neutral" variant="outline" @click="emit('close')" />
+                <UButton :label="t.common.save" :disabled="!canSave" :loading="busy" @click="save" />
             </div>
         </template>
     </UModal>

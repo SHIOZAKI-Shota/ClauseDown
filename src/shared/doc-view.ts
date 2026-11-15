@@ -1,8 +1,9 @@
-import { docStyle, parseLegal, REF_RE, type Article, type Item, type LegalDoc, type Paragraph } from './legal-parser'
+import { docStyle, parseLegal, REF_RE, warningLine, type Article, type Item, type LegalDoc, type Paragraph } from './legal-parser'
 import { mermaidSvg, parseFence } from './blocks'
 import { checkDefinitions } from './definitions'
 import { formatNumber, type NumeralStyle } from './numerals'
 import type { RefTarget } from './legal-styles'
+import { t } from './i18n'
 
 const branchSuffix = (path: number[] | undefined, style: NumeralStyle) => (path ?? []).map((b) => `の${formatNumber(b, style)}`).join('')
 
@@ -125,7 +126,7 @@ export function backRefs(input: string, doc: LegalDoc): Map<number, BackRef[]> {
                 const target = doc.refs[r[1].trim()]
                 if (!target || target.line < 0) continue
                 const info = before(labels, line, (l) => l[0])?.[1]
-                const label = info?.label || '前文'
+                const label = info?.label || t().checks.preamble
                 const own = info?.article
                 if (own === target) continue
                 const list = out.get(target.line) ?? []
@@ -153,25 +154,23 @@ export function checkDoc(input: string): DocIssue[] {
         return lo + 1
     }
     for (const r of source.matchAll(REF_RE)) {
-        if (!doc.refs[r[1].trim()])
-            out.push({ line: lineOf(r.index!), severity: 'error', message: `条参照「${r[0]}」の参照先（{#${r[1].trim()}}）がありません` })
+        if (!doc.refs[r[1].trim()]) out.push({ line: lineOf(r.index!), severity: 'error', message: t().checks.missingRef(r[0], r[1].trim()) })
     }
     for (const f of source.matchAll(/^[ \t]*(`{3,}|~{3,})\s*mermaid[^\n]*\n([\s\S]*?)\n[ \t]*\1[ \t]*$/gm)) {
         const fence = parseFence(f[0].replace(/^[ \t]+/gm, ''))
         if (!fence) continue
         const { error } = mermaidSvg(fence.body)
-        if (error) out.push({ line: lineOf(f.index!), severity: 'warning', message: `図を描けません：${error}` })
+        if (error) out.push({ line: lineOf(f.index!), severity: 'warning', message: t().checks.figureError(error) })
     }
-    for (const d of checkDefinitions(source)) out.push({ line: d.line, severity: 'error', message: `定義語：${d.message}` })
+    for (const d of checkDefinitions(source)) out.push({ line: d.line, severity: 'error', message: t().checks.definition(d.message) })
     for (const w of doc.warnings) {
-        const m = /^(\d+)行目/.exec(w)
-        out.push({ line: m ? Number(m[1]) : 0, severity: 'warning', message: w })
+        out.push({ line: warningLine(w), severity: 'warning', message: w })
     }
-    if (!doc.title) out.push({ line: 1, severity: 'warning', message: '文書タイトル（# の行）がありません' })
+    if (!doc.title) out.push({ line: 1, severity: 'warning', message: t().checks.noTitle })
     for (const ch of doc.chapters) {
         for (const a of ch.articles) {
             if (!a.deleted && !a.paragraphs.some((p) => p.text.trim() || p.items.length)) {
-                out.push({ line: a.line + 1, severity: 'warning', message: `${a.refLabel}に本文がありません` })
+                out.push({ line: a.line + 1, severity: 'warning', message: t().checks.emptyArticle(a.refLabel) })
             }
         }
     }

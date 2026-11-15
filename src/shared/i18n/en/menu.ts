@@ -1,0 +1,25 @@
+import type { Messages } from '../types'
+
+export const menu: Messages['menu'] = {
+    reload: 'Reload',
+    devTools: 'Developer Tools',
+    about: (name) => `About ${name}`,
+    services: 'Services',
+    hide: (name) => `Hide ${name}`,
+    hideOthers: 'Hide Others',
+    unhide: 'Show All',
+    quit: (name) => `Quit ${name}`,
+    edit: 'Edit',
+    undo: 'Undo',
+    redo: 'Redo',
+    cut: 'Cut',
+    copy: 'Copy',
+    paste: 'Paste',
+    selectAll: 'Select All',
+    view: 'View',
+    fullscreen: 'Toggle Full Screen',
+    window: 'Window',
+    minimize: 'Minimize',
+    zoom: 'Zoom',
+    close: 'Close',
+}

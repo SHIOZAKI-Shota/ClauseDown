@@ -1,3 +1,4 @@
+import type { Locale } from './i18n'
 import type { ExperimentId } from './experiments'
 import type { RepoRules, ReviewAction, ReviewEvent } from './review'
 import type { AppPrefs, DocStyle } from './prefs'
@@ -336,6 +337,7 @@ export interface ProofreadConfig {
     rules?: Partial<Record<string, boolean>>
     joshiAllow?: string[]
     dictionaries?: string[]
+    locale?: Locale
 }
 
 export interface ProofreadContext {
@@ -415,6 +417,7 @@ export interface Api {
     saveImage(dir: string, docPath: string, data: Uint8Array, ext: string): Promise<SavedImage>
     proofread(text: string, ctx?: ProofreadContext): Promise<ProofreadIssue[]>
     setSpellLanguages(langs: string[]): Promise<void>
+    systemLanguages(): Promise<string[]>
     listIssues(dir: string): Promise<Issue[]>
     issueDetail(dir: string, n: number): Promise<IssueDetail>
     createIssue(dir: string, input: { title: string; body: string }): Promise<Issue>

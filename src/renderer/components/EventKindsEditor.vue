@@ -3,9 +3,11 @@ import { COLOR_LABEL, DEFAULT_KINDS, EFFECTIVE_KIND, KIND_COLORS, type EventKind
 import { useApp } from '~/stores/app'
 import { useDebounced } from '~/composables/useDebounced'
 import { sameJson, toPlain } from '~/utils/ipc'
+import { useT } from '~/composables/useT'
 
 const emit = defineEmits<{ saved: [] }>()
 const app = useApp()
+const t = useT()
 const kinds = ref<EventKind[]>([])
 const used = ref(new Set<string>())
 let last: EventKind[] = []
@@ -30,10 +32,14 @@ const save = useDebounced(async () => {
 }, 600)
 watch(kinds, save, { deep: true })
 
-const COLORS = (Object.keys(KIND_COLORS) as KindColor[]).map((c) => ({ value: c, label: COLOR_LABEL[c] }))
-const REMIND = [{ label: '知らせない', value: -1 }, { label: '当日', value: 0 }, ...[1, 3, 7, 14, 30, 60, 90].map((n) => ({ label: `${n} 日前`, value: n }))]
+// t.value を読んで言語の切り替えに追従する（COLOR_LABEL は言語に応じた値を返す）
+const COLORS = computed(() => {
+    void t.value
+    return (Object.keys(KIND_COLORS) as KindColor[]).map((c) => ({ value: c, label: COLOR_LABEL[c] }))
+})
+const REMIND = computed(() => [-1, 0, 1, 3, 7, 14, 30, 60, 90].map((n) => ({ label: t.value.schedule.remindShort(n), value: n })))
 function add() {
-    const unused = COLORS.find((c) => !kinds.value.some((k) => k.color === c.value))?.value ?? 'slate'
+    const unused = COLORS.value.find((c) => !kinds.value.some((k) => k.color === c.value))?.value ?? 'slate'
     kinds.value.push({ id: `k-${Date.now().toString(36)}`, label: '', color: unused, task: true, remind: 7 })
 }
 function move(i: number, d: number) {
@@ -49,16 +55,20 @@ const resetDefaults = () => {
 }
 const removable = (k: EventKind) => k.id !== EFFECTIVE_KIND && !used.value.has(k.id)
 const removeTip = (k: EventKind) =>
-    k.id === EFFECTIVE_KIND ? '施行は版の施行日にも使うので消せません' : used.value.has(k.id) ? 'この種類の期日があるので消せません' : '消す'
+    k.id === EFFECTIVE_KIND
+        ? t.value.schedule.kindsEditor.effectiveLocked
+        : used.value.has(k.id)
+          ? t.value.schedule.kindsEditor.usedLocked
+          : t.value.schedule.remove
 </script>
 
 <template>
     <div class="kinds">
         <div class="head cd-muted">
-            <span class="c-color">色</span>
-            <span class="c-label">名前</span>
-            <span class="c-task">済みにする</span>
-            <span class="c-remind">知らせる</span>
+            <span class="c-color">{{ t.schedule.kindsEditor.color }}</span>
+            <span class="c-label">{{ t.schedule.kindsEditor.name }}</span>
+            <span class="c-task">{{ t.schedule.kindsEditor.task }}</span>
+            <span class="c-remind">{{ t.schedule.kindsEditor.remind }}</span>
         </div>
         <div v-for="(k, i) in kinds" :key="k.id" class="row">
             <UDropdownMenu
@@ -73,13 +83,13 @@ const removeTip = (k: EventKind) =>
                     }))
                 "
             >
-                <button class="swatch c-color" :style="{ '--k': KIND_COLORS[k.color] }" :aria-label="`色：${COLOR_LABEL[k.color]}`" />
+                <button class="swatch c-color" :style="{ '--k': KIND_COLORS[k.color] }" :aria-label="t.schedule.kindsEditor.colorOf(COLOR_LABEL[k.color])" />
                 <template #color-leading="{ item }">
                     <span class="dot" :style="{ '--k': KIND_COLORS[(item as { hue: KindColor }).hue] }" />
                 </template>
             </UDropdownMenu>
-            <UInput v-model="k.label" size="sm" class="c-label" placeholder="種類の名前" :maxlength="20" />
-            <USwitch v-model="k.task" class="c-task" :aria-label="`${k.label}を「済みにする」種類にする`" />
+            <UInput v-model="k.label" size="sm" class="c-label" :placeholder="t.schedule.kindsEditor.namePlaceholder" :maxlength="20" />
+            <USwitch v-model="k.task" class="c-task" :aria-label="t.schedule.kindsEditor.taskOf(k.label)" />
             <USelect v-model="k.remind" :items="REMIND" size="sm" class="c-remind" />
             <div class="ops">
                 <UButton
@@ -88,7 +98,7 @@ const removeTip = (k: EventKind) =>
                     square
                     color="neutral"
                     variant="ghost"
-                    aria-label="上へ"
+                    :aria-label="t.schedule.kindsEditor.up"
                     :disabled="i === 0"
                     @click="move(i, -1)"
                 />
@@ -98,7 +108,7 @@ const removeTip = (k: EventKind) =>
                     square
                     color="neutral"
                     variant="ghost"
-                    aria-label="下へ"
+                    :aria-label="t.schedule.kindsEditor.down"
                     :disabled="i === kinds.length - 1"
                     @click="move(i, 1)"
                 />
@@ -109,7 +119,7 @@ const removeTip = (k: EventKind) =>
                         square
                         :color="removable(k) ? 'error' : 'neutral'"
                         variant="ghost"
-                        aria-label="消す"
+                        :aria-label="t.schedule.remove"
                         :disabled="!removable(k)"
                         @click="remove(i)"
                     />
@@ -117,12 +127,12 @@ const removeTip = (k: EventKind) =>
             </div>
         </div>
         <div class="foot">
-            <UButton label="種類を足す" icon="i-lucide-plus" size="sm" color="neutral" variant="outline" @click="add" />
-            <UButton label="既定の種類を戻す" icon="i-lucide-rotate-ccw" size="sm" color="neutral" variant="ghost" @click="resetDefaults" />
+            <UButton :label="t.schedule.kindsEditor.add" icon="i-lucide-plus" size="sm" color="neutral" variant="outline" @click="add" />
+            <UButton :label="t.schedule.kindsEditor.reset" icon="i-lucide-rotate-ccw" size="sm" color="neutral" variant="ghost" @click="resetDefaults" />
         </div>
         <p class="cd-muted note">
-            「済みにする」をオンにした種類（提出・届出など）は、済みにするまで残り、期限を過ぎると「期限切れ」と表示します。
-            知らせる日は期日ごとに変えられます。通知のオン・オフは、アプリの設定の「期日・有効期間」にあります。
+            {{ t.schedule.kindsEditor.note1 }}
+            {{ t.schedule.kindsEditor.note2 }}
         </p>
     </div>
 </template>

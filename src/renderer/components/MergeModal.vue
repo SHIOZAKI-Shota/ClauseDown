@@ -4,10 +4,12 @@ import { STATE_LABEL } from '@shared/review'
 import { useApp } from '~/stores/app'
 import { todayISO } from '~/utils/format'
 import { toPlain } from '~/utils/ipc'
+import { useT } from '~/composables/useT'
 
 const props = defineProps<{ from: string; into: string }>()
 const emit = defineEmits<{ close: [] }>()
 const app = useApp()
+const t = useT()
 
 const preview = ref<MergePreview | null>(null)
 const loading = ref(true)
@@ -22,13 +24,13 @@ const intoB = computed(() => app.branches.find((b) => b.name === props.into))
 const fromLabel = computed(() => fromB.value?.label ?? props.from)
 const intoLabel = computed(() => intoB.value?.label ?? props.into)
 const adopting = computed(() => !!intoB.value?.isMain)
-const title = computed(() => (adopting.value ? `「${fromLabel.value}」を現行版に反映` : `${fromLabel.value}の最新を「${intoLabel.value}」に取り込む`))
+const title = computed(() => (adopting.value ? t.value.merge.titleAdopt(fromLabel.value) : t.value.merge.titleUpdate(fromLabel.value, intoLabel.value)))
 const status = computed(() => (adopting.value && fromB.value ? app.statusOf(fromB.value) : null))
 const blocked = computed(() => !!status.value && !status.value.canMerge)
 
 onMounted(async () => {
     await app.flushEditor()
-    message.value = adopting.value ? `改定案「${fromLabel.value}」を現行版に反映` : `${fromLabel.value}の最新を取り込み`
+    message.value = adopting.value ? t.value.merge.messageAdopt(fromLabel.value) : t.value.merge.messageUpdate(fromLabel.value)
     if (app.repo?.url) await app.sync()
     else await app.refreshDocs()
     preview.value = (await app.run(() => window.api.previewMerge(app.repoDir!, props.from, props.into))) ?? null
@@ -50,8 +52,8 @@ async function apply() {
     app.syncState = s
     await app.afterBranchChange()
     void app.refreshIssueCount()
-    if (s.state === 'error') app.notify(`反映しましたが、リモートへの送信に失敗しました：${s.message}`, true)
-    else app.notify(adopting.value ? `現行版に反映しました${deleteAfter.value ? '。改定案は削除しました' : ''}` : '取り込みました')
+    if (s.state === 'error') app.notify(t.value.merge.pushFailed(s.message ?? ''), true)
+    else app.notify(adopting.value ? t.value.merge.adopted(deleteAfter.value) : t.value.merge.updated)
     emit('close')
 }
 
@@ -61,10 +63,11 @@ const hasConflicts = computed(() => !!preview.value?.conflicts.length)
 const summary = computed(() => {
     const p = preview.value
     if (!p) return ''
-    const parts = [`変わる文書 ${p.files.length} 件`]
-    if (p.autoMerged.length) parts.push(`両方の変更を自動で統合 ${p.autoMerged.length} 件`)
-    if (p.conflicts.length) parts.push(`同じ箇所の重なり ${p.conflicts.length} 件`)
-    return parts.join('・')
+    const m = t.value.merge
+    const parts = [m.summaryFiles(p.files.length)]
+    if (p.autoMerged.length) parts.push(m.summaryAuto(p.autoMerged.length))
+    if (p.conflicts.length) parts.push(m.summaryConflicts(p.conflicts.length))
+    return parts.join(m.summarySep)
 })
 
 function openReview() {
@@ -77,28 +80,28 @@ function openReview() {
     <WorkspaceModal v-if="preview && hasConflicts" :title="title" :summary="summary" @close="emit('close')">
         <template #actions>
             <span v-if="blocked && status" class="notice warn">
-                <UIcon name="i-lucide-shield-alert" />確認の状態：{{ STATE_LABEL[status.state] }}
-                <UButton label="確認依頼を開く" size="xs" color="neutral" variant="link" @click="openReview" />
+                <UIcon name="i-lucide-shield-alert" />{{ t.merge.reviewState(STATE_LABEL[status.state]) }}
+                <UButton :label="t.merge.openReview" size="xs" color="neutral" variant="link" @click="openReview" />
             </span>
             <span v-else-if="status?.state === 'approved'" class="notice ok">
-                <UIcon name="i-lucide-badge-check" />{{ status.decision?.by }} さんが承認済み
+                <UIcon name="i-lucide-badge-check" />{{ t.merge.approvedBy(status.decision?.by ?? '') }}
             </span>
-            <span v-if="app.hasUnsaved" class="notice warn"> <UIcon name="i-lucide-triangle-alert" />保存していない変更があります </span>
+            <span v-if="app.hasUnsaved" class="notice warn"> <UIcon name="i-lucide-triangle-alert" />{{ t.merge.unsaved }} </span>
         </template>
 
         <ConflictResolver v-model="choices" :conflicts="preview.conflicts" :ours-label="intoLabel" :theirs-label="fromLabel" />
 
         <template #footer>
-            <UInput v-model="message" size="sm" class="memo" placeholder="記録するメモ" />
+            <UInput v-model="message" size="sm" class="memo" :placeholder="t.merge.memo" />
             <template v-if="adopting">
-                <UCheckbox v-model="withDate" label="施行日" size="sm" />
+                <UCheckbox v-model="withDate" :label="t.merge.effectiveDate" size="sm" data-guide="effective" />
                 <DateField v-if="withDate" v-model="date" size="sm" />
-                <UCheckbox v-model="deleteAfter" label="反映後に改定案を削除する" size="sm" />
+                <UCheckbox v-model="deleteAfter" :label="t.merge.deleteAfterShort" size="sm" />
             </template>
             <span class="cd-grow" />
-            <UButton label="やめる" size="sm" color="neutral" variant="outline" @click="emit('close')" />
+            <UButton :label="t.merge.cancel" size="sm" color="neutral" variant="outline" @click="emit('close')" />
             <UButton
-                :label="adopting ? '現行版に反映' : '取り込む'"
+                :label="adopting ? t.merge.adopt : t.merge.update"
                 size="sm"
                 :disabled="app.hasUnsaved || blocked || unresolved > 0"
                 :loading="app.busy"
@@ -110,54 +113,54 @@ function openReview() {
     <UModal v-else :open="true" :title="title" :ui="{ content: 'cd-wide' }" @update:open="(v) => !v && emit('close')">
         <template #body>
             <div class="cd-form">
-                <p v-if="loading" class="muted">変更を調べています…</p>
+                <p v-if="loading" class="muted">{{ t.merge.checking }}</p>
                 <template v-else-if="preview">
                     <UAlert
                         v-if="app.hasUnsaved"
                         color="warning"
                         variant="subtle"
                         icon="i-lucide-triangle-alert"
-                        title="保存していない変更があります"
-                        description="先に「版を保存」するか「変更を取り消す」をしてください。"
+                        :title="t.merge.unsaved"
+                        :description="t.merge.unsavedHint"
                     />
                     <UAlert
                         v-if="blocked && status"
                         color="warning"
                         variant="subtle"
                         icon="i-lucide-shield-alert"
-                        :title="`確認の状態：${STATE_LABEL[status.state]}`"
+                        :title="t.merge.reviewState(STATE_LABEL[status.state])"
                         :description="status.reason"
-                        :actions="[{ label: '確認依頼を開く', color: 'warning', variant: 'outline', onClick: openReview }]"
+                        :actions="[{ label: t.merge.openReview, color: 'warning', variant: 'outline', onClick: openReview }]"
                     />
                     <UAlert
                         v-else-if="status && status.state === 'approved'"
                         color="success"
                         variant="subtle"
                         icon="i-lucide-badge-check"
-                        :title="`${status.decision?.by} さんが承認済みです`"
+                        :title="t.merge.approvedByFull(status.decision?.by ?? '')"
                     />
                     <p v-if="preview.upToDate" class="muted">
-                        {{ adopting ? 'この改定案には、まだ現行版に反映していない変更がありません。' : '取り込む変更はありません。すでに最新です。' }}
+                        {{ adopting ? t.merge.nothingToAdopt : t.merge.upToDate }}
                     </p>
                     <template v-else>
                         <div>
-                            <h3>変わる文書（{{ preview.files.length }}件）</h3>
+                            <h3>{{ t.merge.filesHeading(preview.files.length) }}</h3>
                             <ul class="files">
                                 <li v-for="f in preview.files" :key="f">
                                     {{ f }}
-                                    <span v-if="preview.autoMerged.includes(f)" class="note">（両方の変更を自動で統合）</span>
+                                    <span v-if="preview.autoMerged.includes(f)" class="note">{{ t.merge.autoMergedNote }}</span>
                                 </li>
                             </ul>
                         </div>
-                        <UFormField label="記録するメモ">
+                        <UFormField :label="t.merge.memo">
                             <UInput v-model="message" class="cd-full" />
                         </UFormField>
                         <template v-if="adopting">
                             <div class="row">
-                                <UCheckbox v-model="withDate" label="施行日を記録する" />
+                                <UCheckbox v-model="withDate" :label="t.merge.recordEffective" data-guide="effective" />
                                 <DateField v-if="withDate" v-model="date" />
                             </div>
-                            <UCheckbox v-model="deleteAfter" label="反映したあと、この改定案を削除する（リモートからも）" />
+                            <UCheckbox v-model="deleteAfter" :label="t.merge.deleteAfter" />
                         </template>
                     </template>
                 </template>
@@ -165,10 +168,10 @@ function openReview() {
         </template>
         <template #footer>
             <div class="cd-modal-foot">
-                <UButton :label="preview?.upToDate ? '閉じる' : 'やめる'" color="neutral" variant="outline" @click="emit('close')" />
+                <UButton :label="preview?.upToDate ? t.common.close : t.merge.cancel" color="neutral" variant="outline" @click="emit('close')" />
                 <UButton
                     v-if="preview && !preview.upToDate"
-                    :label="adopting ? '現行版に反映' : '取り込む'"
+                    :label="adopting ? t.merge.adopt : t.merge.update"
                     :disabled="app.hasUnsaved || blocked || unresolved > 0"
                     :loading="app.busy"
                     @click="apply"

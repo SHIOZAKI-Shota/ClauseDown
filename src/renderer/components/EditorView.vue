@@ -9,10 +9,12 @@ import { clauseInsertLine, type ClauseInsert } from '@shared/clauses'
 import { backRefs } from '@shared/doc-view'
 import { isEnabled } from '@shared/experiments'
 import { spellLang } from '@shared/legal-styles'
+import { docTemplates } from '@shared/doc-templates'
 import { useApp } from '~/stores/app'
 import { lastAtOrBefore, positionLabel } from '~/utils/legal-editor'
 import { toPlain } from '~/utils/ipc'
 import { useStoredRef } from '~/composables/useStoredRef'
+import { useT } from '~/composables/useT'
 import { useArticleTrail } from '~/composables/useArticleTrail'
 import { useElementSize } from '@vueuse/core'
 import { usePane, paneStyle, type Pane } from '~/composables/usePane'
@@ -22,6 +24,7 @@ import type PdfPagesView from '~/components/PdfPages.vue'
 import type { SaveRequest } from '~/components/SaveVersionModal.vue'
 
 const app = useApp()
+const t = useT()
 const path = app.currentPath!
 const text = ref('')
 const loaded = ref(false)
@@ -80,7 +83,7 @@ let referenced = new Map<string, string>()
 watch(doc, (d, old) => {
     if (old && countArticles(d) < countArticles(old)) {
         const lost = [...referenced].filter(([id]) => !d.refs[id] && settled.value.includes(`[[${id}`))
-        if (lost.length) app.notify(`${lost.map(([, label]) => label).join('・')}は、ほかの条から参照されていました。参照先がなくなっています`, true)
+        if (lost.length) app.notify(t.value.editor.lostRefs(lost.map(([, label]) => label).join(t.value.editor.listSep)), true)
     }
     referenced = new Map(Object.entries(d.refs).flatMap(([id, a]) => (backs.value.has(a.line) ? [[id, a.refLabel] as [string, string]] : [])))
 })
@@ -88,10 +91,10 @@ const printKind = computed({
     get: () => app.prefs.previewKind ?? 'normal',
     set: (v: 'normal' | 'print') => app.setPrefsLive({ previewKind: v }),
 })
-const PREVIEW_KINDS = [
-    { value: 'normal' as const, label: 'ノーマル', icon: 'i-lucide-scroll-text' },
-    { value: 'print' as const, label: '印刷', icon: 'i-lucide-printer' },
-]
+const PREVIEW_KINDS = computed(() => [
+    { value: 'normal' as const, label: t.value.editor.previewKinds.normal, icon: 'i-lucide-scroll-text' },
+    { value: 'print' as const, label: t.value.editor.previewKinds.print, icon: 'i-lucide-printer' },
+])
 const demo = isDemo()
 const showPrint = computed(() => !demo && mode.value !== 'edit' && printKind.value === 'print')
 const html = computed(() => (mode.value === 'edit' || showPrint.value ? '' : withImages(renderDoc(doc.value), app.repoDir, path)))
@@ -176,7 +179,7 @@ function writeNow(): Promise<void> {
         })
         .catch((e) => {
             saving.value = 'pending'
-            app.notify(`文書を保存できませんでした：${(e as Error).message}`, true)
+            app.notify(t.value.editor.saveFailed((e as Error).message), true)
         })
     return writing
 }
@@ -213,13 +216,14 @@ function addItemBranch() {
 function addPreamble() {
     editor.value?.insertPreamble()
 }
+const tpl = () => docTemplates(doc.value.lang)
 function addSupplement() {
-    const body = '\n## 附則 {supplement}\n- この規則は、　年　月　日から施行する。\n'
-    editor.value?.insertAfterLine(body, body.indexOf('　年'))
+    const { body, cursor } = tpl().supplement
+    editor.value?.insertAfterLine(body, body.indexOf(cursor))
 }
 function addClosing() {
-    const body = '\n## {closing}\n本契約の成立を証するため、本書2通を作成し、甲乙記名押印のうえ、各1通を保有する。\n\n　年　月　日\n\n甲　\n\n乙　\n'
-    editor.value?.insertAfterLine(body, body.indexOf('本契約'))
+    const { body, cursor } = tpl().closing
+    editor.value?.insertAfterLine(body, body.indexOf(cursor))
 }
 function addParagraph() {
     editor.value?.insertAfterLine('- ')
@@ -237,7 +241,9 @@ function blockIndent() {
 }
 function addTable() {
     const i = blockIndent()
-    const body = ['| 区分 | 内容 |', '|---|---|', '| ・・・ | ・・・ |'].map((l) => i + l).join('\n')
+    const body = tpl()
+        .table.map((l) => i + l)
+        .join('\n')
     editor.value?.insertAfterLine(`\n${body}\n`, 1 + i.length + 2)
 }
 function addInlineMath() {
@@ -245,19 +251,19 @@ function addInlineMath() {
 }
 function addMathBlock() {
     const i = blockIndent()
-    const body = ['```math', '\\text{補助金の額} = \\min\\left(\\dfrac{2}{3}C,\\ 1{,}000{,}000\\right)', '```'].map((l) => i + l).join('\n')
+    const body = ['```math', tpl().math, '```'].map((l) => i + l).join('\n')
     editor.value?.insertAfterLine(`\n${body}\n`, 1 + i.length + 8)
 }
 function addFigure() {
     const i = blockIndent()
-    const body = ['```mermaid', 'flowchart LR', '  A[申請] --> B[承認]', '  B --> C[実施]', '```'].map((l) => i + l).join('\n')
+    const body = ['```mermaid', 'flowchart LR', ...tpl().flow, '```'].map((l) => i + l).join('\n')
     editor.value?.insertAfterLine(`\n${body}\n`, 1 + body.indexOf('A['))
 }
 async function addImages(files: File[]) {
     for (const f of files) {
         const data = new Uint8Array(await f.arrayBuffer())
         const saved = await app.run(() => window.api.saveImage(app.repoDir!, path, data, extOfMime(f.type) ?? 'png'))
-        if (saved) editor.value?.insertBlock(`![図](${saved.src})`)
+        if (saved) editor.value?.insertBlock(`![${tpl().figure}](${saved.src})`)
     }
 }
 function pickImages() {
@@ -269,7 +275,8 @@ function pickImages() {
     input.click()
 }
 function addAppendix() {
-    editor.value?.insertAfterLine('\n## 別表第一 {appendix}\n| 区分 | 内容 |\n|---|---|\n| ・・・ | ・・・ |\n', 4)
+    const { appendix, table } = tpl()
+    editor.value?.insertAfterLine(`\n## ${appendix} {appendix}\n${table.join('\n')}\n`, 4)
 }
 function addPageBreak() {
     editor.value?.insertBeforeLines('{break}')
@@ -294,30 +301,33 @@ async function editCommand(cmd: 'cut' | 'copy' | 'paste') {
     await nextTick()
     await window.api.editCommand(cmd)
 }
-const editMenu = computed<DropdownMenuItem[][]>(() => [
-    [
-        { label: '切り取り', icon: 'i-lucide-scissors', kbds: ['meta', 'x'], disabled: selEmpty.value, onSelect: () => editCommand('cut') },
-        { label: 'コピー', icon: 'i-lucide-copy', kbds: ['meta', 'c'], disabled: selEmpty.value, onSelect: () => editCommand('copy') },
-        { label: '貼り付け', icon: 'i-lucide-clipboard', kbds: ['meta', 'v'], onSelect: () => editCommand('paste') },
-    ],
-    [
-        { label: selEmpty.value ? 'この行に書式を付ける…' : '選んだ範囲に書式を付ける…', icon: 'i-lucide-type', onSelect: addFormat },
-        { label: 'この行の前で改ページ', icon: 'i-lucide-separator-horizontal', onSelect: addPageBreak },
-    ],
-    [{ label: '条参照を入れる', icon: 'i-lucide-link', onSelect: () => editor.value?.insertRef() }, backRefItem.value],
-    [{ label: articleHere() ? 'この条について課題を作る' : 'この文書について課題を作る', icon: 'i-lucide-list-todo', onSelect: issueHere }],
-])
+const editMenu = computed<DropdownMenuItem[][]>(() => {
+    const m = t.value.editor.context
+    return [
+        [
+            { label: m.cut, icon: 'i-lucide-scissors', kbds: ['meta', 'x'], disabled: selEmpty.value, onSelect: () => editCommand('cut') },
+            { label: m.copy, icon: 'i-lucide-copy', kbds: ['meta', 'c'], disabled: selEmpty.value, onSelect: () => editCommand('copy') },
+            { label: m.paste, icon: 'i-lucide-clipboard', kbds: ['meta', 'v'], onSelect: () => editCommand('paste') },
+        ],
+        [
+            { label: selEmpty.value ? m.formatLine : m.formatSelection, icon: 'i-lucide-type', onSelect: addFormat },
+            { label: m.pageBreakBefore, icon: 'i-lucide-separator-horizontal', onSelect: addPageBreak },
+        ],
+        [{ label: m.insertRef, icon: 'i-lucide-link', onSelect: () => editor.value?.insertRef() }, backRefItem.value],
+        [{ label: articleHere() ? m.issueArticle : m.issueDoc, icon: 'i-lucide-list-todo', onSelect: issueHere }],
+    ]
+})
 const backRefItem = computed<DropdownMenuItem>(() => {
     let line = -1
     for (const ch of doc.value.chapters) for (const a of ch.articles) if (a.line >= 0 && a.line <= cursorLine.value) line = a.line
     const list = backs.value.get(line) ?? []
     return list.length
         ? {
-              label: `参照元（${list.length} 件）`,
+              label: t.value.editor.context.backRefs(list.length),
               icon: 'i-lucide-corner-up-left',
               children: list.map((b) => ({ label: b.label, onSelect: () => editor.value?.goToLine(b.line) })),
           }
-        : { label: '参照元はありません', icon: 'i-lucide-corner-up-left', disabled: true }
+        : { label: t.value.editor.context.noBackRefs, icon: 'i-lucide-corner-up-left', disabled: true }
 })
 function articleHere() {
     let hit: { label: string; title: string } | null = null
@@ -342,8 +352,8 @@ const activeIssue = ref<number | null>(null)
 const issueNote = ref<{ kind: 'error' | 'warning'; text: string } | null>(null)
 let issueTimer: ReturnType<typeof setTimeout> | undefined
 const ISSUE_KINDS = [
-    { kind: 'error', count: 'errors', label: '誤り', icon: 'i-lucide-circle-x', color: 'error' },
-    { kind: 'warning', count: 'warnings', label: '注意', icon: 'i-lucide-triangle-alert', color: 'warning' },
+    { kind: 'error', count: 'errors', icon: 'i-lucide-circle-x', color: 'error' },
+    { kind: 'warning', count: 'warnings', icon: 'i-lucide-triangle-alert', color: 'warning' },
 ] as const
 function noteIssue(it: EditorIssue | null | undefined) {
     clearTimeout(issueTimer)
@@ -371,7 +381,7 @@ const clauseLibrary = computed(() =>
     isEnabled(app.settings, 'clauseLibrary') ? (app.settings?.repos.find((r) => r.dir === app.settings?.clauseLibrary) ?? null) : null,
 )
 function openClauses() {
-    if (!clauseLibrary.value) return app.notify('設定の「Developer」で、条項ライブラリに使うリポジトリを選んでください', true)
+    if (!clauseLibrary.value) return app.notify(t.value.editor.clauseLibraryMissing, true)
     showClauses.value = true
 }
 function insertClause(r: ClauseInsert) {
@@ -383,65 +393,68 @@ function backToEditor(e: Event) {
     e.preventDefault()
     editor.value?.focus()
 }
-const insertMenu = computed<DropdownMenuItem[][]>(() => [
-    [
-        { label: '章', icon: 'i-lucide-heading-2', onSelect: addChapter },
-        {
-            label: '条',
-            icon: 'i-lucide-heading-3',
-            children: [
-                { label: '条', kbds: ['meta', 'alt', 'a'], onSelect: addArticle },
-                { label: '枝番号の条（第○条の2）', onSelect: addBranchArticle },
-                { label: '削除された条（第○条　削除）', onSelect: addDeletedArticle },
-                { label: '番号を指定した条（{n=10}）', onSelect: addNumberedArticle },
-            ],
-        },
-        {
-            label: '項・号',
-            icon: 'i-lucide-list',
-            children: [
-                { label: '項', kbds: ['meta', 'alt', 'p'], onSelect: addParagraph },
-                { label: '号', kbds: ['meta', 'alt', 'i'], onSelect: addItem },
-                { label: '号の細分', onSelect: addSubitem },
-                { label: '号の番号を指定（{n=3}）', onSelect: addItemNumber },
-                { label: '号の枝番号（{b=2}）', onSelect: addItemBranch },
-            ],
-        },
-    ],
-    [
-        { label: '前文（最初の章の前）', icon: 'i-lucide-pilcrow', onSelect: addPreamble },
-        { label: '附則', icon: 'i-lucide-book-plus', onSelect: addSupplement },
-        { label: '後文・署名欄', icon: 'i-lucide-pen-line', onSelect: addClosing },
-        { label: '別表', icon: 'i-lucide-sheet', onSelect: addAppendix },
-    ],
-    [
-        {
-            label: '表',
-            icon: 'i-lucide-table',
-            children: [
-                { label: '表', onSelect: addTable },
-                { label: '右隣のセルと結合（>）', onSelect: () => editor.value?.insertAtCursor('>') },
-                { label: '上のセルと結合（^）', onSelect: () => editor.value?.insertAtCursor('^') },
-            ],
-        },
-        { label: '図（流れ図など）', icon: 'i-lucide-workflow', onSelect: addFigure },
-        {
-            label: '数式',
-            icon: 'i-lucide-sigma',
-            children: [
-                { label: '文中の数式（$…$）', onSelect: addInlineMath },
-                { label: '独立した数式', onSelect: addMathBlock },
-            ],
-        },
-        { label: '画像（ファイルから）…', icon: 'i-lucide-image', onSelect: pickImages },
-        { label: '条参照', icon: 'i-lucide-link', kbds: ['[', '['], onSelect: () => editor.value?.insertRef() },
-    ],
-    [
-        { label: '改ページ（この行の前）', icon: 'i-lucide-separator-horizontal', onSelect: addPageBreak },
-        { label: '書式を付ける…', icon: 'i-lucide-type', onSelect: addFormat },
-    ],
-    ...(isEnabled(app.settings, 'clauseLibrary') ? [[{ label: '条項ライブラリから…', icon: 'i-lucide-library', onSelect: openClauses }]] : []),
-])
+const insertMenu = computed<DropdownMenuItem[][]>(() => {
+    const m = t.value.editor.insert
+    return [
+        [
+            { label: m.chapter, icon: 'i-lucide-heading-2', onSelect: addChapter },
+            {
+                label: m.article,
+                icon: 'i-lucide-heading-3',
+                children: [
+                    { label: m.article, kbds: ['meta', 'alt', 'a'], onSelect: addArticle },
+                    { label: m.branchArticle, onSelect: addBranchArticle },
+                    { label: m.deletedArticle, onSelect: addDeletedArticle },
+                    { label: m.numberedArticle, onSelect: addNumberedArticle },
+                ],
+            },
+            {
+                label: m.paraItem,
+                icon: 'i-lucide-list',
+                children: [
+                    { label: m.paragraph, kbds: ['meta', 'alt', 'p'], onSelect: addParagraph },
+                    { label: m.item, kbds: ['meta', 'alt', 'i'], onSelect: addItem },
+                    { label: m.subitem, onSelect: addSubitem },
+                    { label: m.itemNumber, onSelect: addItemNumber },
+                    { label: m.itemBranch, onSelect: addItemBranch },
+                ],
+            },
+        ],
+        [
+            { label: m.preamble, icon: 'i-lucide-pilcrow', onSelect: addPreamble },
+            { label: m.supplement, icon: 'i-lucide-book-plus', onSelect: addSupplement },
+            { label: m.closing, icon: 'i-lucide-pen-line', onSelect: addClosing },
+            { label: m.appendix, icon: 'i-lucide-sheet', onSelect: addAppendix },
+        ],
+        [
+            {
+                label: m.table,
+                icon: 'i-lucide-table',
+                children: [
+                    { label: m.table, onSelect: addTable },
+                    { label: m.mergeRight, onSelect: () => editor.value?.insertAtCursor('>') },
+                    { label: m.mergeUp, onSelect: () => editor.value?.insertAtCursor('^') },
+                ],
+            },
+            { label: m.figure, icon: 'i-lucide-workflow', onSelect: addFigure },
+            {
+                label: m.math,
+                icon: 'i-lucide-sigma',
+                children: [
+                    { label: m.inlineMath, onSelect: addInlineMath },
+                    { label: m.displayMath, onSelect: addMathBlock },
+                ],
+            },
+            { label: m.image, icon: 'i-lucide-image', onSelect: pickImages },
+            { label: m.ref, icon: 'i-lucide-link', kbds: ['[', '['], onSelect: () => editor.value?.insertRef() },
+        ],
+        [
+            { label: m.pageBreak, icon: 'i-lucide-separator-horizontal', onSelect: addPageBreak },
+            { label: m.format, icon: 'i-lucide-type', onSelect: addFormat },
+        ],
+        ...(isEnabled(app.settings, 'clauseLibrary') ? [[{ label: m.clauseLibrary, icon: 'i-lucide-library', onSelect: openClauses }]] : []),
+    ]
+})
 function onShortcut(kind: 'article' | 'paragraph' | 'item') {
     if (kind === 'article') addArticle()
     else if (kind === 'paragraph') addParagraph()
@@ -559,8 +572,7 @@ async function saveVersion(input: SaveRequest) {
     await Promise.all([app.refreshDocs(), loadSaved()])
     const s = app.prefs.pushOnSave ? await app.sync() : ({ state: 'local' } as const)
     void app.refreshIssueCount()
-    const where = app.onDraft ? `改定案「${app.currentBranch?.label}」に` : ''
-    if (s?.state === 'local' || s?.state === 'upToDate') app.notify(`${where}版を保存しました`)
+    if (s?.state === 'local' || s?.state === 'upToDate') app.notify(t.value.editor.savedVersion(app.onDraft ? (app.currentBranch?.label ?? '') : null))
 }
 
 const aiRunning = ref(false)
@@ -586,7 +598,7 @@ async function reloadFromDisk() {
     }
     const merged = autoMerge(base, mine, fresh)
     if (merged !== null) text.value = merged
-    else app.notify('外部の変更と、この画面で保存していない変更が重なったため、この画面の内容を残しました', true)
+    else app.notify(t.value.editor.conflictKept, true)
     void writeNow()
 }
 
@@ -594,7 +606,7 @@ const offDocChanged = app.onDocChanged(async (e) => {
     if (e.dir !== app.repoDir || e.path !== path) return
     await reloadFromDisk()
     if (e.by === 'ai') aiChanged.value = true
-    else app.notify('外部の AI（MCP）がこの文書を書き換えました')
+    else app.notify(t.value.editor.externalAi)
 })
 onBeforeUnmount(offDocChanged)
 
@@ -619,7 +631,7 @@ async function discard() {
     editor.value?.flush()
     await nextTick()
     clearTimeout(timer)
-    await app.run(() => window.api.discardChanges(app.repoDir!, path), '変更を取り消しました')
+    await app.run(() => window.api.discardChanges(app.repoDir!, path), t.value.editor.discarded)
     await app.refreshDocs()
     if (!app.docs.some((d) => d.path === path)) {
         app.view = 'docs'
@@ -637,7 +649,7 @@ async function exportAs(format: 'pdf' | 'docx' | 'html' | 'md') {
     const out = await app.run(() =>
         window.api.exportFile({ kind: 'doc', format, source: text.value, name, style: toPlain(app.style), dir: app.repoDir!, docPath: path }),
     )
-    if (out) app.notifyExported('書き出しました', out)
+    if (out) app.notifyExported(t.value.editor.exported, out)
 }
 
 const changed = computed(() => app.currentDoc?.changed)
@@ -650,7 +662,7 @@ async function saveShortcut() {
     if (showSave.value || app.dialog) return
     await app.flushEditor()
     if (app.currentDoc?.changed) await openSave()
-    else app.notify('前の版から変わっていません。書いた内容は自動で PC に書き込んでいます')
+    else app.notify(t.value.editor.unchanged)
 }
 defineShortcuts({ meta_s: { handler: () => void saveShortcut(), usingInput: true } })
 const position = computed(() => positionLabel(doc.value, cursorLine.value))
@@ -669,67 +681,86 @@ function openTrailCommit(oid: string) {
 }
 const chars = computed(() => settled.value.replace(/<!--[\s\S]*?-->/g, '').replace(/\s/g, '').length)
 const articleCount = computed(() => doc.value.chapters.reduce((n, c) => n + c.articles.length, 0))
-const saveState = computed(() => (saving.value === 'pending' ? '書き込み中…' : changed.value ? '版を保存していない変更があります' : '保存済みの版と同じです'))
+const saveState = computed(() => {
+    const s = t.value.editor.saveState
+    return saving.value === 'pending' ? s.pending : changed.value ? s.dirty : s.clean
+})
+const exportMenu = computed<DropdownMenuItem[]>(() => {
+    const m = t.value.editor.toolbar
+    return [
+        { label: m.exportPdf, icon: 'i-lucide-file-text', onSelect: () => exportAs('pdf') },
+        { label: m.exportWord, icon: 'i-lucide-file-type', onSelect: () => exportAs('docx') },
+        { label: m.exportHtml, icon: 'i-lucide-file-code', onSelect: () => exportAs('html') },
+        ...(isEnabled(app.settings, 'houritsuExport') ? [{ label: m.exportMd, icon: 'i-lucide-file-code-2', onSelect: () => exportAs('md') }] : []),
+    ]
+})
+const viewModes = computed(() => [
+    { value: 'edit' as const, icon: 'i-lucide-square-pen', tooltip: t.value.editor.toolbar.editOnly },
+    { value: 'split' as const, icon: 'i-lucide-columns-2', tooltip: t.value.editor.toolbar.split },
+    { value: 'preview' as const, icon: 'i-lucide-book-open', tooltip: t.value.editor.toolbar.previewOnly },
+])
 </script>
 
 <template>
     <div v-if="loaded" class="editor-page">
         <div ref="toolbar" class="cd-toolbar toolbar">
-            <UTooltip text="文書・目次">
+            <UTooltip :text="t.editor.toolbar.outline">
                 <UButton
                     icon="i-lucide-list-tree"
                     size="sm"
                     square
+                    data-guide="outline"
                     :color="outlinePane.state.value.collapsed ? 'neutral' : 'primary'"
                     :variant="outlinePane.state.value.collapsed ? 'ghost' : 'soft'"
                     @click="outlinePane.toggle()"
                 />
             </UTooltip>
             <span class="sep" />
-            <UFieldGroup size="sm">
-                <UTooltip :text="`元に戻す（${keys('Ctrl+Z')}）`">
+            <UFieldGroup size="sm" data-guide="undo">
+                <UTooltip :text="t.editor.toolbar.undoTip(keys('Ctrl+Z'))">
                     <UButton
                         icon="i-lucide-undo-2"
                         square
                         color="neutral"
                         variant="outline"
                         :disabled="!history.undo"
-                        aria-label="元に戻す"
+                        :aria-label="t.editor.toolbar.undo"
                         @click="editor?.undo()"
                     />
                 </UTooltip>
-                <UTooltip :text="`やり直す（${REDO_KEYS}）`">
+                <UTooltip :text="t.editor.toolbar.redoTip(REDO_KEYS)">
                     <UButton
                         icon="i-lucide-redo-2"
                         square
                         color="neutral"
                         variant="outline"
                         :disabled="!history.redo"
-                        aria-label="やり直す"
+                        :aria-label="t.editor.toolbar.redo"
                         @click="editor?.redo()"
                     />
                 </UTooltip>
             </UFieldGroup>
-            <UFieldGroup size="sm">
-                <UTooltip :text="`条を追加（${keys('Ctrl+Alt+A')}）`">
-                    <UButton label="条" icon="i-lucide-plus" color="neutral" variant="outline" @click="addArticle" />
+            <UFieldGroup size="sm" data-guide="add">
+                <UTooltip :text="t.editor.toolbar.addArticle(keys('Ctrl+Alt+A'))">
+                    <UButton :label="t.editor.toolbar.article" icon="i-lucide-plus" color="neutral" variant="outline" @click="addArticle" />
                 </UTooltip>
-                <UTooltip :text="`項を追加（${keys('Ctrl+Alt+P')}）`">
-                    <UButton label="項" icon="i-lucide-plus" color="neutral" variant="outline" @click="addParagraph" />
+                <UTooltip :text="t.editor.toolbar.addParagraph(keys('Ctrl+Alt+P'))">
+                    <UButton :label="t.editor.toolbar.paragraph" icon="i-lucide-plus" color="neutral" variant="outline" @click="addParagraph" />
                 </UTooltip>
-                <UTooltip :text="`号を追加（${keys('Ctrl+Alt+I')}）。行頭で Tab を押しても号になります`">
-                    <UButton label="号" icon="i-lucide-plus" color="neutral" variant="outline" @click="addItem" />
+                <UTooltip :text="t.editor.toolbar.addItem(keys('Ctrl+Alt+I'))">
+                    <UButton :label="t.editor.toolbar.item" icon="i-lucide-plus" color="neutral" variant="outline" @click="addItem" />
                 </UTooltip>
-                <UTooltip text="号の細分（イ、ロ…）を追加">
-                    <UButton label="細分" icon="i-lucide-plus" color="neutral" variant="outline" @click="addSubitem" />
+                <UTooltip :text="t.editor.toolbar.addSubitem">
+                    <UButton :label="t.editor.toolbar.subitem" icon="i-lucide-plus" color="neutral" variant="outline" @click="addSubitem" />
                 </UTooltip>
             </UFieldGroup>
-            <UTooltip :text="compact ? '挿入（章・条・附則・表・図・画像など）' : ''">
+            <UTooltip :text="compact ? t.editor.toolbar.insertTip : ''">
                 <UDropdownMenu :items="insertMenu" :content="{ onCloseAutoFocus: backToEditor }">
                     <UButton
-                        :label="compact ? undefined : '挿入'"
-                        aria-label="挿入"
+                        :label="compact ? undefined : t.editor.toolbar.insert"
+                        :aria-label="t.editor.toolbar.insert"
                         icon="i-lucide-square-plus"
+                        data-guide="insert"
                         trailing-icon="i-lucide-chevron-down"
                         size="sm"
                         color="neutral"
@@ -737,11 +768,12 @@ const saveState = computed(() => (saving.value === 'pending' ? '書き込み中�
                     />
                 </UDropdownMenu>
             </UTooltip>
-            <UTooltip :text="compact ? '書式設定' : ''">
+            <UTooltip :text="compact ? t.editor.toolbar.formatting : ''">
                 <UButton
-                    :label="compact ? undefined : '書式設定'"
-                    aria-label="書式設定"
+                    :label="compact ? undefined : t.editor.toolbar.formatting"
+                    :aria-label="t.editor.toolbar.formatting"
                     icon="i-lucide-sliders-horizontal"
+                    data-guide="config"
                     size="sm"
                     :color="showConfig ? 'primary' : 'neutral'"
                     :variant="showConfig ? 'soft' : 'outline'"
@@ -753,20 +785,13 @@ const saveState = computed(() => (saving.value === 'pending' ? '書き込み中�
                 </UButton>
             </UTooltip>
             <span class="cd-grow" />
-            <SegmentSwitch
-                v-model="layout.mode"
-                aria-label="表示"
-                :items="[
-                    { value: 'edit', icon: 'i-lucide-square-pen', tooltip: '編集のみ' },
-                    { value: 'split', icon: 'i-lucide-columns-2', tooltip: '編集とプレビュー' },
-                    { value: 'preview', icon: 'i-lucide-book-open', tooltip: 'プレビューのみ' },
-                ]"
-            />
-            <UTooltip text="AI に編集・チェックを頼む">
+            <SegmentSwitch v-model="layout.mode" :aria-label="t.editor.toolbar.view" :items="viewModes" />
+            <UTooltip :text="t.editor.toolbar.ai">
                 <UButton
                     v-if="!demo"
                     label="AI"
                     icon="i-lucide-sparkles"
+                    data-guide="ai"
                     size="sm"
                     :color="layout.ai ? 'primary' : 'neutral'"
                     :variant="layout.ai ? 'soft' : 'outline'"
@@ -774,10 +799,10 @@ const saveState = computed(() => (saving.value === 'pending' ? '書き込み中�
                 />
             </UTooltip>
             <span class="sep" />
-            <UTooltip v-if="changed" :text="compact ? '変更を取り消す' : ''">
+            <UTooltip v-if="changed" :text="compact ? t.editor.toolbar.discard : ''">
                 <UButton
-                    :label="compact ? undefined : '変更を取り消す'"
-                    aria-label="変更を取り消す"
+                    :label="compact ? undefined : t.editor.toolbar.discard"
+                    :aria-label="t.editor.toolbar.discard"
                     :icon="compact ? 'i-lucide-rotate-ccw' : undefined"
                     size="sm"
                     color="error"
@@ -785,46 +810,45 @@ const saveState = computed(() => (saving.value === 'pending' ? '書き込み中�
                     @click="confirmDiscard = true"
                 />
             </UTooltip>
-            <UDropdownMenu
-                :items="[
-                    { label: 'PDF に書き出す', icon: 'i-lucide-file-text', onSelect: () => exportAs('pdf') },
-                    { label: 'Word に書き出す', icon: 'i-lucide-file-type', onSelect: () => exportAs('docx') },
-                    { label: 'HTML に書き出す', icon: 'i-lucide-file-code', onSelect: () => exportAs('html') },
-                    ...(isEnabled(app.settings, 'houritsuExport')
-                        ? [{ label: 'Markdown（houritsu）に書き出す', icon: 'i-lucide-file-code-2', onSelect: () => exportAs('md') }]
-                        : []),
-                ]"
-            >
+            <UDropdownMenu :items="exportMenu">
                 <UButton
-                    :label="compact ? undefined : '書き出し'"
-                    aria-label="書き出し"
-                    :title="compact ? '書き出し（PDF・Word・HTML）' : undefined"
+                    :label="compact ? undefined : t.editor.toolbar.export"
+                    :aria-label="t.editor.toolbar.export"
+                    :title="compact ? t.editor.toolbar.exportTip : undefined"
                     icon="i-lucide-download"
+                    data-guide="export"
                     trailing-icon="i-lucide-chevron-down"
                     size="sm"
                     color="neutral"
                     variant="outline"
                 />
             </UDropdownMenu>
-            <UButton label="版を保存" icon="i-lucide-save" size="sm" :disabled="!changed" @click="openSave" />
+            <UButton :label="t.editor.toolbar.saveVersion" icon="i-lucide-save" size="sm" :disabled="!changed" data-guide="save" @click="openSave" />
         </div>
         <ConfigPanel v-if="showConfig" :config="doc.config" :warnings="doc.warnings" :style-id="doc.styleId" @change="changeConfig" @preset="preset" />
         <div ref="body" class="body">
-            <PaneRail v-if="outlinePane.state.value.collapsed" :pane="outlinePane" side="left" label="文書・目次" icon="i-lucide-list-tree" />
+            <PaneRail
+                v-if="outlinePane.state.value.collapsed"
+                :pane="outlinePane"
+                side="left"
+                :label="t.editor.toolbar.outline"
+                icon="i-lucide-list-tree"
+                data-guide="outline"
+            />
             <template v-else>
                 <div class="ed-left" :style="paneStyle(outlinePane)">
                     <DocTree class="ed-docs" :pane="outlinePane" />
                     <EditorOutline class="ed-outline-pane" :legal="doc" :line="cursorLine" @jump="(l) => editor?.goToLine(l)" />
                 </div>
-                <PaneResizer :pane="outlinePane" side="left" label="文書・目次" />
+                <PaneResizer :pane="outlinePane" side="left" :label="t.editor.toolbar.outline" />
             </template>
 
-            <PaneRail v-if="mode === 'preview'" :pane="editPane" side="left" label="編集" icon="i-lucide-square-pen" />
+            <PaneRail v-if="mode === 'preview'" :pane="editPane" side="left" :label="t.editor.panes.edit" icon="i-lucide-square-pen" />
             <!-- v-if にすると「元に戻す」の履歴が消えるので、v-show で隠す -->
             <div v-show="mode !== 'preview'" ref="editCol" class="cd-pane-col pane" :style="editStyle">
                 <div class="cd-pane-bar">
-                    <span class="cd-pane-title">編集</span>
-                    <PaneControls :pane="editPane" side="left" label="編集" />
+                    <span class="cd-pane-title">{{ t.editor.panes.edit }}</span>
+                    <PaneControls :pane="editPane" side="left" :label="t.editor.panes.edit" />
                 </div>
                 <UContextMenu :items="editMenu" size="sm">
                     <div class="pane-body" @wheel="zoomEditor" @contextmenu="onEditorMenu">
@@ -857,15 +881,15 @@ const saveState = computed(() => (saving.value === 'pending' ? '書き込み中�
                     @close="issuesOpen = false"
                 />
             </div>
-            <PaneResizer v-if="mode === 'split'" :pane="editBase" side="left" label="編集" />
+            <PaneResizer v-if="mode === 'split'" :pane="editBase" side="left" :label="t.editor.panes.edit" />
 
             <div v-show="mode !== 'edit'" class="cd-pane-col pane preview-col">
                 <div class="cd-pane-bar">
-                    <span class="cd-pane-title">プレビュー</span>
+                    <span class="cd-pane-title">{{ t.editor.panes.preview }}</span>
                     <span v-if="showPrint" class="pdf-state">
-                        <UIcon v-if="pdfBusy" name="i-lucide-loader-circle" class="spin" aria-label="作成中" />
+                        <UIcon v-if="pdfBusy" name="i-lucide-loader-circle" class="spin" :aria-label="t.editor.panes.rendering" />
                     </span>
-                    <div class="zoom">
+                    <div class="zoom" data-guide="zoom">
                         <USlider
                             :model-value="app.prefs.previewZoom"
                             :min="50"
@@ -873,7 +897,7 @@ const saveState = computed(() => (saving.value === 'pending' ? '書き込み中�
                             :step="10"
                             size="xs"
                             class="zoom-slider"
-                            aria-label="プレビューの倍率"
+                            :aria-label="t.editor.panes.zoom"
                             @update:model-value="setPreviewZoom"
                         />
                         <UInputNumber
@@ -883,27 +907,27 @@ const saveState = computed(() => (saving.value === 'pending' ? '書き込み中�
                             :step="1"
                             size="xs"
                             class="zoom-input"
-                            aria-label="プレビューの倍率（%）"
+                            :aria-label="t.editor.panes.zoomPercent"
                             @update:model-value="setPreviewZoom"
                         />
                         <span class="zoom-unit">%</span>
-                        <UTooltip text="エディタと拡縮を同期する">
+                        <UTooltip :text="t.editor.panes.zoomLink">
                             <UButton
                                 :icon="app.prefs.zoomLinked ? 'i-lucide-link' : 'i-lucide-unlink'"
                                 size="xs"
                                 :color="app.prefs.zoomLinked ? 'primary' : 'neutral'"
                                 :variant="app.prefs.zoomLinked ? 'soft' : 'ghost'"
-                                aria-label="エディタと拡縮を同期する"
+                                :aria-label="t.editor.panes.zoomLink"
                                 :aria-pressed="app.prefs.zoomLinked"
                                 @click="app.setPrefsLive({ zoomLinked: !app.prefs.zoomLinked })"
                             />
                         </UTooltip>
                     </div>
-                    <SegmentSwitch v-if="!demo" v-model="printKind" size="xs" aria-label="プレビューの種類" :items="PREVIEW_KINDS" class="kind" />
-                    <PaneControls :pane="previewPane" :side="layout.ai ? 'left' : 'right'" label="プレビュー" />
+                    <SegmentSwitch v-if="!demo" v-model="printKind" size="xs" :aria-label="t.editor.panes.previewKind" :items="PREVIEW_KINDS" class="kind" />
+                    <PaneControls :pane="previewPane" :side="layout.ai ? 'left' : 'right'" :label="t.editor.panes.preview" />
                 </div>
                 <div v-if="showPrint" class="pane-body cd-canvas print-body">
-                    <p v-if="pdfError" class="pdf-error">PDF を作れませんでした：{{ pdfError }}</p>
+                    <p v-if="pdfError" class="pdf-error">{{ t.editor.panes.pdfFailed(pdfError) }}</p>
                     <PdfPages
                         ref="pdfPages"
                         class="pdf"
@@ -922,7 +946,7 @@ const saveState = computed(() => (saving.value === 'pending' ? '書き込み中�
                 v-if="mode === 'edit'"
                 :pane="previewRail"
                 side="right"
-                :label="squeezed ? 'プレビュー（AI を畳んで）' : 'プレビュー'"
+                :label="squeezed ? t.editor.panes.previewSqueezed : t.editor.panes.preview"
                 icon="i-lucide-book-open"
             />
 
@@ -946,8 +970,8 @@ const saveState = computed(() => (saving.value === 'pending' ? '書き込み中�
         </div>
         <footer class="cd-statusbar">
             <div class="issue-pills">
-                <div v-for="k in ISSUE_KINDS" :key="k.kind" class="pill">
-                    <UTooltip :text="`${k.label}の一覧（${keys('Ctrl+Shift+M')}）`">
+                <div v-for="k in ISSUE_KINDS" :key="k.kind" class="pill" data-guide="proofread">
+                    <UTooltip :text="t.editor.status.issueList(k.kind, keys('Ctrl+Shift+M'))">
                         <UButton
                             :icon="k.icon"
                             :label="String(issues[k.count])"
@@ -957,7 +981,7 @@ const saveState = computed(() => (saving.value === 'pending' ? '書き込み中�
                             class="seg first count"
                             :class="{ on: issuesOpen && issueFilter === k.kind }"
                             :disabled="mode === 'preview'"
-                            :aria-label="`${k.label}の一覧`"
+                            :aria-label="t.editor.status.issueListAria(k.kind)"
                             @click="toggleIssues(k.kind)"
                         />
                     </UTooltip>
@@ -968,8 +992,8 @@ const saveState = computed(() => (saving.value === 'pending' ? '書き込み中�
                         :color="issues[k.count] ? k.color : 'neutral'"
                         class="seg mid"
                         :disabled="mode === 'preview' || !issues[k.count]"
-                        :aria-label="`前の${k.label}へ`"
-                        :title="`前の${k.label}へ`"
+                        :aria-label="t.editor.status.prevIssue(k.kind)"
+                        :title="t.editor.status.prevIssue(k.kind)"
                         @click="goIssue(k.kind, -1)"
                     />
                     <UButton
@@ -979,8 +1003,8 @@ const saveState = computed(() => (saving.value === 'pending' ? '書き込み中�
                         :color="issues[k.count] ? k.color : 'neutral'"
                         class="seg last"
                         :disabled="mode === 'preview' || !issues[k.count]"
-                        :aria-label="`次の${k.label}へ`"
-                        :title="`次の${k.label}へ`"
+                        :aria-label="t.editor.status.nextIssue(k.kind)"
+                        :title="t.editor.status.nextIssue(k.kind)"
                         @click="goIssue(k.kind, 1)"
                     />
                 </div>
@@ -1001,11 +1025,11 @@ const saveState = computed(() => (saving.value === 'pending' ? '書き込み中�
                     />
                 </template>
             </UPopover>
-            <span>{{ articleCount }} 条</span>
-            <span>{{ chars.toLocaleString() }} 文字</span>
+            <span>{{ t.editor.status.articles(articleCount) }}</span>
+            <span>{{ t.editor.status.chars(chars.toLocaleString()) }}</span>
             <span class="cd-grow" />
             <span v-if="issueNote" class="issue-note" :class="issueNote.kind">{{ issueNote.text }}</span>
-            <span v-else class="hint">[[ で条参照 ／ Tab で項→号 ／ {{ keys('Ctrl+F') }} で検索</span>
+            <span v-else class="hint">{{ t.editor.status.hint(keys('Ctrl+F')) }}</span>
             <span :class="['save', saving === 'pending' ? 'pending' : changed ? 'dirty' : 'clean']">
                 <UIcon :name="saving === 'pending' ? 'i-lucide-loader' : changed ? 'i-lucide-circle-dot' : 'i-lucide-circle-check'" />
                 {{ saveState }}
@@ -1034,9 +1058,9 @@ const saveState = computed(() => (saving.value === 'pending' ? '書き込み中�
         />
         <ConfirmModal
             v-model:open="confirmDiscard"
-            title="変更を取り消す"
-            description="最後に保存した版のあとの変更をすべて取り消します。"
-            confirm-label="取り消す"
+            :title="t.editor.discardConfirm.title"
+            :description="t.editor.discardConfirm.description"
+            :confirm-label="t.editor.discardConfirm.confirm"
             color="error"
             @confirm="discard"
         />

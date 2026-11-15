@@ -1,5 +1,6 @@
 import type { UpdateState } from '@shared/api'
 import { useApp } from '~/stores/app'
+import { t } from '@shared/i18n'
 
 // 起動してから更新を確認するまでの間。起動直後の読み込みや同期と重ならないようにする
 const DELAY = 5000
@@ -14,7 +15,7 @@ export function useUpdateNotice() {
     async function download() {
         fromToast = true
         const u = await window.api.downloadUpdate()
-        if (u.state === 'downloading') app.notify('ダウンロードを始めました。終わったらお知らせします')
+        if (u.state === 'downloading') app.notify(t().shell.update.started)
     }
 
     async function install() {
@@ -23,34 +24,36 @@ export function useUpdateNotice() {
     }
 
     function showAvailable(u: UpdateState) {
+        const m = t().shell.update
         toast.add({
             id: 'update',
-            title: `ClauseDown ${u.version} が出ました`,
-            description: `今お使いのバージョンは ${u.current} です${u.via === 'brew' ? '。Homebrew で更新します' : ''}`,
+            title: m.availableTitle(u.version),
+            description: m.availableDesc(u.current, u.via === 'brew'),
             icon: 'i-lucide-circle-arrow-up',
             color: 'primary',
             duration: 0,
             actions: [
                 {
-                    label: u.via === 'brew' ? '更新する' : IS_MAC ? '配布ページを開く' : 'ダウンロード',
+                    label: u.via === 'brew' ? m.updateNow : IS_MAC ? m.openDownloadPage : m.download,
                     icon: 'i-lucide-download',
                     size: 'sm',
                     onClick: () => void download(),
                 },
-                { label: '変更点を見る', size: 'sm', color: 'neutral', variant: 'outline', onClick: () => (app.view = 'about') },
+                { label: m.viewChanges, size: 'sm', color: 'neutral', variant: 'outline', onClick: () => (app.view = 'about') },
             ],
         })
     }
 
     function showReady(u: UpdateState) {
+        const m = t().shell.update
         toast.add({
             id: 'update',
-            title: `ClauseDown ${u.version} の準備ができました`,
-            description: u.via === 'brew' ? '再起動すると、Homebrew で新しいバージョンに更新して起動し直します' : '再起動すると新しいバージョンになります',
+            title: m.readyTitle(u.version),
+            description: u.via === 'brew' ? m.readyBrew : m.readyDesc,
             icon: 'i-lucide-circle-arrow-up',
             color: 'primary',
             duration: 0,
-            actions: [{ label: '再起動して更新', icon: 'i-lucide-rotate-cw', size: 'sm', onClick: () => void install() }],
+            actions: [{ label: m.restartToUpdate, icon: 'i-lucide-rotate-cw', size: 'sm', onClick: () => void install() }],
         })
     }
 
@@ -70,7 +73,7 @@ export function useUpdateNotice() {
         })
         void window.api.updateState().then((u) => {
             if (u.via === 'brew' && u.state === 'error' && u.message) {
-                toast.add({ id: 'update', title: '更新できませんでした', description: u.message, icon: 'i-lucide-circle-alert', color: 'error', duration: 0 })
+                toast.add({ id: 'update', title: t().shell.update.failed, description: u.message, icon: 'i-lucide-circle-alert', color: 'error', duration: 0 })
             }
         })
     })

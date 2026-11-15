@@ -7,6 +7,7 @@ const props = defineProps<{
     label: string
 }>()
 
+const t = useT()
 const dragging = ref(false)
 let startX = 0
 let startW = 0
@@ -55,8 +56,8 @@ function key(e: KeyboardEvent) {
         role="separator"
         aria-orientation="vertical"
         tabindex="0"
-        :aria-label="`${label}の幅を変える`"
-        :title="`ドラッグで${label}の幅を変更（ダブルクリックで元の幅）`"
+        :aria-label="t.shell.pane.resize(label)"
+        :title="t.shell.pane.resizeTitle(label)"
         @pointerdown="down"
         @pointermove="move"
         @pointerup="up"

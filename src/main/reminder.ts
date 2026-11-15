@@ -1,4 +1,5 @@
 import { app, Notification } from 'electron'
+import { t } from '../shared/i18n'
 import { promises as fsp } from 'node:fs'
 import { join } from 'node:path'
 import { dueReminders, type ScheduleItem } from '../shared/schedule'
@@ -27,8 +28,9 @@ const localToday = () => {
 
 function bodyOf(o: ScheduleItem, today: string): string {
     const days = Math.round((Date.parse(o.date) - Date.parse(today)) / 86400000)
-    const when = o.overdue ? '期限切れ' : days === 0 ? '今日' : days === 1 ? '明日' : `あと ${days} 日（${o.date}）`
-    const doc = o.docPath ? o.docPath.replace(/\.md$/i, '').split('/').pop() : 'リポジトリ全体'
+    const r = t().notify.reminder
+    const when = o.overdue ? r.overdue : days === 0 ? r.today : days === 1 ? r.tomorrow : r.inDays(days, o.date)
+    const doc = o.docPath ? o.docPath.replace(/\.md$/i, '').split('/').pop() : r.wholeRepo
     return `${o.repo}・${doc}\n${when}`
 }
 
@@ -44,16 +46,16 @@ export async function checkReminders(open: (e: OpenScheduleEvent) => void): Prom
     const fresh = due.filter((o) => !notified[keyOf(o)])
     const shown = fresh.length > 3 ? [] : fresh
     for (const o of shown) {
-        const n = new Notification({ title: `${o.kindLabel}：${o.title}`, body: bodyOf(o, today) })
+        const n = new Notification({ title: t().notify.reminder.title(o.kindLabel, o.title), body: bodyOf(o, today) })
         n.on('click', () => open({ dir: o.dir, docPath: o.docPath }))
         n.show()
     }
     if (fresh.length > 3) {
         const overdue = fresh.filter((o) => o.overdue).length
         const n = new Notification({
-            title: `近づいている期日が ${fresh.length} 件あります`,
+            title: t().notify.reminder.many(fresh.length),
             body: overdue
-                ? `うち ${overdue} 件は期限切れです`
+                ? t().notify.reminder.manyOverdue(overdue)
                 : fresh
                       .slice(0, 3)
                       .map((o) => `${o.date} ${o.title}`)

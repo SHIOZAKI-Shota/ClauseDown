@@ -2,6 +2,7 @@
 import { KIND_COLORS, type DueEvent, type DueEventInput, type EventKind, type RepoSchedule } from '@shared/schedule'
 import { useApp } from '~/stores/app'
 import { todayISO } from '~/utils/format'
+import { useT } from '~/composables/useT'
 
 const props = defineProps<{
     kinds: EventKind[]
@@ -13,6 +14,7 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ close: []; save: [DueEventInput, string]; remove: [string, string] }>()
 const app = useApp()
+const t = useT()
 const dir = ref(props.dir ?? props.repoChoices?.[0]?.dir ?? app.repoDir ?? '')
 const choice = computed(() => props.repoChoices?.find((r) => r.dir === dir.value))
 const kindList = computed(() => choice.value?.kinds ?? props.kinds)
@@ -34,7 +36,7 @@ const note = ref(e?.note ?? '')
 
 const kindNow = computed(() => kindList.value.find((k) => k.id === kind.value))
 const docItems = computed(() => [
-    { label: 'リポジトリ全体', value: ALL },
+    { label: t.value.schedule.wholeRepo, value: ALL },
     ...docList.value.map((d) => ({ label: d.title, value: d.path, description: d.path })),
 ])
 watch(dir, () => {
@@ -43,11 +45,11 @@ watch(dir, () => {
 })
 const remindItems = computed(() => {
     const k = kindNow.value
-    const label = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当日' : `${n} 日前`)
+    const s = t.value.schedule
     return [
-        { label: `種類の既定（${k ? label(k.remind) : '—'}）`, value: 'kind' },
-        ...[0, 1, 3, 7, 14, 30, 60, 90].map((n) => ({ label: label(n), value: String(n) })),
-        { label: '知らせない', value: '-1' },
+        { label: s.modal.kindDefault(k ? s.remindShort(k.remind) : '—'), value: 'kind' },
+        ...[0, 1, 3, 7, 14, 30, 60, 90].map((n) => ({ label: s.remindShort(n), value: String(n) })),
+        { label: s.remindNever, value: '-1' },
     ]
 })
 watch(date, (d) => {
@@ -55,11 +57,12 @@ watch(date, (d) => {
 })
 
 const error = computed(() => {
-    if (!dir.value) return 'リポジトリを選んでください'
-    if (!kind.value) return '種類を選んでください'
-    if (!date.value) return '日付を入れてください'
-    if (isRange.value && end.value < date.value) return '終了日は開始日以降にしてください'
-    if (repeat.value !== 'none' && until.value && until.value < date.value) return '繰り返しの終わりは開始日以降にしてください'
+    const m = t.value.schedule.modal
+    if (!dir.value) return m.errRepo
+    if (!kind.value) return m.errKind
+    if (!date.value) return m.errDate
+    if (isRange.value && end.value < date.value) return m.errEnd
+    if (repeat.value !== 'none' && until.value && until.value < date.value) return m.errUntil
     return ''
 })
 
@@ -86,17 +89,17 @@ function save() {
 <template>
     <UModal
         :open="true"
-        :title="event ? '期日を直す' : '期日の追加'"
-        description="施行・公布・提出・届出・契約の開始や更新などの日付を記録します。リポジトリを使う全員に共有されます。"
+        :title="event ? t.schedule.modal.editTitle : t.schedule.add"
+        :description="t.schedule.modal.description"
         @update:open="(v) => !v && emit('close')"
     >
         <template #body>
             <div class="cd-form">
-                <UFormField v-if="repoChoices && !event" label="リポジトリ">
+                <UFormField v-if="repoChoices && !event" :label="t.schedule.f.repo">
                     <USelect v-model="dir" :items="repoItems" class="cd-full" />
                 </UFormField>
-                <UFormField label="種類">
-                    <div class="kinds" role="radiogroup" aria-label="種類">
+                <UFormField :label="t.schedule.modal.kind">
+                    <div class="kinds" role="radiogroup" :aria-label="t.schedule.modal.kind">
                         <button
                             v-for="k in kindList"
                             :key="k.id"
@@ -112,46 +115,46 @@ function save() {
                         </button>
                     </div>
                 </UFormField>
-                <UFormField label="名前" description="空欄なら種類の名前（例：更新）を使います">
-                    <UInput v-model="title" class="cd-full" :placeholder="kindNow ? `例：${kindNow.label}（〇〇宛て）` : ''" />
+                <UFormField :label="t.schedule.modal.name" :description="t.schedule.modal.nameHelp">
+                    <UInput v-model="title" class="cd-full" :placeholder="kindNow ? t.schedule.modal.namePlaceholder(kindNow.label) : ''" />
                 </UFormField>
-                <UFormField label="対象">
+                <UFormField :label="t.schedule.f.target">
                     <USelectMenu v-model="docPath" :items="docItems" value-key="value" :disabled="fixedDoc" class="cd-full" />
                 </UFormField>
 
                 <div class="dates">
-                    <UFormField :label="isRange ? '開始日' : '日付'">
+                    <UFormField :label="isRange ? t.schedule.modal.start : t.schedule.f.date">
                         <DateField v-model="date" />
                     </UFormField>
-                    <UFormField v-if="isRange" label="終了日">
+                    <UFormField v-if="isRange" :label="t.schedule.modal.end">
                         <DateField v-model="end" :min="date" />
                     </UFormField>
-                    <USwitch v-model="isRange" label="期間にする" class="sw" />
+                    <USwitch v-model="isRange" :label="t.schedule.modal.isRange" class="sw" />
                 </div>
 
-                <UFormField label="繰り返し">
+                <UFormField :label="t.schedule.f.repeat">
                     <div class="dates">
                         <SegmentSwitch
                             v-model="repeat"
-                            aria-label="繰り返し"
+                            :aria-label="t.schedule.f.repeat"
                             :items="[
-                                { value: 'none', label: 'なし' },
-                                { value: 'year', label: '毎年' },
-                                { value: 'month', label: '毎月' },
+                                { value: 'none', label: t.schedule.modal.repeatNone },
+                                { value: 'year', label: t.schedule.modal.yearly },
+                                { value: 'month', label: t.schedule.modal.monthly },
                             ]"
                         />
                         <template v-if="repeat !== 'none'">
-                            <span class="cd-muted">終わり</span>
+                            <span class="cd-muted">{{ t.schedule.modal.until }}</span>
                             <DateField v-model="until" :min="date" />
-                            <span v-if="!until" class="cd-muted">（なし）</span>
+                            <span v-if="!until" class="cd-muted">{{ t.schedule.modal.untilNone }}</span>
                         </template>
                     </div>
                 </UFormField>
 
-                <UFormField label="知らせる" :description="kindNow?.task ? '済みにするまで、期限を過ぎても知らせます' : ''">
+                <UFormField :label="t.schedule.modal.remind" :description="kindNow?.task ? t.schedule.modal.remindTaskHelp : ''">
                     <USelect v-model="remind" :items="remindItems" class="cd-w-input" />
                 </UFormField>
-                <UFormField label="メモ">
+                <UFormField :label="t.schedule.f.memo">
                     <UTextarea v-model="note" :rows="2" autoresize class="cd-full" />
                 </UFormField>
                 <UAlert v-if="error" color="warning" variant="subtle" :title="error" />
@@ -159,9 +162,17 @@ function save() {
         </template>
         <template #footer>
             <div class="cd-modal-foot foot">
-                <UButton v-if="event" label="消す" icon="i-lucide-trash-2" color="error" variant="ghost" class="del" @click="emit('remove', event.id, dir)" />
-                <UButton label="やめる" color="neutral" variant="outline" @click="emit('close')" />
-                <UButton :label="event ? '保存' : '足す'" :disabled="!!error" :loading="app.busy" @click="save" />
+                <UButton
+                    v-if="event"
+                    :label="t.schedule.remove"
+                    icon="i-lucide-trash-2"
+                    color="error"
+                    variant="ghost"
+                    class="del"
+                    @click="emit('remove', event.id, dir)"
+                />
+                <UButton :label="t.schedule.cancel" color="neutral" variant="outline" @click="emit('close')" />
+                <UButton :label="event ? t.common.save : t.schedule.modal.add" :disabled="!!error" :loading="app.busy" @click="save" />
             </div>
         </template>
     </UModal>

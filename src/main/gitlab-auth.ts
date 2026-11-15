@@ -1,4 +1,5 @@
 import { GITLAB_APP } from '../shared/about'
+import { t } from '../shared/i18n'
 import { GITLAB_BASE } from '../shared/forge'
 import type { ForgeLogin } from '../shared/api'
 import { credentialFromResponse, gitlabWeb, loadSettings, saveCredential, type OAuthResponse, type Profile } from './settings'
@@ -33,12 +34,10 @@ const pending = new Map<string, Pending>()
 
 export async function startLogin(base: string): Promise<ForgeLogin> {
     const id = await clientIdFor(base)
-    if (!id) throw new Error('この GitLab の OAuth アプリの Application ID が設定されていません。管理者に登録してもらうか、アクセストークンを入力してください')
+    if (!id) throw new Error(t().errors.gitlabAuth.noAppId)
     const j = await post(base, '/oauth/authorize_device', { client_id: id, scope: SCOPE })
     if (!j.device_code) {
-        throw new Error(
-            `GitLab にログインできません（${String(j.error_description ?? j.error ?? '不明なエラー')}）。GitLab が古い場合は、アクセストークンを入力してください`,
-        )
+        throw new Error(t().errors.gitlabAuth.cannotLoginOld(String(j.error_description ?? j.error ?? t().errors.githubAuth.unknown)))
     }
     pending.set(base, {
         deviceCode: String(j.device_code),
@@ -58,11 +57,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 export async function waitLogin(base: string): Promise<string | null> {
     const p = pending.get(base)
-    if (!p) throw new Error('先に「ログイン」を押してください')
+    if (!p) throw new Error(t().errors.gitlabAuth.pressLoginFirst)
     let interval = p.interval
     while (Date.now() < p.expiresAt) {
         await sleep(interval * 1000)
-        if (pending.get(base) !== p) throw new Error('ログインを中止しました')
+        if (pending.get(base) !== p) throw new Error(t().errors.githubAuth.cancelled)
         const j = await post(base, '/oauth/token', {
             grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
             device_code: p.deviceCode,
@@ -80,12 +79,12 @@ export async function waitLogin(base: string): Promise<string | null> {
             continue
         }
         pending.delete(base)
-        if (j.error === 'access_denied') throw new Error('GitLab でのログインが取り消されました')
+        if (j.error === 'access_denied') throw new Error(t().errors.gitlabAuth.denied)
         if (j.error === 'expired_token') break
-        throw new Error(`GitLab にログインできません（${String(j.error_description ?? j.error)}）`)
+        throw new Error(t().errors.gitlabAuth.cannotLogin(String(j.error_description ?? j.error)))
     }
     pending.delete(base)
-    throw new Error('コードの有効期限が切れました。もう一度「ログイン」を押してください')
+    throw new Error(t().errors.gitlabAuth.expired)
 }
 
 export async function whoAmI(base: string, token: string): Promise<Profile | null> {

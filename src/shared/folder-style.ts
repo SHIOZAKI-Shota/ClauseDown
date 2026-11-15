@@ -1,4 +1,5 @@
 import { cleanStyle, DEFAULT_STYLE, type DocStyle } from './prefs'
+import { t } from './i18n'
 
 export const APP_DIR = '.clausedown'
 
@@ -61,7 +62,8 @@ export function inheritedStyle(base: DocStyle, layers: StyleLayers, folder: stri
 }
 
 export function sourceLabel(src: StyleSource): string {
-    if (src === 'app') return 'ローカル の設定'
-    if (src === '') return 'リポジトリの設定'
-    return `「${src}」の設定`
+    const l = t().labels.styleSource
+    if (src === 'app') return l.app
+    if (src === '') return l.repo
+    return l.folder(src)
 }

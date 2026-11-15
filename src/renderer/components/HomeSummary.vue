@@ -3,6 +3,7 @@ import { useApp } from '~/stores/app'
 import { allFolders } from '~/utils/folders'
 
 const app = useApp()
+const t = useT()
 const unsaved = computed(() => app.docs.filter((d) => d.changed))
 const folders = computed(() => allFolders(app.docs).length)
 const remote = computed(() => app.repo?.url?.replace(/^https?:\/\//, '').replace(/\.git$/, ''))
@@ -15,20 +16,18 @@ function review() {
 
 <template>
     <div class="facts">
-        <span class="fact" :class="{ draft: app.onDraft }" title="作業中（現行版か改定案）">
-            <UIcon :name="app.onDraft ? 'i-lucide-git-branch' : 'i-lucide-badge-check'" />{{ app.currentBranch?.label ?? '現行版' }}
+        <span class="fact" :class="{ draft: app.onDraft }" :title="t.home.summary.workingTitle">
+            <UIcon :name="app.onDraft ? 'i-lucide-git-branch' : 'i-lucide-badge-check'" />{{ app.currentBranch?.label ?? t.home.summary.current }}
         </span>
-        <span class="fact url" :title="app.repo?.url ?? 'ローカル だけで管理しています'">
-            <UIcon :name="remote ? 'i-lucide-cloud' : 'i-lucide-laptop'" />{{ remote ?? 'ローカル だけ' }}
+        <span class="fact url" :title="app.repo?.url ?? t.home.summary.localOnlyTitle">
+            <UIcon :name="remote ? 'i-lucide-cloud' : 'i-lucide-laptop'" />{{ remote ?? t.home.summary.localOnly }}
         </span>
-        <span class="fact">
-            <UIcon name="i-lucide-file-text" />{{ app.docs.length }} 文書<template v-if="folders">・{{ folders }} ディレクトリ</template>
-        </span>
+        <span class="fact"> <UIcon name="i-lucide-file-text" />{{ t.home.summary.counts(app.docs.length, folders) }} </span>
         <UPopover v-if="unsaved.length" :content="{ align: 'start', side: 'bottom' }">
-            <button class="fact warn"><UIcon name="i-lucide-circle-dot" />未保存 {{ unsaved.length }}</button>
+            <button class="fact warn"><UIcon name="i-lucide-circle-dot" />{{ t.home.summary.unsaved(unsaved.length) }}</button>
             <template #content>
                 <div class="pop">
-                    <p class="cd-muted">版として保存していない変更があります</p>
+                    <p class="cd-muted">{{ t.home.summary.unsavedNote }}</p>
                     <button v-for="d in unsaved" :key="d.path" class="item" :title="d.path" @click="app.openDoc(d.path)">
                         <UIcon name="i-lucide-file-pen" />{{ d.title }}
                     </button>
@@ -36,13 +35,13 @@ function review() {
             </template>
         </UPopover>
         <button v-if="app.toReview.length" class="fact primary" @click="review">
-            <UIcon name="i-lucide-user-check" />あなたの確認待ち {{ app.toReview.length }}
+            <UIcon name="i-lucide-user-check" />{{ t.home.summary.toReview(app.toReview.length) }}
         </button>
-        <UTooltip text="フォルダを開く">
-            <UButton icon="i-lucide-folder-open" size="xs" color="neutral" variant="ghost" aria-label="フォルダを開く" @click="openFolder" />
+        <UTooltip :text="t.home.summary.openFolder">
+            <UButton icon="i-lucide-folder-open" size="xs" color="neutral" variant="ghost" :aria-label="t.home.summary.openFolder" @click="openFolder" />
         </UTooltip>
-        <UTooltip text="このリポジトリの設定">
-            <UButton icon="i-lucide-settings-2" size="xs" color="neutral" variant="ghost" aria-label="このリポジトリの設定" @click="app.view = 'repo'" />
+        <UTooltip :text="t.common.repoSettings">
+            <UButton icon="i-lucide-settings-2" size="xs" color="neutral" variant="ghost" :aria-label="t.common.repoSettings" @click="app.view = 'repo'" />
         </UTooltip>
     </div>
 </template>

@@ -2,8 +2,10 @@
 import { groupRepos } from '@shared/repo-sections'
 import { useApp } from '~/stores/app'
 import { repoSectionItems } from '~/composables/useRepoSectionMenu'
+import { useT } from '~/composables/useT'
 
 const app = useApp()
+const t = useT()
 const open = ref(false)
 const missing = (dir: string) => (app.repoStates[dir] ?? 'ok') !== 'ok'
 watch(open, (v) => v && app.checkRepos())
@@ -14,7 +16,7 @@ const groups = computed(() => [
         ...(g.section ? { label: g.section } : {}),
         items: g.repos.map((r) => ({
             label: r.name,
-            suffix: missing(r.dir) ? '見つかりません' : r.url || r.dir,
+            suffix: missing(r.dir) ? t.value.repo.notFound : r.url || r.dir,
             icon: missing(r.dir) ? 'i-lucide-folder-x' : r.url ? 'i-lucide-cloud' : 'i-lucide-hard-drive',
             active: r.dir === app.repoDir,
             onSelect: () => {
@@ -29,7 +31,7 @@ const groups = computed(() => [
             ...(app.repoDir
                 ? [
                       {
-                          label: 'リポジトリホーム',
+                          label: t.value.repo.switcher.home,
                           icon: 'i-lucide-layout-grid',
                           onSelect: () => {
                               open.value = false
@@ -37,7 +39,7 @@ const groups = computed(() => [
                           },
                       },
                       {
-                          label: 'このリポジトリの設定',
+                          label: t.value.repo.switcher.repoSettings,
                           icon: 'i-lucide-settings-2',
                           onSelect: () => {
                               open.value = false
@@ -47,7 +49,7 @@ const groups = computed(() => [
                   ]
                 : []),
             {
-                label: 'リポジトリの追加・管理',
+                label: t.value.repo.addManage,
                 icon: 'i-lucide-plus',
                 onSelect: () => {
                     open.value = false
@@ -71,18 +73,18 @@ const moveItems = computed(() =>
           )
         : [],
 )
-const title = computed(() => [`リポジトリ：${app.repo?.name ?? '未選択'}`, app.repo?.dir ?? '', '（押すと切り替え）'].filter(Boolean).join('\n'))
+const title = computed(() => t.value.repo.switcher.title(app.repo?.name, app.repo?.dir ?? ''))
 </script>
 
 <template>
     <UPopover v-model:open="open" :content="{ align: 'start', side: 'bottom' }">
-        <button class="cd-crumb-btn repo" :class="{ open }" :title="title" aria-label="リポジトリを切り替える">
+        <button class="cd-crumb-btn repo" data-guide="repos" :class="{ open }" :title="title" :aria-label="t.repo.switcher.aria">
             <UIcon name="i-lucide-archive" class="ci" />
-            <span class="nm">{{ app.repo?.name ?? 'リポジトリを選ぶ' }}</span>
+            <span class="nm">{{ app.repo?.name ?? t.repo.switcher.choose }}</span>
             <UIcon name="i-lucide-chevron-down" class="caret" />
         </button>
         <template #content>
-            <UCommandPalette :groups="groups" placeholder="リポジトリを検索" class="palette" @mouseenter="moveOpen = false" />
+            <UCommandPalette :groups="groups" :placeholder="t.repo.switcher.search" class="palette" @mouseenter="moveOpen = false" />
             <UDropdownMenu
                 v-if="app.repoDir"
                 v-model:open="moveOpen"
@@ -93,7 +95,7 @@ const title = computed(() => [`リポジトリ：${app.repo?.name ?? '未選択'
             >
                 <button class="move" :class="{ on: moveOpen }" @mouseenter="moveOpen = true" @click="moveOpen = true" @keydown.esc="open = false">
                     <UIcon name="i-lucide-folder-input" class="mi" />
-                    <span class="ml">セクションの移動</span>
+                    <span class="ml">{{ t.repo.moveSection }}</span>
                     <UIcon name="i-lucide-chevron-right" class="mi" />
                 </button>
             </UDropdownMenu>

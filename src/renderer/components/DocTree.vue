@@ -4,9 +4,11 @@ import { useApp } from '~/stores/app'
 import { folderTree } from '~/utils/folders'
 import { useDocActions } from '~/composables/useDocActions'
 import type { Pane } from '~/composables/usePane'
+import { useT } from '~/composables/useT'
 
 defineProps<{ pane?: Pane }>()
 const app = useApp()
+const t = useT()
 const q = ref('')
 
 const tree = computed(() => folderTree(app.docs))
@@ -34,26 +36,26 @@ const menu = computed<ContextMenuItem[][]>(() => {
     const doc = target.value?.doc ? app.docs.find((d) => d.path === target.value!.doc) : undefined
     if (doc) return actions.docMenu(doc)
     const folder = target.value?.folder
-    if (folder) return [[{ label: 'この中に新しい文書', icon: 'i-lucide-file-plus', onSelect: () => newDocIn(folder) }]]
-    return [[{ label: '新しい文書', icon: 'i-lucide-file-plus', onSelect: () => newDocIn() }]]
+    if (folder) return [[{ label: t.value.docs.newDocHere, icon: 'i-lucide-file-plus', onSelect: () => newDocIn(folder) }]]
+    return [[{ label: t.value.docs.newDoc, icon: 'i-lucide-file-plus', onSelect: () => newDocIn() }]]
 })
 </script>
 
 <template>
     <div class="tree">
         <div class="head" :class="{ drop: dropFolder === '' }" @dragover="onDragOver('', $event)" @dragleave="onDragLeave('')" @drop="onDrop('', $event)">
-            <span>{{ dragging ? 'ここにドロップするとリポジトリの直下へ' : '文書' }}</span>
+            <span>{{ dragging ? t.docs.tree.dropToRoot : t.docs.document }}</span>
             <span class="cd-grow" />
-            <UButton icon="i-lucide-plus" size="xs" color="neutral" variant="ghost" title="新しい文書" @click="newDocIn()" />
-            <PaneControls v-if="pane" :pane="pane" side="left" label="文書・目次" />
+            <UButton icon="i-lucide-plus" size="xs" color="neutral" variant="ghost" :title="t.docs.newDoc" @click="newDocIn()" />
+            <PaneControls v-if="pane" :pane="pane" side="left" :label="t.docs.tree.paneLabel" />
         </div>
-        <UInput v-model="q" icon="i-lucide-search" placeholder="検索（文書名・ディレクトリ名）" size="sm" @keydown="onKey" />
+        <UInput v-model="q" icon="i-lucide-search" :placeholder="t.docs.tree.search" size="sm" @keydown="onKey" />
 
         <UContextMenu :items="menu" size="sm">
             <div class="scroll" @contextmenu="onContextMenu">
                 <FolderTree :root="tree" :docs="app.docs" :actions="actions" :selected-doc="selected" :query="q" hide-root />
                 <p v-if="app.docs.length === 0 || (words.length && !hits.length)" class="empty">
-                    {{ words.length ? '見つかりません' : 'まだ文書がありません' }}
+                    {{ words.length ? t.docs.notFound : t.docs.noDocsYet }}
                 </p>
             </div>
         </UContextMenu>

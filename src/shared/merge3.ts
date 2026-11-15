@@ -1,5 +1,6 @@
 import { diffArrays } from 'diff'
 import { articleTitle, parseLegal, type LegalDoc } from './legal-parser'
+import { t } from './i18n'
 
 export const splitLines = (s: string) => s.replace(/\r\n/g, '\n').split('\n')
 
@@ -21,7 +22,8 @@ export interface MergeResult {
 }
 
 export function whereIs(doc: LegalDoc, line: number): string {
-    let label = doc.preamble || doc.title ? '前文・題名' : ''
+    const where = t().labels.mergeWhere
+    let label = doc.preamble || doc.title ? where.preambleTitle : ''
     for (const ch of doc.chapters) {
         if (ch.line >= 0 && ch.line <= line) {
             label = ch.kind === 'appendix' || ch.kind === 'closing' ? ch.title || '別表' : [ch.label, ch.title].filter(Boolean).join('　') || label
@@ -30,7 +32,7 @@ export function whereIs(doc: LegalDoc, line: number): string {
             if (a.line <= line) label = `${a.refLabel}${a.title ? `（${articleTitle(a, doc)}）` : ''}`
         }
     }
-    return label || '文書の先頭'
+    return label || where.top
 }
 
 interface Edit {

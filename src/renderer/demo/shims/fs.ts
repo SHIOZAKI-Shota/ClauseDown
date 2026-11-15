@@ -1,5 +1,5 @@
 const missing = (path: unknown) => {
-    throw new Error(`デモでは「${String(path)}」を読めません`)
+    throw new Error(`demo: cannot read ${String(path)}`)
 }
 export const existsSync = () => false
 export const readFileSync = missing

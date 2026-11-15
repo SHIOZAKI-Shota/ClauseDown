@@ -1,6 +1,8 @@
+import { tagPath } from '@shared/tag-path'
 import type { AppSettings, DeliveryRecord, Issue, IssueComment } from '@shared/api'
 import type { ReviewEvent } from '@shared/review'
 import type { DueEvent, EventKind } from '@shared/schedule'
+import { t } from '@shared/i18n'
 
 export const MAIN = 'main'
 export const DRAFT_PREFIX = '案/'
@@ -44,15 +46,15 @@ export interface DemoState {
 
 export const newOid = () => Array.from(crypto.getRandomValues(new Uint8Array(20)), (b) => b.toString(16).padStart(2, '0')).join('')
 export const newId = () => newOid().slice(0, 16)
-export const effectiveTag = (docPath: string, date: string) => `施行/${docPath.replace(/\.md$/i, '')}/${date}`
-export const branchLabel = (name: string) => (name === MAIN ? '現行版' : name.startsWith(DRAFT_PREFIX) ? name.slice(DRAFT_PREFIX.length) : name)
+export const effectiveTag = (docPath: string, date: string) => `施行/${tagPath(docPath)}/${date}`
+export const branchLabel = (name: string) => (name === MAIN ? t().demo.mainLabel : name.startsWith(DRAFT_PREFIX) ? name.slice(DRAFT_PREFIX.length) : name)
 
 export function draftRef(label: string): string {
     const slug = label
         .trim()
         .replace(/[\s~^:?*[\]\\/]+/g, '-')
         .replace(/^[-.]+|[-.]+$/g, '')
-    if (!slug) throw new Error('改定案の名前を入力してください')
+    if (!slug) throw new Error(t().demo.draftNameRequired)
     return DRAFT_PREFIX + slug
 }
 

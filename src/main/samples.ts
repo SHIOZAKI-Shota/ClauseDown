@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+import { tagPath } from '../shared/tag-path'
 import fs, { promises as fsp } from 'node:fs'
 import { dirname, join } from 'node:path'
 import git from './igit'
@@ -105,7 +106,7 @@ class SampleRepo {
             await git.annotatedTag({
                 fs,
                 dir,
-                ref: `施行/${d.replace(/\.md$/, '')}/${effective}`,
+                ref: `施行/${tagPath(d)}/${effective}`,
                 message: `${d} 施行日 ${effective}`,
                 tagger: sig,
                 force: true,

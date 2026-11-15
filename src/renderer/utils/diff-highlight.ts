@@ -1,6 +1,7 @@
 import { diffChars, diffLines } from 'diff'
 import { StateEffect, StateField, type Extension, type Range } from '@codemirror/state'
 import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate } from '@codemirror/view'
+import { t } from '@shared/i18n'
 
 export const setDiffBase = StateEffect.define<string | null>()
 
@@ -20,7 +21,7 @@ class Removed extends WidgetType {
         const el = document.createElement('span')
         el.className = 'cd-diff-del'
         el.textContent = this.text
-        el.title = '保存した版から消した文字'
+        el.title = t().editor.diffRemoved
         return el
     }
     override ignoreEvent() {

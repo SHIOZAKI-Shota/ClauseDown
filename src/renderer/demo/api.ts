@@ -1,3 +1,4 @@
+import { fromTagPath } from '@shared/tag-path'
 import type {
     Api,
     BranchInfo,
@@ -15,6 +16,7 @@ import { newDocText } from '@shared/doc-preset'
 import { issueRefs } from '@shared/issue-refs'
 import { autoMerge } from '@shared/merge3'
 import { DELIVERY_KIND, effectivePeriods, expand, fromEffective, kindMap, type Occurrence, type ScheduleItem } from '@shared/schedule'
+import { t } from '@shared/i18n'
 import { proofreadInBrowser } from './proofread'
 import { seed, STATE_VERSION } from './seed'
 import {
@@ -34,7 +36,7 @@ import {
 } from './state'
 
 const KEY = 'clausedown-demo'
-const UNAVAILABLE = 'この操作はデモでは使えません。アプリをダウンロードしてお試しください'
+const UNAVAILABLE = () => t().demo.unavailable
 
 function load(): DemoState {
     try {
@@ -61,7 +63,7 @@ export function resetDemo() {
 
 function repoOf(dir: string): DemoRepo {
     const r = state.repos.find((x) => x.dir === dir)
-    if (!r) throw new Error('このリポジトリはデモにありません')
+    if (!r) throw new Error(t().demo.noRepo)
     return r
 }
 
@@ -93,7 +95,7 @@ function allEffective(repo: DemoRepo) {
     return Object.entries(repo.tags).flatMap(([tag, oid]) => {
         const m = /^施行\/(.+)\/(\d{4}-\d{2}-\d{2})$/.exec(tag)
         const c = repo.commits[oid]
-        return m && c ? [{ docPath: `${m[1]}.md`, date: m[2], oid, message: c.message.split('\n')[0], tag }] : []
+        return m && c ? [{ docPath: `${fromTagPath(m[1])}.md`, date: m[2], oid, message: c.message.split('\n')[0], tag }] : []
     })
 }
 
@@ -251,7 +253,7 @@ const toItem = (repo: DemoRepo, o: Occurrence): ScheduleItem => {
 
 const issueOf = (repo: DemoRepo, n: number) => {
     const i = repo.issues.find((x) => x.n === n)
-    if (!i) throw new Error(`課題 #${n} が見つかりません`)
+    if (!i) throw new Error(t().demo.issueNotFound(n))
     return i
 }
 const plainIssue = ({ comments: _c, ...i }: DemoRepo['issues'][number]): Issue => structuredClone(i)
@@ -265,7 +267,7 @@ function siteTheme(): 'light' | 'dark' | undefined {
     }
 }
 
-const unavailable = () => Promise.reject(new Error(UNAVAILABLE))
+const unavailable = () => Promise.reject(new Error(UNAVAILABLE()))
 const noop = () => () => {}
 const mutate =
     <A extends unknown[], R>(fn: (...a: A) => R) =>
@@ -285,12 +287,13 @@ const impl: Partial<Api> = {
         if (window.parent !== window) window.parent.postMessage({ type: 'clausedown-theme', theme }, location.origin)
     }),
     platform: async () => 'web',
+    systemLanguages: async () => [...navigator.languages],
     listFonts: async () => [],
     setZoom: async () => {},
     repoStatus: async (dirs) => Object.fromEntries(dirs.map((d) => [d, state.repos.some((r) => r.dir === d) ? 'ok' : 'missing'])),
-    openRepo: async (dir) => (state.repos.some((r) => r.dir === dir) ? { ok: true } : { ok: false, message: UNAVAILABLE }),
+    openRepo: async (dir) => (state.repos.some((r) => r.dir === dir) ? { ok: true } : { ok: false, message: UNAVAILABLE() }),
     accounts: async () => [],
-    identity: async () => ({ name: USER, email: '', source: 'manual', label: 'デモ' }),
+    identity: async () => ({ name: USER, email: '', source: 'manual', label: t().demo.badge }),
     getLicenses: async () => null,
     forgeKind: async () => null,
     getRules: async () => ({ requireApproval: false, approvers: [] }),
@@ -304,13 +307,13 @@ const impl: Partial<Api> = {
     },
     readDoc: async (dir, path) => {
         const text = workOf(repoOf(dir))[path]
-        if (text === undefined) throw new Error(`「${path}」が見つかりません`)
+        if (text === undefined) throw new Error(t().demo.notFound(path))
         return text
     },
     writeDoc: mutate((dir, path, content) => setWork(repoOf(dir), path, content)),
     createDoc: mutate((dir, path, title, preset) => {
         const repo = repoOf(dir)
-        if (workOf(repo)[path] !== undefined) throw new Error('同じ名前の文書がすでにあります')
+        if (workOf(repo)[path] !== undefined) throw new Error(t().demo.docExists)
         setWork(repo, path, newDocText(title, preset))
     }),
     deleteDoc: mutate((dir, path) => {
@@ -363,7 +366,7 @@ const impl: Partial<Api> = {
     readAt: async (dir, oid, path) => repoOf(dir).commits[oid]?.files[path] ?? null,
     saveVersion: mutate((dir, input: SaveVersionInput) => {
         const repo = repoOf(dir)
-        const message = input.message.trim() || '版を保存'
+        const message = input.message.trim() || t().demo.defaultMessage
         const oid = addCommit(repo, repo.current, workOf(repo), message, [repo.branches[repo.current]])
         delete repo.work[repo.current]
         if (input.effectiveDate && input.docPath) repo.tags[effectiveTag(input.docPath, input.effectiveDate)] = oid
@@ -399,7 +402,7 @@ const impl: Partial<Api> = {
     createBranch: mutate((dir, label, from) => {
         const repo = repoOf(dir)
         const name = draftRef(label)
-        if (repo.branches[name]) throw new Error(`「${label}」という改定案はすでにあります`)
+        if (repo.branches[name]) throw new Error(t().demo.draftExists(label))
         const source = from ?? repo.current
         repo.branches[name] = repo.branches[source]
         if (source === repo.current && repo.work[repo.current]) {
@@ -411,12 +414,12 @@ const impl: Partial<Api> = {
     }),
     switchBranch: mutate((dir, name) => {
         const repo = repoOf(dir)
-        if (!repo.branches[name]) throw new Error(`改定案「${branchLabel(name)}」が見つかりません`)
+        if (!repo.branches[name]) throw new Error(t().demo.draftNotFound(branchLabel(name)))
         repo.current = name
     }),
     deleteBranch: mutate((dir, name) => {
         const repo = repoOf(dir)
-        if (name === MAIN) throw new Error('現行版は消せません')
+        if (name === MAIN) throw new Error(t().demo.mainUndeletable)
         if (repo.current === name) repo.current = MAIN
         delete repo.branches[name]
         delete repo.work[name]
@@ -433,7 +436,7 @@ const impl: Partial<Api> = {
         for (const c of a.conflicts) {
             const choice = input.choices[c.path]
             const text = choice === 'ours' ? c.ours : choice === 'theirs' ? c.theirs : choice?.content
-            if (text === undefined) throw new Error(`「${c.path}」の重なった箇所を選んでください`)
+            if (text === undefined) throw new Error(t().demo.pickConflict(c.path))
             if (text === null) delete files[c.path]
             else files[c.path] = text
         }
@@ -466,7 +469,7 @@ const impl: Partial<Api> = {
     },
     addEffective: mutate((dir, docPath, oid, date) => {
         const repo = repoOf(dir)
-        if (repo.commits[oid]?.files[docPath] === undefined) throw new Error('この版にはこの文書がありません')
+        if (repo.commits[oid]?.files[docPath] === undefined) throw new Error(t().demo.notInVersion)
         repo.tags[effectiveTag(docPath, date)] = oid
     }),
     removeEffective: mutate((dir, docPath, date) => {
@@ -514,7 +517,7 @@ const impl: Partial<Api> = {
     }),
     setEventDone: mutate((dir, id, date, done) => {
         const e = repoOf(dir).events.find((x) => x.id === id)
-        if (!e) throw new Error('期日が見つかりません')
+        if (!e) throw new Error(t().demo.dueNotFound)
         e.done = done ? [...new Set([...e.done, date])] : e.done.filter((d) => d !== date)
         e.updatedAt = nowIso()
     }),
@@ -552,7 +555,7 @@ const impl: Partial<Api> = {
     },
     createIssue: mutate((dir, input) => {
         const repo = repoOf(dir)
-        if (!input.title.trim()) throw new Error('題名を書いてください')
+        if (!input.title.trim()) throw new Error(t().demo.titleRequired)
         const n = Math.max(0, ...repo.issues.map((i) => i.n)) + 1
         const issue = {
             n,
@@ -574,7 +577,7 @@ const impl: Partial<Api> = {
         return plainIssue(issue)
     }),
     commentIssue: mutate((dir, n, body) => {
-        if (!body.trim()) throw new Error('コメントを書いてください')
+        if (!body.trim()) throw new Error(t().demo.commentRequired)
         issueOf(repoOf(dir), n).comments.push({ id: newId(), body, by: USER, at: nowIso(), kind: 'user' })
     }),
     closeIssue: mutate((dir, n, oid) => {
@@ -618,8 +621,8 @@ const impl: Partial<Api> = {
     editCommand: async (cmd) => {
         document.execCommand(cmd)
     },
-    updateState: async () => ({ state: 'dev', current: 'デモ' }),
-    checkUpdate: async () => ({ state: 'dev', current: 'デモ' }),
+    updateState: async () => ({ state: 'dev', current: t().demo.badge }),
+    checkUpdate: async () => ({ state: 'dev', current: t().demo.badge }),
     onDocChanged: noop,
     onAiEvent: noop,
     onOpenSchedule: noop,

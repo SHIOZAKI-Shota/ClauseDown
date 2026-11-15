@@ -1,6 +1,7 @@
 import { closeSearchPanel, findNext, findPrevious, getSearchQuery, replaceAll, replaceNext, search, SearchQuery, setSearchQuery } from '@codemirror/search'
 import type { EditorState, Extension } from '@codemirror/state'
 import { EditorView, type Panel, type ViewUpdate } from '@codemirror/view'
+import { t } from '@shared/i18n'
 import { keys } from './platform'
 
 const ICONS = {
@@ -51,20 +52,21 @@ function createPanel(view: EditorView): Panel {
         }
     })
 
-    const toggle = el('button', 'cd-find-btn cd-find-expand', { type: 'button', title: '置換を表示', 'aria-label': '置換を表示' })
+    const m = t().editor.find
+    const toggle = el('button', 'cd-find-btn cd-find-expand', { type: 'button', title: m.showReplace, 'aria-label': m.showReplace })
     toggle.append(icon(ICONS.expand))
 
     const field = el('div', 'cd-find-field')
-    const input = el('input', 'cd-find-input', { type: 'text', placeholder: '検索', 'aria-label': '検索', 'main-field': 'true' })
+    const input = el('input', 'cd-find-input', { type: 'text', placeholder: m.search, 'aria-label': m.search, 'main-field': 'true' })
     const count = el('span', 'cd-find-count')
     const opt = (label: string, title: string) => {
         const b = el('button', 'cd-find-opt', { type: 'button', title, 'aria-pressed': 'false' })
         b.textContent = label
         return b
     }
-    const caseBtn = opt('Aa', '大文字と小文字を区別')
-    const wordBtn = opt('語', '単語単位で探す')
-    const reBtn = opt('.*', '正規表現')
+    const caseBtn = opt('Aa', m.caseSensitive)
+    const wordBtn = opt(m.word, m.wholeWord)
+    const reBtn = opt('.*', m.regexp)
     field.append(input, count, caseBtn, wordBtn, reBtn)
 
     const btn = (d: string, title: string, run: () => void) => {
@@ -76,15 +78,15 @@ function createPanel(view: EditorView): Panel {
         })
         return b
     }
-    const prev = btn(ICONS.up, '前へ（Shift+Enter）', () => findPrevious(view))
-    const next = btn(ICONS.down, '次へ（Enter）', () => findNext(view))
-    const close = btn(ICONS.close, '閉じる（Esc）', () => closeSearchPanel(view))
+    const prev = btn(ICONS.up, m.prev, () => findPrevious(view))
+    const next = btn(ICONS.down, m.next, () => findNext(view))
+    const close = btn(ICONS.close, m.close, () => closeSearchPanel(view))
 
     const row1 = el('div', 'cd-find-row')
     row1.append(toggle, field, prev, next, close)
 
     const replaceField = el('div', 'cd-find-field')
-    const replaceInput = el('input', 'cd-find-input', { type: 'text', placeholder: '置換後の文字', 'aria-label': '置換後の文字' })
+    const replaceInput = el('input', 'cd-find-input', { type: 'text', placeholder: m.replaceWith, 'aria-label': m.replaceWith })
     replaceField.append(replaceInput)
     const textBtn = (label: string, title: string, run: () => void) => {
         const b = el('button', 'cd-find-text', { type: 'button', title })
@@ -92,8 +94,8 @@ function createPanel(view: EditorView): Panel {
         b.addEventListener('click', run)
         return b
     }
-    const replaceOne = textBtn('置換', '1件置換して次へ（Enter）', () => replaceNext(view))
-    const replaceEvery = textBtn('すべて置換', `すべて置換（${keys('Ctrl+Alt+Enter')}）`, () => replaceAll(view))
+    const replaceOne = textBtn(m.replace, m.replaceTip, () => replaceNext(view))
+    const replaceEvery = textBtn(m.replaceAll, m.replaceAllTip(keys('Ctrl+Alt+Enter')), () => replaceAll(view))
     const row2 = el('div', 'cd-find-row cd-find-replace')
     row2.append(el('span', 'cd-find-spacer'), replaceField, replaceOne, replaceEvery)
 
@@ -126,9 +128,9 @@ function createPanel(view: EditorView): Panel {
         count.textContent = !query.search
             ? ''
             : !query.valid
-              ? '正規表現の誤り'
+              ? m.badRegexp
               : total === 0
-                ? '0 件'
+                ? m.none
                 : `${current || '-'} / ${total >= MAX_COUNT ? `${MAX_COUNT}+` : total}`
     }
     function commit(patch: Partial<ConstructorParameters<typeof SearchQuery>[0]>) {

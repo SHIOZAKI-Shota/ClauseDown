@@ -1,3 +1,4 @@
+import { locale, t } from '../shared/i18n'
 import { utilityProcess, type UtilityProcess } from 'electron'
 import { join } from 'node:path'
 import type { ProofreadConfig, ProofreadContext, ProofreadIssue } from '../shared/api'
@@ -36,7 +37,7 @@ function worker(): UtilityProcess {
     })
     c.on('exit', () => {
         if (child === c) child = null
-        failAll('校閲のプロセスが終了しました')
+        failAll(t().errors.proofread.exited)
     })
     child = c
     return c
@@ -47,6 +48,7 @@ async function configFor(_ctx: ProofreadContext | undefined): Promise<ProofreadC
     return {
         rules: prefs.proofreadRules ?? {},
         joshiAllow: Array.isArray(prefs.proofreadJoshiAllow) ? prefs.proofreadJoshiAllow.filter((s) => typeof s === 'string') : undefined,
+        locale: locale(),
     }
 }
 
@@ -57,7 +59,7 @@ export async function proofread(text: unknown, ctx?: ProofreadContext): Promise<
     return new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
             pending.delete(id)
-            reject(new Error('校閲に時間がかかりすぎたため、やめました'))
+            reject(new Error(t().errors.proofread.timeout))
             child?.kill()
         }, TIMEOUT_MS)
         pending.set(id, { resolve, reject, timer })

@@ -1,4 +1,5 @@
 import { parseLegal } from './legal-parser'
+import { t } from './i18n'
 
 export interface Definition {
     term: string
@@ -143,7 +144,7 @@ export function checkDefinitions(input: string): DefinitionIssue[] {
         const first = new Map<string, Definition>()
         for (const d of inScope) {
             const prev = first.get(d.term)
-            if (prev) out.push({ from: d.from, to: d.to, line: lineOf(d.from), message: `「${d.term}」は${lineOf(prev.from)}行目ですでに定義しています` })
+            if (prev) out.push({ from: d.from, to: d.to, line: lineOf(d.from), message: t().checks.alreadyDefined(d.term, lineOf(prev.from)) })
             else first.set(d.term, d)
         }
         const terms = [...first.keys()].sort((a, b) => b.length - a.length)
@@ -156,7 +157,7 @@ export function checkDefinitions(input: string): DefinitionIssue[] {
             }
             const uses = occurrences(text, term).filter((i) => i >= from && !partOfCompound(text, i, term) && !(i >= def.sentenceFrom && i < def.from))
             if (!uses.length) {
-                out.push({ from: def.from, to: def.to, line: lineOf(def.from), message: `「${term}」を定義していますが、使っていません` })
+                out.push({ from: def.from, to: def.to, line: lineOf(def.from), message: t().checks.unusedDefinition(term) })
                 continue
             }
             if (def.kind !== 'hereinafter') continue
@@ -167,7 +168,7 @@ export function checkDefinitions(input: string): DefinitionIssue[] {
                     from: i,
                     to: i + term.length,
                     line: lineOf(i),
-                    message: `「${term}」は${lineOf(def.from)}行目で定義しています。定義より前で使っています`,
+                    message: t().checks.usedBeforeDefinition(term, lineOf(def.from)),
                 })
             }
         }

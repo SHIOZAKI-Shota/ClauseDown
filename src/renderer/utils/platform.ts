@@ -1,4 +1,9 @@
+import { t } from '@shared/i18n'
+
 export const IS_MAC = typeof navigator !== 'undefined' && navigator.userAgent.includes('Mac')
+
+/** 「Finder で表示」「エクスプローラーで表示」。呼ぶたびに今の言語で返す */
+export const revealLabel = () => (IS_MAC ? t().common.showInFinder : t().common.showInExplorer)
 
 /** Ctrl にあたるキーの名前。「Ctrl＋ホイール」のように、キー以外と組み合わせて書くときに使う */
 export const MOD_KEY = IS_MAC ? '⌘' : 'Ctrl'

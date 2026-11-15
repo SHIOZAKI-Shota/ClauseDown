@@ -1,46 +1,48 @@
 import { app, Menu, type MenuItemConstructorOptions } from 'electron'
+import { t } from '../shared/i18n'
 
 export function setAppMenu(): void {
     if (process.platform !== 'darwin') return
     const name = app.name
+    const m = t().menu
     const dev: MenuItemConstructorOptions[] = app.isPackaged
         ? []
-        : [{ type: 'separator' }, { role: 'reload', label: '再読み込み' }, { role: 'toggleDevTools', label: '開発者ツール' }]
+        : [{ type: 'separator' }, { role: 'reload', label: m.reload }, { role: 'toggleDevTools', label: m.devTools }]
     const template: MenuItemConstructorOptions[] = [
         {
             label: name,
             submenu: [
-                { role: 'about', label: `${name} について` },
+                { role: 'about', label: m.about(name) },
                 { type: 'separator' },
-                { role: 'services', label: 'サービス' },
+                { role: 'services', label: m.services },
                 { type: 'separator' },
-                { role: 'hide', label: `${name} を隠す` },
-                { role: 'hideOthers', label: 'ほかを隠す' },
-                { role: 'unhide', label: 'すべてを表示' },
+                { role: 'hide', label: m.hide(name) },
+                { role: 'hideOthers', label: m.hideOthers },
+                { role: 'unhide', label: m.unhide },
                 { type: 'separator' },
-                { role: 'quit', label: `${name} を終了` },
+                { role: 'quit', label: m.quit(name) },
             ],
         },
         {
-            label: '編集',
+            label: m.edit,
             submenu: [
-                { role: 'undo', label: '取り消す' },
-                { role: 'redo', label: 'やり直す' },
+                { role: 'undo', label: m.undo },
+                { role: 'redo', label: m.redo },
                 { type: 'separator' },
-                { role: 'cut', label: 'カット' },
-                { role: 'copy', label: 'コピー' },
-                { role: 'paste', label: 'ペースト' },
-                { role: 'selectAll', label: 'すべてを選択' },
+                { role: 'cut', label: m.cut },
+                { role: 'copy', label: m.copy },
+                { role: 'paste', label: m.paste },
+                { role: 'selectAll', label: m.selectAll },
             ],
         },
         {
-            label: '表示',
-            submenu: [{ role: 'togglefullscreen', label: 'フルスクリーンにする／解除する' }, ...dev],
+            label: m.view,
+            submenu: [{ role: 'togglefullscreen', label: m.fullscreen }, ...dev],
         },
         {
             role: 'window',
-            label: 'ウインドウ',
-            submenu: [{ role: 'minimize', label: 'しまう' }, { role: 'zoom', label: '拡大／縮小' }, { type: 'separator' }, { role: 'close', label: '閉じる' }],
+            label: m.window,
+            submenu: [{ role: 'minimize', label: m.minimize }, { role: 'zoom', label: m.zoom }, { type: 'separator' }, { role: 'close', label: m.close }],
         },
     ]
     Menu.setApplicationMenu(Menu.buildFromTemplate(template))

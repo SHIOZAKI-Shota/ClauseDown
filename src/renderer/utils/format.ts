@@ -1,3 +1,5 @@
+import { locale, t } from '@shared/i18n'
+
 const pad = (n: number) => String(n).padStart(2, '0')
 
 export function todayISO(): string {
@@ -26,18 +28,21 @@ export function fmtDate(t: number | string, kind: 'md' | 'ymd' | 'mdhm' | 'ymdhm
 }
 
 const WAREKI = new Intl.DateTimeFormat('ja-JP-u-ca-japanese', { era: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
+const EN_DATE = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' })
+// 日本語の画面では和暦、英語の画面では「Apr 1, 2026」
 export function fmtWareki(date: string): string {
-    const t = Date.parse(`${date}T00:00:00Z`)
-    return Number.isNaN(t) ? date : WAREKI.format(t)
+    const ms = Date.parse(`${date}T00:00:00Z`)
+    return Number.isNaN(ms) ? date : (locale() === 'ja' ? WAREKI : EN_DATE).format(ms)
 }
 
 export function relTime(ts: number): string {
     if (!ts) return ''
     const diff = (Date.now() - ts * 1000) / 1000
-    if (diff < 60) return 'たった今'
-    if (diff < 3600) return `${Math.floor(diff / 60)}分前`
-    if (diff < 86400) return `${Math.floor(diff / 3600)}時間前`
-    if (diff < 86400 * 7) return `${Math.floor(diff / 86400)}日前`
+    const r = t().common.relTime
+    if (diff < 60) return r.justNow
+    if (diff < 3600) return r.minutes(Math.floor(diff / 60))
+    if (diff < 86400) return r.hours(Math.floor(diff / 3600))
+    if (diff < 86400 * 7) return r.days(Math.floor(diff / 86400))
     return fmtDate(ts, 'ymd')
 }
 
@@ -50,7 +55,8 @@ export function daysUntil(date: string, today = todayISO()): number {
 }
 
 export function untilLabel(n: number): string {
-    return n === 0 ? '今日' : n === 1 ? '明日' : n > 0 ? `あと ${n} 日` : `${-n} 日前`
+    const u = t().common.until
+    return n === 0 ? u.today : n === 1 ? u.tomorrow : n > 0 ? u.inDays(n) : u.daysAgo(-n)
 }
 
 export function urgencyOf(n: number): '' | 'soon' | 'near' {

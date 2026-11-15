@@ -4,8 +4,10 @@ import type { CommitInfo, Issue, IssueDetail } from '@shared/api'
 import { useApp } from '~/stores/app'
 import { fmtDate } from '~/utils/format'
 import { MOD_KEY } from '~/utils/platform'
+import { useT } from '~/composables/useT'
 
 const app = useApp()
+const t = useT()
 const md = new MarkdownIt({ html: false, linkify: true, breaks: true }).disable('image')
 md.renderer.rules.link_open = (tokens, idx, options, _env, self) => {
     tokens[idx].attrSet('target', '_blank')
@@ -71,7 +73,7 @@ async function postComment() {
     const n = detail.value?.n
     if (!n || !draft.value.trim() || posting.value) return
     posting.value = true
-    const ok = await app.runOk(() => window.api.commentIssue(dir, n, draft.value), 'コメントしました')
+    const ok = await app.runOk(() => window.api.commentIssue(dir, n, draft.value), t.value.issues.commented)
     posting.value = false
     if (!ok) return
     draft.value = ''
@@ -90,7 +92,6 @@ function onDraftKey(e: KeyboardEvent) {
         void postComment()
     }
 }
-const EVENT = { link: 'を紐付けました', close: 'で解決しました' } as const
 
 function startNew(draft?: { title: string; body: string }) {
     creating.value = true
@@ -101,7 +102,7 @@ function startNew(draft?: { title: string; body: string }) {
 }
 
 async function create() {
-    const made = await app.run(() => window.api.createIssue(dir, { title: newTitle.value, body: newBody.value }), '課題を作りました')
+    const made = await app.run(() => window.api.createIssue(dir, { title: newTitle.value, body: newBody.value }), t.value.issues.created)
     if (!made) return
     await load()
     filter.value = 'open'
@@ -134,32 +135,32 @@ async function confirmPicker() {
     if (!n) return
     const kind = picker.value
     picker.value = null
-    if (kind === 'link' && pickOid.value) await app.run(() => window.api.linkIssue(dir, n, pickOid.value), '版を紐付けました')
+    if (kind === 'link' && pickOid.value) await app.run(() => window.api.linkIssue(dir, n, pickOid.value), t.value.issues.linked)
     if (kind === 'close')
-        await app.run(() => window.api.closeIssue(dir, n, pickOid.value === NO_VERSION ? undefined : pickOid.value || undefined), `#${n} を閉じました`)
+        await app.run(() => window.api.closeIssue(dir, n, pickOid.value === NO_VERSION ? undefined : pickOid.value || undefined), t.value.issues.closed(n))
     await Promise.all([load(), open(n)])
 }
 
 async function reopen() {
     const n = detail.value?.n
     if (!n) return
-    await app.run(() => window.api.updateIssue(dir, n, { state: 'open' }), `#${n} を開き直しました`)
+    await app.run(() => window.api.updateIssue(dir, n, { state: 'open' }), t.value.issues.reopened(n))
     await Promise.all([load(), open(n)])
 }
 
 async function moveToForge() {
     const r = await app.run(() => window.api.moveIssuesToForge(dir))
     if (!r) return
-    const shifted = r.renumbered.length ? `。番号が変わった課題：${r.renumbered.map((x) => `#${x.from}→#${x.to}`).join('、')}` : ''
-    app.notify(`${r.moved} 件の課題を ${sourceLabel.value} に移しました${shifted}`)
+    const m = t.value.issues
+    const shifted = r.renumbered.length ? m.renumbered(r.renumbered.map((x) => `#${x.from}→#${x.to}`).join(m.listSep)) : ''
+    app.notify(m.moved(r.moved, sourceLabel.value, shifted))
     await load()
 }
 
 const versionItems = computed(() => [
-    ...(picker.value === 'close' ? [{ label: '版を指定しない', value: NO_VERSION }] : []),
+    ...(picker.value === 'close' ? [{ label: t.value.issues.noVersion, value: NO_VERSION }] : []),
     ...versions.value.map((c) => ({ label: `${c.oid.slice(0, 7)}　${c.message.split('\n')[0]}`, value: c.oid })),
 ])
-const HOW = { close: '解決', link: '紐付け', ref: '言及' } as const
 const short = (oid: string) => oid.slice(0, 7)
 const dateOf = (s?: string) => (s ? fmtDate(s, 'ymd') : '')
 const openOnSite = (url: string) => app.run(() => window.api.openExternal(url))
@@ -172,13 +173,13 @@ function openVersion(oid: string) {
 
 onMounted(async () => {
     await load()
-    const t = app.issueTarget
+    const target = app.issueTarget
     app.issueTarget = null
-    if (t?.draft) startNew(t.draft)
-    else if (t?.n) {
-        const hit = list.value.find((i) => i.n === t.n)
+    if (target?.draft) startNew(target.draft)
+    else if (target?.n) {
+        const hit = list.value.find((i) => i.n === target.n)
         if (hit) filter.value = hit.state
-        await open(t.n)
+        await open(target.n)
     }
 })
 </script>
@@ -196,14 +197,14 @@ onMounted(async () => {
         />
         <header class="head">
             <div class="title">
-                <h2>課題</h2>
+                <h2>{{ t.issues.title }}</h2>
                 <p class="cd-muted">
-                    {{ app.repo?.name }}<template v-if="sourceLabel">（{{ sourceLabel }} の Issue）</template>
-                    <template v-else>（このリポジトリの記録に保存）</template>
+                    {{ app.repo?.name }}<template v-if="sourceLabel">{{ t.issues.sourceForge(sourceLabel) }}</template>
+                    <template v-else>{{ t.issues.sourceLocal }}</template>
                 </p>
             </div>
             <span class="cd-grow" />
-            <UButton label="新しい課題" icon="i-lucide-plus" @click="startNew()" />
+            <UButton :label="t.issues.new" icon="i-lucide-plus" @click="startNew()" />
         </header>
 
         <UAlert
@@ -212,9 +213,9 @@ onMounted(async () => {
             color="warning"
             variant="subtle"
             icon="i-lucide-arrow-right-left"
-            :title="`このリポジトリには、${sourceLabel} に接続する前に作った課題が ${pending} 件あります`"
-            :description="`${sourceLabel} に移すと、以後は ${sourceLabel} の Issue として扱います。新しく作ったリポジトリなら番号もそのまま引き継がれます。`"
-            :actions="[{ label: `${sourceLabel} に移す`, onClick: moveToForge }]"
+            :title="t.issues.pendingTitle(sourceLabel, pending)"
+            :description="t.issues.pendingBody(sourceLabel)"
+            :actions="[{ label: t.issues.moveTo(sourceLabel), onClick: moveToForge }]"
         />
 
         <div class="body">
@@ -224,15 +225,15 @@ onMounted(async () => {
                         v-model="filter"
                         size="xs"
                         :items="[
-                            { value: 'open', label: `未完了 ${counts.open}` },
-                            { value: 'closed', label: `完了 ${counts.closed}` },
+                            { value: 'open', label: t.issues.openCount(counts.open) },
+                            { value: 'closed', label: t.issues.closedCount(counts.closed) },
                         ]"
                     />
-                    <UInput v-model="q" icon="i-lucide-search" placeholder="番号・題名・本文で探す" size="sm" class="w-full" />
+                    <UInput v-model="q" icon="i-lucide-search" :placeholder="t.issues.searchFull" size="sm" class="w-full" />
                 </div>
-                <p v-if="loading" class="cd-muted pad">読み込んでいます…</p>
+                <p v-if="loading" class="cd-muted pad">{{ t.issues.loading }}</p>
                 <p v-else-if="error" class="err pad">{{ error }}</p>
-                <p v-else-if="!shown.length" class="cd-muted pad">{{ filter === 'open' ? '未完了の課題はありません。' : '完了した課題はありません。' }}</p>
+                <p v-else-if="!shown.length" class="cd-muted pad">{{ filter === 'open' ? t.issues.noOpen : t.issues.noClosed }}</p>
                 <button v-for="i in shown" :key="i.n" class="row" :class="{ on: selected === i.n }" @click="open(i.n)">
                     <UIcon :name="i.state === 'open' ? 'i-lucide-circle-dot' : 'i-lucide-circle-check'" :class="['st', i.state]" />
                     <span class="num">#{{ i.n }}</span>
@@ -243,23 +244,23 @@ onMounted(async () => {
 
             <section class="detail">
                 <div v-if="creating" class="cd-form">
-                    <h3>新しい課題</h3>
-                    <UFormField label="題名">
-                        <UInput v-model="newTitle" class="w-full" autofocus placeholder="例：第12条の休日の定義を見直す" />
+                    <h3>{{ t.issues.new }}</h3>
+                    <UFormField :label="t.issues.fTitle">
+                        <UInput v-model="newTitle" class="w-full" autofocus :placeholder="t.issues.titlePlaceholder" />
                     </UFormField>
-                    <UFormField label="本文" description="Markdown で書けます。">
+                    <UFormField :label="t.issues.fBody" :description="t.issues.bodyHelp">
                         <UTextarea v-model="newBody" :rows="10" class="w-full" />
                     </UFormField>
                     <div class="cd-modal-foot">
-                        <UButton label="やめる" color="neutral" variant="outline" @click="creating = false" />
-                        <UButton label="作る" icon="i-lucide-plus" :disabled="!newTitle.trim()" @click="create" />
+                        <UButton :label="t.issues.cancel" color="neutral" variant="outline" @click="creating = false" />
+                        <UButton :label="t.issues.create" icon="i-lucide-plus" :disabled="!newTitle.trim()" @click="create" />
                     </div>
                 </div>
 
                 <template v-else-if="detail">
                     <div class="d-head">
                         <UBadge
-                            :label="detail.state === 'open' ? '未完了' : '完了'"
+                            :label="detail.state === 'open' ? t.issues.open : t.issues.closedState"
                             :color="detail.state === 'open' ? 'success' : 'neutral'"
                             variant="subtle"
                             :icon="detail.state === 'open' ? 'i-lucide-circle-dot' : 'i-lucide-circle-check'"
@@ -267,20 +268,20 @@ onMounted(async () => {
                         <h3 v-if="!editing">#{{ detail.n }} {{ detail.title }}</h3>
                         <UInput v-else v-model="editTitle" class="grow" />
                         <span class="cd-grow" />
-                        <UTooltip text="サイトで書かれたコメントなどを読み直します">
+                        <UTooltip :text="t.issues.reloadTip">
                             <UButton
                                 icon="i-lucide-refresh-cw"
                                 size="sm"
                                 color="neutral"
                                 variant="ghost"
-                                aria-label="再読み込み"
+                                :aria-label="t.issues.reload"
                                 :loading="reloading"
                                 @click="reloadDetail"
                             />
                         </UTooltip>
                         <UButton
                             v-if="detail.url"
-                            :label="`${sourceLabel} で開く`"
+                            :label="t.issues.openOn(sourceLabel)"
                             icon="i-lucide-external-link"
                             size="sm"
                             color="neutral"
@@ -289,35 +290,48 @@ onMounted(async () => {
                         />
                     </div>
                     <p class="cd-muted sub">
-                        {{ detail.author }} が {{ dateOf(detail.createdAt) }} に作成
-                        <template v-if="detail.state === 'closed' && detail.closedAt">・{{ dateOf(detail.closedAt) }} に完了</template>
+                        {{ t.issues.createdBy(detail.author ?? '', dateOf(detail.createdAt)) }}
+                        <template v-if="detail.state === 'closed' && detail.closedAt">{{ t.issues.closedOn(dateOf(detail.closedAt)) }}</template>
                     </p>
 
                     <div class="actions">
                         <template v-if="!editing">
-                            <UButton label="版を紐付ける" icon="i-lucide-link" size="sm" color="neutral" variant="outline" @click="openPicker('link')" />
-                            <UButton v-if="detail.state === 'open'" label="閉じる" icon="i-lucide-circle-check" size="sm" @click="openPicker('close')" />
-                            <UButton v-else label="開き直す" icon="i-lucide-rotate-ccw" size="sm" color="neutral" variant="outline" @click="reopen" />
-                            <UButton label="編集" icon="i-lucide-pencil" size="sm" color="neutral" variant="ghost" @click="startEdit" />
+                            <UButton
+                                :label="t.issues.linkVersion"
+                                icon="i-lucide-link"
+                                size="sm"
+                                color="neutral"
+                                variant="outline"
+                                @click="openPicker('link')"
+                            />
+                            <UButton
+                                v-if="detail.state === 'open'"
+                                :label="t.issues.close"
+                                icon="i-lucide-circle-check"
+                                size="sm"
+                                @click="openPicker('close')"
+                            />
+                            <UButton v-else :label="t.issues.reopen" icon="i-lucide-rotate-ccw" size="sm" color="neutral" variant="outline" @click="reopen" />
+                            <UButton :label="t.issues.edit" icon="i-lucide-pencil" size="sm" color="neutral" variant="ghost" @click="startEdit" />
                         </template>
                         <template v-else>
-                            <UButton label="やめる" size="sm" color="neutral" variant="outline" @click="editing = false" />
-                            <UButton label="保存" size="sm" :disabled="!editTitle.trim()" @click="saveEdit" />
+                            <UButton :label="t.issues.cancel" size="sm" color="neutral" variant="outline" @click="editing = false" />
+                            <UButton :label="t.common.save" size="sm" :disabled="!editTitle.trim()" @click="saveEdit" />
                         </template>
                     </div>
 
                     <UTextarea v-if="editing" v-model="editBody" :rows="10" class="w-full" />
                     <div v-else-if="detail.body.trim()" class="md" v-html="md.render(detail.body)" />
-                    <p v-else class="cd-muted">本文はありません。</p>
+                    <p v-else class="cd-muted">{{ t.issues.noBody }}</p>
 
-                    <h4>紐付いた版</h4>
+                    <h4>{{ t.issues.linkedVersions }}</h4>
                     <p v-if="!detail.versions.length" class="cd-muted">
-                        まだありません。版を保存するときにこの課題を選ぶか、メッセージに #{{ detail.n }} と書くと、ここに並びます。
+                        {{ t.issues.noLinked(detail.n) }}
                     </p>
                     <ul v-else class="vers">
                         <li v-for="v in detail.versions" :key="v.oid">
-                            <UBadge :label="HOW[v.how]" size="sm" :color="v.how === 'close' ? 'success' : 'neutral'" variant="subtle" />
-                            <UTooltip :text="app.currentDoc ? '改定履歴で開く' : '文書を開いていると、改定履歴で見られます'">
+                            <UBadge :label="t.issues.how[v.how]" size="sm" :color="v.how === 'close' ? 'success' : 'neutral'" variant="subtle" />
+                            <UTooltip :text="app.currentDoc ? t.issues.openInHistory : t.issues.needDoc">
                                 <button class="oid" :disabled="!app.currentDoc" @click="openVersion(v.oid)">{{ short(v.oid) }}</button>
                             </UTooltip>
                             <span class="vmsg">{{ v.message.split('\n')[0] }}</span>
@@ -325,14 +339,15 @@ onMounted(async () => {
                         </li>
                     </ul>
                     <template v-if="detail.drafts.length">
-                        <h4>紐付いた改定案（現行版に反映すると閉じます）</h4>
+                        <h4>{{ t.issues.linkedDrafts }}</h4>
                         <ul class="vers">
                             <li v-for="b in detail.drafts" :key="b"><UIcon name="i-lucide-git-branch" />{{ b.replace(/^案\//, '') }}</li>
                         </ul>
                     </template>
 
                     <h4>
-                        コメント<span v-if="detail.comments.some((c) => c.kind === 'user')" class="cd-muted count">{{
+                        {{ t.issues.comments
+                        }}<span v-if="detail.comments.some((c) => c.kind === 'user')" class="cd-muted count">{{
                             detail.comments.filter((c) => c.kind === 'user').length
                         }}</span>
                     </h4>
@@ -341,18 +356,18 @@ onMounted(async () => {
                             <li v-if="c.kind === 'user'" class="comment">
                                 <div class="c-head">
                                     <UIcon name="i-lucide-message-square" />
-                                    <strong>{{ c.by ?? '（不明）' }}</strong>
+                                    <strong>{{ c.by ?? t.issues.unknown }}</strong>
                                     <span class="cd-muted">{{ fmtDate(c.at, 'ymdhm') }}</span>
                                 </div>
                                 <div class="md c-body" v-html="md.render(c.body)" />
                             </li>
                             <li v-else class="event cd-muted">
                                 <UIcon :name="c.kind === 'close' ? 'i-lucide-circle-check' : 'i-lucide-link'" />
-                                <span>{{ c.by ?? '' }} が版</span>
-                                <UTooltip :text="app.currentDoc ? '改定履歴で開く' : '文書を開いていると、改定履歴で見られます'">
+                                <span>{{ t.issues.eventPre(c.by ?? '', c.kind) }}</span>
+                                <UTooltip :text="app.currentDoc ? t.issues.openInHistory : t.issues.needDoc">
                                     <button class="oid" :disabled="!app.currentDoc" @click="openVersion(c.oid!)">{{ short(c.oid!) }}</button>
                                 </UTooltip>
-                                <span>{{ EVENT[c.kind] }}</span>
+                                <span v-if="t.issues.eventPost(c.kind)">{{ t.issues.eventPost(c.kind) }}</span>
                                 <span class="at">{{ fmtDate(c.at, 'ymdhm') }}</span>
                             </li>
                         </template>
@@ -364,27 +379,34 @@ onMounted(async () => {
                             autoresize
                             :maxrows="12"
                             class="w-full"
-                            placeholder="コメントを書く（Markdown が使えます）"
+                            :placeholder="t.issues.commentPlaceholder"
                             @keydown="onDraftKey"
                         />
                         <div class="c-foot">
-                            <span class="cd-muted hint">{{ MOD_KEY }}＋Enter で送信</span>
-                            <UButton label="コメントする" icon="i-lucide-send" size="sm" :loading="posting" :disabled="!draft.trim()" @click="postComment" />
+                            <span class="cd-muted hint">{{ t.issues.sendHint(MOD_KEY) }}</span>
+                            <UButton
+                                :label="t.issues.comment"
+                                icon="i-lucide-send"
+                                size="sm"
+                                :loading="posting"
+                                :disabled="!draft.trim()"
+                                @click="postComment"
+                            />
                         </div>
                     </div>
                 </template>
 
                 <div v-else class="empty cd-muted">
                     <UIcon name="i-lucide-list-todo" class="big" />
-                    <p>課題を選ぶか、「新しい課題」から作ってください。</p>
+                    <p>{{ t.issues.pickHint }}</p>
                 </div>
             </section>
         </div>
 
         <UModal
             :open="!!picker"
-            :title="picker === 'close' ? `#${detail?.n} を閉じる` : `#${detail?.n} に版を紐付ける`"
-            :description="picker === 'close' ? '解決した版を選ぶと、課題に記録します（選ばなくても閉じられます）。' : '紐付ける版を選びます。'"
+            :title="picker === 'close' ? t.issues.closeTitle(detail?.n ?? 0) : t.issues.linkTitle(detail?.n ?? 0)"
+            :description="picker === 'close' ? t.issues.closeDesc : t.issues.linkDesc"
             @update:open="(v) => !v && (picker = null)"
         >
             <template #body>
@@ -392,8 +414,8 @@ onMounted(async () => {
             </template>
             <template #footer>
                 <div class="cd-modal-foot">
-                    <UButton label="やめる" color="neutral" variant="outline" @click="picker = null" />
-                    <UButton :label="picker === 'close' ? '閉じる' : '紐付ける'" :disabled="picker === 'link' && !pickOid" @click="confirmPicker" />
+                    <UButton :label="t.issues.cancel" color="neutral" variant="outline" @click="picker = null" />
+                    <UButton :label="picker === 'close' ? t.issues.close : t.issues.link" :disabled="picker === 'link' && !pickOid" @click="confirmPicker" />
                 </div>
             </template>
         </UModal>

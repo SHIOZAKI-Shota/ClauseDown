@@ -1,4 +1,5 @@
 import { baseLabel, knownBases, normalizeBase, type ForgeBase } from '../shared/forge'
+import { t } from '../shared/i18n'
 import type { ForgeAccount, ForgeLogin } from '../shared/api'
 import * as ghAuth from './github-auth'
 import * as glAuth from './gitlab-auth'
@@ -7,7 +8,7 @@ import { getToken, listCredentials, loadSettings, saveCredential, setToken as sa
 export async function knownBase(raw: unknown): Promise<ForgeBase> {
     const base = normalizeBase(raw)
     const hit = base && knownBases(await loadSettings()).find((b) => b.base === base)
-    if (!hit) throw new Error('登録されていないサーバーです')
+    if (!hit) throw new Error(t().errors.accounts.unknownServer)
     return hit
 }
 
@@ -38,7 +39,7 @@ export async function accounts(): Promise<ForgeAccount[]> {
         out.push({
             ...b,
             label: baseLabel(b),
-            login: c ? (c.login ?? (c.method === 'token' ? '（トークン）' : null)) : null,
+            login: c ? (c.login ?? (c.method === 'token' ? t().errors.githubAuth.tokenLogin : null)) : null,
             name: c?.name ?? null,
             email: c?.email ?? null,
             method: c?.method ?? null,
@@ -76,16 +77,16 @@ export async function logout(raw: unknown): Promise<void> {
 
 export async function setToken(raw: unknown, token: unknown): Promise<void> {
     const b = await knownBase(raw)
-    const t = typeof token === 'string' ? token.trim() : ''
-    await saveToken(b.base, t, b.kind)
-    if (!t) return
+    const tok = typeof token === 'string' ? token.trim() : ''
+    await saveToken(b.base, tok, b.kind)
+    if (!tok) return
     profileTried.add(b.base)
-    const who = await whoAmI(b, t)
+    const who = await whoAmI(b, tok)
     if (!who && b.kind === 'gitlab') {
         await saveCredential(b.base, null)
-        throw new Error('このトークンでは GitLab にログインできませんでした。トークンと、scope（api・read_repository・write_repository）を確かめてください')
+        throw new Error(t().errors.accounts.gitlabToken)
     }
-    if (who) await saveCredential(b.base, { provider: b.kind, method: 'token', access: t, ...who })
+    if (who) await saveCredential(b.base, { provider: b.kind, method: 'token', access: tok, ...who })
 }
 
 export async function hasToken(): Promise<boolean> {

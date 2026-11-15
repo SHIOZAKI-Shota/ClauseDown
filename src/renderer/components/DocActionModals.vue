@@ -1,37 +1,33 @@
 <script setup lang="ts">
 import type { DocActions } from '~/composables/useDocActions'
+import { useT } from '~/composables/useT'
 
 const props = defineProps<{ actions: DocActions }>()
+const t = useT()
 const { pendingMove, pendingDelete, move, remove } = props.actions
 </script>
 
 <template>
     <ConfirmModal
         :open="!!pendingMove"
-        title="文書を移動"
-        :confirm-label="pendingMove?.folder ? `「${pendingMove.folder}」へ移動` : 'リポジトリの直下へ移動'"
+        :title="t.docs.move.title"
+        :confirm-label="pendingMove?.folder ? t.docs.move.confirmTo(pendingMove.folder) : t.docs.move.confirmToRoot"
         @update:open="(v) => !v && (pendingMove = null)"
         @confirm="move"
     >
-        <p class="note">
-            「{{ pendingMove?.doc.title }}」を{{
-                pendingMove?.folder ? `「${pendingMove.folder}」` : 'リポジトリの直下'
-            }}へ移動し、移動したことを版として記録します。
-        </p>
-        <p class="note muted">
-            移動先のディレクトリの書式が使われます。改定履歴・新旧対照表・施行日は場所ごとに記録しているため、移動前の版は移動後の文書の履歴には出ません（元の場所の記録として残ります）。
-        </p>
+        <p class="note">{{ t.docs.move.body(pendingMove?.doc.title ?? '', pendingMove?.folder ?? '') }}</p>
+        <p class="note muted">{{ t.docs.move.note }}</p>
     </ConfirmModal>
     <ConfirmModal
         :open="!!pendingDelete"
-        title="文書を削除"
-        confirm-label="削除する"
+        :title="t.docs.remove.title"
+        :confirm-label="t.docs.remove.confirm"
         color="error"
         @update:open="(v) => !v && (pendingDelete = null)"
         @confirm="remove"
     >
-        <p class="note">「{{ pendingDelete?.title }}」を削除し、削除したことを版として記録します。</p>
-        <p class="note muted">これまでの版は履歴に残ります。版を保存していない変更は失われます。</p>
+        <p class="note">{{ t.docs.remove.body(pendingDelete?.title ?? '') }}</p>
+        <p class="note muted">{{ t.docs.remove.note }}</p>
     </ConfirmModal>
 </template>
 

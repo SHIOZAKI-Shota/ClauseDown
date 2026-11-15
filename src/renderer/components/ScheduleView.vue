@@ -6,10 +6,12 @@ import { useSchedule, type RepoOccurrence, type RepoPeriod } from '~/composables
 import { useStoredRef } from '~/composables/useStoredRef'
 import { baseName, folderOf } from '~/utils/folders'
 import { daysUntil, fmtDate, untilLabel } from '~/utils/format'
+import { useT } from '~/composables/useT'
 import type { TimelineBand, TimelineItem, TimelineRow } from '~/components/TimelineChart.vue'
 
 const props = defineProps<{ all?: boolean }>()
 const app = useApp()
+const t = useT()
 const isAll = computed(() => !!props.all)
 const s = useSchedule(isAll)
 const pane = usePane('schedule', { size: 340, min: 280, max: 560 })
@@ -24,9 +26,9 @@ const repoMap = computed(() => new Map(s.repos.value.map((r) => [r.dir, r])))
 const docMaps = computed(() => new Map(s.repos.value.map((r) => [r.dir, new Map(r.docs.map((d) => [d.path, d]))])))
 const docOf = (path: string, dir: string) => docMaps.value.get(s.repoOf(dir)?.dir ?? '')?.get(path)
 const repoName = (dir: string) => repoMap.value.get(dir)?.name ?? baseName(dir)
-const titleOf = (path: string, dir: string) => (!path ? 'リポジトリ全体' : (docOf(path, dir)?.title ?? baseName(path).replace(/\.md$/i, '')))
+const titleOf = (path: string, dir: string) => (!path ? t.value.schedule.wholeRepo : (docOf(path, dir)?.title ?? baseName(path).replace(/\.md$/i, '')))
 const exists = (path: string, dir: string) => !!path && !!docOf(path, dir)
-const whereOf = (o: RepoOccurrence) => (isAll.value ? `${repoName(o.dir)}・${titleOf(o.docPath, o.dir)}` : titleOf(o.docPath, o.dir))
+const whereOf = (o: RepoOccurrence) => (isAll.value ? `${repoName(o.dir)}${t.value.common.sep}${titleOf(o.docPath, o.dir)}` : titleOf(o.docPath, o.dir))
 const kindOf = (o: RepoOccurrence): EventKind => s.kindOf.value(o.kind, o.dir)
 
 async function openDocIn(dir: string, path: string, date?: string) {
@@ -56,7 +58,7 @@ const rows = computed<TimelineRow[]>(() => {
             }
             return s.repos.value.map((r) => {
                 const n = ids.get(r.dir)?.size ?? 0
-                return { id: r.dir, label: r.name, sub: n ? `期日 ${n} 件` : '期日なし', title: r.dir }
+                return { id: r.dir, label: r.name, sub: t.value.schedule.dueCount(n), title: r.dir }
             })
         }
         const keys = new Map<string, RepoOccurrence>()
@@ -69,7 +71,7 @@ const rows = computed<TimelineRow[]>(() => {
                 id,
                 label: titleOf(o.docPath, o.dir),
                 sub: repoName(o.dir),
-                title: `${repoName(o.dir)} ／ ${o.docPath || 'リポジトリ全体'}`,
+                title: `${repoName(o.dir)} ／ ${o.docPath || t.value.schedule.wholeRepo}`,
             }))
     }
     const dir = app.repoDir ?? ''
@@ -79,8 +81,8 @@ const rows = computed<TimelineRow[]>(() => {
     paths.delete('')
     const list = [...paths].sort((a, b) => a.localeCompare(b, 'ja'))
     return [
-        { id: '', label: 'リポジトリ全体', sub: '文書を決めない期日' },
-        ...list.map((p) => ({ id: p, label: titleOf(p, dir), sub: exists(p, dir) ? folderOf(p) || undefined : '（見つかりません）', title: p })),
+        { id: '', label: t.value.schedule.wholeRepo, sub: t.value.schedule.wholeRepoSub },
+        ...list.map((p) => ({ id: p, label: titleOf(p, dir), sub: exists(p, dir) ? folderOf(p) || undefined : t.value.schedule.notFound, title: p })),
     ]
 })
 const timelineBands = computed<TimelineBand[]>(() => {
@@ -90,7 +92,7 @@ const timelineBands = computed<TimelineBand[]>(() => {
         .map((p) => ({ ...p, row: isAll.value ? `${p.dir}|${p.docPath}` : p.docPath }))
 })
 const periodOf = (o: RepoOccurrence) => s.periods.value.find((p) => p.dir === o.dir && p.docPath === o.docPath && p.date === o.date)
-const spanLabel = (p: RepoPeriod) => `${fmtDate(p.date, 'ymd')} 〜 ${p.until ? fmtDate(p.until, 'ymd') : ''}`
+const spanLabel = (p: RepoPeriod) => t.value.schedule.span(fmtDate(p.date, 'ymd'), p.until ? fmtDate(p.until, 'ymd') : '')
 function onBand(b: TimelineBand) {
     const dir = b.dir ?? app.repoDir ?? ''
     const o = isAll.value ? null : s.items.value.find((x) => x.source === 'tag' && x.docPath === b.docPath && x.date === b.date)
@@ -155,7 +157,7 @@ const listGroups = computed(() => {
         if (list) list.push(o)
         else map.set(m, [o])
     }
-    return [...map.entries()].map(([m, list]) => ({ label: `${m.slice(0, 4)}年${Number(m.slice(5))}月`, key: m, list }))
+    return [...map.entries()].map(([m, list]) => ({ label: t.value.schedule.monthLabel(Number(m.slice(0, 4)), Number(m.slice(5))), key: m, list }))
 })
 
 const editing = ref<null | { event?: string; dir?: string; initial?: { date?: string; docPath?: string; kind?: string } }>(null)
@@ -205,13 +207,12 @@ const kindItems = computed(() => {
 const repeatLabel = (o: RepoOccurrence) => {
     const e = s.eventOf(o.id, o.dir)
     if (!e?.repeat) return ''
-    return `${e.repeat.every === 'year' ? '毎年' : '毎月'}${e.repeat.until ? `（${fmtDate(e.repeat.until, 'ymd')} まで）` : ''}`
+    return t.value.schedule.repeat(e.repeat.every, e.repeat.until ? fmtDate(e.repeat.until, 'ymd') : undefined)
 }
 async function exportIcs() {
     const r = await app.run(() => window.api.exportSchedule(isAll.value ? '' : (app.repoDir ?? ''), s.today))
-    if (r) app.notifyExported(`${r.count} 件の期日を書き出しました。カレンダーのアプリで取り込んでください`, r.path)
+    if (r) app.notifyExported(t.value.schedule.exported(r.count), r.path)
 }
-const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当日に知らせる' : `${n} 日前から知らせる`)
 </script>
 
 <template>
@@ -228,83 +229,87 @@ const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当�
                 @click="app.leavePage('schedule')"
             />
             <div class="cd-toolbar head">
-                <strong v-if="!isAll" class="h">期日・有効期間</strong>
+                <strong v-if="!isAll" class="h">{{ t.schedule.title }}</strong>
                 <span v-if="docFilter" class="cd-chip only">
-                    {{ titleOf(docFilter, app.repoDir ?? '') }} だけ
-                    <button class="x" aria-label="絞り込みをやめる" @click="app.scheduleDoc = null">
+                    {{ t.schedule.onlyDoc(titleOf(docFilter, app.repoDir ?? '')) }}
+                    <button class="x" :aria-label="t.schedule.clearFilter" @click="app.scheduleDoc = null">
                         <UIcon name="i-lucide-x" />
                     </button>
                 </span>
-                <UButton label="期日の追加" icon="i-lucide-calendar-plus" size="sm" :disabled="!s.repos.value.length" @click="addAt()" />
+                <UButton :label="t.schedule.add" icon="i-lucide-calendar-plus" size="sm" :disabled="!s.repos.value.length" @click="addAt()" />
                 <span class="cd-grow" />
                 <span v-if="!isAll" class="asof">
-                    <UTooltip text="この日に効力のあった版">
+                    <UTooltip :text="t.schedule.asOfTip">
                         <UIcon name="i-lucide-history" class="asof-icon" />
                     </UTooltip>
                     <DateField v-model="asOf" size="sm" />
-                    <UButton v-if="asOf" icon="i-lucide-x" size="xs" square color="neutral" variant="ghost" aria-label="日付を消す" @click="asOf = ''" />
+                    <UButton
+                        v-if="asOf"
+                        icon="i-lucide-x"
+                        size="xs"
+                        square
+                        color="neutral"
+                        variant="ghost"
+                        :aria-label="t.schedule.clearDate"
+                        @click="asOf = ''"
+                    />
                 </span>
                 <UDropdownMenu :items="kindItems" :content="{ align: 'end' }">
-                    <UButton
-                        :label="hidden.length ? `種類（${hidden.length} 件を非表示）` : '種類'"
-                        icon="i-lucide-filter"
-                        size="sm"
-                        color="neutral"
-                        variant="outline"
-                    />
+                    <UButton :label="t.schedule.kinds(hidden.length)" icon="i-lucide-filter" size="sm" color="neutral" variant="outline" />
                 </UDropdownMenu>
-                <USwitch v-model="showDone" label="済みも出す" size="sm" />
+                <USwitch v-model="showDone" :label="t.schedule.showDone" size="sm" />
                 <SegmentSwitch
                     v-if="isAll && mode === 'timeline'"
                     v-model="groupBy"
                     size="sm"
-                    aria-label="行"
+                    :aria-label="t.schedule.rows"
                     :items="[
-                        { value: 'repo', label: 'リポジトリごと' },
-                        { value: 'doc', label: '文書ごと' },
+                        { value: 'repo', label: t.schedule.byRepo },
+                        { value: 'doc', label: t.schedule.byDoc },
                     ]"
                 />
-                <USwitch v-if="!isAll && mode === 'timeline' && !app.scheduleDoc" v-model="allDocs" label="期日のない文書も出す" size="sm" />
+                <USwitch v-if="!isAll && mode === 'timeline' && !app.scheduleDoc" v-model="allDocs" :label="t.schedule.allDocs" size="sm" />
                 <SegmentSwitch
                     v-model="mode"
                     size="sm"
-                    aria-label="表示"
+                    :aria-label="t.schedule.viewMode"
                     :items="[
-                        { value: 'timeline', icon: 'i-lucide-gantt-chart', tooltip: 'タイムライン' },
-                        { value: 'list', icon: 'i-lucide-list', tooltip: '一覧' },
+                        { value: 'timeline', icon: 'i-lucide-gantt-chart', tooltip: t.schedule.timeline },
+                        { value: 'list', icon: 'i-lucide-list', tooltip: t.schedule.list },
                     ]"
                 />
-                <UTooltip :text="isAll ? 'すべてのリポジトリの期日をカレンダーに書き出す（.ics）' : '期日をカレンダーに書き出す（.ics）'">
+                <UTooltip :text="isAll ? t.schedule.exportAllTip : t.schedule.exportTip">
                     <UButton
                         icon="i-lucide-calendar-arrow-down"
                         size="sm"
                         square
                         color="neutral"
                         variant="ghost"
-                        aria-label="カレンダーに書き出す"
+                        :aria-label="t.schedule.exportLabel"
                         :disabled="!s.repos.value.length"
                         @click="exportIcs"
                     />
                 </UTooltip>
-                <UTooltip v-if="!isAll" text="すべてのリポジトリの期日・有効期間（初期ページ）">
+                <UTooltip v-if="!isAll" :text="t.schedule.allReposTip">
                     <UButton
                         icon="i-lucide-layers"
                         size="sm"
                         square
                         color="neutral"
                         variant="ghost"
-                        aria-label="すべてのリポジトリの期日・有効期間"
+                        :aria-label="t.schedule.allRepos"
+                        data-guide="schedule"
                         @click="app.openScheduleAll()"
                     />
                 </UTooltip>
-                <UTooltip v-if="!isAll" text="期日の種類（このリポジトリの設定）">
+                <UTooltip v-if="!isAll" :text="t.schedule.kindsTip">
                     <UButton
                         icon="i-lucide-settings-2"
                         size="sm"
                         square
                         color="neutral"
                         variant="ghost"
-                        aria-label="期日の種類"
+                        :aria-label="t.schedule.kindsLabel"
                         @click="app.openSettings('repo', 'kinds')"
                     />
                 </UTooltip>
@@ -331,7 +336,7 @@ const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当�
 
             <div v-else class="list">
                 <div v-if="overdue.length" class="cd-list-group">
-                    <SectionHead label="期限切れ" icon="i-lucide-alarm-clock-off" :count="overdue.length" pinned class="bad" />
+                    <SectionHead :label="t.schedule.overdue" icon="i-lucide-alarm-clock-off" :count="overdue.length" pinned class="bad" />
                     <OccurrenceRow
                         v-for="o in overdue"
                         :key="o.key"
@@ -358,42 +363,42 @@ const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当�
                 </div>
                 <div v-if="s.loaded.value && !overdue.length && !listGroups.length" class="none">
                     <UIcon name="i-lucide-calendar-range" class="big" />
-                    <p>期日はまだありません。</p>
-                    <UButton v-if="s.repos.value.length" label="期日の追加" icon="i-lucide-calendar-plus" size="sm" @click="addAt()" />
+                    <p>{{ t.schedule.empty }}</p>
+                    <UButton v-if="s.repos.value.length" :label="t.schedule.add" icon="i-lucide-calendar-plus" size="sm" @click="addAt()" />
                 </div>
             </div>
         </div>
 
-        <SidePane v-if="!isAll" :pane="pane" side="right" label="期日の詳細" icon="i-lucide-calendar-clock">
+        <SidePane v-if="!isAll" :pane="pane" side="right" :label="t.schedule.detail" icon="i-lucide-calendar-clock">
             <section v-if="sel" class="detail">
                 <div class="d-head">
                     <span class="d-kind" :style="{ '--k': KIND_COLORS[kindOf(sel).color] }">{{ kindOf(sel).label }}</span>
-                    <UBadge v-if="sel.overdue" label="期限切れ" color="error" variant="subtle" size="sm" />
-                    <UBadge v-else-if="sel.done" label="済み" color="success" variant="subtle" size="sm" />
-                    <UBadge v-if="sel.source === 'tag'" label="版あり" color="primary" variant="subtle" size="sm" />
+                    <UBadge v-if="sel.overdue" :label="t.schedule.overdue" color="error" variant="subtle" size="sm" />
+                    <UBadge v-else-if="sel.done" :label="t.schedule.done" color="success" variant="subtle" size="sm" />
+                    <UBadge v-if="sel.source === 'tag'" :label="t.schedule.hasVersion" color="primary" variant="subtle" size="sm" />
                     <span class="cd-grow" />
-                    <UButton icon="i-lucide-x" size="xs" square color="neutral" variant="ghost" aria-label="選ぶのをやめる" @click="selKey = null" />
+                    <UButton icon="i-lucide-x" size="xs" square color="neutral" variant="ghost" :aria-label="t.schedule.deselect" @click="selKey = null" />
                 </div>
                 <h3 class="d-title">{{ sel.title }}</h3>
                 <dl class="facts">
-                    <dt>日付</dt>
+                    <dt>{{ t.schedule.f.date }}</dt>
                     <dd>
-                        {{ fmtDate(sel.date, 'ymd') }}<template v-if="sel.end"> 〜 {{ fmtDate(sel.end, 'ymd') }}</template>
-                        <span class="cd-muted">（{{ untilLabel(daysUntil(sel.date, today)) }}）</span>
+                        {{ sel.end ? t.schedule.span(fmtDate(sel.date, 'ymd'), fmtDate(sel.end, 'ymd')) : fmtDate(sel.date, 'ymd') }}
+                        <span class="cd-muted">{{ t.schedule.paren(untilLabel(daysUntil(sel.date, today))) }}</span>
                     </dd>
                     <template v-if="sel.source === 'tag' && periodOf(sel)">
-                        <dt>有効期間</dt>
+                        <dt>{{ t.schedule.f.period }}</dt>
                         <dd>{{ spanLabel(periodOf(sel)!) }}</dd>
                     </template>
                     <template v-if="sel.repeat">
-                        <dt>繰り返し</dt>
+                        <dt>{{ t.schedule.f.repeat }}</dt>
                         <dd>{{ repeatLabel(sel) }}</dd>
                     </template>
                     <template v-if="isAll">
-                        <dt>リポジトリ</dt>
+                        <dt>{{ t.schedule.f.repo }}</dt>
                         <dd><button class="link" @click="app.openSchedule(sel.dir)">{{ repoName(sel.dir) }}</button></dd>
                     </template>
-                    <dt>対象</dt>
+                    <dt>{{ t.schedule.f.target }}</dt>
                     <dd>
                         <button v-if="exists(sel.docPath, sel.dir)" class="link" @click="openDocIn(sel.dir, sel.docPath)">
                             {{ titleOf(sel.docPath, sel.dir) }}
@@ -401,22 +406,22 @@ const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当�
                         <span v-else>{{ titleOf(sel.docPath, sel.dir) }}</span>
                     </dd>
                     <template v-if="sel.source === 'event'">
-                        <dt>通知</dt>
-                        <dd>{{ remindLabel(sel.remind) }}</dd>
+                        <dt>{{ t.schedule.f.notify }}</dt>
+                        <dd>{{ t.schedule.remind(sel.remind) }}</dd>
                     </template>
                     <template v-if="sel.note">
-                        <dt>メモ</dt>
+                        <dt>{{ t.schedule.f.memo }}</dt>
                         <dd class="note">{{ sel.note }}</dd>
                     </template>
                     <template v-if="selEvent">
-                        <dt>記録</dt>
-                        <dd class="cd-muted">{{ selEvent.by }}・{{ fmtDate(selEvent.updatedAt, 'ymdhm') }}</dd>
+                        <dt>{{ t.schedule.f.record }}</dt>
+                        <dd class="cd-muted">{{ selEvent.by }}{{ t.common.sep }}{{ fmtDate(selEvent.updatedAt, 'ymdhm') }}</dd>
                     </template>
                 </dl>
                 <div class="d-actions">
                     <UButton
                         v-if="sel.task && sel.source === 'event'"
-                        :label="sel.done ? '済みを取り消す' : '済みにする'"
+                        :label="sel.done ? t.schedule.undoDone : t.schedule.markDone"
                         :icon="sel.done ? 'i-lucide-undo-2' : 'i-lucide-check'"
                         size="sm"
                         :color="sel.done ? 'neutral' : 'primary'"
@@ -425,7 +430,7 @@ const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当�
                     />
                     <UButton
                         v-if="sel.source === 'event'"
-                        label="直す"
+                        :label="t.schedule.edit"
                         icon="i-lucide-pencil"
                         size="sm"
                         color="neutral"
@@ -434,8 +439,9 @@ const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当�
                     />
                     <UButton
                         v-else-if="exists(sel.docPath, sel.dir)"
-                        label="期日・有効期間・納品を開く"
+                        :label="t.schedule.openReleases"
                         icon="i-lucide-package-check"
+                        data-guide="releases"
                         size="sm"
                         color="neutral"
                         variant="outline"
@@ -443,7 +449,7 @@ const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当�
                     />
                     <UButton
                         v-if="sel.source === 'event'"
-                        label="消す"
+                        :label="t.schedule.remove"
                         icon="i-lucide-trash-2"
                         size="sm"
                         color="error"
@@ -452,12 +458,12 @@ const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当�
                     />
                 </div>
                 <p v-if="sel.source !== 'event'" class="cd-muted hint">
-                    {{ sel.source === 'tag' ? '版に付けた施行日です。文書の「期日・有効期間・納品」で外せます。' : '納品の記録です。' }}
+                    {{ sel.source === 'tag' ? t.schedule.tagHint : t.schedule.deliveryHint }}
                 </p>
             </section>
 
             <div v-if="asOf && inForce.length" class="cd-list-group">
-                <SectionHead :label="`${fmtDate(asOf, 'ymd')} の版`" icon="i-lucide-history" :count="inForce.length" pinned />
+                <SectionHead :label="t.schedule.versionsAt(fmtDate(asOf, 'ymd'))" icon="i-lucide-history" :count="inForce.length" pinned />
                 <ListRow
                     v-for="v in inForce"
                     :key="v.row.id"
@@ -466,12 +472,12 @@ const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当�
                     @click="v.p && openDocIn(app.repoDir ?? '', v.row.id, v.p.date)"
                 >
                     {{ v.row.label }}
-                    <template #sub>{{ v.p ? spanLabel(v.p) : '施行前' }}</template>
+                    <template #sub>{{ v.p ? spanLabel(v.p) : t.schedule.beforeEffective }}</template>
                 </ListRow>
             </div>
             <div class="cd-list-group">
-                <SectionHead label="期限切れ" icon="i-lucide-alarm-clock-off" :count="overdue.length" pinned />
-                <p v-if="!overdue.length" class="cd-muted empty">ありません</p>
+                <SectionHead :label="t.schedule.overdue" icon="i-lucide-alarm-clock-off" :count="overdue.length" pinned />
+                <p v-if="!overdue.length" class="cd-muted empty">{{ t.schedule.none }}</p>
                 <OccurrenceRow
                     v-for="o in overdue"
                     :key="o.key"
@@ -484,8 +490,8 @@ const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当�
                 />
             </div>
             <div class="cd-list-group">
-                <SectionHead label="これから 30 日" icon="i-lucide-calendar-clock" :count="soon.length" pinned />
-                <p v-if="!soon.length" class="cd-muted empty">ありません</p>
+                <SectionHead :label="t.schedule.next30" icon="i-lucide-calendar-clock" :count="soon.length" pinned />
+                <p v-if="!soon.length" class="cd-muted empty">{{ t.schedule.none }}</p>
                 <OccurrenceRow
                     v-for="o in soon"
                     :key="o.key"
@@ -498,7 +504,7 @@ const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当�
                 />
             </div>
             <div v-if="recentDone.length" class="cd-list-group">
-                <SectionHead label="最近済みにしたもの" icon="i-lucide-circle-check" :count="recentDone.length" pinned />
+                <SectionHead :label="t.schedule.recentDone" icon="i-lucide-circle-check" :count="recentDone.length" pinned />
                 <OccurrenceRow
                     v-for="o in recentDone"
                     :key="o.key"
@@ -523,8 +529,15 @@ const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当�
             @save="saved"
             @remove="(id, dir) => (removing = { id, dir })"
         />
-        <ConfirmModal :open="!!removing" title="期日を消す" confirm-label="消す" color="error" @update:open="(v) => !v && (removing = null)" @confirm="remove">
-            <p>この期日を消します。繰り返す期日なら、すべての回が消えます。</p>
+        <ConfirmModal
+            :open="!!removing"
+            :title="t.schedule.removeTitle"
+            :confirm-label="t.schedule.remove"
+            color="error"
+            @update:open="(v) => !v && (removing = null)"
+            @confirm="remove"
+        >
+            <p>{{ t.schedule.removeBody }}</p>
         </ConfirmModal>
     </div>
 </template>

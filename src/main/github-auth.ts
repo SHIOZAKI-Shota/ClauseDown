@@ -1,4 +1,5 @@
 import { GITHUB_APP } from '../shared/about'
+import { t } from '../shared/i18n'
 import { GITHUB_BASE } from '../shared/forge'
 import type { ForgeLogin } from '../shared/api'
 
@@ -15,7 +16,7 @@ export const BUILTIN_CLIENT_ID = GITHUB_APP.clientId
 
 export async function clientId(): Promise<string> {
     const id = process.env.CLAUSEDOWN_GITHUB_CLIENT_ID || (await loadSettings()).githubClientId || BUILTIN_CLIENT_ID
-    if (!id) throw new Error('GitHub App の Client ID が設定されていません。設定画面で入力してください')
+    if (!id) throw new Error(t().errors.githubAuth.noClientId)
     return id
 }
 
@@ -33,7 +34,7 @@ let pending: { deviceCode: string; interval: number; expiresAt: number; clientId
 export async function startLogin(): Promise<ForgeLogin> {
     const id = await clientId()
     const j = await post('/login/device/code', { client_id: id })
-    if (!j.device_code) throw new Error(`GitHub にログインできません（${String(j.error_description ?? j.error ?? '不明なエラー')}）`)
+    if (!j.device_code) throw new Error(t().errors.githubAuth.cannotLogin(String(j.error_description ?? j.error ?? t().errors.githubAuth.unknown)))
     pending = {
         deviceCode: String(j.device_code),
         interval: Number(j.interval ?? 5),
@@ -46,12 +47,12 @@ export async function startLogin(): Promise<ForgeLogin> {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 export async function waitLogin(): Promise<GitHubAccount> {
-    if (!pending) throw new Error('先に「GitHub でログイン」を押してください')
+    if (!pending) throw new Error(t().errors.githubAuth.pressLoginFirst)
     const p = pending
     let interval = p.interval
     while (Date.now() < p.expiresAt) {
         await sleep(interval * 1000)
-        if (pending !== p) throw new Error('ログインを中止しました')
+        if (pending !== p) throw new Error(t().errors.githubAuth.cancelled)
         const j = await post('/login/oauth/access_token', {
             client_id: p.clientId,
             device_code: p.deviceCode,
@@ -69,12 +70,12 @@ export async function waitLogin(): Promise<GitHubAccount> {
             continue
         }
         pending = null
-        if (j.error === 'access_denied') throw new Error('GitHub でのログインが取り消されました')
+        if (j.error === 'access_denied') throw new Error(t().errors.githubAuth.denied)
         if (j.error === 'expired_token') break
-        throw new Error(`GitHub にログインできません（${String(j.error_description ?? j.error)}）`)
+        throw new Error(t().errors.githubAuth.cannotLogin(String(j.error_description ?? j.error)))
     }
     pending = null
-    throw new Error('コードの有効期限が切れました。もう一度「GitHub でログイン」を押してください')
+    throw new Error(t().errors.githubAuth.expired)
 }
 
 export async function whoAmI(token: string): Promise<Profile | null> {
@@ -103,7 +104,7 @@ export async function whoAmI(token: string): Promise<Profile | null> {
 export async function account(): Promise<GitHubAccount> {
     const c = await loadCredential(GITHUB_BASE)
     if (!c) return { login: null, method: null }
-    return { login: c.login ?? (c.method === 'token' ? '（トークン）' : null), method: c.method }
+    return { login: c.login ?? (c.method === 'token' ? t().errors.githubAuth.tokenLogin : null), method: c.method }
 }
 
 export async function logout(): Promise<void> {

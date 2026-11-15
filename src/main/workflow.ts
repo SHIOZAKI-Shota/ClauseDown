@@ -1,4 +1,6 @@
+import { tagPath } from '../shared/tag-path'
 import { promises as fsp } from 'node:fs'
+import { t } from '../shared/i18n'
 import { join } from 'node:path'
 import fs from 'node:fs'
 import git from './igit'
@@ -82,19 +84,13 @@ export interface ReviewInput {
     text: string
 }
 
-const DEFAULT_TEXT: Record<ReviewAction, string> = {
-    request: '確認をお願いします',
-    approve: '承認します',
-    changes: '修正をお願いします',
-    comment: '',
-    withdraw: '確認依頼を取り下げます',
-}
+const defaultText = (action: ReviewAction): string => (action === 'comment' ? '' : t().notify.review[action])
 
 export async function addReview(dir: string, input: ReviewInput): Promise<void> {
-    const text = input.text.trim() || DEFAULT_TEXT[input.action]
-    if (!text) throw new Error('コメントを入力してください')
+    const text = input.text.trim() || defaultText(input.action)
+    if (!text) throw new Error(t().errors.workflow.commentRequired)
     const main = await g.mainBranch(dir)
-    if (input.branch === main) throw new Error('現行版には確認を依頼できません。改定案を作ってください')
+    if (input.branch === main) throw new Error(t().errors.workflow.reviewOnMain)
     const who = await identity(dir)
     if (!who) await author(dir)
     const ev: ReviewEvent = {
@@ -110,7 +106,7 @@ export async function addReview(dir: string, input: ReviewInput): Promise<void> 
     }
     const events = await readRecords<ReviewEvent>(dir, RECORD.reviews)
     const open = openRequests(events).get(input.branch)
-    if (input.action !== 'request' && !open) throw new Error('この改定案には確認依頼が出ていません')
+    if (input.action !== 'request' && !open) throw new Error(t().errors.workflow.noOpenRequest)
 
     const forge = await forgeOf(dir)
     if (forge) {
@@ -122,8 +118,8 @@ export async function addReview(dir: string, input: ReviewInput): Promise<void> 
             const r = await forge.openReview(
                 input.branch,
                 main,
-                `改定案「${label}」の確認依頼`,
-                `${text}\n\n${closes ? `${closes}\n\n` : ''}（ClauseDown から作成）`,
+                t().notify.review.title(label),
+                `${text}\n\n${closes ? `${closes}\n\n` : ''}${t().notify.review.createdBy}`,
             )
             ev.pr = r.n
             ev.forge = forge.kind
@@ -165,7 +161,7 @@ async function mergeIntoMain(dir: string, input: MergeInput, main: string): Prom
     const pr = prOf(status.request)
     if (!forge || !pr || (status.request?.forge ?? 'github') !== forge.kind) return g.mergeBranch(dir, input)
 
-    await g.requireClean(dir, '反映')
+    await g.requireClean(dir, t().errors.git.actions.merge)
     const preview = await g.previewMerge(dir, input.from, main)
     if (preview.conflicts.length) {
         const flipped: Record<string, ConflictChoice> = {}
@@ -176,7 +172,7 @@ async function mergeIntoMain(dir: string, input: MergeInput, main: string): Prom
             from: main,
             into: input.from,
             choices: flipped,
-            message: '現行版の最新を取り込み、重なりを解決しました',
+            message: t().notify.commits.mergedMain,
         })
         if (s.state === 'error') return s
     }
@@ -237,21 +233,21 @@ export async function listDeliveries(dir: string, docPath?: string): Promise<Del
 }
 
 export async function deliver(dir: string, input: DeliverInput, outDir: string, build: Builders): Promise<DeliveryRecord> {
-    if (!input.items.length) throw new Error('納品するものを選んでください')
+    if (!input.items.length) throw new Error(t().errors.workflow.nothingToDeliver)
     const source = await g.readAt(dir, input.oid, input.docPath)
-    if (source === null) throw new Error('選んだ版にこの文書がありません')
+    if (source === null) throw new Error(t().errors.workflow.docNotInVersion)
     const base = input.baseOid ? ((await g.readAt(dir, input.baseOid, input.docPath)) ?? '') : ''
     const title = parseLegal(source).title || input.docPath.replace(/\.md$/i, '')
     const client = input.docPath.includes('/') ? input.docPath.slice(0, input.docPath.lastIndexOf('/')) : ''
     const now = new Date()
     const p = (n: number) => String(n).padStart(2, '0')
     const stamp = `${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}`
-    const folderName = safeName([stamp, client.replace(/\//g, '_'), title, '納品'].filter(Boolean).join('_'))
+    const folderName = safeName([stamp, client.replace(/\//g, '_'), title, t().notify.delivery.folder].filter(Boolean).join('_'))
     let folder = join(outDir, folderName)
     for (let i = 2; fs.existsSync(folder); i++) folder = join(outDir, `${folderName}(${i})`)
     await fsp.mkdir(folder, { recursive: true })
 
-    const cmpTitle = `${title} 新旧対照表`
+    const cmpTitle = t().notify.delivery.compareTitle(title)
     const files: { name: string; data: Uint8Array; type: string }[] = []
     const add = (name: string, data: Uint8Array, type: string) => files.push({ name: safeName(name), data, type })
     const PDF = 'application/pdf'
@@ -285,18 +281,25 @@ export async function deliver(dir: string, input: DeliverInput, outDir: string, 
     if (input.publishRelease && forge) {
         record.releaseForge = forge.kind
         try {
-            const tag = `納品/${input.docPath.replace(/\.md$/i, '')}/${record.id}`
-            await git.annotatedTag({ fs, dir, ref: tag, object: input.oid, message: `${title} 納品（${input.to}）`, tagger: await author(dir) })
+            const tag = `納品/${tagPath(input.docPath)}/${record.id}`
+            await git.annotatedTag({
+                fs,
+                dir,
+                ref: tag,
+                object: input.oid,
+                message: t().notify.delivery.tagMessage(title, input.to),
+                tagger: await author(dir),
+            })
             await g.pushRef(dir, `refs/tags/${tag}`)
             const body = [
-                `宛先：${input.to || '—'}`,
-                input.effectiveDate ? `施行日：${input.effectiveDate}` : '',
+                t().notify.delivery.to(input.to || '—'),
+                input.effectiveDate ? t().notify.delivery.effective(input.effectiveDate) : '',
                 input.memo ? `\n${input.memo}` : '',
-                `\n納品物：\n${record.files.map((f) => `- ${f}`).join('\n')}`,
+                t().notify.delivery.files(record.files.map((f) => `- ${f}`).join('\n')),
             ]
                 .filter(Boolean)
                 .join('\n')
-            record.releaseUrl = await forge.release(tag, `${title} 納品 ${stamp}${input.to ? `（${input.to}）` : ''}`, body, files)
+            record.releaseUrl = await forge.release(tag, t().notify.delivery.releaseTitle(title, stamp, input.to ?? ''), body, files)
         } catch (e) {
             record.releaseError = (e as Error).message
         }

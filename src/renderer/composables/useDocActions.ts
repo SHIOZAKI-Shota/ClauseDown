@@ -2,6 +2,8 @@ import type { ContextMenuItem } from '@nuxt/ui'
 import type { DocFile } from '@shared/api'
 import { useApp } from '~/stores/app'
 import { allFolders, folderOf } from '~/utils/folders'
+import { revealLabel } from '~/utils/platform'
+import { t } from '@shared/i18n'
 
 export type DocActions = ReturnType<typeof useDocActions>
 
@@ -35,7 +37,7 @@ export function useDocActions() {
         const r = await app.run(() => window.api.moveDoc(app.repoDir!, m.doc.path, m.folder))
         if (!r) return
         await afterChange(m.doc.path, r.path)
-        app.notify(`「${m.doc.title}」を${m.folder ? `「${m.folder}」` : 'リポジトリの直下'}へ移動しました`)
+        app.notify(t().shell.docActions.moved(m.doc.title, m.folder))
         if (r.recorded) await afterRecorded()
     }
 
@@ -45,13 +47,13 @@ export function useDocActions() {
         if (!to) return
         await app.refreshDocs()
         app.openDoc(to)
-        app.notify(`「${doc.title}」をコピーしました。確認して「版を保存」してください`)
+        app.notify(t().shell.docActions.copied(doc.title))
     }
 
     async function copyToRepo(doc: DocFile, dir: string, name: string) {
         await app.flushEditor()
         const to = await app.run(() => window.api.copyDocToRepo(app.repoDir!, doc.path, dir))
-        if (to) app.notify(`「${doc.title}」を「${name}」の ${to} にコピーしました。そのリポジトリで「版を保存」してください`)
+        if (to) app.notify(t().shell.docActions.copiedToRepo(doc.title, name, to))
     }
 
     const pendingDelete = ref<DocFile | null>(null)
@@ -63,7 +65,7 @@ export function useDocActions() {
         const r = await app.run(() => window.api.deleteDoc(app.repoDir!, d.path))
         if (!r) return
         await afterChange(d.path, null)
-        app.notify(`「${d.title}」を削除しました`)
+        app.notify(t().shell.docActions.deleted(d.title))
         if (r.recorded) await afterRecorded()
     }
 
@@ -71,19 +73,20 @@ export function useDocActions() {
     const missing = (dir: string) => (app.repoStates[dir] ?? 'ok') !== 'ok'
 
     function docMenu(d: DocFile, extra: ContextMenuItem[] = []): ContextMenuItem[][] {
+        const m = t()
         const here = folderOf(d.path)
         const others = (app.settings?.repos ?? []).filter((r) => r.dir !== app.repoDir)
         const moveTo = [
             ...folders.value.filter((f) => f !== here).map((f) => ({ label: f, icon: 'i-lucide-folder', onSelect: () => askMove(d, f) })),
-            ...(here ? [{ label: 'リポジトリの直下', icon: 'i-lucide-folder-root', onSelect: () => askMove(d, '') }] : []),
+            ...(here ? [{ label: m.shell.docActions.root, icon: 'i-lucide-folder-root', onSelect: () => askMove(d, '') }] : []),
         ]
         return [
-            [{ label: '開く', icon: 'i-lucide-file-text', onSelect: () => app.openDoc(d.path) }, ...extra],
+            [{ label: m.common.open, icon: 'i-lucide-file-text', onSelect: () => app.openDoc(d.path) }, ...extra],
             [
-                { label: 'コピー', icon: 'i-lucide-copy', onSelect: () => copy(d) },
-                { label: '別のディレクトリへ移動', icon: 'i-lucide-folder-input', disabled: !moveTo.length, children: moveTo },
+                { label: m.common.copy, icon: 'i-lucide-copy', onSelect: () => copy(d) },
+                { label: m.shell.docActions.moveTo, icon: 'i-lucide-folder-input', disabled: !moveTo.length, children: moveTo },
                 {
-                    label: '他のリポジトリにコピー',
+                    label: m.shell.docActions.copyToRepo,
                     icon: 'i-lucide-archive',
                     disabled: !others.length,
                     children: others.map((r) => ({
@@ -96,12 +99,12 @@ export function useDocActions() {
             ],
             [
                 {
-                    label: IS_MAC ? 'Finder で表示' : 'エクスプローラーで表示',
+                    label: revealLabel(),
                     icon: 'i-lucide-folder-open',
                     onSelect: () => app.run(() => window.api.showDocInFolder(app.repoDir!, d.path)),
                 },
             ],
-            [{ label: '削除', icon: 'i-lucide-trash-2', color: 'error', onSelect: () => (pendingDelete.value = d) }],
+            [{ label: m.common.delete, icon: 'i-lucide-trash-2', color: 'error', onSelect: () => (pendingDelete.value = d) }],
         ]
     }
 

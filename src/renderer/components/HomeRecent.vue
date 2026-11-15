@@ -6,6 +6,7 @@ import { firstLine, fmtDate } from '~/utils/format'
 
 const props = defineProps<{ activity: RepoActivity | null }>()
 const app = useApp()
+const t = useT()
 const FIRST = 6
 const all = ref(false)
 
@@ -19,8 +20,8 @@ const dayKey = (ts: number) => {
 function dayLabel(ts: number) {
     const k = dayKey(ts)
     const now = Date.now() / 1000
-    if (k === dayKey(now)) return '今日'
-    if (k === dayKey(now - 86400)) return '昨日'
+    if (k === dayKey(now)) return t.value.common.today
+    if (k === dayKey(now - 86400)) return t.value.common.yesterday
     return fmtDate(ts, new Date(ts * 1000).getFullYear() === new Date().getFullYear() ? 'md' : 'ymd')
 }
 const hm = (ts: number) => fmtDate(ts, 'mdhm').split(' ')[1]
@@ -44,11 +45,11 @@ function openAt(path: string, oid: string) {
 
 <template>
     <section class="cd-side-sec">
-        <SectionHead label="最近の更新" icon="i-lucide-history">
-            <span class="sub" :title="'作業中：' + (app.currentBranch?.label ?? '')">{{ app.currentBranch?.label }}</span>
+        <SectionHead :label="t.home.recent.title" icon="i-lucide-history">
+            <span class="sub" :title="t.home.recent.working(app.currentBranch?.label ?? '')">{{ app.currentBranch?.label }}</span>
         </SectionHead>
-        <p v-if="!activity" class="cd-muted empty">読み込み中…</p>
-        <p v-else-if="!activity.recent.length" class="cd-muted empty">まだ版がありません。版を保存すると、ここに並びます。</p>
+        <p v-if="!activity" class="cd-muted empty">{{ t.common.loading }}</p>
+        <p v-else-if="!activity.recent.length" class="cd-muted empty">{{ t.home.recent.empty }}</p>
         <template v-else>
             <div v-for="g in days" :key="g.label" class="day">
                 <div class="day-label">{{ g.label }}</div>
@@ -57,19 +58,23 @@ function openAt(path: string, oid: string) {
                         <div class="msg">
                             <IssueText :text="firstLine(r.message)" />
                         </div>
-                        <div class="cd-muted meta">{{ r.author }}・<span :title="fmtDate(r.timestamp, 'ymdhm')">{{ hm(r.timestamp) }}</span></div>
+                        <div class="cd-muted meta">
+                            {{ r.author }}{{ t.common.sep }}<span :title="fmtDate(r.timestamp, 'ymdhm')">{{ hm(r.timestamp) }}</span>
+                        </div>
                         <div v-if="r.paths.length" class="docs">
                             <template v-for="p in r.paths.slice(0, 4)" :key="p">
-                                <button v-if="exists(p)" class="cd-chip" :title="`${p} の改定履歴を開く`" @click="openAt(p, r.oid)">{{ titleOf(p) }}</button>
-                                <span v-else class="cd-chip gone" :title="`${p}（今はありません）`">{{ titleOf(p) }}</span>
+                                <button v-if="exists(p)" class="cd-chip" :title="t.home.recent.openHistory(p)" @click="openAt(p, r.oid)">
+                                    {{ titleOf(p) }}
+                                </button>
+                                <span v-else class="cd-chip gone" :title="t.home.recent.gone(p)">{{ titleOf(p) }}</span>
                             </template>
-                            <span v-if="r.paths.length > 4" class="cd-muted more">ほか {{ r.paths.length - 4 }}</span>
+                            <span v-if="r.paths.length > 4" class="cd-muted more">{{ t.common.moreShort(r.paths.length - 4) }}</span>
                         </div>
                     </li>
                 </ol>
             </div>
             <button v-if="activity.recent.length > FIRST" class="toggle" @click="all = !all">
-                {{ all ? '少なく表示' : `もっと見る（${activity.recent.length - FIRST}）` }}
+                {{ all ? t.home.recent.showLess : t.home.recent.showMore(activity.recent.length - FIRST) }}
             </button>
         </template>
     </section>

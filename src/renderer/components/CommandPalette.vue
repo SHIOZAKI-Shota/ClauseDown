@@ -7,6 +7,7 @@ import { useTheme } from '~/composables/useTheme'
 const open = defineModel<boolean>('open', { required: true })
 const app = useApp()
 const theme = useTheme()
+const t = useT()
 
 function run(fn: () => void) {
     open.value = false
@@ -68,58 +69,62 @@ const articleItems = computed(() => {
         }))
 })
 
-const groups = computed(() => [
-    {
-        id: 'docs',
-        label: '文書',
-        items: app.docs.map((d) => ({
-            label: d.title,
-            suffix: folderOf(d.path),
-            icon: 'i-lucide-file-text',
-            onSelect: () => run(() => app.openDoc(d.path)),
-        })),
-    },
-    {
-        id: 'articles',
-        label: '条',
-        ignoreFilter: true,
-        items: articleItems.value,
-    },
-    {
-        id: 'branches',
-        label: '改定案',
-        items: app.branches.map((b) => ({
-            label: b.label,
-            suffix: b.current ? '作業中' : b.isMain ? '正式な最新の版' : `未反映 ${b.changes} 版`,
-            icon: b.isMain ? 'i-lucide-book-check' : 'i-lucide-file-pen-line',
-            onSelect: () => run(() => !b.current && app.switchBranch(b.name)),
-        })),
-    },
-    {
-        id: 'actions',
-        label: '操作',
-        items: [
-            { label: '新しい文書', icon: 'i-lucide-file-plus', onSelect: () => run(() => (app.dialog = { kind: 'newDoc' })) },
-            { label: '新しい改定案', icon: 'i-lucide-git-branch-plus', onSelect: () => run(() => (app.dialog = { kind: 'newBranch' })) },
-            { label: '同期', icon: 'i-lucide-refresh-cw', onSelect: () => run(() => app.sync()) },
-            { label: '初期ページ', icon: 'i-lucide-house', onSelect: () => run(() => (app.view = 'home')) },
-            { label: 'リポジトリホーム', icon: 'i-lucide-layout-grid', onSelect: () => run(() => (app.view = 'docs')) },
-            { label: '課題', icon: 'i-lucide-list-todo', onSelect: () => run(() => app.openIssues()) },
-            { label: '新しい課題…', icon: 'i-lucide-circle-plus', onSelect: () => run(() => app.openIssues({ draft: { title: '', body: '' } })) },
-            { label: '期日・有効期間（このリポジトリ）', icon: 'i-lucide-calendar-range', onSelect: () => run(() => app.openSchedule()) },
-            { label: 'すべてのリポジトリの期日・有効期間', icon: 'i-lucide-calendar-days', onSelect: () => run(() => app.openScheduleAll()) },
-            { label: '期日の追加…', icon: 'i-lucide-calendar-plus', onSelect: () => run(() => (app.dialog = { kind: 'newEvent' })) },
-            { label: '設定（アプリ全体）', icon: 'i-lucide-settings', onSelect: () => run(() => (app.view = 'setup')) },
-            { label: 'このリポジトリの設定', icon: 'i-lucide-settings-2', onSelect: () => run(() => (app.view = 'repo')) },
-            ...(isDemo() ? [] : [{ label: 'このソフトについて', icon: 'i-lucide-info', onSelect: () => run(() => (app.view = 'about')) }]),
-            {
-                label: theme.dark.value ? 'ライトモードにする' : 'ダークモードにする',
-                icon: theme.dark.value ? 'i-lucide-sun' : 'i-lucide-moon',
-                onSelect: () => run(() => theme.toggle()),
-            },
-        ],
-    },
-])
+const groups = computed(() => {
+    const m = t.value.shell.palette
+    const c = t.value.common
+    return [
+        {
+            id: 'docs',
+            label: m.docs,
+            items: app.docs.map((d) => ({
+                label: d.title,
+                suffix: folderOf(d.path),
+                icon: 'i-lucide-file-text',
+                onSelect: () => run(() => app.openDoc(d.path)),
+            })),
+        },
+        {
+            id: 'articles',
+            label: m.articles,
+            ignoreFilter: true,
+            items: articleItems.value,
+        },
+        {
+            id: 'branches',
+            label: m.drafts,
+            items: app.branches.map((b) => ({
+                label: b.label,
+                suffix: b.current ? c.working : b.isMain ? m.main : m.unmerged(b.changes),
+                icon: b.isMain ? 'i-lucide-book-check' : 'i-lucide-file-pen-line',
+                onSelect: () => run(() => !b.current && app.switchBranch(b.name)),
+            })),
+        },
+        {
+            id: 'actions',
+            label: m.actions,
+            items: [
+                { label: c.newDoc, icon: 'i-lucide-file-plus', onSelect: () => run(() => (app.dialog = { kind: 'newDoc' })) },
+                { label: c.newDraft, icon: 'i-lucide-git-branch-plus', onSelect: () => run(() => (app.dialog = { kind: 'newBranch' })) },
+                { label: m.sync, icon: 'i-lucide-refresh-cw', onSelect: () => run(() => app.sync()) },
+                { label: m.home, icon: 'i-lucide-house', onSelect: () => run(() => (app.view = 'home')) },
+                { label: c.repoHome, icon: 'i-lucide-layout-grid', onSelect: () => run(() => (app.view = 'docs')) },
+                { label: c.issues, icon: 'i-lucide-list-todo', onSelect: () => run(() => app.openIssues()) },
+                { label: m.newIssue, icon: 'i-lucide-circle-plus', onSelect: () => run(() => app.openIssues({ draft: { title: '', body: '' } })) },
+                { label: m.scheduleRepo, icon: 'i-lucide-calendar-range', onSelect: () => run(() => app.openSchedule()) },
+                { label: m.scheduleAll, icon: 'i-lucide-calendar-days', onSelect: () => run(() => app.openScheduleAll()) },
+                { label: m.addDue, icon: 'i-lucide-calendar-plus', onSelect: () => run(() => (app.dialog = { kind: 'newEvent' })) },
+                { label: m.settingsApp, icon: 'i-lucide-settings', onSelect: () => run(() => (app.view = 'setup')) },
+                { label: c.repoSettings, icon: 'i-lucide-settings-2', onSelect: () => run(() => (app.view = 'repo')) },
+                ...(isDemo() ? [] : [{ label: c.aboutApp, icon: 'i-lucide-info', onSelect: () => run(() => (app.view = 'about')) }]),
+                {
+                    label: theme.dark.value ? t.value.shell.theme.toLight : t.value.shell.theme.toDark,
+                    icon: theme.dark.value ? 'i-lucide-sun' : 'i-lucide-moon',
+                    onSelect: () => run(() => theme.toggle()),
+                },
+            ],
+        },
+    ]
+})
 </script>
 
 <template>
@@ -128,7 +133,7 @@ const groups = computed(() => [
             <UCommandPalette
                 v-model:search-term="term"
                 :groups="groups"
-                placeholder="文書・条の見出し・改定案・操作を検索…"
+                :placeholder="t.shell.palette.placeholder"
                 close
                 @update:open="(v: boolean) => !v && (open = false)"
             />

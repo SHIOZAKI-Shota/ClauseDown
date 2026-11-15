@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ja } from '@nuxt/ui/locale'
+import { en, ja } from '@nuxt/ui/locale'
 import { useApp } from '~/stores/app'
 import { cssFont } from '@shared/prefs'
 import { LEGAL_CSS } from '@shared/legal-css'
 
 const app = useApp()
+const uiLocale = computed(() => (app.locale === 'en' ? en : ja))
 
 watchEffect(() => {
     const root = document.documentElement
@@ -18,6 +19,8 @@ watchEffect(() => {
     root.style.setProperty('--cd-margin', `${s.margin}mm`)
     root.classList.toggle('cd-no-linenums', !p.lineNumbers)
     root.classList.toggle('cd-no-hints', !p.numberHints)
+    root.lang = app.locale
+    root.style.setProperty('--cd-break-label', JSON.stringify(app.t.preview.pageBreak))
     const legal = document.getElementById('cd-legal-css')
     if (legal) legal.textContent = p.typesetCss || LEGAL_CSS
 })
@@ -38,7 +41,7 @@ defineShortcuts({
 </script>
 
 <template>
-    <UApp :locale="ja" :toaster="{ position: 'bottom-center' }">
+    <UApp :locale="uiLocale" :toaster="{ position: 'bottom-center' }">
         <TitleBar @search="app.paletteOpen = true" />
         <UDashboardGroup v-if="app.settings" unit="px" storage="local" storage-key="clausedown" class="cd-group">
             <AppSidebar />

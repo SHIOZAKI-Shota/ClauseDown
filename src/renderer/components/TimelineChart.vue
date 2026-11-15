@@ -2,6 +2,7 @@
 import { addDays, dayNum, fromDayNum, KIND_COLORS, type EventKind, type Occurrence, type Period } from '@shared/schedule'
 import { useStoredRef } from '~/composables/useStoredRef'
 import { todayISO } from '~/utils/format'
+import { useT } from '~/composables/useT'
 
 export interface TimelineRow {
     id: string
@@ -34,12 +35,14 @@ const emit = defineEmits<{
     asOf: [string]
 }>()
 
+const t = useT()
 const SCALES = [
-    { value: 'month', label: '月', ppd: 32 },
-    { value: 'quarter', label: '四半期', ppd: 10 },
-    { value: 'year', label: '年', ppd: 2.6 },
-    { value: 'years', label: '5年', ppd: 0.6 },
+    { value: 'month', ppd: 32 },
+    { value: 'quarter', ppd: 10 },
+    { value: 'year', ppd: 2.6 },
+    { value: 'years', ppd: 0.6 },
 ] as const
+const scaleItems = computed(() => SCALES.map((s) => ({ value: s.value, label: t.value.schedule.scale[s.value] })))
 const MIN_PPD = 0.3
 const MAX_PPD = 64
 const ppd = useStoredRef(`clausedown.timeline.${props.storageKey}`, 10, { delay: 400 })
@@ -126,10 +129,11 @@ const axis = computed(() => {
     const lines: Tick[] = []
     const months = monthStarts(a - 31, b + 31)
     const p = ppd.value
+    const s = t.value.schedule
     if (p >= 14) {
         for (let i = 0; i < months.length - 1; i++) {
             const d = fromDayNum(months[i])
-            major.push({ x: xOf(months[i]), w: (months[i + 1] - months[i]) * p, label: `${d.slice(0, 4)}年${Number(d.slice(5, 7))}月`, key: d })
+            major.push({ x: xOf(months[i]), w: (months[i + 1] - months[i]) * p, label: s.monthLabel(Number(d.slice(0, 4)), Number(d.slice(5, 7))), key: d })
         }
         for (let n = a; n <= b; n++) {
             const wd = new Date(n * 86400000).getUTCDay()
@@ -142,13 +146,13 @@ const axis = computed(() => {
         const ys = [months[0], ...years.filter((n) => n !== months[0])]
         for (let i = 0; i < ys.length; i++) {
             const end = ys[i + 1] ?? months[months.length - 1]
-            major.push({ x: xOf(ys[i]), w: (end - ys[i]) * p, label: `${fromDayNum(ys[i]).slice(0, 4)}年`, key: `y${ys[i]}` })
+            major.push({ x: xOf(ys[i]), w: (end - ys[i]) * p, label: s.yearLabel(Number(fromDayNum(ys[i]).slice(0, 4))), key: `y${ys[i]}` })
         }
         const monthW = 30 * p
         for (let i = 0; i < months.length - 1; i++) {
             const d = fromDayNum(months[i])
             const mo = Number(d.slice(5, 7))
-            const label = monthW >= 26 ? `${mo}月` : monthW >= 9 && (mo - 1) % 3 === 0 ? `${mo}` : ''
+            const label = monthW >= 26 ? s.monthShort(mo) : monthW >= 9 && (mo - 1) % 3 === 0 ? `${mo}` : ''
             minor.push({ x: xOf(months[i]), w: (months[i + 1] - months[i]) * p, label, key: d, strong: mo === 1 })
         }
         lines.push(...minor.filter((t) => monthW >= 6 || t.strong))
@@ -219,7 +223,7 @@ const bandsOf = (row: string) => {
         })
         .filter((v) => v.x + v.w >= -40 && v.x <= trackW.value + 40)
 }
-const bandTip = (b: TimelineBand) => [`${b.date} 〜 ${b.until ?? ''}`, b.title].filter(Boolean).join('\n')
+const bandTip = (b: TimelineBand) => [t.value.schedule.span(b.date, b.until ?? ''), b.title].filter(Boolean).join('\n')
 const xIn = (pl: Placed) => pl.x - offX.value
 const visible = (pl: Placed) => xIn(pl) + pl.w >= -40 && xIn(pl) <= trackW.value + 40
 const rowHeight = (id: string) => layout.value.heights.get(id) ?? LANE_H + 10
@@ -330,13 +334,13 @@ const rangeLabel = computed(() => {
     const a = fromDayNum(Math.floor(left.value))
     const b = fromDayNum(Math.floor(left.value + days.value))
     const f = (s: string) => `${s.slice(0, 4)}/${Number(s.slice(5, 7))}`
-    return `${f(a)} 〜 ${f(b)}`
+    return t.value.schedule.span(f(a), f(b))
 })
 const tipOf = (it: TimelineItem) =>
     [
-        `${props.kindOf(it.kind, it.dir).label}：${it.title}`,
-        it.end ? `${it.date} 〜 ${it.end}` : it.date,
-        it.done ? '済み' : it.overdue ? '期限切れ' : '',
+        t.value.schedule.tip(props.kindOf(it.kind, it.dir).label, it.title),
+        it.end ? t.value.schedule.span(it.date, it.end) : it.date,
+        it.done ? t.value.schedule.done : it.overdue ? t.value.schedule.overdue : '',
         it.note ?? '',
     ]
         .filter(Boolean)
@@ -350,19 +354,17 @@ const tipOf = (it: TimelineItem) =>
             <span class="cd-grow" />
             <span class="cd-muted range">{{ rangeLabel }}</span>
             <UFieldGroup size="xs">
-                <UButton icon="i-lucide-chevron-left" square color="neutral" variant="outline" aria-label="前へ" @click="panBy(-trackW / 2)" />
-                <UButton label="今日" color="neutral" variant="outline" @click="goToday" />
-                <UButton icon="i-lucide-chevron-right" square color="neutral" variant="outline" aria-label="次へ" @click="panBy(trackW / 2)" />
+                <UButton icon="i-lucide-chevron-left" square color="neutral" variant="outline" :aria-label="t.schedule.prev" @click="panBy(-trackW / 2)" />
+                <UButton :label="t.schedule.today" color="neutral" variant="outline" @click="goToday" />
+                <UButton icon="i-lucide-chevron-right" square color="neutral" variant="outline" :aria-label="t.schedule.next" @click="panBy(trackW / 2)" />
             </UFieldGroup>
-            <SegmentSwitch v-model="scale" size="xs" :items="SCALES.map((s) => ({ value: s.value, label: s.label }))" />
-            <UTooltip
-                :text="`${MOD_KEY}＋ホイールで拡大・縮小します。背景のドラッグか Shift＋ホイールで、表示する期間を前後に動かします。空いた所をダブルクリックすると、その日に期日を追加します`"
-            >
+            <SegmentSwitch v-model="scale" size="xs" :items="scaleItems" />
+            <UTooltip :text="t.schedule.help(MOD_KEY)">
                 <UIcon name="i-lucide-circle-help" class="help" />
             </UTooltip>
         </div>
 
-        <div ref="scroller" class="scroller" tabindex="0" aria-label="タイムライン" @wheel="onWheel" @keydown="onKey">
+        <div ref="scroller" class="scroller" tabindex="0" :aria-label="t.schedule.timeline" @wheel="onWheel" @keydown="onKey">
             <div class="content" :style="{ '--label-w': `${labelW}px` }">
                 <div class="axis" :style="{ height: `${AXIS_H}px` }">
                     <div v-if="!bare" class="corner" />
@@ -381,7 +383,7 @@ const tipOf = (it: TimelineItem) =>
                                 >{{ t.label }}</span
                             >
                         </div>
-                        <span class="today-tag" :style="{ left: `${todayX}px` }">今日</span>
+                        <span class="today-tag" :style="{ left: `${todayX}px` }">{{ t.schedule.today }}</span>
                         <span v-if="asOfX !== null" class="asof-tag" :style="{ left: `${asOfX}px` }">{{ asOfLabel }}</span>
                     </div>
                 </div>
@@ -457,7 +459,7 @@ const tipOf = (it: TimelineItem) =>
                             />
                         </div>
                     </div>
-                    <div v-if="!rows.length" class="empty cd-muted">表示するものがありません</div>
+                    <div v-if="!rows.length" class="empty cd-muted">{{ t.schedule.nothing }}</div>
                 </div>
             </div>
         </div>

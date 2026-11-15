@@ -5,8 +5,10 @@ import { cleanSection, groupRepos } from '@shared/repo-sections'
 import { useApp } from '~/stores/app'
 import { useStoredRef } from '~/composables/useStoredRef'
 import { repoSectionItems } from '~/composables/useRepoSectionMenu'
+import { useT } from '~/composables/useT'
 
 const app = useApp()
+const t = useT()
 const missing = (dir: string) => (app.repoStates[dir] ?? 'ok') !== 'ok'
 onMounted(() => app.checkRepos())
 
@@ -26,13 +28,14 @@ function toggle(name: string) {
 type Target = { kind: 'repo'; dir: string } | { kind: 'section'; name: string } | { kind: 'top' }
 const menuFor = ref<Target | null>(null)
 const menu = computed<DropdownMenuItem[][]>(() => {
-    const t = menuFor.value
-    if (t?.kind === 'repo') return [[{ label: 'セクションの移動', icon: 'i-lucide-folder-input', children: repoSectionItems(t.dir) }]]
-    if (t?.kind === 'section')
+    const m = t.value.repo
+    const target = menuFor.value
+    if (target?.kind === 'repo') return [[{ label: m.moveSection, icon: 'i-lucide-folder-input', children: repoSectionItems(target.dir) }]]
+    if (target?.kind === 'section')
         return [
             [
-                { label: '名前を変える…', icon: 'i-lucide-pencil', onSelect: () => (app.dialog = { kind: 'sectionName', from: t.name }) },
-                { label: 'セクションを解く', icon: 'i-lucide-folder-x', onSelect: () => void app.dissolveRepoSection(t.name) },
+                { label: m.list.rename, icon: 'i-lucide-pencil', onSelect: () => (app.dialog = { kind: 'sectionName', from: target.name }) },
+                { label: m.list.dissolve, icon: 'i-lucide-folder-x', onSelect: () => void app.dissolveRepoSection(target.name) },
             ],
         ]
     return []
@@ -84,15 +87,8 @@ function onDragEnd() {
             @dragleave="onDragLeave({ kind: 'top' })"
             @drop.prevent="onDrop({ kind: 'top' })"
         >
-            <span>リポジトリ</span>
-            <UButton
-                icon="i-lucide-plus"
-                size="xs"
-                color="neutral"
-                variant="ghost"
-                title="リポジトリの追加・管理"
-                @click="app.openSettings('setup', 'repos')"
-            />
+            <span>{{ t.repo.list.heading }}</span>
+            <UButton icon="i-lucide-plus" size="xs" color="neutral" variant="ghost" :title="t.repo.addManage" @click="app.openSettings('setup', 'repos')" />
         </div>
         <UContextMenu :items="menu" size="sm" :disabled="!menu.length">
             <div class="scroll" @contextmenu.capture="menuFor = null">
@@ -124,7 +120,7 @@ function onDragEnd() {
                                 drop: over?.kind === 'repo' && over.dir === r.dir,
                                 lifted: dragging === r.dir,
                             }"
-                            :title="[r.name, missing(r.dir) ? '見つかりません' : r.url || r.dir].join('\n')"
+                            :title="[r.name, missing(r.dir) ? t.repo.notFound : r.url || r.dir].join('\n')"
                             draggable="true"
                             @click="open(r.dir)"
                             @contextmenu="menuFor = { kind: 'repo', dir: r.dir }"
@@ -138,7 +134,7 @@ function onDragEnd() {
                             <span class="nm">{{ r.name }}</span>
                             <UBadge
                                 v-if="r.dir === app.repoDir && app.toReview.length"
-                                :label="`確認待ち ${app.toReview.length}`"
+                                :label="t.repo.list.toReview(app.toReview.length)"
                                 color="warning"
                                 variant="subtle"
                                 size="sm"
@@ -146,7 +142,7 @@ function onDragEnd() {
                         </button>
                     </template>
                 </template>
-                <p v-if="!app.settings?.repos.length" class="empty">まだリポジトリがありません</p>
+                <p v-if="!app.settings?.repos.length" class="empty">{{ t.repo.list.empty }}</p>
             </div>
         </UContextMenu>
     </div>

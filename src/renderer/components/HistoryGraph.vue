@@ -2,6 +2,11 @@
 import type { CommitInfo } from '@shared/api'
 import { layoutGraph } from '~/utils/graph'
 import { firstLine, relTime } from '~/utils/format'
+import { useApp } from '~/stores/app'
+import { useT } from '~/composables/useT'
+
+const app = useApp()
+const t = useT()
 
 const props = defineProps<{ commits: CommitInfo[]; selected: string | null; pending?: boolean; currentLabel?: string; pickWork?: boolean }>()
 const emit = defineEmits<{ select: [string] }>()
@@ -20,7 +25,7 @@ const rows = computed<(CommitInfo & { work?: boolean })[]>(() => {
         {
             oid: WORK,
             parents: [head.oid],
-            message: '保存していない変更',
+            message: t.value.history.graph.unsaved,
             author: '',
             timestamp: 0,
             tags: [],
@@ -65,17 +70,20 @@ interface Chip {
     title?: string
 }
 function chipsOf(c: CommitInfo): Chip[] {
+    const g = t.value.history.graph
+    // 枝の名前は main プロセスが付けた表示名。現行版の表示名は mainBranch から取る
+    const main = app.mainBranch?.label ?? '現行版'
     const out: Chip[] = []
-    const names = [...c.branches].sort((a, b) => (a === '現行版' ? -1 : b === '現行版' ? 1 : 0))
+    const names = [...c.branches].sort((a, b) => (a === main ? -1 : b === main ? 1 : 0))
     if (names.length) {
-        out.push({ label: names[0], cls: names[0] === '現行版' ? 'branch main' : 'branch', title: names.join('\n') })
+        out.push({ label: names[0], cls: names[0] === main ? 'branch main' : 'branch', title: names.join('\n') })
         if (names.length > 1) out.push({ label: `+${names.length - 1}`, cls: 'branch more', title: names.slice(1).join('\n') })
     }
     const dates = [...new Set(c.tags.filter((t) => t.startsWith('施行/')).map((t) => t.replace(/^施行\/.*\/([^/]+)$/, '$1')))]
     if (!dates.length && effective(c.message)) dates.push(effective(c.message)!)
-    if (dates.length) out.push({ label: `施行 ${dates[0]}`, cls: 'tag', title: dates.map((d) => `施行 ${d}`).join('\n') })
+    if (dates.length) out.push({ label: g.effective(dates[0]), cls: 'tag', title: dates.map((d) => g.effective(d)).join('\n') })
     const deliveries = c.tags.filter((t) => t.startsWith('納品/')).length
-    if (deliveries) out.push({ label: deliveries > 1 ? `納品 ${deliveries}` : '納品', cls: 'tag', title: `納品 ${deliveries} 件` })
+    if (deliveries) out.push({ label: g.delivered(deliveries), cls: 'tag', title: g.deliveredTitle(deliveries) })
     return out
 }
 </script>
@@ -124,11 +132,13 @@ function chipsOf(c: CommitInfo): Chip[] {
         >
             <div class="msg">
                 <span class="text">{{ firstLine(c.message) }}</span>
-                <span v-if="c.head" class="here">いまここ</span>
+                <span v-if="c.head" class="here">{{ t.history.graph.youAreHere }}</span>
             </div>
             <div class="meta">
-                <template v-if="c.work">{{ currentLabel ? `${currentLabel} で編集中` : '編集中' }}</template>
-                <template v-else> <span class="avatar">{{ initial(c.author) }}</span>{{ c.author }}・{{ relTime(c.timestamp) }} </template>
+                <template v-if="c.work">{{ currentLabel ? t.history.graph.editingIn(currentLabel) : t.history.graph.editing }}</template>
+                <template v-else>
+                    <span class="avatar">{{ initial(c.author) }}</span>{{ c.author }}{{ t.history.graph.sep }}{{ relTime(c.timestamp) }}
+                </template>
                 <span v-for="(ch, k) in chipsOf(c)" :key="k" :class="ch.cls" :title="ch.title">{{ ch.label }}</span>
             </div>
         </div>

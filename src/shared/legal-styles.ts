@@ -1,21 +1,15 @@
 import type { DocConfig } from './config'
 import { formatNumber, toRoman, type NumeralStyle } from './numerals'
+import { t } from './i18n'
+import { liveRecord } from './i18n/live'
 
 export const STYLE_IDS = ['ja', 'contract', 'us-law', 'uk-law', 'eu', 'de', 'fr', 'decimal'] as const
 export type StyleId = (typeof STYLE_IDS)[number]
 export type StyleChoice = 'auto' | StyleId
 export type DocLang = 'ja' | 'en' | 'de' | 'fr'
 
-export const STYLE_NAMES: Record<StyleId, string> = {
-    ja: '日本',
-    contract: '英米の契約書',
-    'us-law': '米国の法令',
-    'uk-law': '英国の法令',
-    eu: 'EU の規則',
-    de: 'ドイツ',
-    fr: 'フランス',
-    decimal: '社内規程・規格',
-}
+// 画面に出す書式の名前。読むたびに今の言語で返す
+export const STYLE_NAMES: Record<StyleId, string> = liveRecord(STYLE_IDS, (id) => t().styles.names[id])
 
 export interface ArticleNo {
     number: number

@@ -6,11 +6,12 @@ import { Decoration, EditorView, keymap, ViewPlugin, WidgetType, type Decoration
 import { tags as t } from '@lezer/highlight'
 import { parseFence, mermaidSvg } from '@shared/blocks'
 import type { Article, Item, LegalDoc, Paragraph } from '@shared/legal-parser'
-import { articleTitle, docStyle } from '@shared/legal-parser'
+import { articleTitle, docStyle, warningLine } from '@shared/legal-parser'
 import { checkDefinitions } from '@shared/definitions'
 import { findMath, mathError } from '@shared/math'
 import type { ProofreadIssue } from '@shared/api'
 import { backRefs, lineLabels, type BackRef } from '@shared/doc-view'
+import { t as i18n } from '@shared/i18n'
 
 export const legalTheme = EditorView.theme({
     '&': { height: '100%', fontSize: 'var(--cd-ed-size, 14px)', backgroundColor: 'var(--cd-ed-bg)', color: 'var(--cd-ed-text)' },
@@ -181,12 +182,13 @@ class BackRefWidget extends WidgetType {
         const el = document.createElement('span')
         el.className = 'cd-backref'
         el.title = this.list.map((b) => b.label).join('\n')
-        el.append('← ')
+        const m = i18n().editor.lint
+        el.append(m.backrefPrefix)
         const firsts = new Map<string, BackRef>()
         for (const b of this.list) if (!firsts.has(b.article)) firsts.set(b.article, b)
         let n = 0
         for (const [article, b] of firsts) {
-            if (n++) el.append('・')
+            if (n++) el.append(m.backrefSep)
             const to = document.createElement('span')
             to.className = 'cd-backref-to'
             to.textContent = article
@@ -198,7 +200,7 @@ class BackRefWidget extends WidgetType {
             })
             el.append(to)
         }
-        el.append(' から参照')
+        if (m.backrefSuffix) el.append(m.backrefSuffix)
         return el
     }
     override ignoreEvent() {
@@ -290,7 +292,7 @@ function refCompletions(ctx: CompletionContext) {
             const id = a.id ?? idFor(a, ld)
             options.push({
                 label: `${a.refLabel}${a.title ? (ld.styleId && ld.styleId !== 'ja' ? ` (${articleTitle(a, ld)})` : `（${articleTitle(a, ld)}）`) : ''}`,
-                detail: a.id ? `[[${a.id}]]` : '名前を付けて参照',
+                detail: a.id ? `[[${a.id}]]` : i18n().editor.lint.refDetail,
                 apply: (view, _c, from, to) => {
                     from -= 2
                     if (view.state.sliceDoc(to, to + 2) === ']]') to += 2
@@ -330,29 +332,30 @@ const legalLinter = linter(
         if (!ld) return []
         const out: Diagnostic[] = []
         const text = view.state.doc.toString()
+        const msg = i18n().editor.lint
         for (const r of text.matchAll(REF_RE)) {
             if (!ld.refs[r[1].trim()]) {
-                out.push({ from: r.index!, to: r.index! + r[0].length, severity: 'error', message: `「${r[1]}」という名前の条がありません` })
+                out.push({ from: r.index!, to: r.index! + r[0].length, severity: 'error', message: msg.noArticle(r[1]) })
             }
         }
         for (const f of text.matchAll(/^[ \t]*(`{3,}|~{3,})\s*mermaid[^\n]*\n([\s\S]*?)\n[ \t]*\1[ \t]*$/gm)) {
             const fence = parseFence(f[0].replace(/^[ \t]+/gm, ''))
             if (!fence) continue
             const error = mermaidError(fence.body)
-            if (error) out.push({ from: f.index!, to: f.index! + f[0].length, severity: 'warning', message: `図を描けません：${error}` })
+            if (error) out.push({ from: f.index!, to: f.index! + f[0].length, severity: 'warning', message: msg.figure(error) })
         }
         for (const f of text.matchAll(/^[ \t]*(`{3,}|~{3,})\s*math[^\n]*\n([\s\S]*?)\n[ \t]*\1[ \t]*$/gm)) {
             const error = mathError(f[2], true)
-            if (error) out.push({ from: f.index!, to: f.index! + f[0].length, severity: 'warning', source: '数式', message: `数式を描けません：${error}` })
+            if (error) out.push({ from: f.index!, to: f.index! + f[0].length, severity: 'warning', source: msg.mathSource, message: msg.math(error) })
         }
         for (const m of findMath(text)) {
             const error = mathError(m.tex, m.display)
-            if (error) out.push({ from: m.from, to: m.to, severity: 'warning', source: '数式', message: `数式を描けません：${error}` })
+            if (error) out.push({ from: m.from, to: m.to, severity: 'warning', source: msg.mathSource, message: msg.math(error) })
         }
-        for (const d of checkDefinitions(text)) out.push({ from: d.from, to: d.to, severity: 'error', source: '定義語', message: d.message })
+        for (const d of checkDefinitions(text)) out.push({ from: d.from, to: d.to, severity: 'error', source: msg.definitions, message: d.message })
         for (const w of ld.warnings) {
-            const m = /^(\d+)行目/.exec(w)
-            const line = m ? view.state.doc.line(Math.min(Number(m[1]), view.state.doc.lines)) : view.state.doc.line(1)
+            const n = warningLine(w)
+            const line = n ? view.state.doc.line(Math.min(n, view.state.doc.lines)) : view.state.doc.line(1)
             out.push({ from: line.from, to: line.to, severity: 'warning', message: w })
         }
         return out
@@ -371,7 +374,13 @@ export const proofreadLinter = (proofread: (text: string) => Promise<ProofreadIs
             const len = view.state.doc.length
             return issues
                 .filter((i) => i.from < len)
-                .map((i): Diagnostic => ({ from: i.from, to: Math.min(i.to, len), severity: 'warning', source: `校閲：${i.rule}`, message: i.message }))
+                .map((i): Diagnostic => ({
+                    from: i.from,
+                    to: Math.min(i.to, len),
+                    severity: 'warning',
+                    source: i18n().editor.lint.proofread(i.rule),
+                    message: i.message,
+                }))
         },
         { delay: 1200 },
     )

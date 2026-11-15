@@ -1,6 +1,7 @@
 import MarkdownIt from 'markdown-it'
 import { readConfig, type DocConfig } from './config'
 import { blockLines } from './blocks'
+import { onLocale, t as tr } from './i18n'
 import { legalStyle, resolveStyle, type ArticleNo, type RefTarget, type DocLang, type LegalStyle, type StyleId } from './legal-styles'
 import { extractProps, stripInlineProps, type CdProps } from './cd-prop'
 
@@ -76,6 +77,12 @@ export interface LegalDoc {
     lang: DocLang
 }
 
+// 警告の先頭の行番号（1 始まり）。行番号がなければ 0。日本語の「3行目:」と英語の「Line 3:」のどちらも読む
+export function warningLine(warning: string): number {
+    const m = /^(?:(\d+)行目|Line (\d+):)/.exec(warning)
+    return m ? Number(m[1] ?? m[2]) : 0
+}
+
 export const docLang = (source: string): DocLang => parseLegal(source).lang
 
 export const docStyle = (doc: Pick<LegalDoc, 'styleId' | 'lang' | 'config'>): LegalStyle => legalStyle(doc.styleId ?? 'ja', doc.config, doc.lang ?? 'ja')
@@ -120,6 +127,7 @@ function fixedNumber(flags: Iterable<string>): { fixed?: number; branchPath?: nu
 const ITEM_ATTR_RE = /^\{((?:[nb]=[\d.]+\s*)+)\}\s*/
 
 const parsed = new Map<string, LegalDoc>()
+onLocale(() => parsed.clear())
 const PARSED_MAX = 4
 
 export function parseLegal(input: string): LegalDoc {
@@ -238,7 +246,7 @@ function parseUncached(input: string): LegalDoc {
                 chapter.articles.push(article)
                 continue
             }
-            warnings.push(`${line + 1}行目: 見出しは ### （条）までしか使えません`)
+            warnings.push(tr().checks.atLine(line + 1, tr().checks.headingTooDeep))
             continue
         }
 
@@ -373,7 +381,7 @@ function number(doc: LegalDoc) {
             a.refLabel = style.articleRef(a, owner, config, ch.kind === 'supplement')
             numberParagraphs(a.paragraphs, config, style, false, a, owner)
             if (a.id) {
-                if (doc.refs[a.id]) doc.warnings.push(`条の名前「${a.id}」が重複しています`)
+                if (doc.refs[a.id]) doc.warnings.push(tr().checks.duplicateId(a.id))
                 doc.refs[a.id] = a
             }
             prev = a

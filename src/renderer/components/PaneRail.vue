@@ -7,11 +7,12 @@ const props = defineProps<{
     label: string
     icon?: string
 }>()
+const t = useT()
 const openIcon = computed(() => (props.side === 'left' ? 'i-lucide-panel-left-open' : 'i-lucide-panel-right-open'))
 </script>
 
 <template>
-    <button class="cd-rail" :class="side" :title="`${label}を開く`" :aria-label="`${label}を開く`" @click="pane.expand()">
+    <button class="cd-rail" :class="side" :title="t.shell.pane.open(label)" :aria-label="t.shell.pane.open(label)" @click="pane.expand()">
         <UIcon :name="openIcon" class="open" />
         <UIcon v-if="icon" :name="icon" class="icon" />
         <span class="label">{{ label }}</span>

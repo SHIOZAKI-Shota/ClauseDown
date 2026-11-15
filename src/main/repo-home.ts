@@ -1,4 +1,6 @@
+import { fromTagPath } from '../shared/tag-path'
 import fs, { promises as fsp } from 'node:fs'
+import { t } from '../shared/i18n'
 import git from './igit'
 import { tryResolve } from './git-base'
 import { commitFile, listDocs, readCommitCached, safeJoin } from './git'
@@ -119,7 +121,7 @@ export async function allEffective(dir: string): Promise<RepoActivity['effective
         }
         const hit = tagMemo.get(tagOid)
         if (!hit) continue
-        out.push({ docPath: m[1] === 'all' ? '' : `${m[1]}.md`, date: m[2], ...hit })
+        out.push({ docPath: m[1] === 'all' ? '' : `${fromTagPath(m[1])}.md`, date: m[2], ...hit })
     }
     return out.sort((a, b) => b.date.localeCompare(a.date))
 }
@@ -131,12 +133,12 @@ export async function readRepoNote(dir: string): Promise<string> {
 }
 
 export async function saveRepoNote(dir: string, text: unknown): Promise<boolean> {
-    if (typeof text !== 'string') throw new Error('説明の内容が正しくありません')
+    if (typeof text !== 'string') throw new Error(t().errors.repoHome.badNote)
     const full = safeJoin(dir, NOTE)
     if (text.trim()) {
         await fsp.mkdir(dirname(full), { recursive: true })
         await fsp.writeFile(full, text.replace(/\s+$/, '') + '\n', 'utf8')
     } else if (fs.existsSync(full)) await fsp.rm(full)
     else return false
-    return commitFile(dir, NOTE, 'リポジトリの説明を更新')
+    return commitFile(dir, NOTE, t().notify.commits.repoNote)
 }

@@ -62,6 +62,7 @@ const names: (keyof Api)[] = [
     'moveIssuesToForge',
     'proofread',
     'setSpellLanguages',
+    'systemLanguages',
     'editCommand',
     'updateState',
     'checkUpdate',

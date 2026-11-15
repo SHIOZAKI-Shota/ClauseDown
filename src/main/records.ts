@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import { t } from '../shared/i18n'
 import git from './igit'
 import http from 'isomorphic-git/http/node'
 import { withRepoLock } from './repo-lock'
@@ -112,12 +113,12 @@ export async function readRecord<T>(dir: string, name: string): Promise<T | null
 }
 
 export async function writeRecord(dir: string, name: string, data: unknown): Promise<void> {
-    if (!/^[\w./-]+\.json$/.test(name) || name.split('/').some((p) => !p || p === '.' || p === '..')) throw new Error(`記録の名前が正しくありません: ${name}`)
+    if (!/^[\w./-]+\.json$/.test(name) || name.split('/').some((p) => !p || p === '.' || p === '..')) throw new Error(t().errors.records.badName(name))
     await withRepoLock(dir, async () => {
         const { local, remote, files } = await mergedFiles(dir)
         const blob = await git.writeBlob({ fs, dir, blob: Buffer.from(JSON.stringify(data, null, 2), 'utf8') })
         files.set(name, blob)
-        await commitFiles(dir, files, await parentsOf(dir, local, remote), `記録: ${name}`)
+        await commitFiles(dir, files, await parentsOf(dir, local, remote), t().notify.commits.record(name))
     })
     await withRepoLock(dir, () => pushRecords(dir)).catch((e) => console.error('[records] 記録を送信できませんでした。次の同期で送ります', e))
 }
@@ -137,12 +138,12 @@ export async function pushRecords(dir: string): Promise<void> {
     const parents = await parentsOf(dir, local, remote)
     if (parents.length === 2) {
         const { files } = await mergedFiles(dir)
-        local = await commitFiles(dir, files, parents, '記録を統合')
+        local = await commitFiles(dir, files, parents, t().notify.commits.mergeRecords)
     } else if (parents[0] !== local) {
         await git.writeRef({ fs, dir, ref: LOCAL, value: parents[0], force: true })
         return
     }
     const res = await git.push({ fs, http, dir, remote: 'origin', ref: RECORDS_BRANCH, onAuth })
-    if (!res.ok) throw new Error('記録を送信できませんでした')
+    if (!res.ok) throw new Error(t().errors.records.pushFailed)
     await git.writeRef({ fs, dir, ref: REMOTE, value: local, force: true })
 }

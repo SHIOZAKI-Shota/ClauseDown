@@ -9,12 +9,14 @@ ClauseDown は法律案・条例・契約書・規約・規程など、「第○
 > このアプリは私が業務で使用していた [MPE](https://shd101wyy.github.io/markdown-preview-enhanced) ・スクリプトを・Textlint・Git 等をAIの助けで受肉させたものです、多くの場合 VSCode を使用されたほうが軽量かつ多機能かと思います。
 
 > **[操作マニュアルを読む](docs/manual/README.md)**　画面の画像を使って、文書の作り方から新旧対照表・施行日・納品までの操作を順に説明しています。
+>
+> **[English manual](docs/manual/en/README.md)**　The app can also be used in English (Settings → Appearance → Language).
 
 ![編集画面](docs/manual/images/editor.png)
 
 ## できること
 
-- **[条文を書く](docs/manual/README.md#6-条文を書く)**：条・項・号の番号は自動計算されます。条項を足すと後ろの番号を振り直し、条参照（「第2条」）も追いかけます。法令式・契約書式など番号の付け方を選択可能です。英米の契約書・米国と英国の法令・EU の規則・ドイツ・フランス・社内規程（1.1）の書式にも対応し、英文の定義語・つづり・言い回しも確かめます。その条を参照している条（参照元）と、その条をどの施行版で制定・改正したか（沿革）も、編集画面で確かめられます。PDF・Word・HTML に書き出せます。
+- **[条文を書く](docs/manual/README.md#6-条文を書く)**：条・項・号の番号は自動計算されます。条項を足すと後ろの番号を振り直し、条参照（「第2条」）も追いかけます。法令式・契約書式など番号の付け方を選択可能です。英米の契約書・米国と英国の法令・EU の規則・ドイツ・フランス・社内規程（1.1）の書式にも対応し、英文の定義語・つづり・言い回しも確かめます。画面は日本語と英語を切り替えられます。その条を参照している条（参照元）と、その条をどの施行版で制定・改正したか（沿革）も、編集画面で確かめられます。PDF・Word・HTML に書き出せます。
 
   <a href="docs/manual/README.md#6-条文を書く"><img src="docs/manual/images/feature-editor.png" width="720" alt="条文を書く画面"></a>
 

@@ -1,4 +1,5 @@
 import fs, { promises as fsp } from 'node:fs'
+import { t } from '../shared/i18n'
 import { join, resolve, sep } from 'node:path'
 import git from './igit'
 import { disconnectRemote } from './git'
@@ -12,17 +13,17 @@ const BAD_NAME = /[\\/:*?"<>|]/
 
 export function checkFolderName(raw: string): string {
     const name = String(raw ?? '').trim()
-    if (!name || name === '.' || name === '..' || BAD_NAME.test(name)) throw new Error('フォルダの名前が正しくありません。\\ / : * ? " < > | は使えません')
+    if (!name || name === '.' || name === '..' || BAD_NAME.test(name)) throw new Error(t().errors.repoCopy.badName)
     return name
 }
 
 async function emptyTarget(dest: string) {
-    if (fs.existsSync(dest) && (await fsp.readdir(dest)).length) throw new Error(`同じ名前のフォルダがすでにあります：${dest}`)
+    if (fs.existsSync(dest) && (await fsp.readdir(dest)).length) throw new Error(t().errors.repoCopy.exists(dest))
 }
 
 export async function duplicateRepo(src: string, parent: string, rawName: string): Promise<string> {
     const dest = join(parent, checkFolderName(rawName))
-    if ((resolve(dest) + sep).toLowerCase().startsWith((resolve(src) + sep).toLowerCase())) throw new Error('元のリポジトリの中には複製できません')
+    if ((resolve(dest) + sep).toLowerCase().startsWith((resolve(src) + sep).toLowerCase())) throw new Error(t().errors.repoCopy.insideSource)
     await emptyTarget(dest)
     await fsp.cp(src, dest, { recursive: true, errorOnExist: true, force: false })
     try {
@@ -44,13 +45,13 @@ async function waitUntil(ready: () => Promise<boolean>) {
         if (await ready()) return
         await sleep(2000)
     }
-    throw new Error('フォークの作成に時間がかかっています。少し待ってから、もう一度フォークしてください')
+    throw new Error(t().errors.repoCopy.forkSlow)
 }
 
 export async function forkRepo(dir: string): Promise<string> {
     const url = await remoteUrl(dir)
     const m = matchRemote(url, knownBases(await loadSettings()))
-    if (!url || !m) throw new Error('フォークできるのは、リモートが GitHub・GitLab のリポジトリだけです')
+    if (!url || !m) throw new Error(t().errors.repoCopy.forkUnsupported)
     let forkUrl: string
     if (m.kind === 'github') {
         const [owner, repo] = m.path.split('/')
@@ -73,7 +74,7 @@ export async function forkRepo(dir: string): Promise<string> {
         )
         forkUrl = p.http_url_to_repo
     }
-    if (forkUrl.replace(/\.git$/i, '') === url.replace(/\.git$/i, '')) throw new Error('自分のリポジトリはフォークできません')
+    if (forkUrl.replace(/\.git$/i, '') === url.replace(/\.git$/i, '')) throw new Error(t().errors.repoCopy.forkOwn)
     if (!(await git.listRemotes({ fs, dir })).some((r) => r.remote === 'upstream')) await git.addRemote({ fs, dir, remote: 'upstream', url })
     await git.setConfig({ fs, dir, path: 'remote.origin.url', value: forkUrl })
     return forkUrl

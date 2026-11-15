@@ -1,19 +1,17 @@
 <script setup lang="ts">
 import type { RepoEntry, RepoState } from '@shared/api'
 import { useApp } from '~/stores/app'
+import { useT } from '~/composables/useT'
 
 const props = defineProps<{ repo: RepoEntry; state: RepoState; compact?: boolean }>()
 const app = useApp()
+const t = useT()
 const checking = ref(false)
 
 const title = computed(() =>
-    props.state === 'missing' ? `リポジトリ「${props.repo.name}」のフォルダが見つかりません` : `「${props.repo.name}」のフォルダがリポジトリになっていません`,
+    props.state === 'missing' ? t.value.repo.missing.titleMissing(props.repo.name) : t.value.repo.missing.titleNotRepo(props.repo.name),
 )
-const reasons = computed(() =>
-    props.state === 'missing'
-        ? ['フォルダの名前が変わったか、別の場所に移動された', 'フォルダが削除された', 'USB メモリやネットワークのドライブがつながっていない']
-        : ['版管理の情報（.git フォルダ）が消えた', '別のフォルダと入れ替わった'],
-)
+const reasons = computed(() => (props.state === 'missing' ? t.value.repo.missing.reasonsMissing : t.value.repo.missing.reasonsNotRepo).split('\n'))
 
 async function retry() {
     checking.value = true
@@ -21,8 +19,8 @@ async function retry() {
         await app.checkRepos()
         if (app.repoStates[props.repo.dir] === 'ok') {
             if (props.repo.dir === app.repoDir) await app.refreshDocs()
-            app.notify('リポジトリが見つかりました')
-        } else app.notify('まだ見つかりません', true)
+            app.notify(t.value.repo.missing.found)
+        } else app.notify(t.value.repo.missing.stillMissing, true)
     } finally {
         checking.value = false
     }
@@ -35,17 +33,17 @@ async function retry() {
         <h2>{{ title }}</h2>
         <p class="path">{{ repo.dir }}</p>
         <div class="why">
-            <p>考えられる理由</p>
+            <p>{{ t.repo.missing.reasons }}</p>
             <ul>
                 <li v-for="r in reasons" :key="r">{{ r }}</li>
             </ul>
         </div>
         <div class="actions">
-            <UButton label="新しい場所を選ぶ" icon="i-lucide-folder-search" @click="app.relocateRepo(repo.dir)" />
-            <UButton label="もう一度確かめる" icon="i-lucide-refresh-cw" color="neutral" variant="outline" :loading="checking" @click="retry" />
-            <UButton label="一覧から外す" color="error" variant="ghost" @click="app.forgetRepo(repo.dir)" />
+            <UButton :label="t.repo.missing.relocate" icon="i-lucide-folder-search" @click="app.relocateRepo(repo.dir)" />
+            <UButton :label="t.repo.missing.retry" icon="i-lucide-refresh-cw" color="neutral" variant="outline" :loading="checking" @click="retry" />
+            <UButton :label="t.repo.removeFromList" color="error" variant="ghost" @click="app.forgetRepo(repo.dir)" />
         </div>
-        <p v-if="repo.url" class="cd-muted hint">リモート（{{ repo.url }}）に版を送信してあれば、設定の「リポジトリを追加する」で取得し直すこともできます。</p>
+        <p v-if="repo.url" class="cd-muted hint">{{ t.repo.missing.hint(repo.url) }}</p>
     </div>
 </template>
 

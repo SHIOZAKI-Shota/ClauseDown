@@ -1,4 +1,6 @@
+import { aiPrompts } from '../shared/ai-prompts'
 import type { AiEvent, AiRunInput } from '../shared/api'
+import { t } from '../shared/i18n'
 import type { ToolContext } from './ai-tools'
 import { loadSettings } from './settings'
 import * as g from './git'
@@ -17,11 +19,11 @@ function forget(session: string) {
 
 export async function aiRun(dir: string, input: AiRunInput, send: (e: AiEvent) => void, changed: ToolContext['changed']): Promise<void> {
     const { session } = input
-    if (running.has(session)) throw new Error('AI が作業中です。作業が終わるのを待つか、止めてから指示してください')
+    if (running.has(session)) throw new Error(t().errors.ai.busy)
     const r = await resolveAi()
-    if (!r.ready) throw new Error(`${r.reason}。設定の「AI」で設定してください`)
+    if (!r.ready) throw new Error(t().errors.ai.notReady(r.reason ?? ''))
     const repo = (await loadSettings()).repos.find((x) => x.dir === dir)
-    if (!repo) throw new Error('リポジトリが登録されていません')
+    if (!repo) throw new Error(t().errors.ai.noRepo)
 
     const target = `${r.config.provider}|${r.base}|${r.model}`
     if (sessionTarget.get(session) !== target) {
@@ -30,10 +32,7 @@ export async function aiRun(dir: string, input: AiRunInput, send: (e: AiEvent) =
     }
 
     const branch = await g.currentLabel(dir)
-    const context = [
-        `開いている文書：リポジトリ「${repo.name}」の ${input.path}（作業中：${branch}）`,
-        input.selection ? `エディタで選んでいる部分：\n\`\`\`\n${input.selection}\n\`\`\`` : '',
-    ]
+    const context = [aiPrompts().openDoc(repo.name, input.path, branch), input.selection ? aiPrompts().selection(input.selection) : '']
         .filter(Boolean)
         .join('\n')
     const userText = `${context}\n\n${input.instruction}`
@@ -67,7 +66,7 @@ export async function testAi(): Promise<string> {
     if (!r.ready) throw new Error(r.reason)
     try {
         const text = r.kind === 'anthropic' ? await testAnthropic(r.key!, r.model) : await testOpenAi(r)
-        return text || '（回答が空でした）'
+        return text || t().errors.ai.emptyAnswer
     } catch (e) {
         throw new Error(r.kind === 'anthropic' ? explainAnthropic(e) : explainOpenAi(e, r))
     }

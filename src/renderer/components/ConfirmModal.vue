@@ -8,8 +8,9 @@ withDefaults(
         color?: 'primary' | 'error'
         loading?: boolean
     }>(),
-    { description: undefined, cancelLabel: 'やめる', color: 'primary', loading: false },
+    { description: undefined, cancelLabel: undefined, color: 'primary', loading: false },
 )
+const t = useT()
 const open = defineModel<boolean>('open', { required: true })
 const emit = defineEmits<{ confirm: [] }>()
 </script>
@@ -21,7 +22,7 @@ const emit = defineEmits<{ confirm: [] }>()
         </template>
         <template #footer>
             <div class="cd-modal-foot">
-                <UButton :label="cancelLabel" color="neutral" variant="outline" @click="open = false" />
+                <UButton :label="cancelLabel ?? t.common.stop" color="neutral" variant="outline" @click="open = false" />
                 <UButton :label="confirmLabel" :color="color" :loading="loading" @click="emit('confirm')" />
             </div>
         </template>

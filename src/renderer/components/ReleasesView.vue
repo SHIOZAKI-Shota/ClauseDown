@@ -7,9 +7,11 @@ import { usePane } from '~/composables/usePane'
 import { useSchedule } from '~/composables/useSchedule'
 import { useStoredRef } from '~/composables/useStoredRef'
 import { daysUntil, firstLine, fmtDate, todayISO, untilLabel } from '~/utils/format'
+import { useT } from '~/composables/useT'
 import type { TimelineBand, TimelineItem } from '~/components/TimelineChart.vue'
 
 const app = useApp()
+const t = useT()
 const path = app.currentPath!
 const listPane = usePane('releases', { size: 380, min: 280, max: 720 })
 const versions = ref<EffectiveVersion[]>([])
@@ -49,7 +51,6 @@ async function removeDue() {
     await s.remove(id)
     if (sel.value?.kind === 'e') sel.value = null
 }
-const remindLabel = (n: number) => (n < 0 ? '知らせない' : n === 0 ? '当日に知らせる' : `${n} 日前から知らせる`)
 
 async function load() {
     ;[versions.value, deliveries.value] = await Promise.all([window.api.listEffective(app.repoDir!, path), window.api.listDeliveries(app.repoDir!, path)])
@@ -77,11 +78,11 @@ function pickBand(b: TimelineBand) {
     if (v) sel.value = { kind: 'v', id: v.tag }
 }
 const stateOf = (v: EffectiveVersion) => (v.date > today ? 'upcoming' : v.tag === currentTag.value ? 'current' : 'past')
-const STATE: Record<string, { label: string; color: 'primary' | 'success' | 'neutral' }> = {
-    upcoming: { label: '施行予定', color: 'primary' },
-    current: { label: '施行中', color: 'success' },
-    past: { label: '過去の版', color: 'neutral' },
-}
+const STATE = computed<Record<string, { label: string; color: 'primary' | 'success' | 'neutral' }>>(() => ({
+    upcoming: { label: t.value.releases.state.upcoming, color: 'primary' },
+    current: { label: t.value.releases.state.current, color: 'success' },
+    past: { label: t.value.releases.state.past, color: 'neutral' },
+}))
 const previousOf = (v: EffectiveVersion) => versions.value[versions.value.indexOf(v) + 1]
 
 const selVersion = computed(() => (sel.value?.kind === 'v' ? versions.value.find((v) => v.tag === sel.value!.id) : undefined))
@@ -103,7 +104,7 @@ watch(
 async function remove() {
     const v = removing.value!
     removing.value = null
-    await app.run(() => window.api.removeEffective(app.repoDir!, path, v.date), `施行日 ${v.date} を外しました`)
+    await app.run(() => window.api.removeEffective(app.repoDir!, path, v.date), t.value.releases.removedEffective(v.date))
     await load()
     app.touchSchedule(app.repoDir!)
 }
@@ -121,13 +122,8 @@ const openFolder = (p: string) => app.run(() => window.api.openPath(p))
 const openUrl = (u: string) => window.api.openExternal(u)
 const forgeOf = (d: DeliveryRecord) => FORGE_LABEL[d.releaseForge ?? 'github']
 
-const ITEM_LABEL: Record<string, string> = {
-    docPdf: '条文本体（PDF）',
-    docDocx: '条文本体（Word）',
-    cmpPdf: '新旧対照表（PDF）',
-    cmpDocx: '新旧対照表（Word）',
-}
-const itemsOf = (d: DeliveryRecord) => d.items.map((x) => ITEM_LABEL[x] ?? x)
+const itemsOf = (d: DeliveryRecord) => d.items.map((x) => (t.value.releases.item as Record<string, string>)[x] ?? x)
+const versionLabel = (oid: string, date?: string) => (date ? t.value.releases.effectiveVersion(date) : t.value.releases.version(oid.slice(0, 7)))
 </script>
 
 <template>
@@ -149,40 +145,41 @@ const itemsOf = (d: DeliveryRecord) => d.items.map((x) => ITEM_LABEL[x] ?? x)
             @move="(o, d) => s.move(o, d)"
         >
             <template #tools>
-                <UButton label="期日の追加" icon="i-lucide-calendar-plus" size="xs" @click="editing = {}" />
+                <UButton :label="t.schedule.add" icon="i-lucide-calendar-plus" size="xs" @click="editing = {}" />
                 <UButton
-                    label="すべての文書の期日・有効期間"
+                    :label="t.releases.allDocsDue"
                     icon="i-lucide-calendar-range"
                     size="xs"
                     color="neutral"
                     variant="ghost"
+                    data-guide="schedule"
                     @click="app.openSchedule()"
                 />
             </template>
         </TimelineChart>
         <div class="releases">
-            <SidePane :pane="listPane" side="left" label="期日・有効期間・納品" icon="i-lucide-calendar-check">
+            <SidePane :pane="listPane" side="left" :label="t.releases.pane" icon="i-lucide-calendar-check">
                 <template #bar>
-                    <UTooltip :text="showTimeline ? 'タイムラインを隠す' : 'タイムラインを出す'">
+                    <UTooltip :text="showTimeline ? t.releases.hideTimeline : t.releases.showTimeline">
                         <UButton
                             icon="i-lucide-gantt-chart"
                             size="xs"
                             square
                             color="neutral"
                             :variant="showTimeline ? 'soft' : 'ghost'"
-                            :aria-label="showTimeline ? 'タイムラインを隠す' : 'タイムラインを出す'"
+                            :aria-label="showTimeline ? t.releases.hideTimeline : t.releases.showTimeline"
                             @click="showTimeline = !showTimeline"
                         />
                     </UTooltip>
                 </template>
                 <div class="cd-list-group">
-                    <SectionHead label="期日" icon="i-lucide-calendar-clock" :count="dueList.length" pinned>
-                        <UTooltip text="この文書の期日の追加">
-                            <UButton icon="i-lucide-plus" size="xs" square color="neutral" variant="ghost" aria-label="期日の追加" @click="editing = {}" />
+                    <SectionHead :label="t.releases.due" icon="i-lucide-calendar-clock" :count="dueList.length" pinned>
+                        <UTooltip :text="t.releases.addDueHere">
+                            <UButton icon="i-lucide-plus" size="xs" square color="neutral" variant="ghost" :aria-label="t.schedule.add" @click="editing = {}" />
                         </UTooltip>
                     </SectionHead>
                     <p v-if="s.loaded.value && !dueList.length" class="cd-muted empty">
-                        公布・提出・届出・申請・契約の開始や更新などの日付を記録できます。期日が近づくと通知します。
+                        {{ t.releases.dueEmpty }}
                     </p>
                     <OccurrenceRow
                         v-for="o in dueList"
@@ -196,21 +193,22 @@ const itemsOf = (d: DeliveryRecord) => d.items.map((x) => ITEM_LABEL[x] ?? x)
                 </div>
 
                 <div class="cd-list-group">
-                    <SectionHead label="施行版" icon="i-lucide-calendar-check" :count="versions.length" pinned>
-                        <UTooltip text="改定履歴で版を選んで施行日を付ける">
+                    <SectionHead :label="t.releases.versions" icon="i-lucide-calendar-check" :count="versions.length" pinned>
+                        <UTooltip :text="t.releases.setEffectiveTip">
                             <UButton
                                 icon="i-lucide-calendar-plus"
                                 size="xs"
                                 square
                                 color="neutral"
                                 variant="ghost"
-                                aria-label="施行日を付ける"
+                                :aria-label="t.releases.setEffective"
+                                data-guide="effective"
                                 @click="app.view = 'history'"
                             />
                         </UTooltip>
                     </SectionHead>
                     <p v-if="loaded && !versions.length" class="cd-muted empty">
-                        まだ施行版がありません。「版を保存」や「現行版に反映」のときに施行日を入れるか、改定履歴で版を選んで施行日を付けてください。
+                        {{ t.releases.versionsEmpty }}
                     </p>
                     <ListRow v-for="v in versions" :key="v.tag" :active="sel?.kind === 'v' && sel.id === v.tag" @click="sel = { kind: 'v', id: v.tag }">
                         <template #lead>
@@ -218,8 +216,8 @@ const itemsOf = (d: DeliveryRecord) => d.items.map((x) => ITEM_LABEL[x] ?? x)
                         </template>
                         <IssueText :text="firstLine(v.message)" />
                         <template #sub
-                            >{{ v.author }}<template v-if="v.date >= today">・{{ untilLabel(daysUntil(v.date, today)) }}</template
-                            ><template v-if="untilOf(v)">・{{ fmtDate(untilOf(v)!, 'ymd') }} まで</template></template
+                            >{{ v.author }}<template v-if="v.date >= today">{{ t.common.sep }}{{ untilLabel(daysUntil(v.date, today)) }}</template
+                            ><template v-if="untilOf(v)">{{ t.common.sep }}{{ t.releases.until(fmtDate(untilOf(v)!, 'ymd')) }}</template></template
                         >
                         <template #trail>
                             <UBadge v-if="stateOf(v) !== 'past'" :label="STATE[stateOf(v)].label" :color="STATE[stateOf(v)].color" variant="subtle" size="sm" />
@@ -228,22 +226,23 @@ const itemsOf = (d: DeliveryRecord) => d.items.map((x) => ITEM_LABEL[x] ?? x)
                 </div>
 
                 <div class="cd-list-group">
-                    <SectionHead label="納品の記録" icon="i-lucide-package-check" :count="deliveries.length" pinned>
-                        <UTooltip text="現行版の最新を納品する">
+                    <SectionHead :label="t.releases.deliveries" icon="i-lucide-package-check" :count="deliveries.length" pinned>
+                        <UTooltip :text="t.releases.deliverLatestTip">
                             <UButton
                                 icon="i-lucide-package-plus"
                                 size="xs"
                                 square
                                 color="neutral"
                                 variant="ghost"
-                                aria-label="現行版の最新を納品"
+                                :aria-label="t.releases.deliverLatest"
+                                data-guide="deliver"
                                 :disabled="!app.mainBranch"
                                 @click="deliverLatest"
                             />
                         </UTooltip>
                     </SectionHead>
                     <p v-if="loaded && !deliveries.length" class="cd-muted empty">
-                        まだ納品の記録はありません。いつ・誰に・どの版を渡したかを残すと、リポジトリを使う全員に共有されます。
+                        {{ t.releases.deliveriesEmpty }}
                     </p>
                     <ListRow
                         v-for="d in deliveries"
@@ -252,17 +251,10 @@ const itemsOf = (d: DeliveryRecord) => d.items.map((x) => ITEM_LABEL[x] ?? x)
                         :active="sel?.kind === 'd' && sel.id === d.id"
                         @click="sel = { kind: 'd', id: d.id }"
                     >
-                        {{ d.to || '（宛先なし）' }}
-                        <template #sub
-                            >{{ fmtDate(d.at, 'ymd') }}・{{
-                                d.effectiveDate
-                                    ? `${d.effectiveDate} 施行版`
-                                    : `版
-                            ${d.oid.slice(0, 7)}`
-                            }}</template
-                        >
+                        {{ d.to || t.releases.noRecipient }}
+                        <template #sub>{{ fmtDate(d.at, 'ymd') }}{{ t.common.sep }}{{ versionLabel(d.oid, d.effectiveDate) }}</template>
                         <template #trail>
-                            <UIcon v-if="d.releaseError" name="i-lucide-triangle-alert" class="err" :title="`${forgeOf(d)} に載せられませんでした`" />
+                            <UIcon v-if="d.releaseError" name="i-lucide-triangle-alert" class="err" :title="t.releases.notPublished(forgeOf(d))" />
                         </template>
                     </ListRow>
                 </div>
@@ -276,43 +268,51 @@ const itemsOf = (d: DeliveryRecord) => d.items.map((x) => ITEM_LABEL[x] ?? x)
                                 s.kindOf.value(selDue.kind).label
                             }}</span>
                             <strong>{{ selDue.title }}</strong>
-                            <UBadge v-if="selDue.overdue" label="期限切れ" color="error" variant="subtle" size="sm" />
-                            <UBadge v-else-if="selDue.done" label="済み" color="success" variant="subtle" size="sm" />
+                            <UBadge v-if="selDue.overdue" :label="t.schedule.overdue" color="error" variant="subtle" size="sm" />
+                            <UBadge v-else-if="selDue.done" :label="t.schedule.done" color="success" variant="subtle" size="sm" />
                         </div>
                         <UButton
                             v-if="selDue.task"
-                            :label="selDue.done ? '済みを取り消す' : '済みにする'"
+                            :label="selDue.done ? t.schedule.undoDone : t.schedule.markDone"
                             :icon="selDue.done ? 'i-lucide-undo-2' : 'i-lucide-check'"
                             size="sm"
                             :color="selDue.done ? 'neutral' : 'primary'"
                             :variant="selDue.done ? 'outline' : 'solid'"
                             @click="s.toggleDone(selDue)"
                         />
-                        <UButton label="直す" icon="i-lucide-pencil" size="sm" color="neutral" variant="outline" @click="editing = { event: selDue.id }" />
-                        <UButton label="消す" icon="i-lucide-trash-2" size="sm" color="error" variant="ghost" @click="removingDue = selDue.id" />
+                        <UButton
+                            :label="t.schedule.edit"
+                            icon="i-lucide-pencil"
+                            size="sm"
+                            color="neutral"
+                            variant="outline"
+                            @click="editing = { event: selDue.id }"
+                        />
+                        <UButton :label="t.schedule.remove" icon="i-lucide-trash-2" size="sm" color="error" variant="ghost" @click="removingDue = selDue.id" />
                     </div>
                     <dl class="facts">
-                        <dt>日付</dt>
+                        <dt>{{ t.schedule.f.date }}</dt>
                         <dd>
-                            {{ fmtDate(selDue.date, 'ymd') }}<template v-if="selDue.end"> 〜 {{ fmtDate(selDue.end, 'ymd') }}</template>
-                            <span class="cd-muted">（{{ untilLabel(daysUntil(selDue.date, today)) }}）</span>
+                            {{ selDue.end ? t.schedule.span(fmtDate(selDue.date, 'ymd'), fmtDate(selDue.end, 'ymd')) : fmtDate(selDue.date, 'ymd') }}
+                            <span class="cd-muted">{{ t.schedule.paren(untilLabel(daysUntil(selDue.date, today))) }}</span>
                         </dd>
                         <template v-if="selDueEvent?.repeat">
-                            <dt>繰り返し</dt>
+                            <dt>{{ t.schedule.f.repeat }}</dt>
                             <dd>
-                                {{ selDueEvent.repeat.every === 'year' ? '毎年' : '毎月'
-                                }}<template v-if="selDueEvent.repeat.until">（{{ fmtDate(selDueEvent.repeat.until, 'ymd') }} まで）</template>
+                                {{
+                                    t.schedule.repeat(selDueEvent.repeat.every, selDueEvent.repeat.until ? fmtDate(selDueEvent.repeat.until, 'ymd') : undefined)
+                                }}
                             </dd>
                         </template>
-                        <dt>通知</dt>
-                        <dd>{{ remindLabel(selDue.remind) }}</dd>
+                        <dt>{{ t.schedule.f.notify }}</dt>
+                        <dd>{{ t.schedule.remind(selDue.remind) }}</dd>
                         <template v-if="selDue.note">
-                            <dt>メモ</dt>
+                            <dt>{{ t.schedule.f.memo }}</dt>
                             <dd class="memo">{{ selDue.note }}</dd>
                         </template>
                         <template v-if="selDueEvent">
-                            <dt>記録</dt>
-                            <dd class="cd-muted">{{ selDueEvent.by }}・{{ fmtDate(selDueEvent.updatedAt, 'ymdhm') }}</dd>
+                            <dt>{{ t.schedule.f.record }}</dt>
+                            <dd class="cd-muted">{{ selDueEvent.by }}{{ t.common.sep }}{{ fmtDate(selDueEvent.updatedAt, 'ymdhm') }}</dd>
                         </template>
                     </dl>
                 </template>
@@ -320,32 +320,42 @@ const itemsOf = (d: DeliveryRecord) => d.items.map((x) => ITEM_LABEL[x] ?? x)
                 <template v-else-if="selVersion">
                     <div class="cd-toolbar bar">
                         <div class="what">
-                            <strong>{{ fmtDate(selVersion.date, 'ymd') }} 施行</strong>
+                            <strong>{{ t.releases.effectiveOn(fmtDate(selVersion.date, 'ymd')) }}</strong>
                             <UBadge :label="STATE[stateOf(selVersion)].label" :color="STATE[stateOf(selVersion)].color" variant="subtle" size="sm" />
                             <span class="cd-muted msg" :title="selVersion.message">
-                                <IssueText :text="firstLine(selVersion.message)" />・{{ selVersion.author }}
+                                <IssueText :text="firstLine(selVersion.message)" />{{ t.common.sep }}{{ selVersion.author }}
                             </span>
                         </div>
                         <UButton
                             v-if="previousOf(selVersion)"
-                            :label="`${fmtDate(previousOf(selVersion)!.date, 'ymd')} 版と比較`"
+                            :label="t.releases.compareWith(fmtDate(previousOf(selVersion)!.date, 'ymd'))"
                             icon="i-lucide-columns-2"
                             size="sm"
                             color="neutral"
                             variant="outline"
+                            data-guide="compare"
                             @click="app.openCompare(previousOf(selVersion)!.oid, selVersion.oid)"
                         />
                         <UButton
-                            label="今の文書と比較"
+                            :label="t.releases.compareWork"
                             icon="i-lucide-columns-2"
                             size="sm"
                             color="neutral"
                             variant="outline"
+                            data-guide="compare"
                             @click="app.openCompare(selVersion.oid, 'work')"
                         />
-                        <UButton label="納品する" icon="i-lucide-package" size="sm" @click="deliverVersion(selVersion)" />
-                        <UTooltip text="版は消えません">
-                            <UButton label="施行日を外す" icon="i-lucide-calendar-x" size="sm" color="error" variant="ghost" @click="removing = selVersion" />
+                        <UButton :label="t.releases.deliver" icon="i-lucide-package" size="sm" data-guide="deliver" @click="deliverVersion(selVersion)" />
+                        <UTooltip :text="t.releases.versionKept">
+                            <UButton
+                                :label="t.releases.removeEffective"
+                                icon="i-lucide-calendar-x"
+                                data-guide="effective"
+                                size="sm"
+                                color="error"
+                                variant="ghost"
+                                @click="removing = selVersion"
+                            />
                         </UTooltip>
                     </div>
                 </template>
@@ -353,12 +363,12 @@ const itemsOf = (d: DeliveryRecord) => d.items.map((x) => ITEM_LABEL[x] ?? x)
                 <template v-else-if="selDelivery">
                     <div class="cd-toolbar bar">
                         <div class="what">
-                            <strong>{{ selDelivery.to || '（宛先なし）' }} へ納品</strong>
-                            <span class="cd-muted msg">{{ fmtDate(selDelivery.at, 'ymdhm') }}・{{ selDelivery.by }}</span>
+                            <strong>{{ t.releases.deliveredTo(selDelivery.to || t.releases.noRecipient) }}</strong>
+                            <span class="cd-muted msg">{{ fmtDate(selDelivery.at, 'ymdhm') }}{{ t.common.sep }}{{ selDelivery.by }}</span>
                         </div>
                         <UButton
                             v-if="selDelivery.folder"
-                            label="フォルダを開く"
+                            :label="t.releases.openFolder"
                             icon="i-lucide-folder-open"
                             size="sm"
                             color="neutral"
@@ -367,7 +377,7 @@ const itemsOf = (d: DeliveryRecord) => d.items.map((x) => ITEM_LABEL[x] ?? x)
                         />
                         <UButton
                             v-if="selDelivery.releaseUrl"
-                            :label="`${forgeOf(selDelivery)} で見る`"
+                            :label="t.releases.viewOn(forgeOf(selDelivery))"
                             :icon="selDelivery.releaseForge === 'gitlab' ? 'i-lucide-gitlab' : 'i-lucide-github'"
                             size="sm"
                             color="neutral"
@@ -376,24 +386,19 @@ const itemsOf = (d: DeliveryRecord) => d.items.map((x) => ITEM_LABEL[x] ?? x)
                         />
                     </div>
                     <dl class="facts">
-                        <dt>渡した版</dt>
+                        <dt>{{ t.releases.givenVersion }}</dt>
                         <dd>
-                            {{
-                                selDelivery.effectiveDate
-                                    ? `${fmtDate(selDelivery.effectiveDate, 'ymd')} 施行版`
-                                    : `版
-                            ${selDelivery.oid.slice(0, 7)}`
-                            }}
+                            {{ versionLabel(selDelivery.oid, selDelivery.effectiveDate ? fmtDate(selDelivery.effectiveDate, 'ymd') : undefined) }}
                         </dd>
-                        <dt>渡したもの</dt>
+                        <dt>{{ t.releases.givenItems }}</dt>
                         <dd class="chips"><span v-for="x in itemsOf(selDelivery)" :key="x" class="cd-chip">{{ x }}</span></dd>
                         <template v-if="selDelivery.memo">
-                            <dt>メモ</dt>
+                            <dt>{{ t.schedule.f.memo }}</dt>
                             <dd class="memo">{{ selDelivery.memo }}</dd>
                         </template>
                         <template v-if="selDelivery.releaseError">
                             <dt>{{ forgeOf(selDelivery) }}</dt>
-                            <dd class="error">載せられませんでした：{{ selDelivery.releaseError }}</dd>
+                            <dd class="error">{{ t.releases.publishError(selDelivery.releaseError) }}</dd>
                         </template>
                     </dl>
                 </template>
@@ -401,17 +406,25 @@ const itemsOf = (d: DeliveryRecord) => d.items.map((x) => ITEM_LABEL[x] ?? x)
                 <DocPaper v-if="selOid" :text="content" :doc-path="path" />
                 <div v-else-if="loaded && !selDue" class="none">
                     <UIcon name="i-lucide-calendar-check" class="big" />
-                    <p>施行日を付けた版と、納品の記録がここに並びます。</p>
+                    <p>{{ t.releases.emptyDetail }}</p>
                     <div class="row">
                         <UButton
-                            label="改定履歴から施行日を付ける"
+                            :label="t.releases.setFromHistory"
                             icon="i-lucide-calendar-plus"
                             size="sm"
                             color="neutral"
                             variant="outline"
+                            data-guide="effective"
                             @click="app.view = 'history'"
                         />
-                        <UButton v-if="app.mainBranch" label="現行版の最新を納品" icon="i-lucide-package" size="sm" @click="deliverLatest" />
+                        <UButton
+                            v-if="app.mainBranch"
+                            :label="t.releases.deliverLatest"
+                            icon="i-lucide-package"
+                            size="sm"
+                            data-guide="deliver"
+                            @click="deliverLatest"
+                        />
                     </div>
                 </div>
             </div>
@@ -428,13 +441,13 @@ const itemsOf = (d: DeliveryRecord) => d.items.map((x) => ITEM_LABEL[x] ?? x)
             />
             <ConfirmModal
                 :open="!!removingDue"
-                title="期日を消す"
-                confirm-label="消す"
+                :title="t.schedule.removeTitle"
+                :confirm-label="t.schedule.remove"
                 color="error"
                 @update:open="(v) => !v && (removingDue = null)"
                 @confirm="removeDue"
             >
-                <p>この期日を消します。繰り返す期日なら、すべての回が消えます。</p>
+                <p>{{ t.schedule.removeBody }}</p>
             </ConfirmModal>
             <DeliveryModal
                 v-if="delivering"
@@ -447,13 +460,13 @@ const itemsOf = (d: DeliveryRecord) => d.items.map((x) => ITEM_LABEL[x] ?? x)
             />
             <ConfirmModal
                 :open="!!removing"
-                title="施行日を外す"
-                confirm-label="外す"
+                :title="t.releases.removeEffective"
+                :confirm-label="t.releases.removeEffectiveConfirm"
                 color="error"
                 @update:open="(v) => !v && (removing = null)"
                 @confirm="remove"
             >
-                <p>{{ removing?.date }} の施行日の記録を外します。版そのものは消えません。</p>
+                <p>{{ t.releases.removeEffectiveBody(removing?.date ?? '') }}</p>
             </ConfirmModal>
         </div>
     </div>

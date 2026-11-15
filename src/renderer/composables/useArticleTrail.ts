@@ -4,8 +4,20 @@ import type { LegalDoc } from '@shared/legal-parser'
 import { stepUnits, trailsFor, type HistEvent, type TracedUnit } from '@shared/article-history'
 import { useApp } from '~/stores/app'
 import { fmtWareki } from '~/utils/format'
+import { t } from '@shared/i18n'
 
-export const TRAIL_KIND: Record<HistEvent['kind'], string> = { enacted: '制定', added: '新設', changed: '改正' }
+// 読むたびに今の言語の名前を返す
+export const TRAIL_KIND: Record<HistEvent['kind'], string> = {
+    get enacted() {
+        return t().shell.trail.kind.enacted
+    },
+    get added() {
+        return t().shell.trail.kind.added
+    },
+    get changed() {
+        return t().shell.trail.kind.changed
+    },
+}
 
 async function readAll<T extends { oid: string }>(dir: string, path: string, list: T[]) {
     const sources = await Promise.all(list.map((v) => window.api.readAt(dir, v.oid, path).catch(() => null)))
@@ -44,12 +56,13 @@ export function useArticleTrail(path: string, doc: Ref<LegalDoc>, cursorLine: Re
     const trails = computed(() => trailsFor(traced.value, doc.value))
     const trail = computed(() => trails.value.get(articleLine.value) ?? null)
     const summary = computed(() => {
-        const t = trail.value
-        if (!t) return ''
-        const e = t.events.at(-1)
-        if (!e) return '未施行'
-        const head = `${fmtWareki(versions.value[e.step]?.date ?? '')}施行で${TRAIL_KIND[e.kind]}`
-        return t.pending ? `${head}・未施行の変更あり` : head
+        const tr = trail.value
+        if (!tr) return ''
+        const m = app.t.shell.trail
+        const e = tr.events.at(-1)
+        if (!e) return m.notEffective
+        const head = m.summary(fmtWareki(versions.value[e.step]?.date ?? ''), m.kind[e.kind])
+        return tr.pending ? m.pending(head) : head
     })
 
     const commits = shallowRef<CommitInfo[]>([])

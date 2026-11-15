@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import { t } from '../shared/i18n'
 import fs from 'node:fs'
 import path from 'node:path'
 import { app, shell } from 'electron'
@@ -60,9 +61,9 @@ function setup() {
 
 function friendly(e: unknown): string {
     const m = e instanceof Error ? e.message : String(e)
-    if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|ENETUNREACH|net::ERR_/i.test(m)) return 'インターネットにつながらないため、更新を確認できませんでした'
-    if (/404|latest(-mac)?\.yml/i.test(m)) return '配布されている更新の情報が見つかりませんでした'
-    return `更新でエラーが起きました：${m.split('\n')[0]}`
+    if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|ENETUNREACH|net::ERR_/i.test(m)) return t().errors.updater.offline
+    if (/404|latest(-mac)?\.yml/i.test(m)) return t().errors.updater.noFeed
+    return t().errors.updater.failed(m.split('\n')[0])
 }
 
 export function initUpdater(send: (s: UpdateState) => void) {
@@ -76,7 +77,7 @@ export function initUpdater(send: (s: UpdateState) => void) {
         return
     }
     const failure = brewFailure(log)
-    if (failure) set({ state: 'error', message: `Homebrew での更新に失敗しました：${failure}。ターミナルで「${BREW_UPGRADE}」を実行してください` })
+    if (failure) set({ state: 'error', message: t().errors.updater.brewFailed(failure, BREW_UPGRADE) })
 }
 
 export const updateState = (): UpdateState => state

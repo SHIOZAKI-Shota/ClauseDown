@@ -2,15 +2,17 @@
 import { parseLegal } from '@shared/legal-parser'
 import { renderDoc } from '@shared/legal-renderer'
 import { useApp } from '~/stores/app'
+import { useT } from '~/composables/useT'
 
 const props = defineProps<{ text: string | null | undefined; empty?: string; docPath?: string }>()
 const app = useApp()
+const t = useT()
 const html = computed(() => (typeof props.text === 'string' ? withImages(renderDoc(parseLegal(props.text)), app.repoDir, props.docPath) : ''))
 </script>
 
 <template>
     <div class="cd-preview cd-canvas">
-        <p v-if="text === null" class="cd-muted">{{ empty ?? 'この版にはこの文書がありません。' }}</p>
+        <p v-if="text === null" class="cd-muted">{{ empty ?? t.docs.paper.notInVersion }}</p>
         <div v-else-if="text !== undefined" class="paper cd-paper" v-html="html" />
     </div>
 </template>

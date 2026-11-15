@@ -18,12 +18,13 @@ const props = defineProps<{
 }>()
 
 const app = useApp()
+const t = useT()
 const where = props.idPrefix === 'r' ? 'repo' : 'setup'
 
 const active = computed({
     get: () => {
-        const t = app.settingsTab[where]
-        return props.sections.some((s) => s.id === t) ? t! : (props.sections[0]?.id ?? '')
+        const tab = app.settingsTab[where]
+        return props.sections.some((s) => s.id === tab) ? tab! : (props.sections[0]?.id ?? '')
     },
     set: (id: string) => (app.settingsTab[where] = id),
 })
@@ -49,7 +50,7 @@ watch(active, () => body.value?.scrollTo({ top: 0 }))
 
         <div ref="body" class="body" role="tabpanel">
             <div class="inner">
-                <div class="saved" :class="{ show: saved }"><UIcon name="i-lucide-check" />保存しました</div>
+                <div class="saved" :class="{ show: saved }"><UIcon name="i-lucide-check" />{{ t.common.saved }}</div>
                 <slot />
             </div>
         </div>

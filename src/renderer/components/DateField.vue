@@ -19,6 +19,7 @@ const value = computed<CalendarDate | undefined>({
         model.value = v ? v.toString() : ''
     },
 })
+const t = useT()
 const minValue = computed(() => toDate(props.min))
 const pick = (v: DateValue | undefined) => {
     if (v) value.value = new CalendarDate(v.year, v.month, v.day)
@@ -29,7 +30,7 @@ const pick = (v: DateValue | undefined) => {
     <UInputDate v-model="value" :min-value="minValue" :size="size" class="date-field">
         <template #trailing>
             <UPopover :content="{ align: 'end' }">
-                <UButton icon="i-lucide-calendar" size="xs" color="neutral" variant="link" square aria-label="カレンダーから選ぶ" />
+                <UButton icon="i-lucide-calendar" size="xs" color="neutral" variant="link" square :aria-label="t.shell.date.pick" />
                 <template #content>
                     <UCalendar :model-value="value" :min-value="minValue" class="cal" @update:model-value="(v) => pick(v as DateValue | undefined)" />
                 </template>

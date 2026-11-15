@@ -122,7 +122,7 @@ td[rowspan], th[rowspan] { vertical-align: middle; }
 @media screen {
   .cd-doc .cd-break { position: relative; margin-top: 2.6em; }
   .cd-doc .cd-break::before { content: ''; position: absolute; left: 0; right: 0; top: -1.3em; border-top: 1px dashed var(--cd-ink-soft); }
-  .cd-doc .cd-break::after { content: '改ページ'; position: absolute; left: 50%; top: -1.3em; transform: translate(-50%, -50%); padding: 0 8px; background: var(--cd-paper); font-size: 10px; line-height: 1; color: var(--cd-ink-soft); text-indent: 0; }
+  .cd-doc .cd-break::after { content: var(--cd-break-label, '改ページ'); position: absolute; left: 50%; top: -1.3em; transform: translate(-50%, -50%); padding: 0 8px; background: var(--cd-paper); font-size: 10px; line-height: 1; color: var(--cd-ink-soft); text-indent: 0; }
 }
 
 @media print {

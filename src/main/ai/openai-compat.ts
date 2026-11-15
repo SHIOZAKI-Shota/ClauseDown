@@ -1,19 +1,15 @@
+import { aiPrompts } from '../../shared/ai-prompts'
 import OpenAI from 'openai'
+import { t } from '../../shared/i18n'
 import { z } from 'zod'
 import type { AiEvent } from '../../shared/api'
-import { AI_SYSTEM } from '../../shared/ai-presets'
+import { aiSystem, aiToolUse } from '../../shared/ai-presets'
 import { TOOLS, runTool, toolLabel, type ToolContext } from '../ai-tools'
 import type { ResolvedAi } from './provider'
 
 type Msg = OpenAI.Chat.Completions.ChatCompletionMessageParam
 
 const MAX_TURNS = 40
-
-const EXTRA = `
-
-## 道具の使い方
-- 文書の中身は推測せず、必ず read_doc などの道具で読んでから答えてください
-- 文書を書き換えるときは、本文に書き換え後の文書を書かずに、edit_doc などの道具を呼んでください`
 
 const sessions = new Map<string, Msg[]>()
 
@@ -36,27 +32,22 @@ export function client(r: ResolvedAi): OpenAI {
 
 export function explainOpenAi(e: unknown, r: ResolvedAi): string {
     const who = r.config.provider === 'ollama' ? 'Ollama' : r.label.split('・')[0]
+    const m = t().errors.ai.openai
     if (e instanceof OpenAI.APIConnectionError) {
-        return r.config.provider === 'ollama'
-            ? 'Ollama に接続できません。Ollama を起動しているか確かめてください'
-            : `${who} に接続できません。インターネットの接続と、接続先の URL を確かめてください`
+        return r.config.provider === 'ollama' ? m.ollamaConnection : m.connection(who)
     }
     if (e instanceof OpenAI.AuthenticationError) {
-        return r.config.provider === 'github'
-            ? 'GitHub のログインの期限が切れています。設定の「GitHub/GitLab」でログインし直してください'
-            : `${who} の API キーが正しくありません。設定の「AI」で入れ直してください`
+        return r.config.provider === 'github' ? m.githubExpired : m.auth(who)
     }
     if (e instanceof OpenAI.PermissionDeniedError) {
-        return r.config.provider === 'github'
-            ? 'GitHub Models を使う権限がありません（GitHub のアカウントや組織の設定で、GitHub Models が使えるか確かめてください）'
-            : `${who} を使う権限がありません（${e.message}）`
+        return r.config.provider === 'github' ? m.githubPermission : m.permission(who, e.message)
     }
-    if (e instanceof OpenAI.NotFoundError) return `モデル「${r.model}」が見つかりません。設定の「AI」でモデルを選び直してください`
-    if (e instanceof OpenAI.RateLimitError) return `${who} の利用回数・残高の上限に達したか、混み合っています。少し待つか、プランや残高を確かめてください`
+    if (e instanceof OpenAI.NotFoundError) return m.modelNotFound(r.model)
+    if (e instanceof OpenAI.RateLimitError) return m.rateLimit(who)
     if (e instanceof OpenAI.BadRequestError && /tool|function/i.test(e.message)) {
-        return `モデル「${r.model}」は道具（tools）を使えないため、文書を読んだり書き換えたりできません。道具に対応したモデルを選んでください`
+        return m.noTools(r.model)
     }
-    if (e instanceof OpenAI.APIError) return `${who} の呼び出しに失敗しました（${e.status ?? ''} ${e.message}）`
+    if (e instanceof OpenAI.APIError) return m.api(who, `${e.status ?? ''} ${e.message}`)
     return (e as Error)?.message ?? String(e)
 }
 
@@ -80,7 +71,7 @@ export async function runOpenAi(
     ctx: ToolContext,
     signal: AbortSignal,
 ): Promise<void> {
-    const history = sessions.get(session) ?? [{ role: 'system', content: AI_SYSTEM + EXTRA }]
+    const history = sessions.get(session) ?? [{ role: 'system', content: aiSystem() + aiToolUse() }]
     sessions.set(session, history)
     history.push({ role: 'user', content: userText })
     const api = client(r)
@@ -116,10 +107,10 @@ export async function runOpenAi(
                 : {}),
         })
         if (finish === 'length') {
-            for (const c of used) history.push({ role: 'tool', tool_call_id: c.id, content: '途中で止まったため実行していません' })
-            throw new Error('回答が長すぎて途中で切れました。範囲を絞って指示してください')
+            for (const c of used) history.push({ role: 'tool', tool_call_id: c.id, content: aiPrompts().stopped })
+            throw new Error(t().errors.ai.tooLong)
         }
-        if (finish === 'content_filter') throw new Error('この依頼には AI が回答できませんでした。言い方を変えてお試しください')
+        if (finish === 'content_filter') throw new Error(t().errors.ai.refused)
         if (!used.length) return
 
         const results = await Promise.all(
@@ -128,13 +119,13 @@ export async function runOpenAi(
                 try {
                     input = JSON.parse(c.args || '{}')
                 } catch {
-                    return { role: 'tool', tool_call_id: c.id, content: '道具の入力が JSON として読めませんでした。正しい JSON でもう一度呼んでください' }
+                    return { role: 'tool', tool_call_id: c.id, content: aiPrompts().badJson }
                 }
                 send({ session, type: 'tool', label: toolLabel(c.name, input) })
                 try {
                     return { role: 'tool', tool_call_id: c.id, content: await runTool(c.name, input, ctx) }
                 } catch (e) {
-                    return { role: 'tool', tool_call_id: c.id, content: `エラー：${(e as Error).message}` }
+                    return { role: 'tool', tool_call_id: c.id, content: aiPrompts().toolError((e as Error).message) }
                 }
             }),
         )
@@ -146,7 +137,7 @@ export async function runOpenAi(
 export async function testOpenAi(r: ResolvedAi): Promise<string> {
     const res = await client(r).chat.completions.create({
         model: r.model,
-        messages: [{ role: 'user', content: '「接続できました」とだけ答えてください。' }],
+        messages: [{ role: 'user', content: aiPrompts().ping }],
     })
     return (res.choices[0]?.message?.content ?? '').trim()
 }

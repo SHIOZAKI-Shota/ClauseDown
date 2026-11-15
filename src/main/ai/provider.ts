@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { t } from '../../shared/i18n'
 import { AI_PROVIDERS, aiBaseOf, aiShortLabel, cleanAiConfig, isLocalBase, safeAiBase, type AiConfig, type AiProvider } from '../../shared/ai-providers'
 import { GITHUB_BASE } from '../../shared/forge'
 import { getToken, loadSecret, loadSettings, type SecretName } from '../settings'
@@ -45,17 +46,13 @@ export async function resolveAi(override?: AiConfig): Promise<ResolvedAi> {
         ready: true,
     }
     const fail = (reason: string) => ({ ...r, ready: false, reason })
-    if (config.provider !== 'anthropic' && !safeAiBase(base, rules))
-        return fail(
-            rules.lan
-                ? '接続先の URL は https か、ローカル の中（http://127.0.0.1）か LAN 内（http://192.168.x.x など）にしてください'
-                : '接続先の URL は https か、ローカル の中（http://127.0.0.1）にしてください',
-        )
+    if (config.provider !== 'anthropic' && !safeAiBase(base, rules)) return fail(rules.lan ? t().errors.ai.provider.urlLan : t().errors.ai.provider.url)
+    const m = t().errors.ai.provider
     if (info.auth === 'key' && !key) {
-        return fail(config.provider === 'anthropic' ? 'Claude の API キーが設定されていません' : 'この接続先の API キーが設定されていません')
+        return fail(config.provider === 'anthropic' ? m.noClaudeKey : m.noKey)
     }
-    if (info.auth === 'oauth' && !key) return fail('OpenRouter にログインしていません')
-    if (info.auth === 'github' && !key) return fail('GitHub にログインしていません（設定の「GitHub/GitLab」）')
-    if (!model) return fail('使うモデルを選んでください')
+    if (info.auth === 'oauth' && !key) return fail(m.noOpenRouter)
+    if (info.auth === 'github' && !key) return fail(m.noGitHub)
+    if (!model) return fail(m.noModel)
     return r
 }

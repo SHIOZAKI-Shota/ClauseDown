@@ -1,3 +1,5 @@
+import { t } from './i18n'
+
 export type ForgeKind = 'github' | 'gitlab'
 
 export const FORGE_LABEL: Record<ForgeKind, string> = { github: 'GitHub', gitlab: 'GitLab' }
@@ -16,7 +18,7 @@ export interface ForgeBase {
 }
 
 export function reviewRefLabel(kind: ForgeKind, n: number): string {
-    return kind === 'gitlab' ? `GitLab のマージリクエスト !${n}` : `GitHub のプルリクエスト #${n}`
+    return kind === 'gitlab' ? t().labels.forgeReview.gitlab(n) : t().labels.forgeReview.github(n)
 }
 
 export function normalizeBase(raw: unknown): string | null {

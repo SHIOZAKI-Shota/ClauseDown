@@ -1,5 +1,6 @@
 import { DEFAULT_JOSHI_ALLOW } from './proofread-rules'
 import { fontNames } from './fonts'
+import type { LanguagePref } from './i18n'
 
 export interface DocStyle {
     font: string
@@ -42,6 +43,7 @@ export interface AppPrefs {
     zoomLinked: boolean
     compareStyle: 'table' | 'inline'
     compareStyleLatin: 'table' | 'inline'
+    language: LanguagePref
     spellcheck: boolean
     previewKind: 'normal' | 'print'
     lastDoc?: { dir: string; path: string }
@@ -78,6 +80,7 @@ export const DEFAULT_PREFS: AppPrefs = {
     zoomLinked: false,
     compareStyle: 'table',
     compareStyleLatin: 'inline',
+    language: 'system',
     spellcheck: true,
     previewKind: 'normal',
 }

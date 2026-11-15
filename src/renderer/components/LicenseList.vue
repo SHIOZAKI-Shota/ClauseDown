@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const { data, loaded } = useLicenses()
 const q = ref('')
+const t = useT()
 
 const list = computed(() => {
     const s = q.value.trim().toLowerCase()
@@ -20,42 +21,33 @@ const open = (url: string) => window.api.openExternal(url)
 <template>
     <div class="licenses">
         <div class="part">
-            <h3>このアプリのライセンス</h3>
-            <p class="cd-muted">ClauseDown は {{ data?.app.license ?? 'MIT' }} ライセンスで公開しています。</p>
+            <h3>{{ t.shell.licenses.appLicense }}</h3>
+            <p class="cd-muted">{{ t.shell.licenses.publishedUnder(data?.app.license ?? 'MIT') }}</p>
             <pre v-if="data" class="text">{{ data.app.text }}</pre>
         </div>
 
         <div class="part">
-            <h3>参考</h3>
+            <h3>{{ t.shell.licenses.reference }}</h3>
             <p class="cd-muted">
-                法令の取り込み・書き出しは、<a href="#" class="link" @click.prevent="open('https://github.com/Kohei-Wada/houritsu')">houritsu</a
-                >（Kohei-Wada）様の形式から自動変換でインポート・エクスポートできます。houritsu は、e-Gov法令検索の法令データを Markdown にし、改正の履歴を Git
-                の版として持つリポジトリです。 CC BY 4.0
+                {{ t.shell.licenses.houritsuBefore }}<a href="#" class="link" @click.prevent="open('https://github.com/Kohei-Wada/houritsu')">houritsu</a
+                >{{ t.shell.licenses.houritsuAfter }}
             </p>
         </div>
 
         <div class="part">
             <div class="row">
-                <h3>サードパーティのライセンス</h3>
-                <span v-if="data" class="cd-muted">{{ data.packages.length }} 件</span>
+                <h3>{{ t.shell.licenses.thirdParty }}</h3>
+                <span v-if="data" class="cd-muted">{{ t.shell.licenses.count(data.packages.length) }}</span>
                 <span class="cd-grow" />
-                <UInput v-if="data" v-model="q" icon="i-lucide-search" size="sm" placeholder="名前・ライセンスで検索" />
+                <UInput v-if="data" v-model="q" icon="i-lucide-search" size="sm" :placeholder="t.shell.licenses.search" />
             </div>
-            <p class="cd-muted">
-                ClauseDown は、次のオープンソースソフトウェアを使っております。各ソフトウェアの作者の皆さまに感謝します。 Electron に含まれる Chromium
-                などのライセンスは、インストール先のフォルダにある LICENSES.chromium.html にございます。
-            </p>
+            <p class="cd-muted">{{ t.shell.licenses.thanks }}</p>
 
             <p v-if="loaded && !data" class="cd-muted">
-                一覧がまだ作られていません。<code>npm run build</code> か <code>npm run licenses</code> を実行してください。
+                {{ t.shell.licenses.notBuiltBefore }}<code>npm run build</code>{{ t.shell.licenses.notBuiltOr }}<code>npm run licenses</code
+                >{{ t.shell.licenses.notBuiltAfter }}
             </p>
-            <UAlert
-                v-if="data?.partial"
-                color="warning"
-                variant="subtle"
-                icon="i-lucide-info"
-                description="開発中のため、画面に組み込まれたパッケージが一覧に入っていません。npm run build を一度実行するとそろいます。"
-            />
+            <UAlert v-if="data?.partial" color="warning" variant="subtle" icon="i-lucide-info" :description="t.shell.licenses.partial" />
 
             <div v-if="kinds.length" class="kinds">
                 <UBadge v-for="[k, n] in kinds" :key="k" :label="`${k}　${n}`" color="neutral" variant="subtle" class="kind" @click="q = k" />
@@ -70,7 +62,7 @@ const open = (url: string) => window.api.openExternal(url)
                     <UBadge :label="p.license" color="neutral" variant="outline" size="sm" />
                 </summary>
                 <div class="body">
-                    <p v-if="p.author" class="cd-muted">作者：{{ p.author }}</p>
+                    <p v-if="p.author" class="cd-muted">{{ t.shell.licenses.author(p.author) }}</p>
                     <UButton
                         v-if="p.url"
                         :label="p.url"
@@ -82,10 +74,10 @@ const open = (url: string) => window.api.openExternal(url)
                         @click="open(p.url)"
                     />
                     <pre v-if="p.text" class="text">{{ p.text }}</pre>
-                    <p v-else class="cd-muted">ライセンスのファイルは同梱されていません（{{ p.license }}）。</p>
+                    <p v-else class="cd-muted">{{ t.shell.licenses.noFile(p.license) }}</p>
                 </div>
             </details>
-            <p v-if="data && !list.length" class="cd-muted">見つかりません。</p>
+            <p v-if="data && !list.length" class="cd-muted">{{ t.common.notFound }}</p>
         </div>
     </div>
 </template>

@@ -3,9 +3,11 @@ import type { AiModel, AiStatus } from '@shared/api'
 import { AI_PROVIDERS, OPENAI_PRESETS, aiBaseOf, type AiConfig, type AiProvider } from '@shared/ai-providers'
 import { GITHUB_BASE } from '@shared/forge'
 import { useApp } from '~/stores/app'
+import { useT } from '~/composables/useT'
 
 const emit = defineEmits<{ status: [AiStatus] }>()
 const app = useApp()
+const t = useT()
 
 const status = ref<AiStatus | null>(null)
 const provider = ref<AiProvider>('anthropic')
@@ -18,15 +20,14 @@ const loadingModels = ref(false)
 const testing = ref(false)
 const loggingIn = ref(false)
 
-const info = computed(() => AI_PROVIDERS[provider.value])
+// AI_PROVIDERS の表示名・説明は画面の言語で変わるので、t を読んで作り直す
+const info = computed(() => (void t.value, AI_PROVIDERS[provider.value]))
 const providerNote = computed(() =>
-    provider.value === 'ollama' && status.value && !status.value.local
-        ? 'LAN 内 の Ollama を使用します。API キーは不要です。道具（tools）に対応したモデル（qwen3、llama3.1、gpt-oss など）が必要です。'
-        : info.value.description,
+    provider.value === 'ollama' && status.value && !status.value.local ? t.value.ai.settings.ollamaLan : info.value.description,
 )
-const providerItems = (Object.keys(AI_PROVIDERS) as AiProvider[]).map((p) => ({ label: AI_PROVIDERS[p].label, value: p }))
+const providerItems = computed(() => (void t.value, (Object.keys(AI_PROVIDERS) as AiProvider[]).map((p) => ({ label: AI_PROVIDERS[p].label, value: p }))))
 const OTHER = 'other'
-const presetItems = [...OPENAI_PRESETS.map((p) => ({ label: p.label, value: p.url })), { label: 'その他（URL を入力）', value: OTHER }]
+const presetItems = computed(() => [...OPENAI_PRESETS.map((p) => ({ label: p.label, value: p.url })), { label: t.value.ai.settings.otherUrl, value: OTHER }])
 const preset = ref('')
 const config = computed<AiConfig>(() => ({
     provider: provider.value,
@@ -34,7 +35,9 @@ const config = computed<AiConfig>(() => ({
     baseUrl: provider.value === 'openai' || provider.value === 'ollama' ? baseUrl.value.trim() || undefined : undefined,
 }))
 const githubLogin = computed(() => app.accounts.find((a) => a.base === GITHUB_BASE)?.login)
-const modelItems = computed(() => models.value.map((m) => ({ label: m.label && m.label !== m.id ? `${m.label}（${m.id}）` : m.id, value: m.id })))
+const modelItems = computed(() =>
+    models.value.map((m) => ({ label: m.label && m.label !== m.id ? t.value.ai.settings.modelItem(m.label, m.id) : m.id, value: m.id })),
+)
 
 function setStatus(s: AiStatus) {
     status.value = s
@@ -89,7 +92,7 @@ async function pickModel(v: string) {
 async function saveKey(clear = false) {
     const s = await app.run(
         () => window.api.setAiKey(provider.value, clear ? '' : key.value, config.value.baseUrl),
-        clear ? 'キーを消しました' : 'キーを保存しました',
+        clear ? t.value.ai.settings.keyCleared : t.value.ai.settings.keySaved,
     )
     if (!s) return
     key.value = ''
@@ -99,7 +102,7 @@ async function saveKey(clear = false) {
 async function loginOpenRouter() {
     loggingIn.value = true
     try {
-        const s = await app.run(() => window.api.aiLoginOpenRouter(), 'OpenRouter にログインしました')
+        const s = await app.run(() => window.api.aiLoginOpenRouter(), t.value.ai.settings.openRouterSignedIn)
         if (s) {
             setStatus(s)
             void loadModels()
@@ -113,7 +116,7 @@ async function test() {
     testing.value = true
     try {
         const r = await app.run(() => window.api.testAi())
-        if (r) app.notify(`AI の応答：${r.slice(0, 80)}`)
+        if (r) app.notify(t.value.ai.settings.reply(r.slice(0, 80)))
     } finally {
         testing.value = false
     }
@@ -121,88 +124,79 @@ async function test() {
 </script>
 
 <template>
-    <SettingRow label="使う AI" :description="providerNote">
+    <SettingRow :label="t.ai.settings.provider" :description="providerNote">
         <USelect :model-value="provider" :items="providerItems" class="cd-w-input" @update:model-value="(v) => onProvider(v as AiProvider)" />
     </SettingRow>
 
     <template v-if="provider === 'openai'">
-        <SettingRow label="接続先" description="Gemini は Google AI Studio、DeepSeek は DeepSeek のサイトで発行したキーを使用します。">
+        <SettingRow :label="t.ai.settings.endpoint" :description="t.ai.settings.endpointDesc">
             <USelect :model-value="preset" :items="presetItems" class="cd-w-small" @update:model-value="(v) => onPreset(String(v))" />
             <UInput v-if="preset === OTHER" v-model="baseUrl" placeholder="https://…/v1" class="cd-w-input" @change="save" />
         </SettingRow>
     </template>
-    <SettingRow v-if="provider === 'ollama'" label="Ollama の場所" description="空欄なら http://127.0.0.1:11434 を使います。ふつうは空欄のままで構いません。">
+    <SettingRow v-if="provider === 'ollama'" :label="t.ai.settings.ollamaUrl" :description="t.ai.settings.ollamaUrlDesc">
         <UInput v-model="baseUrl" placeholder="http://127.0.0.1:11434/v1" class="cd-w-input" @change="save" />
     </SettingRow>
 
     <SettingRow
         v-if="info.auth === 'key'"
-        :label="provider === 'anthropic' ? 'Claude API キー' : 'API キー'"
-        :description="
-            status?.hasKey
-                ? '保存してあります（ローカル の中で暗号化しています）。このキーは、この接続先にだけ送ります。'
-                : provider === 'anthropic'
-                  ? 'Anthropic の Console で発行したキーを入力してください。'
-                  : 'その接続先で発行したキーを入力してください。'
-        "
+        :label="provider === 'anthropic' ? t.ai.settings.claudeKey : t.ai.settings.apiKey"
+        :description="status?.hasKey ? t.ai.settings.keyStored : provider === 'anthropic' ? t.ai.settings.keyAnthropic : t.ai.settings.keyOther"
     >
         <UInput
             v-model="key"
             :type="showKey ? 'text' : 'password'"
             class="cd-w-input"
             autocomplete="off"
-            :placeholder="status?.hasKey ? '入力すると上書きします' : provider === 'anthropic' ? 'sk-ant-…' : ''"
+            :placeholder="status?.hasKey ? t.ai.settings.overwrite : provider === 'anthropic' ? 'sk-ant-…' : ''"
         >
             <template #trailing>
                 <UButton :icon="showKey ? 'i-lucide-eye-off' : 'i-lucide-eye'" size="xs" color="neutral" variant="link" @click="showKey = !showKey" />
             </template>
         </UInput>
-        <UButton label="保存" size="sm" color="neutral" variant="outline" :disabled="!key.trim()" @click="saveKey()" />
-        <UButton v-if="status?.hasKey" label="消す" size="sm" color="error" variant="ghost" @click="saveKey(true)" />
+        <UButton :label="t.common.save" size="sm" color="neutral" variant="outline" :disabled="!key.trim()" @click="saveKey()" />
+        <UButton v-if="status?.hasKey" :label="t.ai.settings.clearKey" size="sm" color="error" variant="ghost" @click="saveKey(true)" />
     </SettingRow>
     <SettingRow
         v-if="info.auth === 'oauth'"
-        label="OpenRouter のアカウント"
-        :description="
-            status?.hasKey
-                ? 'ログインしてあります（受け取ったキーを、ローカル の中で暗号化しています）。'
-                : 'ブラウザで OpenRouter にログインすると、このアプリ用のキーが発行されます。'
-        "
+        :label="t.ai.settings.openRouterAccount"
+        :description="status?.hasKey ? t.ai.settings.openRouterStored : t.ai.settings.openRouterHint"
     >
-        <UButton v-if="status?.hasKey" label="ログアウト" size="sm" color="neutral" variant="outline" @click="saveKey(true)" />
-        <UButton v-else label="OpenRouter でログイン" icon="i-lucide-log-in" size="sm" :loading="loggingIn" @click="loginOpenRouter" />
+        <UButton v-if="status?.hasKey" :label="t.ai.settings.logout" size="sm" color="neutral" variant="outline" @click="saveKey(true)" />
+        <UButton v-else :label="t.ai.settings.openRouterLogin" icon="i-lucide-log-in" size="sm" :loading="loggingIn" @click="loginOpenRouter" />
     </SettingRow>
     <SettingRow
         v-if="info.auth === 'github'"
-        label="GitHub のアカウント"
-        :description="githubLogin ? `${githubLogin} のログインを使用します。` : '設定の「GitHub/GitLab」で GitHub にログインしてください。'"
+        :label="t.ai.settings.githubAccount"
+        :description="githubLogin ? t.ai.settings.githubUses(githubLogin) : t.ai.settings.githubNeeded"
     >
-        <UButton v-if="!githubLogin" label="ログインの設定を開く" icon="i-lucide-github" size="sm" color="neutral" variant="outline" @click="goLogin" />
+        <UButton v-if="!githubLogin" :label="t.ai.settings.openLogin" icon="i-lucide-github" size="sm" color="neutral" variant="outline" @click="goLogin" />
     </SettingRow>
 
-    <SettingRow
-        label="モデル"
-        :description="
-            provider === 'ollama'
-                ? 'インストール済みのモデルから選びます（インストールは ollama pull qwen3 など）。ツール呼び出し（tools）に対応したモデルが必要です。'
-                : '一覧から選ぶか、名前を直接入力します。空欄なら既定のモデルを使用します。'
-        "
-    >
+    <SettingRow :label="t.ai.settings.model" :description="provider === 'ollama' ? t.ai.settings.modelOllamaDesc : t.ai.settings.modelDesc">
         <USelect
             v-if="modelItems.length"
             :model-value="model"
             :items="modelItems"
-            placeholder="一覧から選ぶ"
+            :placeholder="t.ai.settings.pickFromList"
             class="cd-w-input"
             @update:model-value="(v) => pickModel(String(v))"
         />
-        <UInput v-model="model" :placeholder="info.model ?? 'モデル名'" class="cd-w-small" @change="save" />
-        <UButton icon="i-lucide-refresh-cw" size="sm" color="neutral" variant="ghost" :loading="loadingModels" title="一覧を更新" @click="loadModels" />
+        <UInput v-model="model" :placeholder="info.model ?? t.ai.settings.modelName" class="cd-w-small" @change="save" />
+        <UButton
+            icon="i-lucide-refresh-cw"
+            size="sm"
+            color="neutral"
+            variant="ghost"
+            :loading="loadingModels"
+            :title="t.ai.settings.refreshList"
+            @click="loadModels"
+        />
     </SettingRow>
 
-    <SettingRow label="状態" :description="status?.ready ? `${status.label} を使用します。` : (status?.reason ?? '')">
-        <UBadge v-if="status?.local" label="文書を PC の外に送信しません" color="success" variant="subtle" icon="i-lucide-shield-check" />
-        <UBadge v-if="status && !status.ready" label="まだ使えません" color="warning" variant="subtle" icon="i-lucide-circle-alert" />
-        <UButton label="接続を試す" size="sm" color="neutral" variant="outline" :disabled="!status?.ready" :loading="testing" @click="test" />
+    <SettingRow :label="t.ai.settings.status" :description="status?.ready ? t.ai.settings.using(status.label) : (status?.reason ?? '')">
+        <UBadge v-if="status?.local" :label="t.ai.settings.local" color="success" variant="subtle" icon="i-lucide-shield-check" />
+        <UBadge v-if="status && !status.ready" :label="t.ai.settings.notReady" color="warning" variant="subtle" icon="i-lucide-circle-alert" />
+        <UButton :label="t.ai.settings.test" size="sm" color="neutral" variant="outline" :disabled="!status?.ready" :loading="testing" @click="test" />
     </SettingRow>
 </template>

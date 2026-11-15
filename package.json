@@ -32,6 +32,7 @@
         "typecheck": "tsc -p tsconfig.node.json && nuxt typecheck",
         "test": "vitest run",
         "test:e2e": "npm run build && vitest run -c vitest.e2e.config.ts",
+        "manual:shots": "npm run build && vitest run -c vitest.e2e.config.ts scripts/manual-shots.e2e.ts",
         "dist": "npm run build && electron-builder --mac --win --publish never",
         "dist:win": "npm run build && electron-builder --win --publish never",
         "dist:mac": "npm run build && electron-builder --mac --publish never",

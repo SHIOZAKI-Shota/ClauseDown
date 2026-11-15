@@ -2,10 +2,12 @@
 import type { DeliveryItem, EffectiveVersion } from '@shared/api'
 import { useApp } from '~/stores/app'
 import { folderOf } from '~/utils/folders'
+import { useT } from '~/composables/useT'
 
 const props = defineProps<{ path: string; oid: string; baseOid?: string; effectiveDate?: string }>()
 const emit = defineEmits<{ close: []; done: [] }>()
 const app = useApp()
+const t = useT()
 
 const to = ref(folderOf(props.path))
 const memo = ref('')
@@ -20,14 +22,14 @@ onMounted(async () => {
 })
 
 const baseItems = computed(() => [
-    { label: '（対照表を作らない）', value: NONE },
-    ...versions.value.filter((v) => v.oid !== props.oid).map((v) => ({ label: `${v.date} 施行版`, value: v.oid })),
+    { label: t.value.releases.delivery.noCompare, value: NONE },
+    ...versions.value.filter((v) => v.oid !== props.oid).map((v) => ({ label: t.value.releases.effectiveVersion(v.date), value: v.oid })),
 ])
 const itemOptions = computed(() => [
-    { label: '条文本体（PDF）', value: 'docPdf' },
-    { label: '条文本体（Word）', value: 'docDocx' },
-    { label: '新旧対照表（PDF）', value: 'cmpPdf', disabled: base.value === NONE },
-    { label: '新旧対照表（Word）', value: 'cmpDocx', disabled: base.value === NONE },
+    { label: t.value.releases.item.docPdf, value: 'docPdf' },
+    { label: t.value.releases.item.docDocx, value: 'docDocx' },
+    { label: t.value.releases.item.cmpPdf, value: 'cmpPdf', disabled: base.value === NONE },
+    { label: t.value.releases.item.cmpDocx, value: 'cmpDocx', disabled: base.value === NONE },
 ])
 watch(base, (b) => {
     if (b === NONE) items.value = items.value.filter((x) => x !== 'cmpPdf' && x !== 'cmpDocx')
@@ -48,7 +50,7 @@ async function go() {
     )
     if (!rec) return
     app.notify(
-        rec.releaseError ? `納品一式を作りました（${app.forgeLabel} には載せられませんでした：${rec.releaseError}）` : `納品一式を作りました：${rec.folder}`,
+        rec.releaseError ? t.value.releases.delivery.createdWithError(app.forgeLabel, rec.releaseError) : t.value.releases.delivery.created(rec.folder),
         !!rec.releaseError,
     )
     await window.api.openPath(rec.folder)
@@ -59,36 +61,36 @@ async function go() {
 <template>
     <UModal
         :open="true"
-        :title="effectiveDate ? `${effectiveDate} 施行版を納品` : '現行版を納品'"
-        description="保存先のフォルダに一式を作り、納品の記録を残します。"
+        :title="effectiveDate ? t.releases.delivery.titleVersion(effectiveDate) : t.releases.delivery.titleCurrent"
+        :description="t.releases.delivery.description"
         @update:open="(v) => !v && emit('close')"
     >
         <template #body>
             <div class="cd-form">
-                <UFormField label="宛先" description="例：株式会社A 法務部 〇〇様">
+                <UFormField :label="t.releases.delivery.to" :description="t.releases.delivery.toHelp">
                     <UInput v-model="to" class="cd-full" />
                 </UFormField>
-                <UFormField label="新旧対照表の改正前">
+                <UFormField :label="t.releases.delivery.base">
                     <USelect v-model="base" :items="baseItems" class="cd-full" />
                 </UFormField>
-                <UFormField label="納品するもの">
+                <UFormField :label="t.releases.delivery.items">
                     <UCheckboxGroup v-model="items" :items="itemOptions" />
                 </UFormField>
-                <UFormField label="メモ（任意）">
+                <UFormField :label="t.releases.delivery.memo">
                     <UTextarea v-model="memo" :rows="2" class="cd-full" />
                 </UFormField>
                 <UCheckbox
                     v-if="app.forge"
                     v-model="publish"
-                    :label="`${app.forgeLabel} のリリースにも載せる`"
-                    :description="`納品物を ${app.forgeLabel} に添付して残します`"
+                    :label="t.releases.delivery.publish(app.forgeLabel)"
+                    :description="t.releases.delivery.publishHelp(app.forgeLabel)"
                 />
             </div>
         </template>
         <template #footer>
             <div class="cd-modal-foot">
-                <UButton label="やめる" color="neutral" variant="outline" @click="emit('close')" />
-                <UButton label="保存先を選んで作成" icon="i-lucide-package" :disabled="!items.length" :loading="app.busy" @click="go" />
+                <UButton :label="t.schedule.cancel" color="neutral" variant="outline" @click="emit('close')" />
+                <UButton :label="t.releases.delivery.submit" icon="i-lucide-package" :disabled="!items.length" :loading="app.busy" @click="go" />
             </div>
         </template>
     </UModal>

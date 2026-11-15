@@ -1,4 +1,5 @@
 import http from 'node:http'
+import { t as tr } from '../shared/i18n'
 import net from 'node:net'
 import os from 'node:os'
 import { promises as fsp } from 'node:fs'
@@ -9,7 +10,7 @@ import { z } from 'zod'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { TOOLS, type ToolContext } from './ai-tools'
-import { AI_PRESETS, AI_SYSTEM } from '../shared/ai-presets'
+import { aiMcpText, aiPresets, aiSystem } from '../shared/ai-presets'
 import { loadSecret, saveSecret } from './settings'
 import type { AiStatus, McpConfig } from '../shared/api'
 
@@ -40,7 +41,7 @@ export async function regenerateMcpToken(): Promise<string> {
 }
 
 function buildServer(changed: ToolContext['changed']): McpServer {
-    const mcp = new McpServer({ name: 'clausedown', version: app.getVersion() }, { instructions: AI_SYSTEM })
+    const mcp = new McpServer({ name: 'clausedown', version: app.getVersion() }, { instructions: aiSystem() })
     const ctx: ToolContext = { by: 'mcp', changed }
     for (const t of TOOLS) {
         mcp.registerTool(
@@ -60,16 +61,17 @@ function buildServer(changed: ToolContext['changed']): McpServer {
             },
         )
     }
-    for (const p of AI_PRESETS) {
+    const text = aiMcpText()
+    for (const p of aiPresets()) {
         mcp.registerPrompt(
             p.id,
             {
                 title: p.label,
                 description: p.description,
-                argsSchema: { repo: z.string().describe('リポジトリの名前'), path: z.string().describe('文書のパス') },
+                argsSchema: { repo: z.string().describe(text.repoArg), path: z.string().describe(text.pathArg) },
             },
             ({ repo, path }) => ({
-                messages: [{ role: 'user' as const, content: { type: 'text' as const, text: `リポジトリ「${repo}」の ${path} について。${p.prompt}` } }],
+                messages: [{ role: 'user' as const, content: { type: 'text' as const, text: `${text.about(repo, path)}${p.prompt}` } }],
             }),
         )
     }
@@ -123,7 +125,7 @@ function alive(path: string): Promise<boolean> {
 
 async function listenSocket(path: string, changed: ToolContext['changed']): Promise<string | null> {
     if (process.platform !== 'win32') {
-        if (await alive(path)) return 'ほかの ClauseDown が Claude Desktop 用の入口を使っています'
+        if (await alive(path)) return tr().errors.mcp.socketInUse
         await fsp.rm(path, { force: true })
     }
     const s = http.createServer(async (req, res) => {
@@ -172,7 +174,7 @@ export async function applyMcp(
     })
     await new Promise<void>((done) => {
         s.once('error', (e: NodeJS.ErrnoException) => {
-            state = { running: false, url, error: e.code === 'EADDRINUSE' ? `ポート ${port} はほかのアプリが使っています。別の番号にしてください` : e.message }
+            state = { running: false, url, error: e.code === 'EADDRINUSE' ? tr().errors.mcp.portInUse(port) : e.message }
             done()
         })
         s.listen(port, '127.0.0.1', () => {
