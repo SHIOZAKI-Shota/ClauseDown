@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import { t } from '../shared/i18n'
 import { createHash } from 'node:crypto'
 import git from './igit'
 import type { Issue, IssueComment, IssueDetail, IssueLink, IssuePatch, IssueVersion } from '../shared/api'
@@ -35,16 +36,18 @@ interface BranchLinks {
     issues: number[]
 }
 
-const MARK = '（ClauseDown）'
+// 日本語・英語のどちらの画面で書いたコメントも読み取れるようにする
+const MARKS = ['（ClauseDown）', '(ClauseDown)']
 const firstLine = (s: string) => s.split('\n')[0].trim()
-export const linkComment = (oid: string, message: string) => `版 ${oid}「${firstLine(message)}」を紐付けました${MARK}`
-export const closeComment = (oid: string, message: string) => `版 ${oid}「${firstLine(message)}」で解決しました${MARK}`
-const COMMENT_OID = /版 ([0-9a-f]{40})「/
+export const linkComment = (oid: string, message: string) => t().notify.issues.linkComment(oid, firstLine(message))
+export const closeComment = (oid: string, message: string) => t().notify.issues.closeComment(oid, firstLine(message))
+const COMMENT_OID = /(?:版 |[Vv]ersion )([0-9a-f]{40}) ?[「"]/
+const CLOSED = /で解決しました|^Resolved by version /
 
 function asComment(c: { id: string; body: string; by?: string; at: string }): IssueComment {
-    const m = c.body.includes(MARK) ? COMMENT_OID.exec(c.body) : null
+    const m = MARKS.some((mark) => c.body.includes(mark)) ? COMMENT_OID.exec(c.body) : null
     if (!m) return { ...c, kind: 'user' }
-    return { ...c, kind: c.body.includes('で解決しました') ? 'close' : 'link', oid: m[1] }
+    return { ...c, kind: CLOSED.test(c.body) ? 'close' : 'link', oid: m[1] }
 }
 
 async function localComments(dir: string, issueId: string): Promise<LocalComment[]> {
@@ -59,7 +62,7 @@ function movedCommentNote(c: LocalComment): string {
     const when = Number.isNaN(d.getTime())
         ? c.at
         : `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-    return `（${c.by ? `${c.by}・` : ''}${when} のコメント）`
+    return t().notify.issues.movedComment(c.by ?? '', when)
 }
 
 const fileOf = (i: LocalIssue) => `${RECORD.issues}${i.id}.json`
@@ -100,7 +103,7 @@ async function localAll(dir: string): Promise<LocalIssue[]> {
         if (used.has(i.n)) {
             const old = i.n
             i.n = ++max
-            i.body = `${i.body.replace(/\s+$/, '')}\n\n（ほかの PC で作った課題と番号が重なったため、#${old} から #${i.n} に振り直しました）`
+            i.body = `${i.body.replace(/\s+$/, '')}\n\n${t().notify.issues.renumbered(old, i.n)}`
             await writeRecord(dir, fileOf(i), i)
         }
         used.add(i.n)
@@ -114,14 +117,14 @@ async function localActive(dir: string): Promise<LocalIssue[]> {
 
 async function findLocal(dir: string, n: number): Promise<LocalIssue> {
     const i = (await localActive(dir)).find((x) => x.n === n)
-    if (!i) throw new Error(`課題 #${n} が見つかりません`)
+    if (!i) throw new Error(t().errors.issues.notFound(n))
     return i
 }
 
 async function commitMessage(dir: string, oid: string): Promise<string> {
-    if (typeof oid !== 'string' || !/^[0-9a-f]{40}$/.test(oid)) throw new Error('版の指定が正しくありません')
+    if (typeof oid !== 'string' || !/^[0-9a-f]{40}$/.test(oid)) throw new Error(t().errors.issues.badVersion)
     const { commit } = await git.readCommit({ fs, dir, oid }).catch(() => {
-        throw new Error('指定した版が見つかりません')
+        throw new Error(t().errors.issues.versionNotFound)
     })
     return commit.message
 }
@@ -136,7 +139,7 @@ export async function listIssues(dir: string): Promise<Issue[]> {
 
 export async function createIssue(dir: string, input: { title?: unknown; body?: unknown }): Promise<Issue> {
     const title = cleanText(input?.title, 300).trim()
-    if (!title) throw new Error('課題の題名を入力してください')
+    if (!title) throw new Error(t().errors.issues.titleRequired)
     const body = cleanText(input?.body, 60_000)
     const forge = await forgeOf(dir)
     if (forge) return forge.createIssue(title, body)
@@ -159,7 +162,7 @@ export async function updateIssue(dir: string, n: number, patch: IssuePatch): Pr
     const clean: IssuePatch = {}
     if (patch?.title !== undefined) {
         clean.title = cleanText(patch.title, 300).trim()
-        if (!clean.title) throw new Error('課題の題名を入力してください')
+        if (!clean.title) throw new Error(t().errors.issues.titleRequired)
     }
     if (patch?.body !== undefined) clean.body = cleanText(patch.body, 60_000)
     if (patch?.state === 'open' || patch?.state === 'closed') clean.state = patch.state
@@ -203,7 +206,7 @@ export async function closeIssue(dir: string, n: number, oid?: string): Promise<
 
 export async function commentIssue(dir: string, n: number, body: unknown): Promise<void> {
     const text = cleanText(body, 60_000)
-    if (!text.trim()) throw new Error('コメントを書いてください')
+    if (!text.trim()) throw new Error(t().errors.issues.commentRequired)
     const forge = await forgeOf(dir)
     if (forge) return forge.comment(n, text)
     const issue = await findLocal(dir, n)
@@ -215,7 +218,7 @@ export async function issueDetail(dir: string, n: number): Promise<IssueDetail> 
     const forge = await forgeOf(dir)
     const local = forge ? null : await findLocal(dir, n)
     const issue = forge ? (await forge.listIssues()).find((i) => i.n === n) : toIssue(local!)
-    if (!issue) throw new Error(`課題 #${n} が見つかりません`)
+    if (!issue) throw new Error(t().errors.issues.notFound(n))
     const comments: IssueComment[] = forge
         ? (await forge.comments(n).catch(() => [])).map(asComment)
         : (await localComments(dir, local!.id)).map((c) => ({ id: c.id, body: c.body, by: c.by, at: c.at, kind: 'user' as const }))
@@ -252,7 +255,7 @@ export async function branchIssues(dir: string, branch: string): Promise<number[
 }
 
 export async function setBranchIssues(dir: string, branch: string, issues: number[]): Promise<void> {
-    if (typeof branch !== 'string' || !branch) throw new Error('改定案を指定してください')
+    if (typeof branch !== 'string' || !branch) throw new Error(t().errors.issues.branchRequired)
     const clean = [...new Set((Array.isArray(issues) ? issues : []).map(Number).filter((n) => Number.isInteger(n) && n > 0))].sort((a, b) => a - b)
     await writeRecord(dir, linksFile(branch), { branch, issues: clean } satisfies BranchLinks)
 }
@@ -317,14 +320,14 @@ export async function pendingLocalIssues(dir: string): Promise<number> {
 
 export async function moveIssuesToForge(dir: string): Promise<{ moved: number; renumbered: { from: number; to: number }[] }> {
     const forge = await forgeOf(dir)
-    if (!forge) throw new Error('GitHub・GitLab に接続していないため、課題を移せません')
+    if (!forge) throw new Error(t().errors.issues.noForge)
     const local = (await localActive(dir)).sort((a, b) => a.n - b.n)
     const renumbered: { from: number; to: number }[] = []
     for (const i of local) {
         let created = await forge.createIssue(i.title, i.body)
         if (created.n !== i.n) {
             renumbered.push({ from: i.n, to: created.n })
-            created = await forge.updateIssue(created.n, { body: `${i.body.replace(/\s+$/, '')}\n\n（ClauseDown での旧番号 #${i.n}）` })
+            created = await forge.updateIssue(created.n, { body: `${i.body.replace(/\s+$/, '')}\n\n${t().notify.issues.oldNumber(i.n)}` })
         }
         for (const l of i.links ?? []) await forge.comment(created.n, linkComment(l.oid, await commitMessage(dir, l.oid).catch(() => ''))).catch(() => {})
         for (const c of await localComments(dir, i.id)) await forge.comment(created.n, `${movedCommentNote(c)}\n\n${c.body}`)

@@ -1,3 +1,6 @@
+import { t } from './i18n'
+import { liveRecord } from './i18n/live'
+
 export type ReviewAction = 'request' | 'approve' | 'changes' | 'comment' | 'withdraw'
 
 export interface ReviewEvent {
@@ -65,13 +68,8 @@ export interface ReviewStatus {
     reason?: string
 }
 
-export const STATE_LABEL: Record<ReviewState, string> = {
-    none: '確認依頼なし',
-    requested: '確認待ち',
-    approved: '承認済み',
-    changes: '修正依頼あり',
-    outdated: '承認後に変更あり',
-}
+// 読むたびに今の言語で返す
+export const STATE_LABEL: Record<ReviewState, string> = liveRecord(['none', 'requested', 'approved', 'changes', 'outdated'], (s) => t().labels.reviewState[s])
 
 export const STATE_COLOR: Record<ReviewState, 'success' | 'error' | 'warning' | 'neutral'> = {
     none: 'neutral',
@@ -119,14 +117,8 @@ export function reviewStatus(all: ReviewEvent[], branch: string, tipOid: string,
     const status: ReviewStatus = { state, request, decision, events, canMerge: true }
     if (rules.requireApproval && state !== 'approved') {
         status.canMerge = false
-        status.reason =
-            state === 'none'
-                ? 'このリポジトリでは、現行版に反映する前に確認と承認が必要です。「確認を依頼」してください'
-                : state === 'outdated'
-                  ? '承認したあとで改定案が変更されています。もう一度承認を受けてください'
-                  : state === 'changes'
-                    ? '修正の依頼が出ています。直して再度確認を依頼してください'
-                    : 'まだ承認されていません'
+        const blocked = t().labels.reviewBlocked
+        status.reason = state === 'none' ? blocked.none : state === 'outdated' ? blocked.outdated : state === 'changes' ? blocked.changes : blocked.requested
     }
     return status
 }

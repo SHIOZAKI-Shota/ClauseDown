@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import { t } from '../shared/i18n'
 import path from 'node:path'
 
 export const BREW = '/opt/homebrew/bin/brew'
@@ -42,7 +43,7 @@ const quote = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`
 export function brewUpgradeScript(pid: number, bundle: string, log: string, cask = CASK): string {
     return [
         `while kill -0 ${pid} 2>/dev/null; do sleep 0.5; done`,
-        `osascript -e 'display notification "Homebrew で新しいバージョンに更新しています" with title "ClauseDown"' >/dev/null 2>&1`,
+        `osascript -e 'display notification "${t().notify.brewUpdating}" with title "ClauseDown"' >/dev/null 2>&1`,
         `{ ${BREW} upgrade --cask ${cask}; echo "exit=$?"; } > ${quote(log)} 2>&1`,
         `open ${quote(bundle)}`,
     ].join('\n')
@@ -56,5 +57,5 @@ export function brewFailure(log: string): string | null {
         .split('\n')
         .map((l) => l.trim())
         .filter(Boolean)
-    return lines.find((l) => l.startsWith('Error:'))?.replace(/^Error:\s*/, '') ?? lines.at(-1) ?? `終了コード ${m[1]}`
+    return lines.find((l) => l.startsWith('Error:'))?.replace(/^Error:\s*/, '') ?? lines.at(-1) ?? t().errors.updater.exitCode(m[1])
 }

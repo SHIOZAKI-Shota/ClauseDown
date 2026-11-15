@@ -4,6 +4,7 @@ import type { DocActions } from '~/composables/useDocActions'
 import { folderOf, type FolderNode } from '~/utils/folders'
 import { useStoredRef } from '~/composables/useStoredRef'
 import { useApp } from '~/stores/app'
+import { useT } from '~/composables/useT'
 
 const props = withDefaults(
     defineProps<{
@@ -19,6 +20,7 @@ const props = withDefaults(
 )
 const cwd = defineModel<string | null>({ default: null })
 const app = useApp()
+const t = useT()
 const { dragging, dropFolder, onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop } = props.actions
 
 const closed = useStoredRef<string[]>('clausedown.folderTreeClosed', [])
@@ -92,7 +94,7 @@ const indent = (depth: number) => ({ paddingLeft: `${6 + depth * 14}px` })
 </script>
 
 <template>
-    <nav class="ftree" :aria-label="withDocs ? '文書' : 'ディレクトリ'">
+    <nav class="ftree" :aria-label="withDocs ? t.docs.document : t.docs.directory">
         <template v-for="r in rows" :key="r.kind === 'folder' ? `f:${r.node.path}` : r.doc.path">
             <div
                 v-if="r.kind === 'folder'"
@@ -114,7 +116,7 @@ const indent = (depth: number) => ({ paddingLeft: `${6 + depth * 14}px` })
                     v-if="r.node.children.length || withDocs"
                     class="chev"
                     :class="{ open: isOpen(r.node.path) }"
-                    :aria-label="isOpen(r.node.path) ? 'ディレクトリを閉じる' : 'ディレクトリを開く'"
+                    :aria-label="isOpen(r.node.path) ? t.docs.tree.closeFolder : t.docs.tree.openFolder"
                     @click.stop="toggle(r.node.path)"
                 >
                     <UIcon name="i-lucide-chevron-right" class="chev-icon" />
@@ -139,7 +141,7 @@ const indent = (depth: number) => ({ paddingLeft: `${6 + depth * 14}px` })
                     color="neutral"
                     variant="ghost"
                     class="add"
-                    title="このディレクトリに文書を追加"
+                    :title="t.docs.tree.addDoc"
                     @click.stop="app.dialog = { kind: 'newDoc', folder: r.node.path || undefined }"
                 />
             </div>
@@ -158,7 +160,7 @@ const indent = (depth: number) => ({ paddingLeft: `${6 + depth * 14}px` })
                 <span class="chev-space" />
                 <UIcon name="i-lucide-file-text" class="ficon" />
                 <span class="label">{{ r.doc.title }}</span>
-                <UIcon v-if="r.doc.changed" name="i-lucide-circle-dot" class="dot" title="版を保存していない変更があります" />
+                <UIcon v-if="r.doc.changed" name="i-lucide-circle-dot" class="dot" :title="t.docs.unsavedChanges" />
             </button>
         </template>
     </nav>

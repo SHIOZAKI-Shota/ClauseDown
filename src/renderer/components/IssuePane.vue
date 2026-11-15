@@ -2,6 +2,7 @@
 import type { LegalDoc } from '@shared/legal-parser'
 import { positionLabel } from '~/utils/legal-editor'
 import { useStoredRef } from '~/composables/useStoredRef'
+import { useT } from '~/composables/useT'
 
 export interface EditorIssue {
     from: number
@@ -15,6 +16,7 @@ export interface EditorIssue {
 const props = defineProps<{ items: EditorIssue[]; doc: LegalDoc; active: number | null }>()
 const filter = defineModel<'all' | 'error' | 'warning'>('filter', { default: 'all' })
 const emit = defineEmits<{ pick: [EditorIssue]; close: [] }>()
+const t = useT()
 
 const MIN = 80
 const MAX = 600
@@ -23,9 +25,9 @@ const errors = computed(() => props.items.filter((i) => i.severity === 'error').
 const warnings = computed(() => props.items.length - errors.value)
 const shown = computed(() => (filter.value === 'all' ? props.items : props.items.filter((i) => i.severity === filter.value)))
 const FILTERS = computed(() => [
-    { value: 'all' as const, label: `すべて ${props.items.length}` },
-    { value: 'error' as const, label: `誤り ${errors.value}` },
-    { value: 'warning' as const, label: `注意 ${warnings.value}` },
+    { value: 'all' as const, label: t.value.editor.issues.all(props.items.length) },
+    { value: 'error' as const, label: t.value.editor.issues.error(errors.value) },
+    { value: 'warning' as const, label: t.value.editor.issues.warning(warnings.value) },
 ])
 
 let startY = 0
@@ -66,7 +68,7 @@ watch(
             :class="{ dragging }"
             role="separator"
             aria-orientation="horizontal"
-            aria-label="指摘の高さを変える"
+            :aria-label="t.editor.issues.resize"
             @pointerdown="down"
             @pointermove="move"
             @pointerup="up"
@@ -74,10 +76,18 @@ watch(
             @dblclick="height = 180"
         />
         <div class="cd-pane-bar">
-            <span class="cd-pane-title">指摘</span>
-            <SegmentSwitch v-model="filter" size="xs" aria-label="指摘の種類" :items="FILTERS" />
-            <UTooltip text="指摘を閉じる">
-                <UButton icon="i-lucide-panel-bottom-close" size="xs" square color="neutral" variant="ghost" aria-label="指摘を閉じる" @click="emit('close')" />
+            <span class="cd-pane-title">{{ t.editor.issues.title }}</span>
+            <SegmentSwitch v-model="filter" size="xs" :aria-label="t.editor.issues.kind" :items="FILTERS" data-guide="proofread" />
+            <UTooltip :text="t.editor.issues.close">
+                <UButton
+                    icon="i-lucide-panel-bottom-close"
+                    size="xs"
+                    square
+                    color="neutral"
+                    variant="ghost"
+                    :aria-label="t.editor.issues.close"
+                    @click="emit('close')"
+                />
             </UTooltip>
         </div>
         <div ref="list" class="list">
@@ -90,9 +100,11 @@ watch(
             >
                 <UIcon :name="it.severity === 'error' ? 'i-lucide-circle-x' : 'i-lucide-triangle-alert'" class="mark" />
                 <span class="msg">{{ it.message }}</span>
-                <span class="where">{{ [positionLabel(doc, it.line) || `${it.line + 1} 行目`, it.source].filter(Boolean).join('・') }}</span>
+                <span class="where">{{
+                    [positionLabel(doc, it.line) || t.editor.issues.line(it.line + 1), it.source].filter(Boolean).join(t.editor.issues.sep)
+                }}</span>
             </button>
-            <p v-if="!shown.length" class="empty">指摘はありません</p>
+            <p v-if="!shown.length" class="empty">{{ t.editor.issues.empty }}</p>
         </div>
     </section>
 </template>

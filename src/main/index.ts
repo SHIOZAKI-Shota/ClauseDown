@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeTheme, net, protocol, shell } from 'electron'
+import { t } from '../shared/i18n'
 import type { AiStatus, AppSettings, DocChangedEvent, McpConfig } from '../shared/api'
 import { existsSync, statSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
@@ -29,6 +30,7 @@ import { proofread, stopProofread } from './proofread'
 import { SPELL_LANGS } from '../shared/legal-styles'
 import { imageExt, imageMime } from '../shared/images'
 import { setAppMenu } from './menu'
+import { applyLocale, systemLanguages } from './i18n'
 import { cspFor } from './csp'
 import { aiReset, aiRun, aiStop, testAi } from './ai-agent'
 import { keyName, resolveAi } from './ai/provider'
@@ -153,20 +155,19 @@ const norm = (p: string) => (CASE_FOLD ? resolve(p).toLowerCase() : resolve(p))
 const under = (p: string, root: string) => p === root || p.startsWith(root.endsWith(sep) ? root : root + sep)
 
 async function assertAllowedDir(dir: unknown, allowPicked = false): Promise<void> {
-    if (typeof dir !== 'string' || !dir) throw new Error('リポジトリが指定されていません')
+    if (typeof dir !== 'string' || !dir) throw new Error(t().errors.app.noRepo)
     const d = norm(dir)
     const { repos } = await loadSettings()
     if (repos.some((r) => norm(r.dir) === d)) return
     if (allowPicked && [...pickedRoots].some((root) => under(d, root))) return
-    throw new Error('このフォルダはリポジトリとして登録されていません')
+    throw new Error(t().errors.app.notRegistered)
 }
 
 const PICKED_OK = new Set(['openRepo', 'initRepo'])
 const DOC_PATH = new Set(['readDoc', 'writeDoc', 'createDoc', 'discardChanges'])
 
 function assertPicked(dir: unknown) {
-    if (typeof dir !== 'string' || ![...pickedRoots].some((root) => under(norm(dir), root)))
-        throw new Error('作る場所は、フォルダを選び直してから指定してください')
+    if (typeof dir !== 'string' || ![...pickedRoots].some((root) => under(norm(dir), root))) throw new Error(t().errors.app.repickFolder)
 }
 
 const DIR_FIRST = new Set([
@@ -286,7 +287,7 @@ async function aiStatus(): Promise<AiStatus> {
 async function setAiKey(provider: AiProvider, key: unknown, baseUrl?: string): Promise<AiStatus> {
     const config = cleanAiConfig({ provider, baseUrl }, { lan: isEnabled(await loadSettings(), 'lanAi') })
     const name = keyName(config.provider, aiBaseOf(config))
-    if (!name) throw new Error('この接続先には API キーを保存できません')
+    if (!name) throw new Error(t().errors.app.noKeyForProvider)
     await saveSecret(name, typeof key === 'string' ? key.trim() : '')
     return aiStatus()
 }
@@ -303,7 +304,7 @@ function keepExported<T extends string | null>(p: T): T {
 }
 function exportedPath(p: unknown): string {
     const full = typeof p === 'string' ? resolve(p) : ''
-    if (!exported.has(full) || !statSync(full, { throwIfNoEntry: false })?.isFile()) throw new Error('ファイルが見つかりません')
+    if (!exported.has(full) || !statSync(full, { throwIfNoEntry: false })?.isFile()) throw new Error(t().errors.app.fileNotFound)
     return full
 }
 
@@ -317,10 +318,10 @@ function isBundle(full: string): boolean {
 }
 
 async function openFolder(p: unknown): Promise<void> {
-    if (typeof p !== 'string' || !(process.platform === 'win32' ? /^[A-Za-z]:[\\/]/.test(p) : isAbsolute(p))) throw new Error('この場所は開けません')
+    if (typeof p !== 'string' || !(process.platform === 'win32' ? /^[A-Za-z]:[\\/]/.test(p) : isAbsolute(p))) throw new Error(t().errors.app.cannotOpen)
     const full = resolve(p)
-    if (!statSync(full, { throwIfNoEntry: false })?.isDirectory()) throw new Error('フォルダが見つかりません')
-    if (isBundle(full)) throw new Error('この場所は開けません')
+    if (!statSync(full, { throwIfNoEntry: false })?.isDirectory()) throw new Error(t().errors.app.folderNotFound)
+    if (isBundle(full)) throw new Error(t().errors.app.cannotOpen)
     const { repos } = await loadSettings()
     if (madeFolders.has(norm(full)) || repos.some((r) => norm(r.dir) === norm(full))) await shell.openPath(full)
     else shell.showItemInFolder(full)
@@ -333,6 +334,7 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
         await applyTheme(theme)
     },
     platform: async () => process.platform,
+    systemLanguages: async () => systemLanguages(),
     listFonts,
     saveSettings: async (next: AppSettings) => {
         for (const r of next.repos ?? []) await assertAllowedDir(r.dir, true)
@@ -341,6 +343,7 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
             for (const r of cur.repos ?? []) if (!kept.has(norm(r.dir))) git.forgetRepo(r.dir)
             return { ...next, mcp: cur.mcp, ai: cur.ai }
         })
+        applyLocale(await loadSettings())
     },
     resetAll: async () => {
         await resetAllData()
@@ -398,7 +401,7 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
     },
     deleteDoc: docOps.deleteDoc,
     showDocInFolder: async (dir: string, path: string) => {
-        if (typeof path !== 'string') throw new Error('文書を指定してください')
+        if (typeof path !== 'string') throw new Error(t().errors.app.docRequired)
         shell.showItemInFolder(git.safeJoin(dir, path))
     },
     repoActivity: repoHome.repoActivity,
@@ -550,7 +553,7 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
     },
     setMcp: async (config: McpConfig) => {
         const port = Math.trunc(Number(config?.port))
-        if (!(port >= 1024 && port <= 65535)) throw new Error('ポート番号は 1024〜65535 で指定してください')
+        if (!(port >= 1024 && port <= 65535)) throw new Error(t().errors.app.badPort)
         const mcp = { enabled: !!config.enabled, port }
         await updateSettings((s) => ({ ...s, mcp }))
         await applyMcp(mcp, notifyChanged('mcp'))
@@ -565,14 +568,15 @@ for (const [name, fn] of Object.entries(handlers)) {
     ipcMain.handle(name, async (e, ...args) => {
         const from = e.senderFrame?.url ?? ''
         const dev = process.env.ELECTRON_RENDERER_URL
-        if (!from.startsWith('app://bundle/') && !(dev && from.startsWith(dev))) throw new Error('不正な呼び出しです')
+        if (!from.startsWith('app://bundle/') && !(dev && from.startsWith(dev))) throw new Error(t().errors.app.badCaller)
         if (DIR_FIRST.has(name)) await assertAllowedDir(args[0], PICKED_OK.has(name))
         if (DOC_PATH.has(name)) git.assertDocPath(args[1])
         return LOCKED.has(name) ? withRepoLock(args[0], async () => fn(...args)) : fn(...args)
     })
 }
 
-void app.whenReady().then(() => {
+void app.whenReady().then(async () => {
+    applyLocale(await loadSettings())
     setAppMenu()
     serveRenderer()
     void createWindow()

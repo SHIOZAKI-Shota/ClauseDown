@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import MarkdownIt from 'markdown-it'
 import type { AiEvent, AiStatus } from '@shared/api'
-import { AI_PRESETS } from '@shared/ai-presets'
+import { aiPresets } from '@shared/ai-presets'
 import { useApp } from '~/stores/app'
+import { useT } from '~/composables/useT'
 import type { Pane } from '~/composables/usePane'
 
 const props = defineProps<{
@@ -19,6 +20,8 @@ const emit = defineEmits<{
 }>()
 
 const app = useApp()
+const t = useT()
+const presets = computed(() => aiPresets(app.locale))
 const md = new MarkdownIt({ html: false, linkify: false, breaks: true }).disable('image')
 
 interface Turn {
@@ -38,15 +41,9 @@ const status = ref<AiStatus | null>(null)
 const sendNote = computed(() => {
     const s = status.value
     if (!s) return ''
-    if (s.local) return '文書を PC の外に送信しません。'
-    const to = {
-        anthropic: 'Anthropic の Claude API',
-        openai: '設定した接続先',
-        ollama: 'Ollama',
-        openrouter: 'OpenRouter と、選んだモデルの会社',
-        github: 'GitHub Models',
-    }[s.config.provider]
-    return `文書の内容は ${to} に送信されます。`
+    const p = t.value.ai.panel
+    if (s.local) return p.local
+    return p.sentTo(p.sendTo[s.config.provider])
 })
 const useSelection = ref(true)
 const list = ref<HTMLDivElement>()
@@ -111,7 +108,13 @@ async function send(text = input.value) {
     if (!instruction || running.value) return
     const selection = useSelection.value ? props.selection().trim() : ''
     input.value = ''
-    turns.value.push({ role: 'user', text: selection ? `${instruction}\n\n（選んでいる部分について）` : instruction, html: '', thinking: '', tools: [] })
+    turns.value.push({
+        role: 'user',
+        text: selection ? `${instruction}\n\n${t.value.ai.panel.aboutSelection}` : instruction,
+        html: '',
+        thinking: '',
+        tools: [],
+    })
     turns.value.push({ role: 'ai', text: '', html: '', thinking: '', tools: [] })
     running.value = true
     emit('start')
@@ -154,16 +157,11 @@ function openSettings() {
         <header class="head">
             <UIcon name="i-lucide-sparkles" class="mark" />
             <span class="title">AI</span>
-            <button
-                v-if="status?.ready"
-                class="which"
-                :title="status.local ? 'ローカル の中で動いています（文書を PC の外に送信しません）' : '設定の「AI」で変えられます'"
-                @click="openSettings"
-            >
+            <button v-if="status?.ready" class="which" :title="status.local ? t.ai.panel.runningLocal : t.ai.panel.changeInSettings" @click="openSettings">
                 <UIcon v-if="status.local" name="i-lucide-shield-check" />{{ status.label }}
             </button>
             <span class="cd-grow" />
-            <UTooltip text="新しい会話">
+            <UTooltip :text="t.ai.panel.newChat">
                 <UButton
                     icon="i-lucide-message-square-plus"
                     size="xs"
@@ -171,27 +169,27 @@ function openSettings() {
                     color="neutral"
                     variant="ghost"
                     :disabled="!turns.length"
-                    aria-label="新しい会話"
+                    :aria-label="t.ai.panel.newChat"
                     @click="reset"
                 />
             </UTooltip>
             <PaneControls v-if="pane" :pane="pane" side="right" label="AI" />
-            <UTooltip text="閉じる">
-                <UButton icon="i-lucide-x" size="xs" square color="neutral" variant="ghost" aria-label="閉じる" @click="emit('close')" />
+            <UTooltip :text="t.common.close">
+                <UButton icon="i-lucide-x" size="xs" square color="neutral" variant="ghost" :aria-label="t.common.close" @click="emit('close')" />
             </UTooltip>
         </header>
 
         <div v-if="status && !status.ready" class="setup">
-            <p>AI を使うには、設定の「AI」で接続先を設定してください。</p>
+            <p>{{ t.ai.panel.setup }}</p>
             <p class="cd-muted">{{ status.reason }}</p>
-            <UButton label="設定を開く" icon="i-lucide-settings" size="sm" @click="openSettings" />
+            <UButton :label="t.ai.panel.openSettings" icon="i-lucide-settings" size="sm" @click="openSettings" />
         </div>
 
         <template v-else>
             <div ref="list" class="list">
                 <div v-if="!turns.length" class="presets">
-                    <p class="cd-muted lead">この文書について、AI に頼めます。</p>
-                    <button v-for="p in AI_PRESETS" :key="p.id" class="preset" :disabled="running" @click="send(p.prompt)">
+                    <p class="cd-muted lead">{{ t.ai.panel.lead }}</p>
+                    <button v-for="p in presets" :key="p.id" class="preset" :disabled="running" @click="send(p.prompt)">
                         <UIcon :name="p.icon" class="icon" />
                         <span>
                             <span class="label">{{ p.label }}</span>
@@ -199,29 +197,29 @@ function openSettings() {
                         </span>
                     </button>
                 </div>
-                <div v-for="(t, i) in turns" :key="i" :class="['turn', t.role]">
-                    <div v-if="t.role === 'user'" class="bubble">{{ t.text }}</div>
+                <div v-for="(turn, i) in turns" :key="i" :class="['turn', turn.role]">
+                    <div v-if="turn.role === 'user'" class="bubble">{{ turn.text }}</div>
                     <template v-else>
-                        <details v-if="t.thinking.trim()" class="reasoning" :open="running && i === turns.length - 1 && !t.text">
-                            <summary>{{ running && i === turns.length - 1 && !t.text ? '思考中…' : '思考' }}</summary>
-                            <div class="reasoning-body">{{ t.thinking.trim() }}</div>
+                        <details v-if="turn.thinking.trim()" class="reasoning" :open="running && i === turns.length - 1 && !turn.text">
+                            <summary>{{ running && i === turns.length - 1 && !turn.text ? t.ai.panel.thinkingNow : t.ai.panel.thought }}</summary>
+                            <div class="reasoning-body">{{ turn.thinking.trim() }}</div>
                         </details>
-                        <ul v-if="t.tools.length" class="tools">
-                            <li v-for="(l, j) in t.tools" :key="j"><UIcon name="i-lucide-wrench" />{{ l }}</li>
+                        <ul v-if="turn.tools.length" class="tools">
+                            <li v-for="(l, j) in turn.tools" :key="j"><UIcon name="i-lucide-wrench" />{{ l }}</li>
                         </ul>
                         <!-- eslint-disable-next-line vue/no-v-html -- markdown-it は html を無効にしている -->
-                        <div v-if="t.text" class="answer" v-html="t.html" />
-                        <div v-else-if="running && i === turns.length - 1 && !t.thinking.trim()" class="thinking">
-                            <UIcon name="i-lucide-loader" class="spin" />考えています…
+                        <div v-if="turn.text" class="answer" v-html="turn.html" />
+                        <div v-else-if="running && i === turns.length - 1 && !turn.thinking.trim()" class="thinking">
+                            <UIcon name="i-lucide-loader" class="spin" />{{ t.ai.panel.thinking }}
                         </div>
-                        <UAlert v-if="t.error" :description="t.error" color="error" variant="subtle" icon="i-lucide-circle-alert" />
+                        <UAlert v-if="turn.error" :description="turn.error" color="error" variant="subtle" icon="i-lucide-circle-alert" />
                     </template>
                 </div>
             </div>
 
             <div v-if="canRevert && !running" class="revert">
-                <span class="cd-muted">AI が文書を書き換えました。版はまだ保存していません。</span>
-                <UButton label="依頼の前に戻す" icon="i-lucide-undo-2" size="xs" color="neutral" variant="outline" @click="emit('revert')" />
+                <span class="cd-muted">{{ t.ai.panel.changed }}</span>
+                <UButton :label="t.ai.panel.revert" icon="i-lucide-undo-2" size="xs" color="neutral" variant="outline" @click="emit('revert')" />
             </div>
 
             <footer class="foot">
@@ -231,17 +229,17 @@ function openSettings() {
                     autoresize
                     :maxrows="8"
                     class="cd-full"
-                    placeholder="例：第5条の試用期間を2か月にして、延長の規定も足して"
+                    :placeholder="t.ai.panel.placeholder"
                     :disabled="running"
                     @keydown="onKey"
                 />
                 <div class="row">
-                    <UCheckbox v-model="useSelection" label="選んでいる部分を伝える" size="xs" />
+                    <UCheckbox v-model="useSelection" :label="t.ai.panel.useSelection" size="xs" />
                     <span class="cd-grow" />
-                    <UButton v-if="running" label="止める" icon="i-lucide-square" size="sm" color="neutral" variant="outline" @click="stop" />
-                    <UButton v-else label="頼む" icon="i-lucide-send" size="sm" :disabled="!input.trim()" @click="send()" />
+                    <UButton v-if="running" :label="t.ai.panel.stop" icon="i-lucide-square" size="sm" color="neutral" variant="outline" @click="stop" />
+                    <UButton v-else :label="t.ai.panel.send" icon="i-lucide-send" size="sm" :disabled="!input.trim()" @click="send()" />
                 </div>
-                <p class="note">{{ sendNote }}{{ keys('Ctrl+Enter') }} で送信</p>
+                <p class="note">{{ sendNote }}{{ t.ai.panel.sendKey(keys('Ctrl+Enter')) }}</p>
             </footer>
         </template>
     </aside>

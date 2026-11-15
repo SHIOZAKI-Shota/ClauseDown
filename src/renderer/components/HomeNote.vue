@@ -3,6 +3,7 @@ import MarkdownIt from 'markdown-it'
 import { useApp } from '~/stores/app'
 
 const app = useApp()
+const t = useT()
 const md = new MarkdownIt({ html: false, linkify: false, breaks: true }).disable('image')
 const text = ref('')
 const draft = ref('')
@@ -37,7 +38,7 @@ async function save() {
     editing.value = false
     await load()
     if (recorded) {
-        app.notify('メモを保存しました')
+        app.notify(t.value.home.note.saved)
         if (app.prefs.pushOnSave) await app.sync()
     }
 }
@@ -49,36 +50,26 @@ function onKey(e: KeyboardEvent) {
 
 <template>
     <section class="cd-side-sec">
-        <SectionHead label="メモ" icon="i-lucide-notebook-text">
-            <UTooltip v-if="!editing && text" text="編集">
-                <UButton icon="i-lucide-pencil" size="xs" square color="neutral" variant="ghost" aria-label="メモを編集" @click="edit" />
+        <SectionHead :label="t.home.note.title" icon="i-lucide-notebook-text">
+            <UTooltip v-if="!editing && text" :text="t.common.edit">
+                <UButton icon="i-lucide-pencil" size="xs" square color="neutral" variant="ghost" :aria-label="t.home.note.editNote" @click="edit" />
             </UTooltip>
         </SectionHead>
         <div v-if="editing" class="edit" @keydown="onKey">
-            <UTextarea
-                v-model="draft"
-                :rows="5"
-                autoresize
-                :maxrows="14"
-                class="cd-full"
-                autofocus
-                placeholder="例：〇〇様からの依頼分。担当：山田。次回の見直しは2027年4月。"
-            />
-            <p class="cd-muted hint">
-                見出し（#）と箇条書き（-）を使えます。保存すると版として記録します。同期すると他の編集者も閲覧可能です。{{ keys('Ctrl+Enter') }} で保存。
-            </p>
+            <UTextarea v-model="draft" :rows="5" autoresize :maxrows="14" class="cd-full" autofocus :placeholder="t.home.note.placeholder" />
+            <p class="cd-muted hint">{{ t.home.note.hint(keys('Ctrl+Enter')) }}</p>
             <div class="row">
                 <span class="cd-grow" />
-                <UButton label="やめる" size="xs" color="neutral" variant="outline" @click="editing = false" />
-                <UButton label="保存" size="xs" :loading="app.busy" @click="save" />
+                <UButton :label="t.common.stop" size="xs" color="neutral" variant="outline" @click="editing = false" />
+                <UButton :label="t.common.save" size="xs" :loading="app.busy" @click="save" />
             </div>
         </div>
         <template v-else-if="text">
             <!-- eslint-disable-next-line vue/no-v-html -- markdown-it は html を無効にしている -->
             <div ref="body" class="note" :class="{ clamp: !expanded }" v-html="md.render(text)" />
-            <button v-if="long || expanded" class="more" @click="expanded = !expanded">{{ expanded ? '短く表示' : '続きを読む' }}</button>
+            <button v-if="long || expanded" class="more" @click="expanded = !expanded">{{ expanded ? t.home.note.showLess : t.home.note.readMore }}</button>
         </template>
-        <button v-else-if="loaded" class="empty" @click="edit"><UIcon name="i-lucide-plus" />依頼主・担当者・連絡先・次回の見直し予定などを書いておく</button>
+        <button v-else-if="loaded" class="empty" @click="edit"><UIcon name="i-lucide-plus" />{{ t.home.note.empty }}</button>
     </section>
 </template>
 

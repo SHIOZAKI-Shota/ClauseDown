@@ -1,6 +1,7 @@
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { cleanSection, sectionNames } from '@shared/repo-sections'
 import { useApp } from '~/stores/app'
+import { t } from '@shared/i18n'
 
 export function repoSectionItems(dir: string): DropdownMenuItem[][] {
     const app = useApp()
@@ -14,8 +15,8 @@ export function repoSectionItems(dir: string): DropdownMenuItem[][] {
             onSelect: () => void (name !== current && app.moveRepo(dir, { section: name })),
         })),
         [
-            { label: '新規作成…', icon: 'i-lucide-folder-plus', onSelect: () => (app.dialog = { kind: 'sectionName', dir }) },
-            ...(current ? [{ label: 'セクションから出す', icon: 'i-lucide-folder-output', onSelect: () => void app.moveRepo(dir, {}) }] : []),
+            { label: t().shell.repoSection.create, icon: 'i-lucide-folder-plus', onSelect: () => (app.dialog = { kind: 'sectionName', dir }) },
+            ...(current ? [{ label: t().shell.repoSection.leave, icon: 'i-lucide-folder-output', onSelect: () => void app.moveRepo(dir, {}) }] : []),
         ],
     ].filter((g) => g.length)
 }

@@ -1,4 +1,5 @@
 import { BrowserWindow, dialog } from 'electron'
+import { t } from '../shared/i18n'
 import { promises as fsp } from 'node:fs'
 import { join } from 'node:path'
 import type { DeliverInput, DeliveryRecord, DocBase, ExportRequest } from '../shared/api'
@@ -31,9 +32,9 @@ function hiddenWindow(width?: number, height?: number) {
 
 const userCss = (css: string) => css.replace(/<\/(style)/gi, '<\\/$1')
 
-function page(body: string, title: string, style: DocStyle, landscape = false, css = ''): string {
+function page(body: string, title: string, style: DocStyle, landscape = false, css = '', lang: string = 'ja'): string {
     const margin = landscape ? Math.min(style.margin, 15) : style.margin
-    return `<!doctype html><html lang="ja"><head>${HIDDEN_CSP}<meta charset="utf-8"><title>${title.replace(/[<>&]/g, '')}</title>
+    return `<!doctype html><html lang="${lang}"><head>${HIDDEN_CSP}<meta charset="utf-8"><title>${title.replace(/[<>&]/g, '')}</title>
 <style>@page { size: A4${landscape ? ' landscape' : ''}; margin: ${margin}mm; } body { margin: 0; } ${MATH_CSS}
 ${css ? userCss(css) : LEGAL_CSS}
 :root { ${styleVars(style)} }</style></head><body>${body}</body></html>`
@@ -179,7 +180,7 @@ export function makeBuilders(style: DocStyle, css = '', base?: DocBase): Builder
     return {
         docPdf: async (src) => {
             const doc = parseLegal(src)
-            return toPdf(await inlineImages(page(renderDoc(doc), doc.title, style, false, css), base), false, style)
+            return toPdf(await inlineImages(page(renderDoc(doc), doc.title, style, false, css, doc.lang), base), false, style)
         },
         docDocx: async (src) => {
             const doc = parseLegal(src)
@@ -188,7 +189,14 @@ export function makeBuilders(style: DocStyle, css = '', base?: DocBase): Builder
         cmpPdf: async (o, n, title) =>
             toPdf(
                 await inlineImages(
-                    page(renderCompareTable(compareSources(o, n), { title, omitUnchanged: true, lang: docLang(n || o) }), title, style, true, css),
+                    page(
+                        renderCompareTable(compareSources(o, n), { title, omitUnchanged: true, lang: docLang(n || o) }),
+                        title,
+                        style,
+                        true,
+                        css,
+                        docLang(n || o),
+                    ),
                     base,
                 ),
                 true,
@@ -203,7 +211,7 @@ const screenCss = (margin: number) =>
 
 async function docHtml(source: string, style: DocStyle, css: string, base?: DocBase): Promise<string> {
     const doc = parseLegal(source)
-    return inlineImages(page(screenCss(style.margin) + renderDoc(doc), doc.title, style, false, css), base)
+    return inlineImages(page(screenCss(style.margin) + renderDoc(doc), doc.title, style, false, css, doc.lang), base)
 }
 
 const baseOf = (req: { dir?: string; docPath?: string }): DocBase | undefined =>
@@ -213,7 +221,7 @@ export async function previewPdf(source: string, style: DocStyle, base?: DocBase
     const { prefs } = await loadSettings()
     const s = cleanStyle(style ?? DEFAULT_STYLE)
     const doc = parseLegal(String(source))
-    const html = page(withLineMarks(renderDoc(doc)), doc.title, s, false, prefs.typesetCss)
+    const html = page(withLineMarks(renderDoc(doc)), doc.title, s, false, prefs.typesetCss, doc.lang)
     return toPdf(await inlineImages(html, baseOf(base ?? {})), false, s)
 }
 
@@ -231,10 +239,10 @@ async function build(req: ExportRequest): Promise<Uint8Array> {
     if (req.compareStyle === 'inline') {
         if (req.format === 'docx') return inlineToDocx(rows, { ...opts, style })
         const head = `<p class="cd-title">${req.title.replace(/[<>&]/g, '')}</p><p style="text-align: center; margin-bottom: 1em"><del class="cd-del">${words.deletedText}</del>${lang === 'ja' ? '　' : '&nbsp;&nbsp;'}<ins class="cd-ins">${words.addedText}</ins></p>`
-        return toPdf(await inlineImages(page(head + renderInlineDiff(rows, opts), req.title, style, false, prefs.typesetCss), baseOf(req)), false, style)
+        return toPdf(await inlineImages(page(head + renderInlineDiff(rows, opts), req.title, style, false, prefs.typesetCss, lang), baseOf(req)), false, style)
     }
     if (req.format === 'docx') return compareToDocx(rows, { ...opts, style })
-    return toPdf(await inlineImages(page(renderCompareTable(rows, opts), req.title, style, true, prefs.typesetCss), baseOf(req)), true, style)
+    return toPdf(await inlineImages(page(renderCompareTable(rows, opts), req.title, style, true, prefs.typesetCss, lang), baseOf(req)), true, style)
 }
 
 const today = () => {
@@ -247,7 +255,7 @@ export async function exportFile(parent: BrowserWindow | null, req: ExportReques
     const { prefs } = await loadSettings()
     const ext = req.format
     const name = prefs.exportDateSuffix ? `${req.name}_${today()}` : req.name
-    const filters = [{ name: { pdf: 'PDF', md: 'Markdown', html: 'HTML', docx: 'Word 文書' }[ext], extensions: [ext] }]
+    const filters = [{ name: { pdf: 'PDF', md: 'Markdown', html: 'HTML', docx: t().notify.dialogs.wordDoc }[ext], extensions: [ext] }]
     const opts = { defaultPath: prefs.exportDir ? join(prefs.exportDir, `${name}.${ext}`) : `${name}.${ext}`, filters }
     const result = parent ? await dialog.showSaveDialog(parent, opts) : await dialog.showSaveDialog(opts)
     if (result.canceled || !result.filePath) return null
@@ -258,7 +266,7 @@ export async function exportFile(parent: BrowserWindow | null, req: ExportReques
 export async function deliverWithDialog(parent: BrowserWindow | null, dir: string, input: DeliverInput): Promise<DeliveryRecord | null> {
     const { prefs } = await loadSettings()
     const opts = {
-        title: '納品一式の保存先を選ぶ',
+        title: t().notify.dialogs.deliveryFolder,
         defaultPath: prefs.exportDir || undefined,
         properties: ['openDirectory', 'createDirectory'] as ('openDirectory' | 'createDirectory')[],
     }
@@ -273,7 +281,7 @@ export async function exportScheduleIcs(parent: BrowserWindow | null, dir: strin
     const { name, text, count } = await scheduleIcs(dir, today)
     const file = `${name.replace(/[/:*?"<>|]/g, '_')}.ics`
     const opts = {
-        title: '期日をカレンダーの形式で書き出す',
+        title: t().notify.dialogs.exportIcs,
         defaultPath: prefs.exportDir ? join(prefs.exportDir, file) : file,
         filters: [{ name: 'iCalendar', extensions: ['ics'] }],
     }

@@ -1,4 +1,5 @@
 import { addDays, type ScheduleItem } from './schedule'
+import { t } from './i18n'
 
 const esc = (s: string) =>
     s
@@ -48,7 +49,7 @@ const stamp = (d: Date) =>
 
 const trigger = (days: number) => (days === 0 ? 'PT9H' : `-PT${days * 24 - 9}H`)
 
-const docName = (p: string) => (p ? p.replace(/\.md$/i, '').split('/').pop()! : 'リポジトリ全体')
+const docName = (p: string) => (p ? p.replace(/\.md$/i, '').split('/').pop()! : t().labels.ics.wholeRepo)
 
 export const exportable = (o: ScheduleItem) => o.source !== 'delivery' && !o.done
 
@@ -56,9 +57,10 @@ export function toIcs(items: ScheduleItem[], name: string, now = new Date()): st
     const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ClauseDown//ClauseDown//JA', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH']
     lines.push(`X-WR-CALNAME:${esc(name)}`)
     for (const o of items.filter(exportable)) {
-        const head = o.title && o.title !== o.kindLabel ? `${o.kindLabel}：${o.title}` : o.kindLabel
-        const summary = `${head}（${o.repo}）`
-        const desc = [`リポジトリ：${o.repo}`, `文書：${docName(o.docPath)}`, o.note ? `\n${o.note}` : ''].filter(Boolean).join('\n')
+        const l = t().labels.ics
+        const head = o.title && o.title !== o.kindLabel ? l.head(o.kindLabel, o.title) : o.kindLabel
+        const summary = l.summary(head, o.repo)
+        const desc = [l.repo(o.repo), l.doc(docName(o.docPath)), o.note ? `\n${o.note}` : ''].filter(Boolean).join('\n')
         lines.push(
             'BEGIN:VEVENT',
             `UID:${uidOf(o.key)}`,

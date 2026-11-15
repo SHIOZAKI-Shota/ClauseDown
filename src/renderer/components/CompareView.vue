@@ -7,8 +7,10 @@ import { compareWords } from '@shared/legal-styles'
 import { useApp } from '~/stores/app'
 import { toPlain } from '~/utils/ipc'
 import { usePane } from '~/composables/usePane'
+import { useT } from '~/composables/useT'
 
 const app = useApp()
+const t = useT()
 const path = app.currentPath!
 const commits = ref<CommitInfo[]>([])
 const effective = ref<EffectiveVersion[]>([])
@@ -61,10 +63,10 @@ watch([oldOid, newOid], loadTexts)
 
 const rows = computed(() => compareSources(oldText.value, newText.value))
 const changes = computed(() => rows.value.filter((r) => r.status !== 'same').length)
-const STYLES = [
-    { value: 'table', label: '新旧対照表 形式', icon: 'i-lucide-columns-2' },
-    { value: 'inline', label: 'Diff 形式', icon: 'i-lucide-file-diff' },
-]
+const STYLES = computed(() => [
+    { value: 'table', label: t.value.compare.styleTable, icon: 'i-lucide-columns-2' },
+    { value: 'inline', label: t.value.compare.styleInline, icon: 'i-lucide-file-diff' },
+])
 const lang = computed(() => docLang(newText.value || oldText.value))
 const latin = computed(() => lang.value !== 'ja')
 const words = computed(() => compareWords(lang.value))
@@ -82,7 +84,7 @@ const html = computed(() =>
     ),
 )
 
-const title = computed(() => `${app.currentDoc?.title ?? ''} ${style.value === 'inline' ? '変更箇所' : '新旧対照表'}`)
+const title = computed(() => t.value.compare.title(app.currentDoc?.title ?? '', style.value === 'inline'))
 
 async function exportAs(format: 'pdf' | 'docx') {
     const out = await app.run(() =>
@@ -100,19 +102,19 @@ async function exportAs(format: 'pdf' | 'docx') {
             docPath: app.currentPath!,
         }),
     )
-    if (out) app.notifyExported('書き出しました', out)
+    if (out) app.notifyExported(t.value.compare.exported, out)
 }
 </script>
 
 <template>
     <div class="compare">
-        <SidePane :pane="listPane" side="left" label="比べる版" icon="i-lucide-git-compare">
+        <SidePane :pane="listPane" side="left" :label="t.compare.listLabel" icon="i-lucide-git-compare">
             <div class="lists">
                 <section class="list">
                     <div class="list-head">
-                        <span class="badge old">改正前</span>
+                        <span class="badge old">{{ t.compare.before }}</span>
                         <UButton
-                            label="空の文書"
+                            :label="t.compare.emptyDoc"
                             size="xs"
                             :color="oldOid === 'empty' ? 'primary' : 'neutral'"
                             :variant="oldOid === 'empty' ? 'soft' : 'ghost'"
@@ -132,7 +134,7 @@ async function exportAs(format: 'pdf' | 'docx') {
                 </section>
                 <section class="list">
                     <div class="list-head">
-                        <span class="badge new">改正後</span>
+                        <span class="badge new">{{ t.compare.after }}</span>
                     </div>
                     <div ref="newList" class="list-body">
                         <HistoryGraph
@@ -149,10 +151,10 @@ async function exportAs(format: 'pdf' | 'docx') {
         </SidePane>
         <div class="main">
             <div class="cd-toolbar bar">
-                <SegmentSwitch v-model="style" :items="STYLES" aria-label="表示の形式" />
-                <UCheckbox v-model="omit" label="変更のない条は（略）にする" />
+                <SegmentSwitch v-model="style" :items="STYLES" :aria-label="t.compare.styleAria" />
+                <UCheckbox v-model="omit" :label="t.compare.omit" />
                 <span class="cd-grow" />
-                <UBadge :label="`変更 ${changes} か所`" color="neutral" variant="subtle" />
+                <UBadge :label="t.compare.changes(changes)" color="neutral" variant="subtle" />
                 <UButton label="PDF" icon="i-lucide-file-down" size="sm" color="neutral" variant="outline" @click="exportAs('pdf')" />
                 <UButton label="Word" icon="i-lucide-file-down" size="sm" color="neutral" variant="outline" @click="exportAs('docx')" />
             </div>

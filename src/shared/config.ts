@@ -1,4 +1,5 @@
 import YAML from 'yaml'
+import { t } from './i18n'
 
 export interface DocConfig {
     doc: {
@@ -25,31 +26,88 @@ export const DEFAULT_CONFIG: DocConfig = {
     subitem: { style: 'iroha' },
 }
 
+const c = () => t().config
+
+// label と options は読むたびに今の言語で返す。番号の見本（第一章 など）は文書の書式なので訳さない
 export const CONFIG_CHOICES = {
     'doc.style': {
-        label: '書式の系統',
-        options: {
-            auto: '自動',
-            ja: '日本',
-            contract: '英米の契約書',
-            'us-law': '米国の法令',
-            'uk-law': '英国の法令',
-            eu: 'EU の規則',
-            de: 'ドイツ',
-            fr: 'フランス',
-            decimal: '社内規程・規格（1.1）',
+        get label() {
+            return c().docStyle
+        },
+        get options() {
+            return c().docStyleOptions
         },
     },
-    'doc.contractType': { label: '契約書の型', options: { section: 'Section 1', plain: '1.', article: 'Article 1' } },
-    'chapter.numeral': { label: '章番号', options: { kanji: '第一章', arabic: '第1章', fullwidth: '第１章', none: '番号なし' } },
-    'article.numeral': { label: '条番号', options: { kanji: '第二条', arabic: '第2条', fullwidth: '第２条' } },
-    'article.title': { label: '条見出しの位置', options: { above: '前の行（法令式）', inline: '条番号の右（契約書式）', none: '表示しない' } },
-    'article.numbering': { label: '条番号の振り方', options: { continuous: '章をまたいで通し番号', perChapter: '章ごとに振り直す' } },
-    'paragraph.firstNumbered': { label: '第1項の番号', options: { false: '付けない', true: '付ける' } },
-    'paragraph.numeral': { label: '項番号', options: { fullwidth: '２', arabic: '2', circled: '②' } },
-    'paragraph.indent': { label: '項の位置', options: { nested: '条より下げる', flush: '条と同じ（法令式）' } },
-    'item.style': { label: '号', options: { kanji: '一', paren: '（1）', circled: '①' } },
-    'subitem.style': { label: '号の細分', options: { iroha: 'イ', paren: '（1）', roman: '（i）' } },
+    'doc.contractType': {
+        get label() {
+            return c().contractType
+        },
+        options: { section: 'Section 1', plain: '1.', article: 'Article 1' },
+    },
+    'chapter.numeral': {
+        get label() {
+            return c().chapterNumeral
+        },
+        get options() {
+            return { kanji: '第一章', arabic: '第1章', fullwidth: '第１章', none: c().noNumber }
+        },
+    },
+    'article.numeral': {
+        get label() {
+            return c().articleNumeral
+        },
+        options: { kanji: '第二条', arabic: '第2条', fullwidth: '第２条' },
+    },
+    'article.title': {
+        get label() {
+            return c().articleTitle
+        },
+        get options() {
+            return c().articleTitleOptions
+        },
+    },
+    'article.numbering': {
+        get label() {
+            return c().articleNumbering
+        },
+        get options() {
+            return c().articleNumberingOptions
+        },
+    },
+    'paragraph.firstNumbered': {
+        get label() {
+            return c().firstNumbered
+        },
+        get options() {
+            return c().firstNumberedOptions
+        },
+    },
+    'paragraph.numeral': {
+        get label() {
+            return c().paragraphNumeral
+        },
+        options: { fullwidth: '２', arabic: '2', circled: '②' },
+    },
+    'paragraph.indent': {
+        get label() {
+            return c().paragraphIndent
+        },
+        get options() {
+            return c().paragraphIndentOptions
+        },
+    },
+    'item.style': {
+        get label() {
+            return c().itemStyle
+        },
+        options: { kanji: '一', paren: '（1）', circled: '①' },
+    },
+    'subitem.style': {
+        get label() {
+            return c().subitemStyle
+        },
+        options: { iroha: 'イ', paren: '（1）', roman: '（i）' },
+    },
 } as const
 
 export type ConfigKey = keyof typeof CONFIG_CHOICES
@@ -89,13 +147,13 @@ export function readConfig(md: string): ConfigResult {
     try {
         raw = YAML.parse(m[1]) ?? {}
     } catch (e) {
-        warnings.push(`設定の書き方に誤りがあります: ${(e as Error).message}`)
+        warnings.push(c().invalidYaml((e as Error).message))
         return { config, warnings }
     }
     if (typeof raw !== 'object' || raw === null) return { config, warnings }
     for (const [section, values] of Object.entries(raw as Record<string, unknown>)) {
         if (!Object.hasOwn(config, section)) {
-            warnings.push(`不明な設定項目です: ${section}`)
+            warnings.push(c().unknownKey(section))
             continue
         }
         if (typeof values !== 'object' || values === null) continue
@@ -103,11 +161,11 @@ export function readConfig(md: string): ConfigResult {
             const full = `${section}.${key}` as ConfigKey
             const choice = Object.hasOwn(CONFIG_CHOICES, full) ? CONFIG_CHOICES[full] : undefined
             if (!choice) {
-                warnings.push(`不明な設定項目です: ${full}`)
+                warnings.push(c().unknownKey(full))
                 continue
             }
             if (!Object.keys(choice.options).includes(String(value))) {
-                warnings.push(`${choice.label}（${full}）の値「${String(value)}」は使えません`)
+                warnings.push(c().invalidValue(choice.label, full, String(value)))
                 continue
             }
             ;(config as any)[section][key] = normalizeValue(section, key, value)

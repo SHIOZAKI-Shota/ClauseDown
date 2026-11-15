@@ -4,6 +4,7 @@ import { useApp } from '~/stores/app'
 import type { Pane } from '~/composables/usePane'
 
 const app = useApp()
+const t = useT()
 
 const OPTS = { size: 264, min: 220, max: 420 }
 const FOOTER = 'p-0 flex-col items-stretch gap-0'
@@ -50,35 +51,35 @@ const toggle = (to: 'setup' | 'about') => (app.view === to ? app.goBack() : (app
     >
         <template #header>
             <div v-if="!collapsed" class="cd-pane-bar side-bar">
-                <span class="cd-pane-title">リポジトリ</span>
-                <PaneControls :pane="sidePane" side="left" label="サイドバー" />
+                <span class="cd-pane-title">{{ t.shell.sidebar.repos }}</span>
+                <PaneControls :pane="sidePane" side="left" :label="t.shell.sidebar.sidebar" />
             </div>
         </template>
 
-        <button v-if="collapsed" class="rail" title="サイドバーを開く" aria-label="サイドバーを開く" @click="collapsed = false">
+        <button v-if="collapsed" class="rail" :title="t.shell.sidebar.open" :aria-label="t.shell.sidebar.open" @click="collapsed = false">
             <UIcon name="i-lucide-panel-left-open" />
-            <span class="rail-label">リポジトリ</span>
+            <span class="rail-label">{{ t.shell.sidebar.repos }}</span>
         </button>
 
         <RepoList v-if="!collapsed" />
 
         <template #footer>
             <template v-if="collapsed">
-                <UTooltip v-if="!demo" :text="app.view === 'about' ? 'このソフトについてを閉じる' : 'このソフトについて'">
+                <UTooltip v-if="!demo" :text="app.view === 'about' ? t.shell.sidebar.closeAbout : t.common.aboutApp">
                     <button
                         class="rail-btn"
                         :class="{ on: app.view === 'about' }"
-                        :aria-label="app.view === 'about' ? 'このソフトについてを閉じる' : 'このソフトについて'"
+                        :aria-label="app.view === 'about' ? t.shell.sidebar.closeAbout : t.common.aboutApp"
                         @click="toggle('about')"
                     >
                         <UIcon :name="app.view === 'about' ? 'i-lucide-x' : 'i-lucide-info'" />
                     </button>
                 </UTooltip>
-                <UTooltip :text="app.view === 'setup' ? '設定を閉じる' : '設定'">
+                <UTooltip :text="app.view === 'setup' ? t.shell.sidebar.closeSettings : t.common.settings">
                     <button
                         class="rail-btn"
                         :class="{ on: app.view === 'setup' }"
-                        :aria-label="app.view === 'setup' ? '設定を閉じる' : '設定'"
+                        :aria-label="app.view === 'setup' ? t.shell.sidebar.closeSettings : t.common.settings"
                         @click="toggle('setup')"
                     >
                         <UIcon :name="app.view === 'setup' ? 'i-lucide-x' : 'i-lucide-settings'" />
@@ -88,12 +89,12 @@ const toggle = (to: 'setup' | 'about') => (app.view === to ? app.goBack() : (app
             <template v-else>
                 <button v-if="!demo" class="nav-item footer-item" :class="{ on: app.view === 'about' }" @click="toggle('about')">
                     <UIcon :name="app.view === 'about' ? 'i-lucide-x' : 'i-lucide-info'" />
-                    <span class="nl">{{ app.view === 'about' ? 'このソフトについてを閉じる' : 'このソフトについて' }}</span>
+                    <span class="nl">{{ app.view === 'about' ? t.shell.sidebar.closeAbout : t.common.aboutApp }}</span>
                 </button>
                 <button class="nav-item footer-item" :class="{ on: app.view === 'setup' }" @click="toggle('setup')">
                     <UIcon :name="app.view === 'setup' ? 'i-lucide-x' : 'i-lucide-settings'" />
-                    <span class="nl">{{ app.view === 'setup' ? '設定を閉じる' : '設定' }}</span>
-                    <span v-if="app.view !== 'setup'" class="who">{{ app.me || '名前未設定' }}</span>
+                    <span class="nl">{{ app.view === 'setup' ? t.shell.sidebar.closeSettings : t.common.settings }}</span>
+                    <span v-if="app.view !== 'setup'" class="who">{{ app.me || t.shell.sidebar.noName }}</span>
                 </button>
             </template>
         </template>

@@ -1,4 +1,5 @@
 import http from 'node:http'
+import { t } from '../../shared/i18n'
 import { createHash, randomBytes } from 'node:crypto'
 import type { AddressInfo } from 'node:net'
 
@@ -32,7 +33,7 @@ export async function loginOpenRouter(open: (url: string) => Promise<void>): Pro
             return
         }
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
-        res.end(PAGE('ログインできました。ClauseDown に戻ってください。このページは閉じてかまいません。'))
+        res.end(PAGE(t().errors.ai.openrouter.success))
         done(code)
     }
 
@@ -45,8 +46,8 @@ export async function loginOpenRouter(open: (url: string) => Promise<void>): Pro
         v4.close()
         v6.close()
     }
-    const timer = setTimeout(() => fail(new Error('ログインの時間が切れました。もう一度「OpenRouter でログイン」を押してください')), TIMEOUT())
-    current = () => fail(new Error('ログインを中止しました'))
+    const timer = setTimeout(() => fail(new Error(t().errors.ai.openrouter.timeout)), TIMEOUT())
+    current = () => fail(new Error(t().errors.ai.openrouter.cancelled))
 
     try {
         const callback = `http://localhost:${port}/cb/${nonce}`
@@ -60,7 +61,7 @@ export async function loginOpenRouter(open: (url: string) => Promise<void>): Pro
         const j = (await res.json().catch(() => ({}))) as { key?: string; error?: { message?: string } | string }
         if (!res.ok || !j.key) {
             const m = typeof j.error === 'string' ? j.error : j.error?.message
-            throw new Error(`OpenRouter のキーを受け取れませんでした（${m ?? `HTTP ${res.status}`}）`)
+            throw new Error(t().errors.ai.openrouter.noKey(m ?? `HTTP ${res.status}`))
         }
         return j.key
     } finally {

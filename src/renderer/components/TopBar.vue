@@ -3,14 +3,15 @@ import { useApp, type View } from '~/stores/app'
 import { firstLine, fmtDate } from '~/utils/format'
 
 const app = useApp()
+const t = useT()
 
-const tabs = [
-    { label: '編集', value: 'editor', icon: 'i-lucide-pencil' },
-    { label: '改定履歴', value: 'history', icon: 'i-lucide-git-commit-vertical' },
-    { label: '新旧対照表', value: 'compare', icon: 'i-lucide-columns-2' },
-    { label: '期日・有効期間・納品', value: 'releases', icon: 'i-lucide-calendar-check' },
-]
-const docView = computed(() => app.currentDoc && tabs.some((t) => t.value === app.view))
+const tabs = computed(() => [
+    { label: t.value.shell.topBar.edit, value: 'editor', icon: 'i-lucide-pencil' },
+    { label: t.value.shell.topBar.history, value: 'history', icon: 'i-lucide-git-commit-vertical' },
+    { label: t.value.shell.topBar.compare, value: 'compare', icon: 'i-lucide-columns-2' },
+    { label: t.value.shell.topBar.releases, value: 'releases', icon: 'i-lucide-calendar-check' },
+])
+const docView = computed(() => app.currentDoc && tabs.value.some((tab) => tab.value === app.view))
 const tab = computed({
     get: () => app.view,
     set: (v) => {
@@ -34,7 +35,7 @@ watch(
 )
 const savedAt = computed(() => (lastSaved.value ? fmtDate(lastSaved.value.timestamp, 'mdhm') : ''))
 const versionTitle = computed(() =>
-    lastSaved.value ? `${app.currentBranch?.label ?? ''}：「${savedMessage.value}」（${lastSaved.value.author}・${savedAt.value}）` : '',
+    lastSaved.value ? t.value.shell.topBar.versionTitle(app.currentBranch?.label ?? '', savedMessage.value, lastSaved.value.author, savedAt.value) : '',
 )
 const savedMessage = computed(() => (lastSaved.value ? firstLine(lastSaved.value.message) : ''))
 </script>
@@ -42,7 +43,10 @@ const savedMessage = computed(() => (lastSaved.value ? firstLine(lastSaved.value
 <template>
     <UDashboardNavbar v-if="docView" :toggle="false" class="cd-nav">
         <template #left>
-            <UTabs v-if="docView" v-model="tab" :items="tabs" :content="false" size="sm" variant="pill" />
+            <UTabs v-if="docView" v-model="tab" :items="tabs" :content="false" size="sm" variant="pill">
+                <!-- デモの案内（demo/guide.ts）がタブを見分けるための印 -->
+                <template #trailing="{ item }"><span :data-guide="item.value" hidden /></template>
+            </UTabs>
         </template>
         <template v-if="docView" #default>
             <div class="doc">
@@ -53,33 +57,42 @@ const savedMessage = computed(() => (lastSaved.value ? firstLine(lastSaved.value
                         <span class="msg">{{ savedMessage }}</span>
                         <span class="at">{{ savedAt }}</span>
                     </template>
-                    <span v-else-if="lastSaved === null" class="msg">まだ保存していません</span>
-                    <span v-if="app.currentDoc!.changed" class="dirty">＋保存していない変更</span>
+                    <span v-else-if="lastSaved === null" class="msg">{{ t.shell.topBar.notSaved }}</span>
+                    <span v-if="app.currentDoc!.changed" class="dirty">{{ t.shell.topBar.unsaved }}</span>
                 </span>
             </div>
         </template>
         <template v-if="docView" #right>
             <UButton
-                label="期日・有効期間"
+                :label="t.shell.topBar.due"
                 icon="i-lucide-calendar-range"
+                data-guide="schedule"
                 size="sm"
                 color="neutral"
                 variant="ghost"
-                :title="app.dueCount?.due ? `期限切れ ${app.dueCount.overdue} 件・30 日以内 ${app.dueCount.due - app.dueCount.overdue} 件` : undefined"
+                :title="app.dueCount?.due ? t.shell.topBar.dueTitle(app.dueCount.overdue, app.dueCount.due - app.dueCount.overdue) : undefined"
                 @click="app.openSchedule()"
             >
                 <template v-if="app.dueCount?.due" #trailing>
                     <UBadge :label="String(app.dueCount.due)" :color="app.dueCount.overdue ? 'error' : 'neutral'" variant="subtle" size="sm" />
                 </template>
             </UButton>
-            <UButton label="課題" icon="i-lucide-list-todo" size="sm" color="neutral" variant="ghost" @click="app.openIssues()">
+            <UButton :label="t.common.issues" icon="i-lucide-list-todo" size="sm" color="neutral" variant="ghost" data-guide="issues" @click="app.openIssues()">
                 <template v-if="app.openIssueCount" #trailing>
                     <UBadge :label="String(app.openIssueCount)" color="neutral" variant="subtle" size="sm" />
                 </template>
             </UButton>
-            <UButton label="リポジトリホーム" icon="i-lucide-layout-grid" size="sm" color="neutral" variant="ghost" @click="app.goRepoHome()">
+            <UButton
+                :label="t.common.repoHome"
+                icon="i-lucide-layout-grid"
+                size="sm"
+                color="neutral"
+                variant="ghost"
+                data-guide="docs"
+                @click="app.goRepoHome()"
+            >
                 <template v-if="app.toReview.length" #trailing>
-                    <UBadge :label="`確認待ち ${app.toReview.length}`" color="warning" variant="subtle" size="sm" />
+                    <UBadge :label="t.shell.topBar.toReview(app.toReview.length)" color="warning" variant="subtle" size="sm" />
                 </template>
             </UButton>
         </template>

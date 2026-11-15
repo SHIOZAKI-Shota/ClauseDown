@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { useApp } from '~/stores/app'
+import { useT } from '~/composables/useT'
 
 const open = defineModel<boolean>('open', { required: true })
 const app = useApp()
+const t = useT()
 const url = ref(app.repo?.url?.replace(/\.git$/, '') ?? '')
 const sending = ref(false)
 const changed = computed(() => {
@@ -24,19 +26,17 @@ async function save() {
 </script>
 
 <template>
-    <UModal v-model:open="open" title="リモートを変更" description="GitHub・GitLab でリポジトリの名前や持ち主を変えたとき、新しい URL を入れます。">
+    <UModal v-model:open="open" :title="t.repo.changeRemote.title" :description="t.repo.changeRemote.description">
         <template #body>
             <div class="body">
-                <UInput v-model="url" placeholder="https://github.com/組織名/リポジトリ名" class="cd-full" autofocus @keydown.enter="changed && save()" />
-                <p class="cd-muted">
-                    新しいリモートが空なら、すべての版を送信します。中身がある場合は、このリポジトリと同じ履歴を持っているときだけ変更します。別のリポジトリに誤ってつながないためです。
-                </p>
+                <UInput v-model="url" :placeholder="t.repo.changeRemote.placeholder" class="cd-full" autofocus @keydown.enter="changed && save()" />
+                <p class="cd-muted">{{ t.repo.changeRemote.note }}</p>
             </div>
         </template>
         <template #footer>
             <div class="cd-modal-foot">
-                <UButton label="やめる" color="neutral" variant="outline" @click="open = false" />
-                <UButton label="変更する" :loading="sending" :disabled="!changed" @click="save" />
+                <UButton :label="t.repo.cancel" color="neutral" variant="outline" @click="open = false" />
+                <UButton :label="t.repo.changeRemote.submit" :loading="sending" :disabled="!changed" @click="save" />
             </div>
         </template>
     </UModal>

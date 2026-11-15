@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import { t } from '../shared/i18n'
 import type { AuthCallback } from 'isomorphic-git'
 import git from './igit'
 import { getToken, listCredentials, loadSettings } from './settings'
@@ -51,11 +52,12 @@ export async function identity(dir?: string | null): Promise<Identity | null> {
         const b = bases.find((x) => x.base === base)
         const c = creds[base]
         if (!b || !c?.name) return null
-        return { name: c.name, email: c.email ?? '', login: c.login, source: b.kind, base, label: `${baseLabel(b)} の ${c.login ?? c.name}` }
+        return { name: c.name, email: c.email ?? '', login: c.login, source: b.kind, base, label: t().notify.identity.login(baseLabel(b), c.login ?? c.name) }
     }
     const anyLogin = () => bases.map((b) => fromLogin(b.base)).find(Boolean) ?? null
     const name = settings.author?.name?.trim()
-    const manual = (): Identity | null => (name ? { name, email: settings.author.email?.trim() ?? '', source: 'manual', label: '手入力' } : null)
+    const manual = (): Identity | null =>
+        name ? { name, email: settings.author.email?.trim() ?? '', source: 'manual', label: t().notify.identity.manual } : null
     const def = settings.identityDefault
 
     if (def === 'manual' && name) return manual()
@@ -78,7 +80,7 @@ export async function identity(dir?: string | null): Promise<Identity | null> {
 
 export async function author(dir?: string | null): Promise<{ name: string; email: string }> {
     const who = await identity(dir)
-    if (!who) throw new Error('版の作成者が決まっていません。設定の「あなたの情報」で GitHub・GitLab にログインするか、名前を入力してください')
+    if (!who) throw new Error(t().errors.gitBase.noAuthor)
     return { name: who.name, email: who.email }
 }
 
@@ -100,15 +102,15 @@ export async function remoteUrl(dir: string): Promise<string | null> {
 export function explain(e: unknown): string {
     const err = e as { code?: string; message?: string; data?: { statusCode?: number } }
     if (err.code === 'UserCanceledError') {
-        return 'GitHub・GitLab にログインしていません。設定の「GitHub/GitLab」でログインするか、アクセストークンを入力してください（社内の GitLab は、先にサーバーを追加してください）'
+        return t().errors.gitBase.notLoggedIn
     }
     if (err.data?.statusCode === 404) {
-        return 'リモートのリポジトリが見つかりません。リポジトリが削除・改名・移動されたか、ログイン中のアカウントに閲覧の権限がない可能性があります。リポジトリの設定でリモートの URL を確かめてください。GitHub では、ClauseDown の App をそのリポジトリにインストールしていない場合も、このエラーになります（設定 →「GitHub/GitLab」→「インストールする」）'
+        return t().errors.gitBase.remoteNotFound
     }
-    if (err.data?.statusCode === 401 || err.data?.statusCode === 403) return 'アクセストークンが正しくないか、権限が足りません'
-    if (err.code === 'PushRejectedError') return 'リモートに新しい変更があるため、送信できませんでした。「同期」を押してください'
-    if (err.code === 'HttpError') return `サーバーとの通信に失敗しました（${err.message}）`
-    if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT/.test(String(err.message))) return 'ネットワークに接続できません。インターネットの接続を確かめてください'
+    if (err.data?.statusCode === 401 || err.data?.statusCode === 403) return t().errors.gitBase.badToken
+    if (err.code === 'PushRejectedError') return t().errors.gitBase.pushRejected
+    if (err.code === 'HttpError') return t().errors.gitBase.http(String(err.message))
+    if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT/.test(String(err.message))) return t().errors.gitBase.offline
     return err.message ?? String(e)
 }
 

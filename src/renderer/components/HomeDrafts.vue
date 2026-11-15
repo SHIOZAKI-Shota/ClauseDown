@@ -5,6 +5,7 @@ import { useApp } from '~/stores/app'
 import { fmtDate, relTime } from '~/utils/format'
 
 const app = useApp()
+const t = useT()
 const ORDER: Record<string, number> = { requested: 0, outdated: 0, changes: 1 }
 const drafts = computed(() =>
     app.branches
@@ -22,48 +23,56 @@ const mine = (b: BranchInfo) => app.toReview.includes(b)
 
 <template>
     <section class="cd-side-sec">
-        <SectionHead label="改定案" icon="i-lucide-git-branch" :count="drafts.length">
-            <UTooltip text="新しい改定案">
+        <SectionHead :label="t.home.drafts.title" icon="i-lucide-git-branch" :count="drafts.length">
+            <UTooltip :text="t.common.newDraft">
                 <UButton
                     icon="i-lucide-plus"
                     size="xs"
                     square
                     color="neutral"
                     variant="ghost"
-                    aria-label="新しい改定案"
+                    :aria-label="t.common.newDraft"
                     @click="app.dialog = { kind: 'newBranch' }"
                 />
             </UTooltip>
         </SectionHead>
-        <p v-if="!drafts.length" class="cd-muted empty">進行中の改定案はありません。大きな改定は「＋」から改定案を作ると、現行版を変えずに進められます。</p>
+        <p v-if="!drafts.length" class="cd-muted empty">{{ t.home.drafts.empty }}</p>
         <ul v-else class="list">
             <li v-for="b in drafts" :key="b.name" :class="{ mine: mine(b), current: b.current }">
                 <div class="main">
                     <div class="name">
                         <strong :title="b.label">{{ b.label }}</strong>
-                        <span v-if="b.current" class="here">作業中</span>
+                        <span v-if="b.current" class="here">{{ t.common.working }}</span>
                     </div>
                     <div class="cd-muted meta">
                         <UBadge
-                            :label="mine(b) ? 'あなたの確認待ち' : STATE_LABEL[app.statusOf(b).state]"
+                            :label="mine(b) ? t.home.toReview : STATE_LABEL[app.statusOf(b).state]"
                             :color="mine(b) ? 'primary' : STATE_COLOR[app.statusOf(b).state]"
                             variant="subtle"
                             size="sm"
                         />
-                        <span :title="fmtDate(b.timestamp, 'ymdhm')">{{ b.author }}・{{ relTime(b.timestamp) }}</span>
+                        <span :title="fmtDate(b.timestamp, 'ymdhm')">{{ b.author }}{{ t.common.sep }}{{ relTime(b.timestamp) }}</span>
                     </div>
-                    <div v-if="b.mainMoved" class="warn"><UIcon name="i-lucide-triangle-alert" />現行版のほうが先に更新されています</div>
+                    <div v-if="b.mainMoved" class="warn"><UIcon name="i-lucide-triangle-alert" />{{ t.home.drafts.mainMoved }}</div>
                 </div>
                 <div class="side">
                     <UButton
                         v-if="waiting(b)"
-                        label="確認"
+                        :label="t.home.drafts.review"
                         size="xs"
                         :color="mine(b) ? 'primary' : 'neutral'"
                         :variant="mine(b) ? 'solid' : 'outline'"
                         @click="app.dialog = { kind: 'review', branch: b.name }"
                     />
-                    <UButton v-if="!b.current" label="切り替え" size="xs" color="neutral" variant="ghost" class="switch" @click="app.switchBranch(b.name)" />
+                    <UButton
+                        v-if="!b.current"
+                        :label="t.home.drafts.switch"
+                        size="xs"
+                        color="neutral"
+                        variant="ghost"
+                        class="switch"
+                        @click="app.switchBranch(b.name)"
+                    />
                 </div>
             </li>
         </ul>

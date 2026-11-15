@@ -2,6 +2,8 @@
 import type { LegalDoc } from '@shared/legal-parser'
 import { articleTitle, chapterHeading } from '@shared/legal-parser'
 import { lastAtOrBefore } from '~/utils/legal-editor'
+import { useT } from '~/composables/useT'
+const t = useT()
 const props = defineProps<{ legal: LegalDoc; line: number }>()
 const emit = defineEmits<{ jump: [number] }>()
 const q = ref('')
@@ -49,15 +51,15 @@ watch(active, async () => {
 <template>
     <aside class="ed-outline">
         <div class="cd-pane-bar">
-            <span class="cd-pane-title">目次 <span class="count">{{ articleLines.length }} 条</span></span>
+            <span class="cd-pane-title">{{ t.editor.outline.title }} <span class="count">{{ t.editor.outline.count(articleLines.length) }}</span></span>
         </div>
-        <UInput v-model="q" icon="i-lucide-search" size="xs" placeholder="条を探す" class="search" />
+        <UInput v-model="q" icon="i-lucide-search" size="xs" :placeholder="t.editor.outline.search" class="search" />
         <div ref="list" class="list">
             <button v-for="e in filtered" :key="e.key" :class="[e.kind, { on: e.line === active, deleted: e.deleted }]" @click="emit('jump', e.line)">
                 <span class="label">{{ e.label }}</span>
-                <span class="title">{{ e.deleted ? '削除' : e.title }}</span>
+                <span class="title">{{ e.deleted ? t.editor.outline.deleted : e.title }}</span>
             </button>
-            <p v-if="!filtered.length" class="empty">{{ q ? '見つかりません' : '条がありません' }}</p>
+            <p v-if="!filtered.length" class="empty">{{ q ? t.editor.outline.notFound : t.editor.outline.empty }}</p>
         </div>
     </aside>
 </template>
@@ -116,6 +118,10 @@ button.chapter {
     margin-top: 8px;
     font-weight: 700;
     color: var(--cd-syn-chapter);
+}
+
+button .label {
+    white-space: nowrap;
 }
 
 button.article .label {

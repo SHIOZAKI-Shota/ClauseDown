@@ -1,4 +1,5 @@
 import { GITHUB_BASE, knownBases, matchRemote, type ForgeKind } from '../shared/forge'
+import { t } from '../shared/i18n'
 import type { ReviewAction, ReviewEvent } from '../shared/review'
 import type { Issue, IssuePatch } from '../shared/api'
 import { remoteUrl } from './git-base'
@@ -94,7 +95,7 @@ function githubForge(path: string): Forge {
                     branch: req.branch,
                     action,
                     oid: v.commit_id,
-                    by: v.user?.login ?? '（不明）',
+                    by: v.user?.login ?? t().notify.review.unknownUser,
                     at: v.submitted_at,
                     text: v.body ?? '',
                     source: 'github',
@@ -159,7 +160,7 @@ function gitlabForge(r: gl.GitLabRepo): Forge {
                     oid: note ? shaAt(note.created_at) : '',
                     by: user,
                     at: note?.created_at ?? req.at,
-                    text: '承認しました',
+                    text: t().notify.review.approved,
                 })
             }
             for (const x of notes) {
@@ -186,7 +187,7 @@ function gitlabForge(r: gl.GitLabRepo): Forge {
                     const already = me && (await gl.listApprovals(r, n).catch(() => [] as string[])).includes(me)
                     if (!already) {
                         if (e instanceof gl.GitLabError && e.status === 409) {
-                            throw new Error('GitLab 側の改定案が、ローカル の改定案と違っています。同期してからもう一度承認してください')
+                            throw new Error(t().errors.forge.gitlabDivergedApprove)
                         }
                         throw e
                     }

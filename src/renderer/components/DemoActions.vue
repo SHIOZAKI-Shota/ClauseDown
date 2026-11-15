@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { PROJECT } from '@shared/about'
+import { useT } from '~/composables/useT'
 
+const t = useT()
 const confirmReset = ref(false)
 
 async function reset() {
@@ -12,16 +14,16 @@ async function reset() {
 
 <template>
     <div class="demo-actions">
-        <UTooltip text="書いた内容と保存した版は、このブラウザーにだけ残ります">
-            <UBadge label="デモ" color="primary" variant="subtle" size="sm" />
+        <UTooltip :text="t.demo.badgeTooltip">
+            <UBadge :label="t.demo.badge" color="primary" variant="subtle" size="sm" />
         </UTooltip>
-        <UButton label="見本に戻す" icon="i-lucide-rotate-ccw" size="xs" color="neutral" variant="ghost" @click="confirmReset = true" />
-        <UButton label="アプリを入手" icon="i-lucide-download" size="xs" :to="`${PROJECT.repo}/releases/latest`" target="_blank" />
+        <UButton :label="t.demo.reset" icon="i-lucide-rotate-ccw" size="xs" color="neutral" variant="ghost" data-guide="reset" @click="confirmReset = true" />
+        <UButton :label="t.demo.getApp" icon="i-lucide-download" size="xs" :to="`${PROJECT.repo}/releases/latest`" target="_blank" data-guide="get" />
         <ConfirmModal
             v-model:open="confirmReset"
-            title="見本に戻しますか？"
-            description="書いた内容と保存した版を消して、最初の見本に戻します。"
-            confirm-label="見本に戻す"
+            :title="t.demo.resetTitle"
+            :description="t.demo.resetDesc"
+            :confirm-label="t.demo.reset"
             color="error"
             @confirm="reset"
         />

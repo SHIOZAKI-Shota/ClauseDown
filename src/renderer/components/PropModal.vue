@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { BODY_FONTS, cssFont } from '@shared/prefs'
 import { parseProps, propsStyle } from '@shared/cd-prop'
+import { useT } from '~/composables/useT'
 
+const t = useT()
 const props = defineProps<{ sample: string; inline: boolean; canInline: boolean }>()
 const emit = defineEmits<{ close: []; apply: [{ open: string; close: string; mode: 'inline' | 'lines'; onlyBreak: boolean }] }>()
 
@@ -14,15 +16,15 @@ const cols = ref('')
 const pageBreak = ref(false)
 
 const MODES = computed(() => [
-    { value: 'inline' as const, label: '選んだ文字だけ', icon: 'i-lucide-text-cursor', disabled: !props.canInline },
-    { value: 'lines' as const, label: '行ごと（条・項・表など）', icon: 'i-lucide-text' },
+    { value: 'inline' as const, label: t.value.editor.prop.inline, icon: 'i-lucide-text-cursor', disabled: !props.canInline },
+    { value: 'lines' as const, label: t.value.editor.prop.lines, icon: 'i-lucide-text' },
 ])
-const ALIGNS = [
-    { value: 'none' as const, label: '指定なし' },
-    { value: 'left' as const, icon: 'i-lucide-align-left', tooltip: '左寄せ' },
-    { value: 'center' as const, icon: 'i-lucide-align-center', tooltip: '中央寄せ' },
-    { value: 'right' as const, icon: 'i-lucide-align-right', tooltip: '右寄せ' },
-]
+const ALIGNS = computed(() => [
+    { value: 'none' as const, label: t.value.editor.prop.none },
+    { value: 'left' as const, icon: 'i-lucide-align-left', tooltip: t.value.editor.prop.left },
+    { value: 'center' as const, icon: 'i-lucide-align-center', tooltip: t.value.editor.prop.center },
+    { value: 'right' as const, icon: 'i-lucide-align-right', tooltip: t.value.editor.prop.right },
+])
 const lines = computed(() => mode.value === 'lines')
 const colsOk = computed(() => !cols.value.trim() || /^\s*\d+(\.\d+)?(%|mm)?(\s*,\s*\d+(\.\d+)?(%|mm)?)*\s*$/.test(cols.value))
 
@@ -48,7 +50,7 @@ const previewStyle = computed(() => {
     const style = propsStyle({ ...p, break: undefined, fontFamily: undefined })
     return `${style};${p.fontFamily ? `font-family:${cssFont(p.fontFamily)}` : ''}`
 })
-const sampleText = computed(() => (props.sample.trim() || '本文の例').slice(0, 120))
+const sampleText = computed(() => (props.sample.trim() || t.value.editor.prop.sampleText).slice(0, 120))
 
 function apply() {
     if (!ready.value) return
@@ -59,34 +61,34 @@ function apply() {
 </script>
 
 <template>
-    <UModal :open="true" title="書式を付ける" @update:open="(v) => !v && emit('close')">
+    <UModal :open="true" :title="t.editor.prop.title" @update:open="(v) => !v && emit('close')">
         <template #body>
             <div class="form">
-                <UFormField label="付ける範囲">
-                    <SegmentSwitch v-model="mode" :items="MODES" aria-label="付ける範囲" />
+                <UFormField :label="t.editor.prop.scope">
+                    <SegmentSwitch v-model="mode" :items="MODES" :aria-label="t.editor.prop.scope" />
                 </UFormField>
                 <div class="row">
-                    <UFormField label="文字の大きさ（pt）" class="grow">
-                        <UInputNumber v-model="size" :min="5" :max="40" :step="0.5" placeholder="指定なし" />
+                    <UFormField :label="t.editor.prop.size" class="grow">
+                        <UInputNumber v-model="size" :min="5" :max="40" :step="0.5" :placeholder="t.editor.prop.none" />
                     </UFormField>
-                    <UFormField v-if="lines" label="行の高さ（倍）" class="grow">
-                        <UInputNumber v-model="lineHeight" :min="0.8" :max="4" :step="0.1" placeholder="指定なし" />
+                    <UFormField v-if="lines" :label="t.editor.prop.lineHeight" class="grow">
+                        <UInputNumber v-model="lineHeight" :min="0.8" :max="4" :step="0.1" :placeholder="t.editor.prop.none" />
                     </UFormField>
                 </div>
-                <UFormField label="フォント">
+                <UFormField :label="t.editor.prop.font">
                     <FontPicker v-model="font" :recommended="BODY_FONTS" class="w-full" />
                 </UFormField>
                 <template v-if="lines">
-                    <UFormField label="寄せ">
-                        <SegmentSwitch v-model="align" :items="ALIGNS" aria-label="寄せ" />
+                    <UFormField :label="t.editor.prop.align">
+                        <SegmentSwitch v-model="align" :items="ALIGNS" :aria-label="t.editor.prop.align" />
                     </UFormField>
-                    <UFormField label="表の列の幅" :error="colsOk ? undefined : '25,75 のように、数字をカンマで区切って書いてください'">
-                        <UInput v-model="cols" placeholder="例：25,75" class="w-full" />
+                    <UFormField :label="t.editor.prop.cols" :error="colsOk ? undefined : t.editor.prop.colsError">
+                        <UInput v-model="cols" :placeholder="t.editor.prop.colsPlaceholder" class="w-full" />
                     </UFormField>
-                    <USwitch v-model="pageBreak" label="この前で改ページする" />
+                    <USwitch v-model="pageBreak" :label="t.editor.prop.pageBreak" />
                 </template>
                 <div class="preview">
-                    <p class="cd-muted cap">見本</p>
+                    <p class="cd-muted cap">{{ t.editor.prop.sample }}</p>
                     <p class="sample" :style="previewStyle">{{ sampleText }}</p>
                 </div>
                 <code v-if="ready" class="tag">{{ tag }}</code>
@@ -94,8 +96,8 @@ function apply() {
         </template>
         <template #footer>
             <div class="foot">
-                <UButton label="やめる" color="neutral" variant="outline" @click="emit('close')" />
-                <UButton :label="onlyBreak ? '改ページを入れる' : '囲む'" :disabled="!ready" @click="apply" />
+                <UButton :label="t.editor.prop.cancel" color="neutral" variant="outline" @click="emit('close')" />
+                <UButton :label="onlyBreak ? t.editor.prop.insertBreak : t.editor.prop.wrap" :disabled="!ready" @click="apply" />
             </div>
         </template>
     </UModal>

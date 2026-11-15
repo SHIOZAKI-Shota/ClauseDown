@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import type { Issue } from '@shared/api'
 import { useApp } from '~/stores/app'
+import { useT } from '~/composables/useT'
 
 const props = defineProps<{ oid?: string; branch?: string; branchLabel?: string }>()
 const emit = defineEmits<{ close: [] }>()
 const app = useApp()
+const t = useT()
 const dir = app.repoDir!
 
 const issues = ref<Issue[]>([])
@@ -33,9 +35,9 @@ function toggle(n: number) {
 async function save() {
     if (props.oid && picked.value[0]) {
         const n = picked.value[0]
-        if (await app.runOk(() => window.api.linkIssue(dir, n, props.oid!), `版を課題 #${n} に紐付けました`)) emit('close')
+        if (await app.runOk(() => window.api.linkIssue(dir, n, props.oid!), t.value.issues.linkModal.linked(n))) emit('close')
     } else if (props.branch) {
-        if (await app.runOk(() => window.api.setBranchIssues(dir, props.branch!, picked.value), '改定案で解決する課題を記録しました')) emit('close')
+        if (await app.runOk(() => window.api.setBranchIssues(dir, props.branch!, picked.value), t.value.issues.linkModal.branchSaved)) emit('close')
     }
 }
 </script>
@@ -43,14 +45,14 @@ async function save() {
 <template>
     <UModal
         :open="true"
-        :title="oid ? '版を課題に紐付ける' : `「${branchLabel}」で解決する課題`"
-        :description="oid ? `版 ${oid.slice(0, 7)} を紐付ける課題を選びます。` : '選んだ課題は、この改定案を現行版に反映したときに閉じます。'"
+        :title="oid ? t.issues.linkModal.titleVersion : t.issues.linkModal.titleBranch(branchLabel ?? '')"
+        :description="oid ? t.issues.linkModal.descVersion(oid.slice(0, 7)) : t.issues.linkModal.descBranch"
         @update:open="(v) => !v && emit('close')"
     >
         <template #body>
-            <UInput v-model="q" icon="i-lucide-search" placeholder="番号・題名で探す" size="sm" class="w-full" />
-            <p v-if="loading" class="cd-muted pad">読み込んでいます…</p>
-            <p v-else-if="!shown.length" class="cd-muted pad">課題がありません。課題の画面から作れます。</p>
+            <UInput v-model="q" icon="i-lucide-search" :placeholder="t.issues.linkModal.search" size="sm" class="w-full" />
+            <p v-if="loading" class="cd-muted pad">{{ t.issues.loading }}</p>
+            <p v-else-if="!shown.length" class="cd-muted pad">{{ t.issues.linkModal.empty }}</p>
             <div class="list">
                 <button v-for="i in shown" :key="i.n" type="button" class="row" :class="{ on: picked.includes(i.n) }" @click="toggle(i.n)">
                     <UIcon
@@ -58,14 +60,14 @@ async function save() {
                     />
                     <span class="num">#{{ i.n }}</span>
                     <span class="ttl">{{ i.title }}</span>
-                    <UBadge v-if="i.state === 'closed'" label="完了" size="sm" color="neutral" variant="subtle" />
+                    <UBadge v-if="i.state === 'closed'" :label="t.issues.closedState" size="sm" color="neutral" variant="subtle" />
                 </button>
             </div>
         </template>
         <template #footer>
             <div class="cd-modal-foot">
-                <UButton label="やめる" color="neutral" variant="outline" @click="emit('close')" />
-                <UButton :label="oid ? '紐付ける' : '記録する'" :disabled="!!oid && !picked.length" @click="save" />
+                <UButton :label="t.issues.cancel" color="neutral" variant="outline" @click="emit('close')" />
+                <UButton :label="oid ? t.issues.link : t.issues.linkModal.record" :disabled="!!oid && !picked.length" @click="save" />
             </div>
         </template>
     </UModal>

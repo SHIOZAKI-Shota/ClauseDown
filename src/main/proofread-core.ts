@@ -1,4 +1,5 @@
 import type { ProofreadConfig, ProofreadIssue } from '../shared/api'
+import { setLocale } from '../shared/i18n'
 import { noHankakuKana } from './proofread-hankaku'
 import { legalEnglish } from './proofread-legal-en'
 import { LEGAL_OKURIGANA_YAML, LEGAL_TERMS_YAML } from './proofread-legal'
@@ -115,6 +116,7 @@ export function ignoredRanges(source: string): [number, number][] {
 }
 
 export async function proofread(input: unknown, config: ProofreadConfig = {}): Promise<ProofreadIssue[]> {
+    if (config.locale) setLocale(config.locale)
     if (typeof input !== 'string' || !input.trim() || input.length > MAX_CHARS) return []
     const text = input.replace(/\r\n?/g, '\n')
     lint ??= load().catch((e) => {

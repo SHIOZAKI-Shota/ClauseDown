@@ -1,6 +1,8 @@
+import { tagPath } from '../shared/tag-path'
 import fs, { promises as fsp } from 'node:fs'
 import { join, relative, resolve, sep, dirname, basename } from 'node:path'
 import { imageExt } from '../shared/images'
+import { t } from '../shared/i18n'
 import git, { TREE, dropCache } from './igit'
 import http from 'isomorphic-git/http/node'
 import type { CommitObject, TreeEntry } from 'isomorphic-git'
@@ -69,34 +71,34 @@ const isDotGit = (part: string) => {
 export function safeJoin(dir: string, path: string): string {
     const full = resolve(dir, path)
     const root = resolve(dir)
-    if (full !== root && !full.startsWith(root + sep)) throw new Error(`不正なパスです: ${path}`)
+    if (full !== root && !full.startsWith(root + sep)) throw new Error(t().errors.git.badPath(path))
     let cur = root
     for (const part of full.slice(root.length).split(sep).filter(Boolean)) {
-        if (isDotGit(part)) throw new Error(`版管理のフォルダ（.git）は読み書きできません: ${path}`)
+        if (isDotGit(part)) throw new Error(t().errors.git.dotGit(path))
         cur = join(cur, part)
         const st = fs.lstatSync(cur, { throwIfNoEntry: false })
         if (!st) break
-        if (st.isSymbolicLink()) throw new Error(`リンクになっている場所には書き込めません: ${path}`)
+        if (st.isSymbolicLink()) throw new Error(t().errors.git.symlink(path))
     }
     return full
 }
 
 export function assertDocPath(path: unknown): asserts path is string {
     if (typeof path !== 'string' || !/\.md$/i.test(path) || path.split(/[\\/]/).some((p) => !p || p === '..' || p.startsWith('.'))) {
-        throw new Error(`扱えるのはリポジトリ内の .md の文書だけです: ${String(path)}`)
+        throw new Error(t().errors.git.mdOnly(String(path)))
     }
 }
 
 const toPosix = (p: string) => p.split(sep).join('/')
 
 async function ensureEmptyDir(dir: string) {
-    if (fs.existsSync(join(dir, '.git'))) throw new Error('このフォルダはすでに版管理されています。「ローカル にあるフォルダを開く」を使ってください')
+    if (fs.existsSync(join(dir, '.git'))) throw new Error(t().errors.git.alreadyRepo)
     const items = await fsp.readdir(dir).catch(() => null)
-    if (items && items.length) throw new Error(`「${basename(dir)}」という名前のフォルダがすでにあり、中にファイルがあります。別の名前にしてください`)
+    if (items && items.length) throw new Error(t().errors.git.folderNotEmpty(basename(dir)))
 }
 
 export async function cloneRepo(url: string, dir: string): Promise<void> {
-    if (!safeRemoteUrl(url)) throw new Error('リモートの URL は https:// で始まるものを入力してください')
+    if (!safeRemoteUrl(url)) throw new Error(t().errors.git.httpsOnly)
     await ensureEmptyDir(dir)
     const created = !fs.existsSync(dir)
     await fsp.mkdir(dir, { recursive: true })
@@ -128,7 +130,7 @@ export async function repoStatus(dirs: string[]): Promise<Record<string, 'ok' | 
 }
 
 export async function openRepo(dir: string): Promise<{ ok: boolean; message?: string }> {
-    if (!fs.existsSync(join(dir, '.git'))) return { ok: false, message: 'このフォルダは版管理されていません' }
+    if (!fs.existsSync(join(dir, '.git'))) return { ok: false, message: t().errors.git.notRepo }
     return { ok: true }
 }
 
@@ -170,7 +172,7 @@ export async function changedPaths(dir: string): Promise<Set<string>> {
 
 export async function requireClean(dir: string, action: string) {
     if ((await changedPaths(dir)).size > 0) {
-        throw new Error(`版を保存していない変更があります。「版を保存」するか「変更を取り消す」をしてから${action}してください`)
+        throw new Error(t().errors.git.unsaved(action))
     }
 }
 
@@ -222,7 +224,7 @@ export function writeDoc(dir: string, path: string, content: string): Promise<vo
 
 export async function createDoc(dir: string, path: string, title: string, preset: 'law' | 'contract' = 'law'): Promise<void> {
     const full = safeJoin(dir, path)
-    if (fs.existsSync(full)) throw new Error('同じ名前の文書がすでにあります')
+    if (fs.existsSync(full)) throw new Error(t().errors.git.docExists)
     await writeDoc(dir, path, newDocText(title, preset))
 }
 
@@ -254,7 +256,7 @@ async function branchName(dir: string) {
 }
 
 export function branchLabel(name: string, main: string) {
-    if (name === main) return '現行版'
+    if (name === main) return t().notify.mainLabel
     return name.startsWith(DRAFT_PREFIX) ? name.slice(DRAFT_PREFIX.length) : name
 }
 
@@ -266,13 +268,13 @@ export function draftRef(label: string): string {
         .replace(/@\{/g, '-')
         .replace(/^[-.]+|[-.]+$/g, '')
         .replace(/\.lock$/i, '-lock')
-    if (!slug) throw new Error('改定案の名前を入力してください')
+    if (!slug) throw new Error(t().errors.git.draftName)
     return DRAFT_PREFIX + slug
 }
 
 export async function branchOid(dir: string, name: string): Promise<string> {
     const oid = (await tryResolve(dir, `refs/heads/${name}`)) ?? (await tryResolve(dir, `refs/remotes/origin/${name}`))
-    if (!oid) throw new Error(`改定案「${name}」が見つかりません`)
+    if (!oid) throw new Error(t().errors.git.draftNotFound(name))
     return oid
 }
 
@@ -326,7 +328,7 @@ async function countOnlyIn(dir: string, a: string, b: string | null): Promise<nu
 
 export async function currentLabel(dir: string): Promise<string> {
     const cur = await git.currentBranch({ fs, dir })
-    return cur ? branchLabel(cur, await mainBranch(dir)) : '現行版'
+    return cur ? branchLabel(cur, await mainBranch(dir)) : t().notify.mainLabel
 }
 
 export async function listBranches(dir: string): Promise<BranchInfo[]> {
@@ -378,16 +380,16 @@ export async function createBranch(dir: string, label: string, from?: string): P
     const name = draftRef(label)
     if (!(await hasHead(dir))) {
         const tree = await git.writeTree({ fs, dir, tree: [] })
-        await git.commit({ fs, dir, message: 'リポジトリを作成', author: await author(dir), tree, parent: [] })
+        await git.commit({ fs, dir, message: t().notify.commits.createRepo, author: await author(dir), tree, parent: [] })
     }
     const exists = (await tryResolve(dir, `refs/heads/${name}`)) || (await tryResolve(dir, `refs/remotes/origin/${name}`))
-    if (exists) throw new Error(`「${branchLabel(name, '')}」という改定案はすでにあります`)
+    if (exists) throw new Error(t().errors.git.draftExists(branchLabel(name, '')))
     const current = await git.currentBranch({ fs, dir })
     if (!from || from === current) {
         await git.branch({ fs, dir, ref: name, checkout: true })
         return name
     }
-    await requireClean(dir, '別の案から改定案を作成')
+    await requireClean(dir, t().errors.git.actions.draftFromDraft)
     await git.branch({ fs, dir, ref: name, object: await branchOid(dir, from) })
     await git.checkout({ fs, dir, ref: name })
     return name
@@ -395,7 +397,7 @@ export async function createBranch(dir: string, label: string, from?: string): P
 
 export async function switchBranch(dir: string, name: string): Promise<void> {
     if ((await git.currentBranch({ fs, dir })) === name) return
-    await requireClean(dir, '切り替え')
+    await requireClean(dir, t().errors.git.actions.switch)
     const local = await tryResolve(dir, `refs/heads/${name}`)
     if (!local) await git.branch({ fs, dir, ref: name, object: await branchOid(dir, name) })
     await git.checkout({ fs, dir, ref: name, force: true })
@@ -403,9 +405,9 @@ export async function switchBranch(dir: string, name: string): Promise<void> {
 
 export async function deleteBranch(dir: string, name: string): Promise<void> {
     const main = await mainBranch(dir)
-    if (name === main) throw new Error('現行版は削除できません')
+    if (name === main) throw new Error(t().errors.git.deleteMain)
     if ((await git.currentBranch({ fs, dir })) === name) {
-        await requireClean(dir, '改定案を削除')
+        await requireClean(dir, t().errors.git.actions.deleteDraft)
         await git.checkout({ fs, dir, ref: main, force: true })
     }
     if (await tryResolve(dir, `refs/remotes/origin/${name}`)) {
@@ -415,7 +417,7 @@ export async function deleteBranch(dir: string, name: string): Promise<void> {
         try {
             await git.push({ fs, http, dir, remote: 'origin', ref: name, delete: true, onAuth })
         } catch (e) {
-            throw new Error(`リモートから改定案を削除できませんでした（${explain(e)}）`)
+            throw new Error(t().errors.git.remoteDeleteFailed(explain(e)))
         }
         await git.deleteRef({ fs, dir, ref: `refs/remotes/origin/${name}` }).catch(() => {})
     }
@@ -709,13 +711,13 @@ export async function readAt(dir: string, oid: string, path: string): Promise<st
 }
 
 const EFFECTIVE_PREFIX = '施行/'
-const effectiveTag = (docPath: string, date: string) => `${EFFECTIVE_PREFIX}${docPath.replace(/\.md$/i, '')}/${date}`
+const effectiveTag = (docPath: string, date: string) => `${EFFECTIVE_PREFIX}${tagPath(docPath)}/${date}`
 
 export async function tagEffective(dir: string, docPaths: string[], date: string, oid: string) {
     const who = await author(dir)
     for (const p of docPaths) {
         const ref = effectiveTag(p, date)
-        await git.annotatedTag({ fs, dir, ref, object: oid, message: `${p} 施行日 ${date}`, tagger: who, force: true })
+        await git.annotatedTag({ fs, dir, ref, object: oid, message: t().notify.commits.effectiveTag(p, date), tagger: who, force: true })
         await addPendingTag(dir, ref)
     }
     const untags = await pendingUntags(dir)
@@ -733,7 +735,7 @@ export interface EffectiveVersion {
 }
 
 export async function listEffective(dir: string, docPath: string): Promise<EffectiveVersion[]> {
-    const prefix = `施行/${docPath.replace(/\.md$/i, '')}/`
+    const prefix = `${EFFECTIVE_PREFIX}${tagPath(docPath)}/`
     const out: EffectiveVersion[] = []
     for (const tag of await git.listTags({ fs, dir })) {
         if (!tag.startsWith(prefix)) continue
@@ -748,8 +750,8 @@ export async function listEffective(dir: string, docPath: string): Promise<Effec
 }
 
 export async function addEffective(dir: string, docPath: string, oid: string, date: string): Promise<void> {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('施行日の形式が正しくありません')
-    if ((await readAt(dir, oid, docPath)) === null) throw new Error('この版にはこの文書がありません')
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error(t().errors.git.effectiveDateFormat)
+    if ((await readAt(dir, oid, docPath)) === null) throw new Error(t().errors.git.docNotInVersion)
     await tagEffective(dir, [docPath], date, oid)
     await push(dir)
 }
@@ -772,7 +774,7 @@ export async function removeEffective(dir: string, docPath: string, date: string
 export async function saveVersion(dir: string, input: SaveVersionInput): Promise<string> {
     const head = await hasHead(dir)
     const changed = await realStatus(dir)
-    if (changed.length === 0 && head) throw new Error('前の版から変更がありません')
+    if (changed.length === 0 && head) throw new Error(t().errors.git.noChanges)
     const gone = changed.filter(([, , work]) => work === 0).map(([p]) => p)
     const kept = changed.filter(([, , work]) => work !== 0).map(([p]) => p)
     if (gone.length) await git.remove({ fs, dir, filepath: gone })
@@ -897,8 +899,8 @@ export async function push(dir: string): Promise<SyncState> {
         await pushRecords(dir)
         if (failed.length) {
             const { tag, error } = failed[0]
-            const why = (error as { code?: string })?.code === 'PushRejectedError' ? 'リモートにある同じ名前の記録を置き換えられませんでした' : explain(error)
-            return { state: 'error', message: `施行日の記録「${tag}」を送信できませんでした（${why}）` }
+            const why = (error as { code?: string })?.code === 'PushRejectedError' ? t().errors.git.tagReplaceRejected : explain(error)
+            return { state: 'error', message: t().errors.git.tagPushFailed(tag, why) }
         }
         return { state: 'upToDate' }
     } catch (e) {
@@ -918,10 +920,10 @@ export async function publishRepo(dir: string, rawUrl: string): Promise<string> 
     let url = String(rawUrl ?? '')
         .trim()
         .replace(/\/+$/, '')
-    if (!safeRemoteUrl(url)) throw new Error('リモートの URL は https:// で始まるものを入力してください')
+    if (!safeRemoteUrl(url)) throw new Error(t().errors.git.httpsOnly)
     if (matchRemote(url, knownBases(await loadSettings())) && !/\.git$/i.test(url)) url += '.git'
-    if (await hasRemote(dir)) throw new Error('このリポジトリには、すでにリモートが設定されています')
-    if (!(await hasHead(dir))) throw new Error('まだ版が保存されていません。最初の版を保存してから共有してください')
+    if (await hasRemote(dir)) throw new Error(t().errors.git.hasRemote)
+    if (!(await hasHead(dir))) throw new Error(t().errors.git.noVersions)
 
     let refs: { ref: string; oid: string }[]
     try {
@@ -931,7 +933,7 @@ export async function publishRepo(dir: string, rawUrl: string): Promise<string> 
     }
     for (const r of refs.filter((r) => r.ref.startsWith('refs/'))) {
         if ((await tryResolve(dir, r.ref)) !== r.oid) {
-            throw new Error('リモートのリポジトリが空ではありません。README などを付けずに、空のリポジトリとして作り直してください')
+            throw new Error(t().errors.git.remoteNotEmpty)
         }
     }
 
@@ -951,7 +953,7 @@ export async function changeRemote(dir: string, rawUrl: string): Promise<string>
     let url = String(rawUrl ?? '')
         .trim()
         .replace(/\/+$/, '')
-    if (!safeRemoteUrl(url)) throw new Error('リモートの URL は https:// で始まるものを入力してください')
+    if (!safeRemoteUrl(url)) throw new Error(t().errors.git.httpsOnly)
     if (matchRemote(url, knownBases(await loadSettings())) && !/\.git$/i.test(url)) url += '.git'
     const before = await remoteUrl(dir)
     if (!before) return publishRepo(dir, url)
@@ -972,7 +974,7 @@ export async function changeRemote(dir: string, rawUrl: string): Promise<string>
                 ),
             ),
         )
-        if (!known.some(Boolean)) throw new Error('このリモートには、このリポジトリとは別の履歴があります。正しい URL か確かめてください')
+        if (!known.some(Boolean)) throw new Error(t().errors.git.unrelatedHistory)
     }
 
     await git.setConfig({ fs, dir, path: 'remote.origin.url', value: url })
@@ -1075,19 +1077,19 @@ async function planMerge(dir: string, ours: string, theirs: string, choices: Rec
         }
         const choice = choices?.[f.path]
         if (choice && typeof choice === 'object') {
-            if (choice.content !== null && typeof choice.content !== 'string') throw new Error(`「${f.path}」の解決内容が正しくありません`)
+            if (choice.content !== null && typeof choice.content !== 'string') throw new Error(t().errors.git.badResolution(f.path))
             plan.set(f.path, choice.content === null ? null : await writeText(dir, choice.content))
         } else if (choice === 'theirs') plan.set(f.path, f.theirs ?? null)
         else if (choice === 'ours') continue
         else if (autoMerged.has(f.path)) plan.set(f.path, await writeText(dir, autoMerged.get(f.path)!))
-        else throw new Error(`「${f.path}」の重なりが解決されていません`)
+        else throw new Error(t().errors.git.unresolved(f.path))
     }
     return plan
 }
 
 async function commitMerge(dir: string, ours: string, theirs: string, plan: TreeChanges, message: string) {
     const branch = await branchName(dir)
-    if ((await git.resolveRef({ fs, dir, ref: branch })) !== ours) throw new Error('統合の途中で版が変わりました。もう一度やり直してください')
+    if ((await git.resolveRef({ fs, dir, ref: branch })) !== ours) throw new Error(t().errors.git.movedDuringMerge)
     const oid = (await commitTree(dir, ours, plan, message, [ours, theirs]))!
     for (const [path, blob] of plan) {
         const full = safeJoin(dir, path)
@@ -1105,10 +1107,10 @@ async function commitMerge(dir: string, ours: string, theirs: string, plan: Tree
 
 export async function resolveConflicts(dir: string, theirs: string, choices: Record<string, ConflictChoice>): Promise<SyncState> {
     try {
-        await requireClean(dir, '取り込み')
+        await requireClean(dir, t().errors.git.actions.pull)
         const ours = await git.resolveRef({ fs, dir, ref: await branchName(dir) })
         const plan = await planMerge(dir, ours, theirs, choices)
-        await commitMerge(dir, ours, theirs, plan, 'リモートの変更を取り込みました')
+        await commitMerge(dir, ours, theirs, plan, t().notify.commits.pulledRemote)
         return push(dir)
     } catch (e) {
         return { state: 'error', message: explain(e) }
@@ -1132,7 +1134,7 @@ export async function previewMerge(dir: string, from: string, into: string): Pro
 }
 
 export async function mergeBranch(dir: string, input: MergeInput): Promise<SyncState> {
-    await requireClean(dir, '反映')
+    await requireClean(dir, t().errors.git.actions.merge)
     const fromOid = await branchOid(dir, input.from)
     const intoOid = await branchOid(dir, input.into)
     const plan = await planMerge(dir, intoOid, fromOid, input.choices)

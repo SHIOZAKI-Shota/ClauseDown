@@ -6,6 +6,7 @@ import { renderBlock, renderRich, renderRichParts } from './blocks'
 import { inlinePropsHtml, propsAttrs, stripInlineProps, type CdProps } from './cd-prop'
 import { useMath } from './math'
 import { useLocalImages } from './images'
+import { t } from './i18n'
 
 const md = useLocalImages(useMath(new MarkdownIt({ html: false, linkify: false, breaks: true })))
 
@@ -14,7 +15,7 @@ const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 function inline(text: string, doc: LegalDoc): string {
     const resolved = resolveRefs(text, doc, (id) => `[[${id}]]`)
     return inlinePropsHtml(
-        md.renderInline(resolved).replace(/\[\[([^\]]+)\]\]/g, (_, id) => `<span class="cd-missing" title="参照先の条が見つかりません">[[${id}]]</span>`),
+        md.renderInline(resolved).replace(/\[\[([^\]]+)\]\]/g, (_, id) => `<span class="cd-missing" title="${esc(t().checks.missingTarget)}">[[${id}]]</span>`),
     )
 }
 

@@ -32,7 +32,7 @@ const RULES: Record<string, () => Promise<unknown>> = {
 const core = import('../../main/proofread-core').then((m) => {
     m.setRuleLoader((pkg) => {
         const load = RULES[pkg]
-        if (!load) throw new Error(`校正の規則 ${pkg} はデモに入っていません`)
+        if (!load) throw new Error(`demo: proofreading rule ${pkg} is not bundled`)
         return load()
     })
     return m

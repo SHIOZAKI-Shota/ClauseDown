@@ -1,5 +1,6 @@
 import type { Ref } from 'vue'
 import { addDays, byDate, kindMap, type DueEvent, type DueEventInput, type EventKind, type Occurrence, type Period, type RepoSchedule } from '@shared/schedule'
+import { t } from '@shared/i18n'
 import { useApp } from '~/stores/app'
 import { todayISO } from '~/utils/format'
 import { toPlain } from '~/utils/ipc'
@@ -90,13 +91,13 @@ export function useSchedule(all?: Ref<boolean>) {
     }
 
     async function save(input: DueEventInput, dir = app.repoDir!): Promise<boolean> {
-        const ok = await app.runOk(() => window.api.saveEvent(dir, toPlain(input)), '期日を保存しました')
+        const ok = await app.runOk(() => window.api.saveEvent(dir, toPlain(input)), t().schedule.saved)
         if (ok) app.touchSchedule(dir)
         return ok
     }
 
     async function remove(id: string, dir = app.repoDir!) {
-        const ok = await app.runOk(() => window.api.deleteEvent(dir, id), '期日を消しました')
+        const ok = await app.runOk(() => window.api.deleteEvent(dir, id), t().schedule.removed)
         if (ok) app.touchSchedule(dir)
     }
 

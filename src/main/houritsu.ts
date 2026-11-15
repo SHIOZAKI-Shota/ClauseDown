@@ -1,6 +1,7 @@
 import fs, { promises as fsp } from 'node:fs'
 import git from './igit'
 import { author } from './git-base'
+import { t } from '../shared/i18n'
 import { safeJoin, walkMd } from './git'
 import { fromHouritsu, isHouritsu, type HouritsuConversion } from '../shared/houritsu'
 
@@ -65,7 +66,7 @@ export async function convertHouritsu(dir: string, paths: string[]): Promise<Hou
         }
         if (done.length) {
             await git.add({ fs, dir, filepath: done })
-            await git.commit({ fs, dir, message: `houritsu の形式から ClauseDown の形に変換（${done.length} 件）`, author: who })
+            await git.commit({ fs, dir, message: t().notify.commits.houritsuConverted(done.length), author: who })
         }
     } catch (e) {
         for (const path of done) {

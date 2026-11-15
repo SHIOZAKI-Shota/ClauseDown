@@ -2,8 +2,10 @@
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { FORGE_LABEL } from '@shared/forge'
 import { useApp } from '~/stores/app'
+import { useT } from '~/composables/useT'
 
 const app = useApp()
+const t = useT()
 const showConflicts = ref(false)
 const publishing = ref(false)
 const changing = ref(false)
@@ -12,30 +14,30 @@ const disconnecting = ref(false)
 const local = computed(() => app.syncState?.state === 'local' || !app.repo?.url)
 const status = computed(() => {
     const s = app.syncState
+    const m = t.value.sync.status
     const remote = (text: string, color: 'success' | 'warning' | 'error' | 'neutral', title: string) => ({
-        text: text ? `リモート・${text}` : 'リモート',
+        text: text ? m.remoteWith(text) : m.remote,
         icon: 'i-lucide-cloud',
         color,
         title,
     })
-    if (!app.repo?.url)
-        return { text: 'ローカル', icon: 'i-lucide-hard-drive', color: 'neutral' as const, title: 'リモートがなく、ローカル だけで管理しています' }
-    if (!s) return { text: '未確認', icon: 'i-lucide-circle-help', color: 'neutral' as const, title: 'まだ同期していません' }
+    if (!app.repo?.url) return { text: m.local, icon: 'i-lucide-hard-drive', color: 'neutral' as const, title: m.localTitle }
+    if (!s) return { text: m.unknown, icon: 'i-lucide-circle-help', color: 'neutral' as const, title: m.unknownTitle }
     switch (s.state) {
         case 'local':
-            return { text: 'ローカル', icon: 'i-lucide-hard-drive', color: 'neutral' as const, title: 'リモートがなく、ローカル だけで管理しています' }
+            return { text: m.local, icon: 'i-lucide-hard-drive', color: 'neutral' as const, title: m.localTitle }
         case 'upToDate':
-            return remote('', 'success', `リモート（${app.repo?.url ?? ''}）と同じ、最新の状態です`)
+            return remote('', 'success', m.upToDateTitle(app.repo?.url ?? ''))
         case 'behind':
-            return remote('', 'success', 'リモートから最新の版を取得しました')
+            return remote('', 'success', m.behindTitle)
         case 'ahead':
-            return remote(`送信待ち ${s.count}`, 'warning', `リモートにまだ送信していない版が ${s.count} 件あります`)
+            return remote(m.ahead(s.count), 'warning', m.aheadTitle(s.count))
         case 'diverged':
-            return remote('重なりあり', 'error', 'リモートの変更と重なっています')
+            return remote(m.diverged, 'error', m.divergedTitle)
         case 'dirty':
-            return remote('取得できません', 'warning', '保存していない変更があるため、最新を取得できません')
+            return remote(m.dirty, 'warning', m.dirtyTitle)
         case 'error':
-            return remote('同期できませんでした', 'error', s.message)
+            return remote(m.error, 'error', s.message)
     }
 })
 
@@ -52,36 +54,37 @@ function main() {
 }
 
 const webUrl = computed(() => app.repo?.url?.replace(/\.git$/, ''))
-const where = computed(() => (app.forge ? FORGE_LABEL[app.forge] : 'ブラウザ'))
+const where = computed(() => (app.forge ? FORGE_LABEL[app.forge] : t.value.sync.status.browser))
 async function copyUrl() {
     if (!webUrl.value) return
     await navigator.clipboard.writeText(webUrl.value)
-    app.notify('リモートの URL をコピーしました')
+    app.notify(t.value.sync.status.urlCopied)
 }
 
-const menu = computed<DropdownMenuItem[][]>(() =>
-    local.value
+const menu = computed<DropdownMenuItem[][]>(() => {
+    const m = t.value.sync.status
+    return local.value
         ? [
-              [{ type: 'label', label: 'ローカル だけで管理しています' }],
-              [{ label: 'リモートを追加…', icon: 'i-lucide-cloud-upload', onSelect: () => (publishing.value = true) }],
-              [{ label: 'GitHub/GitLab のログイン', icon: 'i-lucide-log-in', onSelect: () => app.openSettings('setup', 'remote') }],
+              [{ type: 'label', label: m.localOnly }],
+              [{ label: m.addRemote, icon: 'i-lucide-cloud-upload', onSelect: () => (publishing.value = true) }],
+              [{ label: m.forgeLogin, icon: 'i-lucide-log-in', onSelect: () => app.openSettings('setup', 'remote') }],
           ]
         : [
               ...(webUrl.value ? [[{ type: 'label' as const, label: webUrl.value.replace(/^https?:\/\//, '') }]] : []),
               [
                   diverged.value
-                      ? { label: '重なりを解決…', icon: 'i-lucide-git-merge', onSelect: () => (showConflicts.value = true) }
-                      : { label: '今すぐ同期', icon: 'i-lucide-refresh-cw', disabled: app.busy, onSelect: () => void doSync() },
-                  { label: `${where.value}で開く`, icon: 'i-lucide-external-link', onSelect: () => webUrl.value && window.api.openExternal(webUrl.value) },
-                  { label: 'URL をコピー', icon: 'i-lucide-copy', onSelect: () => void copyUrl() },
+                      ? { label: m.resolve, icon: 'i-lucide-git-merge', onSelect: () => (showConflicts.value = true) }
+                      : { label: m.syncNow, icon: 'i-lucide-refresh-cw', disabled: app.busy, onSelect: () => void doSync() },
+                  { label: m.openIn(where.value), icon: 'i-lucide-external-link', onSelect: () => webUrl.value && window.api.openExternal(webUrl.value) },
+                  { label: m.copyUrl, icon: 'i-lucide-copy', onSelect: () => void copyUrl() },
               ],
               [
-                  { label: 'リモートを変更…', icon: 'i-lucide-pencil', onSelect: () => (changing.value = true) },
-                  { label: 'GitHub/GitLab の設定', icon: 'i-lucide-settings-2', onSelect: () => app.openSettings('repo', 'forge') },
+                  { label: m.changeRemote, icon: 'i-lucide-pencil', onSelect: () => (changing.value = true) },
+                  { label: m.forgeSettings, icon: 'i-lucide-settings-2', onSelect: () => app.openSettings('repo', 'forge') },
               ],
-              [{ label: 'リモートから外す…', icon: 'i-lucide-unlink', color: 'error', onSelect: () => (disconnecting.value = true) }],
-          ],
-)
+              [{ label: m.disconnect, icon: 'i-lucide-unlink', color: 'error', onSelect: () => (disconnecting.value = true) }],
+          ]
+})
 
 async function disconnect() {
     disconnecting.value = false
@@ -113,8 +116,8 @@ watch(
                 :trailing-icon="local ? 'i-lucide-plus' : diverged ? 'i-lucide-git-merge' : 'i-lucide-refresh-cw'"
                 :ui="{ trailingIcon: app.busy && !local ? 'spin' : '' }"
                 :disabled="app.busy && !local"
-                :title="`${status.title}\n${local ? '押すと、リモートを追加します' : diverged ? '押すと、重なりを解決する画面を開きます' : '押すと同期します'}`"
-                :aria-label="local ? 'リモートを追加' : diverged ? '重なりを解決する' : '同期する'"
+                :title="`${status.title}\n${local ? t.sync.status.hintAdd : diverged ? t.sync.status.hintResolve : t.sync.status.hintSync}`"
+                :aria-label="local ? t.sync.status.ariaAdd : diverged ? t.sync.status.ariaResolve : t.sync.status.ariaSync"
                 @click="main"
             />
             <UDropdownMenu :items="menu" :content="{ align: 'end' }">
@@ -124,8 +127,8 @@ watch(
                     variant="soft"
                     size="xs"
                     class="seg more"
-                    aria-label="リモートのメニュー"
-                    title="リモートのメニュー"
+                    :aria-label="t.sync.status.menu"
+                    :title="t.sync.status.menu"
                 />
             </UDropdownMenu>
         </div>
@@ -134,10 +137,10 @@ watch(
         <ChangeRemoteModal v-if="changing" v-model:open="changing" />
         <ConfirmModal
             v-model:open="disconnecting"
-            title="リモートから外す"
-            confirm-label="外す"
+            :title="t.sync.status.disconnectTitle"
+            :confirm-label="t.sync.status.disconnectConfirm"
             color="error"
-            :description="`リモート（${webUrl ?? ''}）とのつながりを外し、ローカル だけで管理する形に戻します。リモートのリポジトリと、ローカル の版は消えません。あとで「リモートを追加」からつなぎ直せます。`"
+            :description="t.sync.status.disconnectDesc(webUrl ?? '')"
             @confirm="disconnect"
         />
     </div>

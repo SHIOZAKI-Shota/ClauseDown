@@ -5,6 +5,8 @@ import { EXPERIMENTS, isEnabled, type ExperimentId } from '@shared/experiments'
 import { DEFAULT_JOSHI_ALLOW, PROOFREAD_RULES, ruleOn } from '@shared/proofread-rules'
 import { EDITOR_FONTS, cssFont, type AppPrefs } from '@shared/prefs'
 import { useApp } from '~/stores/app'
+import { useT } from '~/composables/useT'
+import type { LanguagePref } from '@shared/i18n'
 import { baseName } from '~/utils/folders'
 import { useTheme, type ThemeMode } from '~/composables/useTheme'
 import { useSavedFlash } from '~/composables/useSavedFlash'
@@ -13,24 +15,31 @@ import { FORGE_LABEL, knownBases, matchRemote } from '@shared/forge'
 import { LEGAL_CSS } from '@shared/legal-css'
 import { cleanSection, groupRepos, sectionNames } from '@shared/repo-sections'
 const app = useApp()
+const t = useT()
 const { set: setTheme } = useTheme()
 
 const demo = isDemo()
 const DEMO_SECTIONS = ['display', 'editor', 'print']
 const shown = (id: string) => !demo || DEMO_SECTIONS.includes(id)
-const SECTIONS = [
-    { id: 'profile', label: 'あなたの情報', icon: 'i-lucide-user' },
-    { id: 'display', label: '表示', icon: 'i-lucide-monitor' },
-    { id: 'editor', label: 'エディタ', icon: 'i-lucide-square-pen' },
-    { id: 'sync', label: '同期', icon: 'i-lucide-refresh-cw' },
-    { id: 'due', label: '期日・有効期間', icon: 'i-lucide-calendar-clock' },
-    { id: 'export', label: '書き出し', icon: 'i-lucide-download' },
-    { id: 'print', label: '印刷・PDF・Word の書式', icon: 'i-lucide-type' },
-    { id: 'remote', label: 'GitHub/GitLab', icon: 'i-lucide-cloud' },
-    { id: 'ai', label: 'AI', icon: 'i-lucide-sparkles' },
-    { id: 'repos', label: 'リポジトリの一覧', icon: 'i-lucide-archive' },
-    { id: 'developer', label: 'Developer', icon: 'i-lucide-code-xml' },
-].filter((s) => shown(s.id))
+const SECTION_ICONS = {
+    profile: 'i-lucide-user',
+    display: 'i-lucide-monitor',
+    editor: 'i-lucide-square-pen',
+    sync: 'i-lucide-refresh-cw',
+    due: 'i-lucide-calendar-clock',
+    export: 'i-lucide-download',
+    print: 'i-lucide-type',
+    remote: 'i-lucide-cloud',
+    ai: 'i-lucide-sparkles',
+    repos: 'i-lucide-archive',
+    developer: 'i-lucide-code-xml',
+} as const
+const SECTIONS = computed(() =>
+    (Object.keys(SECTION_ICONS) as (keyof typeof SECTION_ICONS)[])
+        .filter((id) => shown(id))
+        .map((id) => ({ id, label: t.value.settings.sections[id], icon: SECTION_ICONS[id] })),
+)
+const st = computed(() => t.value.settings)
 
 const resetting = ref<'prefs' | 'all' | null>(null)
 const resetBusy = ref(false)
@@ -39,7 +48,7 @@ async function resetPrefs() {
     try {
         await app.resetPrefs()
         await setTheme('system')
-        app.notify('表示・エディタなどの設定を初期値に戻しました')
+        app.notify(st.value.developer.resetPrefsDone)
         resetting.value = null
     } finally {
         resetBusy.value = false
@@ -89,17 +98,17 @@ const identityDefault = computed({
     },
 })
 const defaultItems = computed(() => [
-    { label: '自動（ログイン中のアカウントのどれか）', value: 'auto' },
-    ...signedIn.value.map((a) => ({ label: `${a.label}：${a.name}（@${a.login}）`, value: a.base })),
+    { label: st.value.profile.auto, value: 'auto' },
+    ...signedIn.value.map((a) => ({ label: st.value.profile.accountItem(a.label, a.name ?? '', a.login ?? ''), value: a.base })),
 ])
 const nameSource = computed({
     get: () => (identityDefault.value === 'manual' ? 'manual' : 'login'),
     set: (v: 'login' | 'manual') => (identityDefault.value = v === 'manual' ? 'manual' : 'auto'),
 })
-const SOURCES: SegmentItem[] = [
-    { value: 'login', label: 'GitHub・GitLab のアカウント', icon: 'i-lucide-log-in' },
-    { value: 'manual', label: '自分で入力する', icon: 'i-lucide-pencil' },
-]
+const SOURCES = computed<SegmentItem[]>(() => [
+    { value: 'login', label: st.value.profile.sourceLogin, icon: 'i-lucide-log-in' },
+    { value: 'manual', label: st.value.profile.sourceManual, icon: 'i-lucide-pencil' },
+])
 
 const name = ref(app.settings?.author.name ?? '')
 const email = ref(app.settings?.author.email ?? '')
@@ -139,20 +148,13 @@ onMounted(async () => {
     if (mcpEnabled.value) mcpToken.value = await window.api.getMcpToken()
     void refreshDesktop()
 })
-const DESKTOP_TEXT: Record<DesktopStatus['state'], string> = {
-    registered: '登録済みです。Claude Desktop のチャットから ClauseDown の文書を扱えます。',
-    unregistered: 'ボタンを押すと、Claude Desktop から ClauseDown の文書を扱えるようにします。',
-    outdated: 'ClauseDown の場所が変わったため、登録し直す必要があります。',
-    notInstalled: 'Claude Desktop が見つかりません。入れて一度起動してから、この画面を開き直してください。',
-    broken: '',
-}
-const desktopText = computed(() => (desktop.value ? (desktop.value.error ?? DESKTOP_TEXT[desktop.value.state]) : ''))
+const desktopText = computed(() => (desktop.value ? (desktop.value.error ?? st.value.mcp.desktopText[desktop.value.state]) : ''))
 async function registerDesktop() {
-    const s = await app.run(() => window.api.registerDesktop(), 'Claude Desktop に登録しました。Claude Desktop を再起動すると使えます')
+    const s = await app.run(() => window.api.registerDesktop(), st.value.mcp.registerDone)
     if (s) desktop.value = s
 }
 async function unregisterDesktop() {
-    const s = await app.run(() => window.api.unregisterDesktop(), 'Claude Desktop への登録を外しました。Claude Desktop を再起動すると反映されます')
+    const s = await app.run(() => window.api.unregisterDesktop(), st.value.mcp.unregisterDone)
     if (s) desktop.value = s
 }
 async function applyMcp() {
@@ -165,14 +167,14 @@ async function applyMcp() {
     else flash()
 }
 async function regenerateToken() {
-    const t = await app.run(() => window.api.regenerateMcpToken(), '接続用トークンを作り直しました。つないでいる AI の設定も新しいトークンに変えてください')
-    if (t) mcpToken.value = t
+    const token = await app.run(() => window.api.regenerateMcpToken(), st.value.mcp.regenerated)
+    if (token) mcpToken.value = token
 }
 const mcpUrl = computed(() => ai.value?.mcp.url || `http://127.0.0.1:${mcpPort.value}/mcp`)
 const claudeCommand = computed(() => `claude mcp add --transport http clausedown ${mcpUrl.value} --header "Authorization: Bearer ${mcpToken.value}"`)
 async function copy(text: string, what: string) {
     await navigator.clipboard.writeText(text)
-    app.notify(`${what}をコピーしました`)
+    app.notify(st.value.copied(what))
 }
 
 const mode = ref<'new' | 'open' | 'clone'>('new')
@@ -181,11 +183,11 @@ const folderPath = ref('')
 const folderPaths = ref<string[]>([])
 const newName = ref('')
 const adding = computed(() => app.busy)
-const MODES: SegmentItem<'new' | 'open' | 'clone'>[] = [
-    { value: 'new', label: '新しく作る（ローカル）', icon: 'i-lucide-folder-plus' },
-    { value: 'open', label: 'ローカル にあるフォルダを開く', icon: 'i-lucide-folder-open' },
-    { value: 'clone', label: 'GitHub・GitLab から取得', icon: 'i-lucide-cloud-download' },
-]
+const MODES = computed<SegmentItem<'new' | 'open' | 'clone'>[]>(() => [
+    { value: 'new', label: st.value.repos.modes.new, icon: 'i-lucide-folder-plus' },
+    { value: 'open', label: st.value.repos.modes.open, icon: 'i-lucide-folder-open' },
+    { value: 'clone', label: st.value.repos.modes.clone, icon: 'i-lucide-cloud-download' },
+])
 watch(mode, () => {
     folderPath.value = ''
     folderPaths.value = []
@@ -201,8 +203,8 @@ const sepChar = computed(() => (folderPath.value.includes('\\') ? '\\' : '/'))
 const nameError = computed(() => {
     const n = newName.value.trim()
     if (!n) return ''
-    if (/[\\/:*?"<>|]/.test(n)) return '\\ / : * ? " < > | は名前に使えません'
-    if (n.startsWith('.') || n.endsWith('.') || n.endsWith(' ')) return '点で始まる・点や空白で終わる名前は使えません'
+    if (/[\\/:*?"<>|]/.test(n)) return st.value.repos.badChars
+    if (n.startsWith('.') || n.endsWith('.') || n.endsWith(' ')) return st.value.repos.badDots
     return ''
 })
 const targetPath = computed(() =>
@@ -241,12 +243,10 @@ async function addOpenRepos() {
         folderPaths.value = []
         for (const r of added) if (await checkHouritsu(r.dir)) break
     }
-    const notes = [
-        notRepo.length ? `リポジトリではないため追加できませんでした：${notRepo.join('、')}（.git フォルダがある場所を選んでください）` : '',
-        already.length ? `すでに一覧にあります：${already.join('、')}` : '',
-    ].filter(Boolean)
-    if (added.length) app.notify(`${added.length}件のリポジトリを追加しました`)
-    if (notes.length) app.notify(notes.join(' ／ '), !added.length || notRepo.length > 0)
+    const m = st.value.repos
+    const notes = [notRepo.length ? m.notRepo(notRepo.join(m.listSep)) : '', already.length ? m.already(already.join(m.listSep)) : ''].filter(Boolean)
+    if (added.length) app.notify(m.addedN(added.length))
+    if (notes.length) app.notify(notes.join(m.noteSep), !added.length || notRepo.length > 0)
     if (added.length) app.view = 'docs'
 }
 
@@ -266,7 +266,7 @@ async function addRepo() {
     url.value = ''
     folderPath.value = ''
     newName.value = ''
-    app.notify(`リポジトリ「${entry.name}」を${mode.value === 'clone' ? '取得' : '作成'}しました`)
+    app.notify(st.value.repos.created(entry.name, mode.value === 'clone'))
     app.view = 'docs'
     await checkHouritsu(target)
 }
@@ -287,7 +287,7 @@ const dupParent = ref('')
 const dupBusy = ref(false)
 function startDuplicate(r: RepoEntry) {
     dupOf.value = r
-    dupName.value = `${r.name}_コピー`
+    dupName.value = `${r.name}${st.value.repos.copySuffix}`
     dupParent.value = parentOf(r.dir)
 }
 async function pickDupParent() {
@@ -305,7 +305,7 @@ async function duplicate() {
     if (!dest) return
     await app.saveSettings({ ...app.settings!, repos: [...app.settings!.repos, { name, dir: dest }] })
     dupOf.value = null
-    app.notify(`「${r.name}」を「${name}」として複製しました`)
+    app.notify(st.value.repos.duplicated(r.name, name))
 }
 
 const forkOf = ref<RepoEntry | null>(null)
@@ -325,7 +325,7 @@ async function fork() {
     await app.setRepoUrl(r.dir, url)
     forkOf.value = null
     if (r.dir === app.repoDir) await app.refreshDocs()
-    app.notify(`フォークしました。送信先を ${url.replace(/\.git$/, '')} に切り替えました`)
+    app.notify(st.value.repos.forked(url.replace(/\.git$/, '')))
 }
 
 const defaultCss = LEGAL_CSS.trim()
@@ -338,11 +338,11 @@ watch(
     }, 400),
 )
 
-const NO_SECTION = 'なし'
+const noSection = computed(() => st.value.repos.noSection)
 const repoGroups = computed(() => groupRepos(app.settings?.repos ?? []))
-const sectionChoices = computed(() => [NO_SECTION, ...sectionNames(app.settings?.repos ?? [])])
+const sectionChoices = computed(() => [noSection.value, ...sectionNames(app.settings?.repos ?? [])])
 function setSection(r: RepoEntry, v: string) {
-    const next = v === NO_SECTION ? undefined : cleanSection(v)
+    const next = v === noSection.value ? undefined : cleanSection(v)
     if (next !== cleanSection(r.section)) void app.moveRepo(r.dir, { section: next })
 }
 const experimentOn = (id: ExperimentId) => isEnabled(app.settings, id)
@@ -365,54 +365,49 @@ async function addSamples() {
     if (!made) return
     const repos = [...app.settings!.repos.filter((r) => !made.some((m) => m.dir === r.dir)), ...made]
     await app.saveSettings({ ...app.settings!, repos })
-    app.notify(`サンプルリポジトリを ${made.length} 件追加しました`)
+    app.notify(st.value.developer.samplesAdded(made.length))
     const h = made.find((m) => m.name.startsWith('SAMPLE_houritsu'))
     if (h) await checkHouritsu(h.dir)
 }
 </script>
 
 <template>
-    <SettingsLayout
-        :sections="SECTIONS"
-        title="設定"
-        scope="アプリ全体"
-        note="リポジトリごとの設定がある項目は、そちらが優先されます。リポジトリごとの設定は、タイトルバーのリポジトリ名を押して「このリポジトリの設定」から開きます。"
-        :saved="saved"
-        id-prefix="s"
-    >
-        <SettingsSection v-if="shown('profile')" id="profile" title="あなたの情報">
+    <SettingsLayout :sections="SECTIONS" :title="t.settings.title" :scope="t.settings.scope" :note="t.settings.note" :saved="saved" id-prefix="s">
+        <SettingsSection v-if="shown('profile')" id="profile" :title="t.settings.sections.profile">
             <UAlert
                 v-if="app.repoDir && app.identity"
                 color="neutral"
                 variant="subtle"
                 icon="i-lucide-user-check"
-                :title="`「${app.repo?.name}」では ${app.identity.name}${app.identity.email ? ` <${app.identity.email}>` : ''} として記録します`"
-                :description="`${app.identity.label}の名前です`"
+                :title="t.settings.profile.recordingAs(app.repo?.name ?? '', `${app.identity.name}${app.identity.email ? ` <${app.identity.email}>` : ''}`)"
+                :description="t.settings.profile.nameOf(app.identity.label)"
             />
             <UAlert
                 v-else-if="!app.identity"
                 color="warning"
                 variant="subtle"
                 icon="i-lucide-user-x"
-                title="まだ名前が決まっていません"
-                description="GitHub・GitLab にログインするか、下に名前を入れてください。決まるまで版を保存できません。"
+                :title="t.settings.profile.noName"
+                :description="t.settings.profile.noNameDesc"
             />
 
-            <SettingRow label="名前の決め方" stacked>
-                <SegmentSwitch v-model="nameSource" :items="SOURCES" aria-label="名前の決め方" />
+            <SettingRow :label="t.settings.profile.nameSource" stacked>
+                <SegmentSwitch v-model="nameSource" :items="SOURCES" :aria-label="t.settings.profile.nameSource" />
             </SettingRow>
 
             <template v-if="nameSource === 'login'">
-                <SettingRow label="ログイン中のアカウント" description="名前・メールを変えるときは、GitHub・GitLab のプロフィールで変えてください。" stacked>
+                <SettingRow :label="t.settings.profile.accounts" :description="t.settings.profile.accountsDesc" stacked>
                     <div v-if="signedIn.length" class="accounts">
                         <div v-for="a in signedIn" :key="a.base" class="account">
                             <UIcon :name="a.kind === 'github' ? 'i-lucide-github' : 'i-lucide-gitlab'" class="kind" />
                             <div class="who">
                                 <strong>{{ a.name }}</strong>
-                                <span class="cd-muted">@{{ a.login }}・{{ a.email || 'メールなし' }}・{{ a.label }}</span>
+                                <span class="cd-muted"
+                                    >@{{ a.login }}{{ t.common.sep }}{{ a.email || t.settings.profile.noEmail }}{{ t.common.sep }}{{ a.label }}</span
+                                >
                             </div>
                             <UButton
-                                label="プロフィールで変える"
+                                :label="t.settings.profile.changeInProfile"
                                 icon="i-lucide-external-link"
                                 size="xs"
                                 color="neutral"
@@ -422,52 +417,56 @@ async function addSamples() {
                         </div>
                     </div>
                     <div v-else class="accounts empty">
-                        <span class="cd-muted">ログインしていません。ログインすると、GitHub・GitLab の名前とメールで記録します。</span>
-                        <UButton label="GitHub/GitLab でログイン" icon="i-lucide-log-in" size="sm" @click="goLogin" />
+                        <span class="cd-muted">{{ t.settings.profile.notSignedIn }}</span>
+                        <UButton :label="t.settings.profile.signIn" icon="i-lucide-log-in" size="sm" @click="goLogin" />
                     </div>
                 </SettingRow>
 
-                <SettingRow
-                    v-if="signedIn.length > 1"
-                    label="リモートの無いリポジトリで使うアカウント"
-                    description="リモートが GitHub・GitLab のリポジトリでは、そのアカウントを使います。"
-                >
+                <SettingRow v-if="signedIn.length > 1" :label="t.settings.profile.defaultAccount" :description="t.settings.profile.defaultAccountDesc">
                     <USelect v-model="identityDefault" :items="defaultItems" class="cd-w-input" />
                 </SettingRow>
             </template>
 
             <template v-else>
-                <SettingRow label="名前" description="すべてのリポジトリで、この名前を記録します。">
-                    <UInput v-model="name" class="cd-w-input" placeholder="例：山田" />
+                <SettingRow :label="t.settings.profile.name" :description="t.settings.profile.nameDesc">
+                    <UInput v-model="name" class="cd-w-input" :placeholder="t.settings.profile.namePlaceholder" />
                 </SettingRow>
-                <SettingRow label="メールアドレス" description="任意">
+                <SettingRow :label="t.settings.profile.email" :description="t.settings.profile.emailDesc">
                     <UInput v-model="email" class="cd-w-input" placeholder="you@example.com" />
                 </SettingRow>
             </template>
         </SettingsSection>
 
-        <SettingsSection id="display" title="表示">
-            <SettingRow label="配色">
+        <SettingsSection id="display" :title="t.settings.sections.display">
+            <SettingRow :label="t.settings.language" :description="t.settings.languageDesc">
+                <USelect
+                    :model-value="app.prefs.language"
+                    :items="(['system', 'ja', 'en'] as const).map((value) => ({ value, label: t.settings.languageOptions[value] }))"
+                    class="cd-w-small"
+                    @update:model-value="(v: LanguagePref) => setPref('language', v)"
+                />
+            </SettingRow>
+            <SettingRow :label="t.settings.display.theme">
                 <SegmentSwitch
                     v-model="theme"
-                    aria-label="配色"
+                    :aria-label="t.settings.display.theme"
                     :items="[
-                        { value: 'light', label: 'ライト', icon: 'i-lucide-sun' },
-                        { value: 'dark', label: 'ダーク', icon: 'i-lucide-moon' },
-                        { value: 'system', label: 'システムに合わせる', icon: 'i-lucide-monitor' },
+                        { value: 'light', label: t.settings.display.light, icon: 'i-lucide-sun' },
+                        { value: 'dark', label: t.settings.display.dark, icon: 'i-lucide-moon' },
+                        { value: 'system', label: t.settings.display.system, icon: 'i-lucide-monitor' },
                     ]"
                 />
             </SettingRow>
-            <SettingRow label="画面の拡大率">
+            <SettingRow :label="t.settings.display.uiScale">
                 <USelect :model-value="app.prefs.uiScale" :items="SCALES" class="cd-w-small" @update:model-value="(v: number) => setPref('uiScale', v)" />
             </SettingRow>
-            <SettingRow label="起動時に前回の文書を開く">
+            <SettingRow :label="t.settings.display.reopenLastDoc">
                 <USwitch :model-value="app.prefs.reopenLastDoc" @update:model-value="(v: boolean) => setPref('reopenLastDoc', v)" />
             </SettingRow>
         </SettingsSection>
 
-        <SettingsSection id="editor" title="エディタ">
-            <SettingRow label="フォント">
+        <SettingsSection id="editor" :title="t.settings.sections.editor">
+            <SettingRow :label="t.settings.editor.font">
                 <FontPicker
                     :model-value="app.prefs.editorFont"
                     :recommended="EDITOR_FONTS"
@@ -485,26 +484,23 @@ async function addSamples() {
             <div class="sample" :style="{ fontFamily: cssFont(app.prefs.editorFont, 'mono'), fontSize: `${app.prefs.editorFontSize}px` }">
                 ### 目的 {#purpose}<br />- この法律は、〇〇に関し必要な事項を定める。 0123456789 ABCabc
             </div>
-            <SettingRow label="行番号を表示する">
+            <SettingRow :label="t.settings.editor.lineNumbers">
                 <USwitch :model-value="app.prefs.lineNumbers" @update:model-value="(v: boolean) => setPref('lineNumbers', v)" />
             </SettingRow>
-            <SettingRow label="長い行を折り返す">
+            <SettingRow :label="t.settings.editor.lineWrap">
                 <USwitch :model-value="app.prefs.lineWrap" @update:model-value="(v: boolean) => setPref('lineWrap', v)" />
             </SettingRow>
-            <SettingRow label="条・項の番号を行頭に表示する">
+            <SettingRow :label="t.settings.editor.numberHints">
                 <template #description>
-                    <span class="cd-hint cd-hint-article">第3条</span> <span class="cd-hint">２</span>
-                    <span class="cd-hint">一</span> などの番号を、エディタの行頭にだけ表示します
+                    {{ t.settings.editor.numberHintsBefore }}<span class="cd-hint cd-hint-article">第3条</span> <span class="cd-hint">２</span>
+                    <span class="cd-hint">一</span>{{ t.settings.editor.numberHintsAfter }}
                 </template>
                 <USwitch :model-value="app.prefs.numberHints" @update:model-value="(v: boolean) => setPref('numberHints', v)" />
             </SettingRow>
-            <SettingRow label="英文のつづりを確かめる" description="海外の書式の文書で、つづりの誤りに赤い下線を引きます。日本の書式の文書では使いません。">
+            <SettingRow :label="t.settings.editor.spellcheck" :description="t.settings.editor.spellcheckDesc">
                 <USwitch :model-value="app.prefs.spellcheck !== false" @update:model-value="(v: boolean) => setPref('spellcheck', v)" />
             </SettingRow>
-            <SettingRow
-                label="校閲（黄色の波線）を表示する"
-                description="下の規則に当てはまる書き方に、黄色の波線を引きます。規則ごとに切り替えられます。定義語の誤り（赤い波線）は、この設定に関係なく表示します。"
-            >
+            <SettingRow :label="t.settings.editor.proofread" :description="t.settings.editor.proofreadDesc">
                 <USwitch :model-value="app.prefs.proofread" @update:model-value="(v: boolean) => setPref('proofread', v)" />
             </SettingRow>
             <template v-if="app.prefs.proofread">
@@ -514,32 +510,32 @@ async function addSamples() {
                 </SettingRow>
                 <SettingRow
                     v-if="proofreadRuleOn('no-doubled-joshi')"
-                    label="「同じ助詞の連続」で許す助詞"
+                    :label="t.settings.editor.joshi"
                     class="sub-row"
-                    description="ここに書いた助詞は、一文に重なっても指摘しません。条文は一文が長いので、「に」「が」などは初めから許しています。読点（、）で区切って書きます。"
+                    :description="t.settings.editor.joshiDesc"
                 >
                     <UInput v-model="joshiText" class="cd-w-input" @change="saveJoshi" />
-                    <UButton label="初期値に戻す" size="xs" color="neutral" variant="ghost" @click="resetJoshi" />
+                    <UButton :label="t.settings.editor.resetDefault" size="xs" color="neutral" variant="ghost" @click="resetJoshi" />
                 </SettingRow>
             </template>
         </SettingsSection>
 
-        <SettingsSection v-if="shown('sync')" id="sync" title="同期">
-            <SettingRow label="起動したら同期する" description="アプリを起動したときに、リモートの最新の状態を取得します">
+        <SettingsSection v-if="shown('sync')" id="sync" :title="t.settings.sections.sync">
+            <SettingRow :label="t.settings.sync.onStart" :description="t.settings.sync.onStartDesc">
                 <USwitch :model-value="app.prefs.syncOnStart" @update:model-value="(v: boolean) => setPref('syncOnStart', v)" />
             </SettingRow>
-            <SettingRow label="版を保存したら送信する" description="オフにすると、「同期」を押すまでリモートに版を送信しません">
+            <SettingRow :label="t.settings.sync.pushOnSave" :description="t.settings.sync.pushOnSaveDesc">
                 <USwitch :model-value="app.prefs.pushOnSave" @update:model-value="(v: boolean) => setPref('pushOnSave', v)" />
             </SettingRow>
         </SettingsSection>
 
-        <SettingsSection v-if="shown('due')" id="due" title="期日・有効期間">
-            <SettingRow label="期日をデスクトップに通知する" description="登録しているすべてのリポジトリの期日を一度だけ通知します">
+        <SettingsSection v-if="shown('due')" id="due" :title="t.settings.sections.due">
+            <SettingRow :label="t.settings.due.notify" :description="t.settings.due.notifyDesc">
                 <USwitch :model-value="app.prefs.notifyDue" @update:model-value="(v: boolean) => setPref('notifyDue', v)" />
             </SettingRow>
-            <SettingRow label="期日の種類" description="リポジトリごとに決定">
+            <SettingRow :label="t.settings.due.kinds" :description="t.settings.due.kindsDesc">
                 <UButton
-                    label="このリポジトリの期日の種類"
+                    :label="t.settings.due.kindsButton"
                     icon="i-lucide-calendar-cog"
                     size="sm"
                     color="neutral"
@@ -550,19 +546,26 @@ async function addSamples() {
             </SettingRow>
         </SettingsSection>
 
-        <SettingsSection v-if="shown('export')" id="export" title="書き出し">
-            <SettingRow label="既定の保存先" description="PDF・Word の書き出しと、納品一式の保存に使うフォルダです">
-                <span class="path">{{ app.prefs.exportDir || '（毎回選ぶ）' }}</span>
-                <UButton label="選ぶ" size="sm" color="neutral" variant="outline" @click="pickExportDir" />
-                <UButton v-if="app.prefs.exportDir" label="解除" size="sm" color="neutral" variant="ghost" @click="setPref('exportDir', '')" />
+        <SettingsSection v-if="shown('export')" id="export" :title="t.settings.sections.export">
+            <SettingRow :label="t.settings.export.dir" :description="t.settings.export.dirDesc">
+                <span class="path">{{ app.prefs.exportDir || t.settings.export.askEachTime }}</span>
+                <UButton :label="t.settings.choose" size="sm" color="neutral" variant="outline" @click="pickExportDir" />
+                <UButton
+                    v-if="app.prefs.exportDir"
+                    :label="t.settings.export.clear"
+                    size="sm"
+                    color="neutral"
+                    variant="ghost"
+                    @click="setPref('exportDir', '')"
+                />
             </SettingRow>
-            <SettingRow label="ファイル名に日付を付ける" description="例：業務委託契約書_20261103.pdf">
+            <SettingRow :label="t.settings.export.dateSuffix" :description="t.settings.export.dateSuffixDesc">
                 <USwitch :model-value="app.prefs.exportDateSuffix" @update:model-value="(v: boolean) => setPref('exportDateSuffix', v)" />
             </SettingRow>
         </SettingsSection>
 
-        <SettingsSection id="print" title="印刷・PDF・Word の書式">
-            <p class="cd-muted note">各リポジトリの設定が優先されます。</p>
+        <SettingsSection id="print" :title="t.settings.sections.print">
+            <p class="cd-muted note">{{ t.settings.print.note }}</p>
             <StyleEditor
                 :model-value="app.prefs.docStyle"
                 :inherited="app.prefs.docStyle"
@@ -571,26 +574,23 @@ async function addSamples() {
             />
         </SettingsSection>
 
-        <SettingsSection v-if="shown('remote')" id="remote" title="GitHub/GitLab">
+        <SettingsSection v-if="shown('remote')" id="remote" :title="t.settings.sections.remote">
             <ForgeAccountRow v-for="acc in app.accounts" :key="acc.base" :account="acc" />
             <GitLabHostAdd />
         </SettingsSection>
 
-        <SettingsSection v-if="shown('ai')" id="ai" title="AI">
-            <AiProviderSettings @status="(st) => (ai = st)" />
-            <SettingRow
-                label="外部の AI からつなぐ（MCP）"
-                description="Claude Code などの AI から、ローカル の ClauseDown の文書を読む・チェックする・書き換えることができるようにします。アプリの起動中に、ローカル の中からだけ接続できます。版の保存・現行版への反映・納品はできません。"
-            >
+        <SettingsSection v-if="shown('ai')" id="ai" :title="t.settings.sections.ai">
+            <AiProviderSettings @status="(s) => (ai = s)" />
+            <SettingRow :label="t.settings.mcp.enable" :description="t.settings.mcp.enableDesc">
                 <USwitch v-model="mcpEnabled" @update:model-value="applyMcp" />
             </SettingRow>
             <template v-if="mcpEnabled">
-                <SettingRow label="ポート番号" description="ほかのアプリと重なったときだけ変えてください。">
+                <SettingRow :label="t.settings.mcp.port" :description="t.settings.mcp.portDesc">
                     <UInput v-model.number="mcpPort" type="number" class="cd-w-small" @change="applyMcp" />
-                    <UBadge v-if="ai?.mcp.running" label="待ち受け中" color="success" variant="subtle" icon="i-lucide-radio" />
-                    <UBadge v-else-if="ai?.mcp.error" label="開始できません" color="error" variant="subtle" icon="i-lucide-circle-alert" />
+                    <UBadge v-if="ai?.mcp.running" :label="t.settings.mcp.listening" color="success" variant="subtle" icon="i-lucide-radio" />
+                    <UBadge v-else-if="ai?.mcp.error" :label="t.settings.mcp.cannotStart" color="error" variant="subtle" icon="i-lucide-circle-alert" />
                 </SettingRow>
-                <SettingRow label="接続用トークン" description="AI 側の設定に入力します。ほかの人に知られたら作り直してください。">
+                <SettingRow :label="t.settings.mcp.token" :description="t.settings.mcp.tokenDesc">
                     <UInput :model-value="mcpToken" :type="showMcpToken ? 'text' : 'password'" class="cd-w-input" readonly>
                         <template #trailing>
                             <UButton
@@ -602,111 +602,138 @@ async function addSamples() {
                             />
                         </template>
                     </UInput>
-                    <UButton label="コピー" icon="i-lucide-copy" size="sm" color="neutral" variant="outline" @click="copy(mcpToken, '接続用トークン')" />
-                    <UButton label="作り直す" size="sm" color="neutral" variant="ghost" @click="regenerateToken" />
+                    <UButton
+                        :label="t.settings.copy"
+                        icon="i-lucide-copy"
+                        size="sm"
+                        color="neutral"
+                        variant="outline"
+                        @click="copy(mcpToken, t.settings.mcp.token)"
+                    />
+                    <UButton :label="t.settings.mcp.regenerate" size="sm" color="neutral" variant="ghost" @click="regenerateToken" />
                 </SettingRow>
-                <SettingRow label="Claude Desktop への登録" :description="desktopText">
-                    <UBadge v-if="desktop?.state === 'registered'" label="登録済み" color="success" variant="subtle" icon="i-lucide-check" />
-                    <UButton v-if="desktop?.state === 'unregistered'" label="登録する" icon="i-lucide-plug" size="sm" @click="registerDesktop" />
-                    <UButton v-if="desktop?.state === 'outdated'" label="登録し直す" icon="i-lucide-refresh-cw" size="sm" @click="registerDesktop" />
+                <SettingRow :label="t.settings.mcp.desktop" :description="desktopText">
+                    <UBadge v-if="desktop?.state === 'registered'" :label="t.settings.mcp.registered" color="success" variant="subtle" icon="i-lucide-check" />
+                    <UButton
+                        v-if="desktop?.state === 'unregistered'"
+                        :label="t.settings.mcp.register"
+                        icon="i-lucide-plug"
+                        size="sm"
+                        @click="registerDesktop"
+                    />
+                    <UButton
+                        v-if="desktop?.state === 'outdated'"
+                        :label="t.settings.mcp.reregister"
+                        icon="i-lucide-refresh-cw"
+                        size="sm"
+                        @click="registerDesktop"
+                    />
                     <UButton
                         v-if="desktop?.state === 'registered' || desktop?.state === 'outdated'"
-                        label="登録を外す"
+                        :label="t.settings.mcp.unregister"
                         size="sm"
                         color="neutral"
                         variant="ghost"
                         @click="unregisterDesktop"
                     />
                 </SettingRow>
-                <SettingRow
-                    label="Claude Code への登録"
-                    stacked
-                    description="ターミナルで次のコマンドを実行すると、Claude Code から ClauseDown の文書を扱えます。"
-                >
+                <SettingRow :label="t.settings.mcp.code" stacked :description="t.settings.mcp.codeDesc">
                     <div class="cmd">
                         <code>{{ claudeCommand.replace(mcpToken, showMcpToken ? mcpToken : '••••••') }}</code>
-                        <UButton icon="i-lucide-copy" size="xs" color="neutral" variant="outline" label="コピー" @click="copy(claudeCommand, 'コマンド')" />
+                        <UButton
+                            icon="i-lucide-copy"
+                            size="xs"
+                            color="neutral"
+                            variant="outline"
+                            :label="t.settings.copy"
+                            @click="copy(claudeCommand, t.settings.mcp.command)"
+                        />
                     </div>
                 </SettingRow>
             </template>
         </SettingsSection>
 
-        <SettingsSection v-if="shown('repos')" id="repos" title="リポジトリの一覧">
+        <SettingsSection v-if="shown('repos')" id="repos" :title="t.settings.sections.repos">
             <template v-for="g in repoGroups" :key="g.section || '-'">
                 <h3 v-if="g.section" class="repo-sec">{{ g.section }}</h3>
                 <SettingRow
                     v-for="r in g.repos"
                     :key="r.dir"
-                    :label="r.name + (r.dir === app.repoDir ? '（使用中）' : '')"
-                    :description="(app.repoStates[r.dir] ?? 'ok') !== 'ok' ? `見つかりません：${r.dir}` : r.url ? `${r.dir} ／ ${r.url}` : r.dir"
+                    :label="r.name + (r.dir === app.repoDir ? t.settings.repos.inUse : '')"
+                    :description="
+                        (app.repoStates[r.dir] ?? 'ok') !== 'ok'
+                            ? t.settings.repos.notFoundAt(r.dir)
+                            : r.url
+                              ? `${r.dir}${t.settings.repos.noteSep}${r.url}`
+                              : r.dir
+                    "
                 >
                     <USelectMenu
-                        :model-value="cleanSection(r.section) ?? NO_SECTION"
+                        :model-value="cleanSection(r.section) ?? noSection"
                         :items="sectionChoices"
                         create-item
                         size="sm"
                         icon="i-lucide-folder"
                         class="sec-select"
-                        aria-label="セクション"
+                        :aria-label="t.settings.repos.section"
                         @update:model-value="(v: string) => setSection(r, v)"
                         @create="(v: string) => setSection(r, v)"
                     />
                     <template v-if="(app.repoStates[r.dir] ?? 'ok') !== 'ok'">
-                        <UBadge label="見つかりません" color="warning" variant="subtle" icon="i-lucide-folder-x" />
-                        <UButton label="新しい場所を選ぶ" size="sm" color="neutral" variant="outline" @click="app.relocateRepo(r.dir)" />
+                        <UBadge :label="t.settings.repos.notFound" color="warning" variant="subtle" icon="i-lucide-folder-x" />
+                        <UButton :label="t.settings.repos.relocate" size="sm" color="neutral" variant="outline" @click="app.relocateRepo(r.dir)" />
                     </template>
-                    <UButton v-else-if="r.dir !== app.repoDir" label="切り替える" size="sm" color="neutral" variant="outline" @click="app.switchRepo(r.dir)" />
+                    <UButton
+                        v-else-if="r.dir !== app.repoDir"
+                        :label="t.settings.repos.switchTo"
+                        size="sm"
+                        color="neutral"
+                        variant="outline"
+                        @click="app.switchRepo(r.dir)"
+                    />
                     <template v-if="(app.repoStates[r.dir] ?? 'ok') === 'ok'">
                         <UButton
-                            label="複製"
+                            :label="t.settings.repos.duplicate"
                             icon="i-lucide-copy"
                             size="sm"
                             color="neutral"
                             variant="ghost"
-                            title="履歴ごと別のフォルダにコピーします。リモートは外れます"
+                            :title="t.settings.repos.duplicateTitle"
                             @click="startDuplicate(r)"
                         />
                         <UButton
                             v-if="forgeOf(r)"
-                            label="フォーク"
+                            :label="t.settings.repos.fork"
                             icon="i-lucide-git-fork"
                             size="sm"
                             color="neutral"
                             variant="ghost"
-                            title="GitHub・GitLab に自分のコピーを作り、送信先をそちらに切り替えます"
+                            :title="t.settings.repos.forkTitle"
                             @click="forkOf = r"
                         />
                     </template>
                     <UButton
-                        label="一覧から外す"
+                        :label="t.settings.repos.remove"
                         size="sm"
                         color="error"
                         variant="ghost"
-                        title="一覧から外すだけで、ファイルは消えません"
+                        :title="t.settings.repos.removeTitle"
                         @click="removeRepo(r)"
                     />
                 </SettingRow>
             </template>
-            <p v-if="app.settings!.repos.length === 0" class="cd-muted">リポジトリがありません。下の「リポジトリを追加する」から追加してください。</p>
+            <p v-if="app.settings!.repos.length === 0" class="cd-muted">{{ t.settings.repos.empty }}</p>
 
-            <h3>リポジトリを追加する</h3>
-            <SettingRow label="追加方法" stacked>
-                <SegmentSwitch v-model="mode" :items="MODES" aria-label="追加方法" />
+            <h3>{{ t.settings.repos.addHeading }}</h3>
+            <SettingRow :label="t.settings.repos.addMethod" stacked>
+                <SegmentSwitch v-model="mode" :items="MODES" :aria-label="t.settings.repos.addMethod" />
             </SettingRow>
-            <SettingRow
-                v-if="mode === 'clone'"
-                label="リポジトリの URL"
-                description="例：https://github.com/組織名/リポジトリ名、https://gitlab.com/組織名/リポジトリ名"
-            >
-                <UInput v-model="url" class="cd-w-wide" placeholder="https://github.com/組織名/リポジトリ名" />
+            <SettingRow v-if="mode === 'clone'" :label="t.settings.repos.url" :description="t.settings.repos.urlDesc">
+                <UInput v-model="url" class="cd-w-wide" :placeholder="t.settings.repos.urlPlaceholder" />
             </SettingRow>
-            <SettingRow
-                v-if="mode === 'open'"
-                label="フォルダ"
-                :description="`${MOD_KEY} や Shift を押しながら選ぶと、複数のリポジトリをまとめて追加できます。`"
-            >
-                <span class="path">{{ folderPaths.length ? `${folderPaths.length}件を選択` : '（未選択）' }}</span>
-                <UButton label="選ぶ" icon="i-lucide-folder-open" size="sm" color="neutral" variant="outline" @click="pick" />
+            <SettingRow v-if="mode === 'open'" :label="t.settings.repos.folder" :description="t.settings.repos.folderDesc(MOD_KEY)">
+                <span class="path">{{ folderPaths.length ? t.settings.repos.selectedCount(folderPaths.length) : t.settings.unselected }}</span>
+                <UButton :label="t.settings.choose" icon="i-lucide-folder-open" size="sm" color="neutral" variant="outline" @click="pick" />
             </SettingRow>
             <ul v-if="mode === 'open' && folderPaths.length" class="picked">
                 <li v-for="p in folderPaths" :key="p" :title="p">
@@ -715,18 +742,18 @@ async function addSamples() {
                 </li>
             </ul>
             <template v-else-if="mode !== 'open'">
-                <SettingRow label="リポジトリの名前" :description="nameError || 'この名前のフォルダを作ります。例：〇〇法案、A社_契約書、B社_規程'">
+                <SettingRow :label="t.settings.repos.name" :description="nameError || t.settings.repos.nameDesc">
                     <UInput
                         v-model="newName"
                         class="cd-w-input"
-                        placeholder="例：A社_契約書"
+                        :placeholder="t.settings.repos.namePlaceholder"
                         :color="nameError ? 'error' : undefined"
                         :highlight="!!nameError"
                     />
                 </SettingRow>
-                <SettingRow label="作る場所" description="選んだフォルダの中に、上の名前のフォルダを作ります。">
-                    <span class="path">{{ folderPath || '（未選択）' }}</span>
-                    <UButton label="選ぶ" icon="i-lucide-folder-open" size="sm" color="neutral" variant="outline" @click="pick" />
+                <SettingRow :label="t.settings.repos.location" :description="t.settings.repos.locationDesc">
+                    <span class="path">{{ folderPath || t.settings.unselected }}</span>
+                    <UButton :label="t.settings.choose" icon="i-lucide-folder-open" size="sm" color="neutral" variant="outline" @click="pick" />
                 </SettingRow>
             </template>
             <div class="actions">
@@ -735,11 +762,11 @@ async function addSamples() {
                     :label="
                         mode === 'open'
                             ? folderPaths.length > 1
-                                ? `${folderPaths.length}件を追加`
-                                : '追加'
+                                ? t.settings.repos.addN(folderPaths.length)
+                                : t.settings.add
                             : mode === 'clone'
-                              ? '取得して追加'
-                              : '作成して追加'
+                              ? t.settings.repos.cloneAdd
+                              : t.settings.repos.createAdd
                     "
                     :disabled="!canAdd"
                     :loading="adding"
@@ -748,24 +775,25 @@ async function addSamples() {
             </div>
         </SettingsSection>
 
-        <SettingsSection v-if="shown('developer')" id="developer" title="Developer">
-            <SettingRow
-                label="サンプルリポジトリを追加"
-                description="社内規程・契約書・条例と要綱・houritsu 形式の法令の 4 つを、選んだフォルダに作って一覧に加えます。版の履歴・改定案・施行日・期日が付いています。"
-            >
-                <UButton label="追加" icon="i-lucide-folder-plus" size="sm" color="neutral" variant="outline" :loading="samplesBusy" @click="addSamples" />
+        <SettingsSection v-if="shown('developer')" id="developer" :title="t.settings.sections.developer">
+            <SettingRow :label="t.settings.developer.samples" :description="t.settings.developer.samplesDesc">
+                <UButton
+                    :label="t.settings.add"
+                    icon="i-lucide-folder-plus"
+                    size="sm"
+                    color="neutral"
+                    variant="outline"
+                    :loading="samplesBusy"
+                    @click="addSamples"
+                />
             </SettingRow>
-            <SettingRow
-                label="版組 CSS"
-                description="条文のプレビューと、PDF・新旧対照表の PDF の見た目を決める CSS です。書き換えると、すぐプレビューに反映します。すべて消すと既定の CSS を使います。Word の書き出しには使いません。"
-                stacked
-            >
+            <SettingRow :label="t.settings.developer.css" :description="t.settings.developer.cssDesc" stacked>
                 <div class="css-box">
                     <CssEditor v-model="typesetCss" />
                     <div class="css-actions">
-                        <span v-if="!isDefaultCss" class="cd-muted">既定から書き換えています</span>
+                        <span v-if="!isDefaultCss" class="cd-muted">{{ t.settings.developer.cssModified }}</span>
                         <UButton
-                            label="既定に戻す"
+                            :label="t.settings.developer.cssReset"
                             icon="i-lucide-rotate-ccw"
                             size="xs"
                             color="neutral"
@@ -776,36 +804,50 @@ async function addSamples() {
                     </div>
                 </div>
             </SettingRow>
-            <SettingRow
-                label="表示・エディタなどの設定を初期値に戻す"
-                description="配色・拡大率・エディタ・同期・期日の通知・書き出し・印刷の書式・版組 CSS を、最初の状態に戻します。あなたの情報・ログイン・AI・リポジトリの一覧は変わりません。"
-            >
-                <UButton label="初期値に戻す" icon="i-lucide-rotate-ccw" size="sm" color="neutral" variant="outline" @click="resetting = 'prefs'" />
+            <SettingRow :label="t.settings.developer.resetPrefs" :description="t.settings.developer.resetPrefsDesc">
+                <UButton
+                    :label="t.settings.developer.resetPrefsButton"
+                    icon="i-lucide-rotate-ccw"
+                    size="sm"
+                    color="neutral"
+                    variant="outline"
+                    @click="resetting = 'prefs'"
+                />
             </SettingRow>
-            <SettingRow
-                label="すべてを初期状態に戻す"
-                description="ローカル に保存した設定・ログイン・AI の API キー・リポジトリの一覧をすべて消して、アプリを起動し直します。リポジトリのフォルダと文書は消えません。"
-            >
-                <UButton label="すべて初期化" icon="i-lucide-trash-2" size="sm" color="error" variant="outline" @click="resetting = 'all'" />
+            <SettingRow :label="t.settings.developer.resetAll" :description="t.settings.developer.resetAllDesc">
+                <UButton
+                    :label="t.settings.developer.resetAllButton"
+                    icon="i-lucide-trash-2"
+                    size="sm"
+                    color="error"
+                    variant="outline"
+                    @click="resetting = 'all'"
+                />
             </SettingRow>
 
-            <h3>試験中の機能</h3>
+            <h3>{{ t.settings.developer.experiments }}</h3>
             <template v-for="e in EXPERIMENTS" :key="e.id">
                 <SettingRow :description="e.description">
                     <template #label>
                         <span class="exp-label"
                             >{{ e.label }}
-                            <UBadge label="試験中" size="sm" color="warning" variant="subtle" icon="i-lucide-flask-conical" />
+                            <UBadge :label="t.settings.developer.experimental" size="sm" color="warning" variant="subtle" icon="i-lucide-flask-conical" />
                         </span>
                     </template>
                     <USwitch :model-value="experimentOn(e.id)" @update:model-value="(v: boolean) => setExperiment(e.id, v)" />
                 </SettingRow>
                 <SettingRow
                     v-if="e.id === 'clauseLibrary' && experimentOn('clauseLibrary')"
-                    label="ライブラリに使うリポジトリ"
-                    description="このリポジトリの文書に書いた条が、条項ライブラリに並びます。版の保存や同期は、通常のリポジトリと同様です"
+                    :label="t.settings.developer.library"
+                    :description="t.settings.developer.libraryDesc"
                 >
-                    <USelect :model-value="libraryDir" :items="libraryItems" placeholder="選んでください" class="cd-w-input" @update:model-value="setLibrary" />
+                    <USelect
+                        :model-value="libraryDir"
+                        :items="libraryItems"
+                        :placeholder="t.settings.developer.choosePlaceholder"
+                        class="cd-w-input"
+                        @update:model-value="setLibrary"
+                    />
                 </SettingRow>
             </template>
         </SettingsSection>
@@ -813,18 +855,18 @@ async function addSamples() {
 
     <ConfirmModal
         :open="resetting === 'prefs'"
-        title="設定を初期値に戻す"
-        description="表示・エディタ・同期・期日の通知・書き出し・印刷の書式・版組 CSS が、最初の状態に戻ります。"
-        confirm-label="初期値に戻す"
+        :title="t.settings.developer.resetPrefsTitle"
+        :description="t.settings.developer.resetPrefsConfirm"
+        :confirm-label="t.settings.developer.resetPrefsButton"
         :loading="resetBusy"
         @update:open="(v) => !v && (resetting = null)"
         @confirm="resetPrefs"
     />
     <ConfirmModal
         :open="resetting === 'all'"
-        title="すべてを初期状態に戻す"
-        description="設定・ログイン・AI の API キー・リポジトリの一覧を消して、アプリを起動し直します。リポジトリのフォルダと文書は消えません。元には戻せません。"
-        confirm-label="すべて初期化"
+        :title="t.settings.developer.resetAll"
+        :description="t.settings.developer.resetAllConfirm"
+        :confirm-label="t.settings.developer.resetAllButton"
         color="error"
         :loading="resetBusy"
         @update:open="(v) => !v && (resetting = null)"
@@ -833,36 +875,36 @@ async function addSamples() {
 
     <UModal
         :open="!!dupOf"
-        title="リポジトリを複製"
-        :description="`「${dupOf?.name}」を、版の履歴ごと別のフォルダにコピーします。コピーにはリモートを付けません。`"
+        :title="t.settings.repos.dupTitle"
+        :description="t.settings.repos.dupDesc(dupOf?.name ?? '')"
         :dismissible="!dupBusy"
         @update:open="(v) => !v && (dupOf = null)"
     >
         <template #body>
             <div class="dup">
-                <SettingRow label="新しいリポジトリの名前" stacked>
+                <SettingRow :label="t.settings.repos.dupName" stacked>
                     <UInput v-model="dupName" class="cd-w-input" />
                 </SettingRow>
-                <SettingRow label="作る場所" stacked>
-                    <span class="path">{{ dupParent || '（未選択）' }}</span>
-                    <UButton label="選ぶ" icon="i-lucide-folder-open" size="sm" color="neutral" variant="outline" @click="pickDupParent" />
+                <SettingRow :label="t.settings.repos.location" stacked>
+                    <span class="path">{{ dupParent || t.settings.unselected }}</span>
+                    <UButton :label="t.settings.choose" icon="i-lucide-folder-open" size="sm" color="neutral" variant="outline" @click="pickDupParent" />
                 </SettingRow>
             </div>
         </template>
         <template #footer>
             <div class="cd-modal-foot">
-                <UButton label="やめる" color="neutral" variant="outline" :disabled="dupBusy" @click="dupOf = null" />
-                <UButton label="複製" :loading="dupBusy" :disabled="!dupName.trim() || !dupParent" @click="duplicate" />
+                <UButton :label="t.settings.repos.cancel" color="neutral" variant="outline" :disabled="dupBusy" @click="dupOf = null" />
+                <UButton :label="t.settings.repos.duplicate" :loading="dupBusy" :disabled="!dupName.trim() || !dupParent" @click="duplicate" />
             </div>
         </template>
     </UModal>
 
     <ConfirmModal
         :open="!!forkOf"
-        :title="`${forkWhere} でフォーク`"
-        confirm-label="フォーク"
+        :title="t.settings.repos.forkWith(forkWhere)"
+        :confirm-label="t.settings.repos.fork"
         :loading="forkBusy"
-        :description="`${forkWhere} のあなたのアカウントに「${forkOf?.name}」のフォークを作ります。ローカル のリポジトリの送信先をフォークに切り替え、元のリポジトリは upstream として残します。`"
+        :description="t.settings.repos.forkDesc(forkWhere, forkOf?.name ?? '')"
         @update:open="(v) => !v && !forkBusy && (forkOf = null)"
         @confirm="fork"
     />

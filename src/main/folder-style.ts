@@ -1,4 +1,5 @@
 import { promises as fsp } from 'node:fs'
+import { t } from '../shared/i18n'
 import { dirname, join } from 'node:path'
 import { APP_DIR, cleanOverride, styleFileOf, type StyleLayers, type StyleOverride } from '../shared/folder-style'
 import { commitFile, safeJoin } from './git'
@@ -34,10 +35,10 @@ export async function listFolderStyles(dir: string): Promise<StyleLayers> {
 
 export async function saveFolderStyle(dir: string, folder: string, override: StyleOverride): Promise<boolean> {
     if (typeof folder !== 'string' || folder.split('/').some((p) => p === '..' || p.startsWith('.'))) {
-        throw new Error('ディレクトリの指定が正しくありません')
+        throw new Error(t().errors.folderStyle.badFolder)
     }
     const st = await fsp.stat(safeJoin(dir, folder || '.')).catch(() => null)
-    if (!st?.isDirectory()) throw new Error(`ディレクトリ「${folder}」が見つかりません`)
+    if (!st?.isDirectory()) throw new Error(t().errors.folderStyle.notFound(folder))
     const o = cleanOverride(override)
     const rel = styleFileOf(folder)
     const full = safeJoin(dir, rel)
@@ -46,5 +47,5 @@ export async function saveFolderStyle(dir: string, folder: string, override: Sty
         await fsp.mkdir(dirname(full), { recursive: true })
         await fsp.writeFile(full, JSON.stringify({ style: o }, null, 2) + '\n', 'utf8')
     }
-    return commitFile(dir, rel, `書式を変更（${folder || 'リポジトリ全体'}）`)
+    return commitFile(dir, rel, t().notify.commits.folderStyle(folder || t().notify.commits.wholeRepo))
 }

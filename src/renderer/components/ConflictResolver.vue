@@ -6,8 +6,10 @@ import { linesFor, merge3, type Hunk, type HunkChoice, type MergeResult } from '
 import { parseLegal } from '@shared/legal-parser'
 import { renderDoc } from '@shared/legal-renderer'
 import { useApp } from '~/stores/app'
+import { useT } from '~/composables/useT'
 
 const app = useApp()
+const t = useT()
 const props = defineProps<{ conflicts: Conflict[]; oursLabel: string; theirsLabel: string }>()
 const choices = defineModel<Record<string, ConflictChoice>>({ required: true })
 
@@ -38,7 +40,7 @@ interface Spot {
 const spots = computed<Spot[]>(() =>
     props.conflicts.flatMap((c): Spot[] => {
         const m = state[c.path].merge
-        if (!m) return [{ path: c.path, hunk: null, label: c.oursDeleted ? `${props.oursLabel}で削除` : `${props.theirsLabel}で削除` }]
+        if (!m) return [{ path: c.path, hunk: null, label: t.value.merge.conflict.deletedIn(c.oursDeleted ? props.oursLabel : props.theirsLabel) }]
         return m.hunks.map((h) => ({ path: c.path, hunk: h, label: h.where }))
     }),
 )
@@ -89,8 +91,8 @@ function clear() {
 }
 const picked = computed(() => (spot.value.hunk ? fs.value.picked[spot.value.hunk.id] : undefined))
 const bothMenu = computed<DropdownMenuItem[]>(() => [
-    { label: `${props.oursLabel} → ${props.theirsLabel} の順`, onSelect: () => pick('oursThenTheirs') },
-    { label: `${props.theirsLabel} → ${props.oursLabel} の順`, onSelect: () => pick('theirsThenOurs') },
+    { label: t.value.merge.conflict.order(props.oursLabel, props.theirsLabel), onSelect: () => pick('oursThenTheirs') },
+    { label: t.value.merge.conflict.order(props.theirsLabel, props.oursLabel), onSelect: () => pick('theirsThenOurs') },
 ])
 
 function build(path: string): { text: string; at: Record<number, number>; complete: boolean } {
@@ -167,20 +169,20 @@ watch(
 
 const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!)
 function marked(lines: string[], base: string[]): string {
-    if (!lines.length) return '<span class="none">（削除）</span>'
+    if (!lines.length) return `<span class="none">${esc(t.value.merge.conflict.deletedMark)}</span>`
     return diffChars(base.join('\n'), lines.join('\n'))
         .filter((p) => !p.removed)
         .map((p) => (p.added ? `<u>${esc(p.value)}</u>` : esc(p.value)))
         .join('')
 }
-const plain = (lines: string[]) => (lines.length ? esc(lines.join('\n')) : '<span class="none">（なし）</span>')
+const plain = (lines: string[]) => (lines.length ? esc(lines.join('\n')) : `<span class="none">${esc(t.value.merge.conflict.none)}</span>`)
 </script>
 
 <template>
     <div class="cr">
         <aside class="side">
             <div class="cd-pane-head">
-                <span>重なった箇所</span>
+                <span>{{ t.merge.conflict.spots }}</span>
                 <span class="count">{{ spots.length - remaining }} / {{ spots.length }}</span>
             </div>
             <div class="side-list">
@@ -208,13 +210,13 @@ const plain = (lines: string[]) => (lines.length ? esc(lines.join('\n')) : '<spa
                         <UButton :label="theirsLabel" color="neutral" :variant="picked === 'theirs' ? 'soft' : 'outline'" @click="pick('theirs')" />
                         <UDropdownMenu :items="bothMenu">
                             <UButton
-                                label="両方"
+                                :label="t.merge.conflict.both"
                                 trailing-icon="i-lucide-chevron-down"
                                 color="neutral"
                                 :variant="picked === 'oursThenTheirs' || picked === 'theirsThenOurs' ? 'soft' : 'outline'"
                             />
                         </UDropdownMenu>
-                        <UButton label="元の版" color="neutral" :variant="picked === 'base' ? 'soft' : 'outline'" @click="pick('base')" />
+                        <UButton :label="t.merge.conflict.base" color="neutral" :variant="picked === 'base' ? 'soft' : 'outline'" @click="pick('base')" />
                     </UFieldGroup>
                 </template>
             </div>
@@ -222,20 +224,18 @@ const plain = (lines: string[]) => (lines.length ? esc(lines.join('\n')) : '<spa
             <div class="center-body">
                 <div v-if="!spot.hunk" class="deleted">
                     <p>
-                        {{ conflict.oursDeleted ? oursLabel : theirsLabel }}ではこの文書を削除し、{{
-                            conflict.oursDeleted ? theirsLabel : oursLabel
-                        }}では書き直しています。
+                        {{ t.merge.conflict.deletedVsEdited(conflict.oursDeleted ? oursLabel : theirsLabel, conflict.oursDeleted ? theirsLabel : oursLabel) }}
                     </p>
                     <SegmentSwitch
                         :model-value="fs.keep ?? undefined"
-                        aria-label="この文書をどうするか"
+                        :aria-label="t.merge.conflict.keepAria"
                         :items="[
                             {
                                 value: conflict.oursDeleted ? 'theirs' : 'ours',
-                                label: `文書を残す（${conflict.oursDeleted ? theirsLabel : oursLabel}の内容）`,
+                                label: t.merge.conflict.keepDoc(conflict.oursDeleted ? theirsLabel : oursLabel),
                                 icon: 'i-lucide-file-check',
                             },
-                            { value: 'delete', label: '文書を削除する', icon: 'i-lucide-file-x' },
+                            { value: 'delete', label: t.merge.conflict.deleteDoc, icon: 'i-lucide-file-x' },
                         ]"
                         @update:model-value="(v) => (fs.keep = v as FileState['keep'])"
                     />
@@ -245,7 +245,7 @@ const plain = (lines: string[]) => (lines.length ? esc(lines.join('\n')) : '<spa
                     <table class="cmp">
                         <thead>
                             <tr>
-                                <th v-if="showBase">元の版</th>
+                                <th v-if="showBase">{{ t.merge.conflict.base }}</th>
                                 <th>{{ oursLabel }}</th>
                                 <th>{{ theirsLabel }}</th>
                             </tr>
@@ -265,20 +265,26 @@ const plain = (lines: string[]) => (lines.length ? esc(lines.join('\n')) : '<spa
                         </tbody>
                     </table>
                     <div class="sub">
-                        <span class="hint">下線は元の版から変わった文字</span>
-                        <UButton :label="showBase ? '元の版を隠す' : '元の版を表示'" size="xs" color="neutral" variant="link" @click="showBase = !showBase" />
+                        <span class="hint">{{ t.merge.conflict.underlineHint }}</span>
+                        <UButton
+                            :label="showBase ? t.merge.conflict.hideBase : t.merge.conflict.showBase"
+                            size="xs"
+                            color="neutral"
+                            variant="link"
+                            @click="showBase = !showBase"
+                        />
                     </div>
 
                     <div class="out-head">
-                        <span>統合後</span>
+                        <span>{{ t.merge.conflict.merged }}</span>
                         <span class="cd-grow" />
-                        <UButton v-if="current !== '' || picked" label="やり直す" size="xs" color="neutral" variant="link" @click="clear" />
+                        <UButton v-if="current !== '' || picked" :label="t.merge.conflict.redo" size="xs" color="neutral" variant="link" @click="clear" />
                     </div>
                     <textarea
                         v-model="current"
                         class="out"
                         spellcheck="false"
-                        :placeholder="`上のボタンで選ぶか、ここに直接書いてください`"
+                        :placeholder="t.merge.conflict.placeholder"
                         :rows="Math.max(4, current.split('\n').length + 1)"
                     />
                 </template>
@@ -287,14 +293,14 @@ const plain = (lines: string[]) => (lines.length ? esc(lines.join('\n')) : '<spa
 
         <section class="right">
             <div class="cd-toolbar toolbar">
-                <span class="where">統合結果</span>
+                <span class="where">{{ t.merge.conflict.result }}</span>
                 <span class="cd-grow" />
                 <SegmentSwitch
                     v-model="resultView"
-                    aria-label="統合結果の表示"
+                    :aria-label="t.merge.conflict.resultAria"
                     :items="[
-                        { value: 'preview', icon: 'i-lucide-book-open', tooltip: '条文で見る' },
-                        { value: 'text', icon: 'i-lucide-square-pen', tooltip: '全文を直す' },
+                        { value: 'preview', icon: 'i-lucide-book-open', tooltip: t.merge.conflict.asArticles },
+                        { value: 'text', icon: 'i-lucide-square-pen', tooltip: t.merge.conflict.editFull },
                     ]"
                 />
             </div>
@@ -304,19 +310,19 @@ const plain = (lines: string[]) => (lines.length ? esc(lines.join('\n')) : '<spa
             <div v-else class="right-body text">
                 <textarea v-model="fullText" class="out full" spellcheck="false" :disabled="!fs.merge" />
                 <div v-if="fs.override !== null" class="sub">
-                    <span class="hint">全文を直しています（各箇所の選択より優先）</span>
-                    <UButton label="取り消す" size="xs" color="neutral" variant="link" @click="fs.override = null" />
+                    <span class="hint">{{ t.merge.conflict.overriding }}</span>
+                    <UButton :label="t.merge.conflict.undo" size="xs" color="neutral" variant="link" @click="fs.override = null" />
                 </div>
             </div>
         </section>
 
         <footer class="cd-statusbar status">
             <span>{{ conflict.path }}</span>
-            <span>重なり {{ index + 1 }} / {{ spots.length }}</span>
+            <span>{{ t.merge.conflict.position(index + 1, spots.length) }}</span>
             <span class="cd-grow" />
-            <span v-if="remaining" class="left">未解決 {{ remaining }} か所</span>
-            <span v-else class="done"> <UIcon name="i-lucide-circle-check" />すべて解決しました </span>
-            <UButton v-if="remaining" label="次の未解決へ" size="xs" color="neutral" variant="link" @click="nextUnresolved" />
+            <span v-if="remaining" class="left">{{ t.merge.conflict.unresolved(remaining) }}</span>
+            <span v-else class="done"> <UIcon name="i-lucide-circle-check" />{{ t.merge.conflict.allResolved }} </span>
+            <UButton v-if="remaining" :label="t.merge.conflict.nextUnresolved" size="xs" color="neutral" variant="link" @click="nextUnresolved" />
         </footer>
     </div>
 </template>

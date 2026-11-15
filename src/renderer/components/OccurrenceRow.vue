@@ -9,14 +9,16 @@ const props = defineProps<{
     where?: string
 }>()
 defineEmits<{ click: []; toggle: [] }>()
+const t = useT()
 const today = todayISO()
 const n = computed(() => daysUntil(props.o.date, today))
 const md = (s: string) => `${Number(s.slice(5, 7))}/${Number(s.slice(8))}`
 const when = computed(() => {
     const o = props.o
-    if (o.done) return '済み'
-    if (o.overdue) return `期限切れ（${untilLabel(n.value)}）`
-    if (o.end && o.date <= today && today <= o.end) return `期間中（〜${md(o.end)}）`
+    const m = t.value.shell.occurrence
+    if (o.done) return m.done
+    if (o.overdue) return m.overdue(untilLabel(n.value))
+    if (o.end && o.date <= today && today <= o.end) return m.during(md(o.end))
     return untilLabel(n.value)
 })
 </script>
@@ -29,15 +31,20 @@ const when = computed(() => {
         <span class="title">{{ o.title }}</span>
         <template #sub>
             <span class="kind" :style="{ '--k': KIND_COLORS[kind.color] }">{{ kind.label }}</span>
-            <span v-if="o.end" class="span">〜{{ md(o.end) }}</span>
+            <span v-if="o.end" class="span">{{ t.shell.occurrence.until(md(o.end)) }}</span>
             <UIcon v-if="o.repeat" name="i-lucide-repeat" class="rep" />
             <span class="when">{{ when }}</span>
-            <template v-if="where">・{{ where }}</template>
+            <template v-if="where">{{ t.common.sep }}{{ where }}</template>
         </template>
         <template #trail>
             <slot name="trail" />
-            <UTooltip v-if="o.task && o.source === 'event'" :text="o.done ? '済みを取り消す' : '済みにする'">
-                <UCheckbox :model-value="o.done" :aria-label="o.done ? '済みを取り消す' : '済みにする'" @click.stop @update:model-value="$emit('toggle')" />
+            <UTooltip v-if="o.task && o.source === 'event'" :text="o.done ? t.shell.occurrence.unmarkDone : t.shell.occurrence.markDone">
+                <UCheckbox
+                    :model-value="o.done"
+                    :aria-label="o.done ? t.shell.occurrence.unmarkDone : t.shell.occurrence.markDone"
+                    @click.stop
+                    @update:model-value="$emit('toggle')"
+                />
             </UTooltip>
         </template>
     </ListRow>

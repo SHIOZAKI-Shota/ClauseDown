@@ -1,0 +1,17 @@
+export const checks = {
+    // 行番号つきの警告。先頭の行番号は warningLine() で読み取る
+    atLine: (line: number, message: string) => `${line}行目: ${message}`,
+    headingTooDeep: '見出しは ### （条）までしか使えません',
+    duplicateId: (id: string) => `条の名前「${id}」が重複しています`,
+    missingRef: (ref: string, id: string) => `条参照「${ref}」の参照先（{#${id}}）がありません`,
+    figureError: (error: string) => `図を描けません：${error}`,
+    mathError: (error: string) => `数式を描けません：${error}`,
+    definition: (message: string) => `定義語：${message}`,
+    noTitle: '文書タイトル（# の行）がありません',
+    emptyArticle: (label: string) => `${label}に本文がありません`,
+    preamble: '前文',
+    alreadyDefined: (term: string, line: number) => `「${term}」は${line}行目ですでに定義しています`,
+    unusedDefinition: (term: string) => `「${term}」を定義していますが、使っていません`,
+    usedBeforeDefinition: (term: string, line: number) => `「${term}」は${line}行目で定義しています。定義より前で使っています`,
+    missingTarget: '参照先の条が見つかりません',
+}

@@ -1,3 +1,4 @@
+import { locale } from '@shared/i18n'
 import type { ProofreadIssue } from '@shared/api'
 import type { AppPrefs } from '@shared/prefs'
 
@@ -27,7 +28,7 @@ export function setDictionaryPath(path: string) {
 export function proofreadInBrowser(text: string, prefs: AppPrefs): Promise<ProofreadIssue[]> {
     if (!text.trim()) return Promise.resolve([])
     const id = ++seq
-    const config = { rules: prefs.proofreadRules ?? {}, joshiAllow: prefs.proofreadJoshiAllow }
+    const config = { rules: prefs.proofreadRules ?? {}, joshiAllow: prefs.proofreadJoshiAllow, locale: locale() }
     return new Promise((resolve, reject) => {
         pending.set(id, { resolve, reject })
         start().postMessage({ id, text, config: JSON.parse(JSON.stringify(config)), dicPath })

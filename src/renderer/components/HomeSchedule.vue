@@ -6,10 +6,11 @@ import { baseName } from '~/utils/folders'
 import { fmtDate } from '~/utils/format'
 
 const app = useApp()
+const t = useT()
 const s = useSchedule()
 const LIMIT = 8
 
-const titleOf = (path: string) => (!path ? 'リポジトリ全体' : (app.docs.find((d) => d.path === path)?.title ?? baseName(path).replace(/\.md$/i, '')))
+const titleOf = (path: string) => (!path ? t.value.home.wholeRepo : (app.docs.find((d) => d.path === path)?.title ?? baseName(path).replace(/\.md$/i, '')))
 const exists = (path: string) => !!path && app.docs.some((d) => d.path === path)
 
 const upcoming = computed(() => {
@@ -29,35 +30,33 @@ const shortDate = (d: string) => fmtDate(`${d}T00:00:00`, d.startsWith(thisYear)
 
 <template>
     <section class="cd-side-sec">
-        <SectionHead label="期日・有効期間" icon="i-lucide-calendar-clock" :count="upcoming.length">
-            <UTooltip text="期日の追加">
+        <SectionHead :label="t.home.schedule.title" icon="i-lucide-calendar-clock" :count="upcoming.length">
+            <UTooltip :text="t.home.schedule.addDue">
                 <UButton
                     icon="i-lucide-calendar-plus"
                     size="xs"
                     square
                     color="neutral"
                     variant="ghost"
-                    aria-label="期日の追加"
+                    :aria-label="t.home.schedule.addDue"
                     @click="app.dialog = { kind: 'newEvent', docPath: '' }"
                 />
             </UTooltip>
-            <UTooltip text="タイムラインで見る">
+            <UTooltip :text="t.home.schedule.timeline">
                 <UButton
                     icon="i-lucide-calendar-range"
                     size="xs"
                     square
                     color="neutral"
                     variant="ghost"
-                    aria-label="タイムラインで見る"
+                    :aria-label="t.home.schedule.timeline"
                     @click="app.openSchedule()"
                 />
             </UTooltip>
         </SectionHead>
-        <p v-if="overdueCount" class="over"><UIcon name="i-lucide-alarm-clock-off" />期限切れが {{ overdueCount }} 件あります</p>
-        <p v-if="!s.loaded.value" class="cd-muted">読み込み中…</p>
-        <p v-else-if="!upcoming.length" class="cd-muted">
-            これから 60 日の期日はありません。施行・公布・提出・届出・契約の更新などの日付を足すと、ここに出ます。
-        </p>
+        <p v-if="overdueCount" class="over"><UIcon name="i-lucide-alarm-clock-off" />{{ t.home.schedule.overdue(overdueCount) }}</p>
+        <p v-if="!s.loaded.value" class="cd-muted">{{ t.common.loading }}</p>
+        <p v-else-if="!upcoming.length" class="cd-muted">{{ t.home.schedule.empty }}</p>
         <div v-else class="rows">
             <OccurrenceRow
                 v-for="o in upcoming.slice(0, LIMIT)"
@@ -69,10 +68,10 @@ const shortDate = (d: string) => fmtDate(`${d}T00:00:00`, d.startsWith(thisYear)
                 @toggle="s.toggleDone(o)"
             />
         </div>
-        <button v-if="upcoming.length > LIMIT" class="more" @click="app.openSchedule()">ほか {{ upcoming.length - LIMIT }} 件をタイムラインで見る</button>
+        <button v-if="upcoming.length > LIMIT" class="more" @click="app.openSchedule()">{{ t.home.schedule.moreInTimeline(upcoming.length - LIMIT) }}</button>
 
         <template v-if="deliveries.length">
-            <SectionHead label="最近の納品" icon="i-lucide-package-check" class="sub" />
+            <SectionHead :label="t.home.schedule.deliveries" icon="i-lucide-package-check" class="sub" />
             <ul class="deliv">
                 <li v-for="d in deliveries" :key="d.key">
                     <span class="cd-muted when">{{ shortDate(d.date) }}</span>

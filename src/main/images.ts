@@ -1,4 +1,5 @@
 import fs, { promises as fsp } from 'node:fs'
+import { t } from '../shared/i18n'
 import { dirname } from 'node:path'
 import type { SavedImage } from '../shared/api'
 import { writeAtomic } from './atomic'
@@ -8,11 +9,11 @@ import { imageDest, imageExt, imageMime, imagePathOf, imageSize, sniffImage, typ
 const MAX_BYTES = 20 * 1024 * 1024
 
 export async function saveImage(dir: string, docPath: unknown, data: unknown, ext: unknown): Promise<SavedImage> {
-    if (typeof docPath !== 'string' || !docPath.toLowerCase().endsWith('.md')) throw new Error('文書（.md）を指定してください')
-    if (!(data instanceof Uint8Array) || !data.length) throw new Error('画像のデータがありません')
-    if (data.length > MAX_BYTES) throw new Error('画像が大きすぎます（20MB まで）')
+    if (typeof docPath !== 'string' || !docPath.toLowerCase().endsWith('.md')) throw new Error(t().errors.images.mdRequired)
+    if (!(data instanceof Uint8Array) || !data.length) throw new Error(t().errors.images.noData)
+    if (data.length > MAX_BYTES) throw new Error(t().errors.images.tooLarge)
     const kind = sniffImage(data)
-    if (!kind) throw new Error('PNG・JPEG・GIF・WebP の画像だけ貼り付けられます')
+    if (!kind) throw new Error(t().errors.images.badType)
     const want = typeof ext === 'string' ? imageExt(`.${ext}`) : null
     const use: ImageExt = want && (want === kind || (want === 'jpeg' && kind === 'jpg')) ? want : kind
     const base = imageDest(docPath, use)

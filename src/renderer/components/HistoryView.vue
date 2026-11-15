@@ -2,8 +2,10 @@
 import type { CommitInfo } from '@shared/api'
 import { useApp } from '~/stores/app'
 import { usePane } from '~/composables/usePane'
+import { useT } from '~/composables/useT'
 
 const app = useApp()
+const t = useT()
 const path = app.currentPath!
 const listPane = usePane('history', { size: 460, min: 300, max: 1000 })
 const onlyThis = ref(true)
@@ -40,7 +42,7 @@ onMounted(load)
 const selectedCommit = computed(() => commits.value.find((c) => c.oid === selected.value))
 
 const onCurrent = computed(() => !!selectedCommit.value?.onCurrent)
-const currentLabel = computed(() => app.currentBranch?.label ?? '今の案')
+const currentLabel = computed(() => app.currentBranch?.label ?? t.value.history.currentFallback)
 const targetBranch = computed(() => {
     const c = selectedCommit.value
     if (!c || c.onCurrent) return null
@@ -60,7 +62,7 @@ async function switchToTarget() {
 
 function compareWithPrevious() {
     const prev = selectedCommit.value?.parents[0]
-    if (!prev) return app.notify('これより前の版はありません', true)
+    if (!prev) return app.notify(t.value.history.noPrevious, true)
     app.openCompare(prev, selected.value!)
 }
 
@@ -72,9 +74,7 @@ async function restore() {
     confirmRestore.value = false
     confirmBring.value = false
     if (typeof content.value !== 'string') return
-    const done = onCurrent.value
-        ? 'この版の内容に戻しました。確認して「版を保存」してください'
-        : `この版の内容を「${currentLabel.value}」にコピーしました。確認して「版を保存」してください`
+    const done = onCurrent.value ? t.value.history.restored : t.value.history.copied(currentLabel.value)
     await app.run(() => window.api.writeDoc(app.repoDir!, path, content.value as string), done)
     await app.refreshDocs()
     app.view = 'editor'
@@ -88,13 +88,13 @@ async function onEffectiveAdded() {
 
 <template>
     <div class="history">
-        <SidePane :pane="listPane" side="left" label="版の一覧" icon="i-lucide-git-commit-horizontal">
+        <SidePane :pane="listPane" side="left" :label="t.history.listLabel" icon="i-lucide-git-commit-horizontal">
             <div class="head">
-                <UCheckbox v-model="onlyThis" label="この文書の変更のみ" />
-                <UCheckbox v-model="allBranches" label="すべての改定案を表示" />
+                <UCheckbox v-model="onlyThis" :label="t.history.onlyThisDoc" />
+                <UCheckbox v-model="allBranches" :label="t.history.allDrafts" />
             </div>
-            <p v-if="loading && commits.length === 0" class="muted pad">読み込んでいます…</p>
-            <p v-else-if="commits.length === 0" class="muted pad">まだ版が保存されていません。</p>
+            <p v-if="loading && commits.length === 0" class="muted pad">{{ t.history.loading }}</p>
+            <p v-else-if="commits.length === 0" class="muted pad">{{ t.history.empty }}</p>
             <HistoryGraph
                 :commits="commits"
                 :selected="selected"
@@ -103,24 +103,25 @@ async function onEffectiveAdded() {
                 @select="selected = $event"
             />
             <div v-if="commits.length" class="legend">
-                <span><i class="ln main" />現行版</span>
-                <span><i class="ln draft" />改定案</span>
-                <span><i class="ln faint" />ほかの改定案（薄く表示）</span>
+                <span><i class="ln main" />{{ t.history.legend.main }}</span>
+                <span><i class="ln draft" />{{ t.history.legend.draft }}</span>
+                <span><i class="ln faint" />{{ t.history.legend.faint }}</span>
             </div>
         </SidePane>
         <div class="detail">
             <template v-if="selectedCommit">
                 <div class="cd-toolbar actions">
                     <div class="msg">
-                        <IssueText :text="selectedCommit.message" />
+                        <IssueText :text="selectedCommit.message.replace(/(^|\n)施行日: (\S+)\s*$/, `$1${t.history.effectiveTrailer}: $2`)" />
                     </div>
                     <span class="cd-grow" />
-                    <UButton label="課題に紐付ける" icon="i-lucide-link" size="sm" color="neutral" variant="outline" @click="showLink = true" />
-                    <UButton label="前の版と比較" size="sm" color="neutral" variant="outline" @click="compareWithPrevious" />
-                    <UButton label="今の文書と比較" size="sm" color="neutral" variant="outline" @click="compareWithCurrent" />
+                    <UButton :label="t.history.linkIssue" icon="i-lucide-link" size="sm" color="neutral" variant="outline" @click="showLink = true" />
+                    <UButton :label="t.history.comparePrevious" size="sm" color="neutral" variant="outline" data-guide="compare" @click="compareWithPrevious" />
+                    <UButton :label="t.history.compareCurrent" size="sm" color="neutral" variant="outline" data-guide="compare" @click="compareWithCurrent" />
                     <UButton
-                        label="施行日を付ける"
+                        :label="t.history.addEffective"
                         icon="i-lucide-calendar-check"
+                        data-guide="effective"
                         size="sm"
                         color="neutral"
                         variant="outline"
@@ -129,8 +130,9 @@ async function onEffectiveAdded() {
                     />
                     <UButton
                         v-if="onCurrent"
-                        label="この版に戻す"
+                        :label="t.history.restore"
                         icon="i-lucide-history"
+                        data-guide="restore"
                         size="sm"
                         color="neutral"
                         variant="outline"
@@ -138,9 +140,9 @@ async function onEffectiveAdded() {
                         @click="confirmRestore = true"
                     />
                     <template v-else>
-                        <UTooltip :text="targetBranch ? '' : 'この版がある改定案は、反映後に削除されています'">
+                        <UTooltip :text="targetBranch ? '' : t.history.draftDeleted">
                             <UButton
-                                :label="targetBranch ? `「${targetBranch.label}」に切り替える` : '切り替え先の案がありません'"
+                                :label="targetBranch ? t.history.switchTo(targetBranch.label) : t.history.noSwitchTarget"
                                 icon="i-lucide-git-branch"
                                 size="sm"
                                 :disabled="!targetBranch"
@@ -148,7 +150,7 @@ async function onEffectiveAdded() {
                             />
                         </UTooltip>
                         <UButton
-                            :label="`この版の内容を「${currentLabel}」にコピー`"
+                            :label="t.history.copyInto(currentLabel)"
                             icon="i-lucide-download"
                             size="sm"
                             color="neutral"
@@ -171,16 +173,16 @@ async function onEffectiveAdded() {
         />
         <ConfirmModal
             v-model:open="confirmBring"
-            :title="`「${currentLabel}」にコピー`"
-            :description="`別の案にある版の内容で、「${currentLabel}」のこの文書を置き換えます。作業中の案は切り替わりません。置き換えたあと「版を保存」すると、「${currentLabel}」の版として記録されます。`"
-            :confirm-label="`「${currentLabel}」にコピー`"
+            :title="t.history.copyTitle(currentLabel)"
+            :description="t.history.copyDescription(currentLabel)"
+            :confirm-label="t.history.copyTitle(currentLabel)"
             @confirm="restore"
         />
         <ConfirmModal
             v-model:open="confirmRestore"
-            title="この版に戻す"
-            description="この版の内容で今の文書を置き換えます。置き換えたあと「版を保存」すると記録されます。"
-            confirm-label="戻す"
+            :title="t.history.restore"
+            :description="t.history.restoreDescription"
+            :confirm-label="t.history.restoreConfirm"
             @confirm="restore"
         />
     </div>

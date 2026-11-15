@@ -1,4 +1,5 @@
 import fs, { promises as fsp } from 'node:fs'
+import { t } from '../shared/i18n'
 import os from 'node:os'
 import { join, resolve } from 'node:path'
 import { app } from 'electron'
@@ -29,9 +30,9 @@ export function parseConfig(text: string | null): Record<string, unknown> {
     try {
         v = JSON.parse(text)
     } catch {
-        throw new Error('Claude Desktop の設定ファイルを読めませんでした。ファイルの書き方を直してから、もう一度押してください')
+        throw new Error(t().errors.claudeDesktop.unreadable)
     }
-    if (!isObject(v)) throw new Error('Claude Desktop の設定ファイルの形が想定と違います')
+    if (!isObject(v)) throw new Error(t().errors.claudeDesktop.badShape)
     return v
 }
 
@@ -68,7 +69,7 @@ const bridgeDir = () => (app.isPackaged ? join(process.resourcesPath, 'mcp-bridg
 
 function expected(): DesktopEntry {
     const socket = mcpSocketPath()
-    if (!socket) throw new Error('Claude Desktop 用の入口の場所を決められませんでした')
+    if (!socket) throw new Error(t().errors.claudeDesktop.noSocket)
     return bridgeEntry(process.platform, bridgeDir(), socket)
 }
 
@@ -92,7 +93,7 @@ export async function desktopStatus(): Promise<DesktopStatus> {
 
 async function save(entry: DesktopEntry | null): Promise<DesktopStatus> {
     const dir = configDir()
-    if (!dir || !fs.existsSync(dir)) throw new Error('Claude Desktop が見つかりません。先に Claude Desktop を入れて、一度起動してください')
+    if (!dir || !fs.existsSync(dir)) throw new Error(t().errors.claudeDesktop.notInstalled)
     const file = join(dir, FILE)
     const text = await readConfig(file)
     const next = withEntry(parseConfig(text), entry)

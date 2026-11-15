@@ -8,6 +8,7 @@ import { baseName } from '~/utils/folders'
 import { fmtDate, todayISO } from '~/utils/format'
 
 const app = useApp()
+const t = useT()
 const today = todayISO()
 onMounted(() => app.checkRepos())
 
@@ -19,28 +20,28 @@ const repoName = (dir: string) => repos.value.find((r) => r.dir === dir)?.name ?
 const ready = computed(() => !!app.repoDir && !app.repoProblem)
 const repoSub = (r: RepoEntry) =>
     stateOf(r) === 'missing'
-        ? '見つかりません（押して場所を選び直す）'
+        ? t.value.home.repoMissing
         : stateOf(r) === 'notGit'
-          ? 'リポジトリになっていません（押して選び直す）'
-          : r.url?.replace(/^https?:\/\//, '').replace(/\.git$/, '') || 'ローカル（ローカル だけ）'
+          ? t.value.home.repoNotGit
+          : r.url?.replace(/^https?:\/\//, '').replace(/\.git$/, '') || t.value.home.localOnly
 
 const now = new Date()
-const WEEK = ['日', '月', '火', '水', '木', '金', '土']
-const dateLine = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日（${WEEK[now.getDay()]}）`
+const dateLine = computed(() => t.value.home.dateLine(now))
 const hello = computed(() => {
     const h = now.getHours()
-    const g = h < 10 ? 'おはようございます' : h < 18 ? 'こんにちは' : 'お疲れさまです'
-    return app.me ? `${app.me}さん、${g}` : g
+    const m = t.value.home
+    const g = h < 10 ? m.greeting.morning : h < 18 ? m.greeting.day : m.greeting.evening
+    return app.me ? m.helloName(app.me, g) : g
 })
 
 const steps = computed(() => [
     {
         done: !!app.me,
-        label: 'GitHub/GitLab にログインする（または名前を入れる）',
-        sub: 'ログインしたアカウントの名前とメールで、版を保存した人を記録します。',
+        label: t.value.home.steps.login,
+        sub: t.value.home.steps.loginSub,
         action: () => app.openSettings('setup', app.accounts.some((a) => a.login) ? 'profile' : 'remote'),
     },
-    { done: repos.value.length > 0, label: 'リポジトリを追加する', sub: '案件ごと・依頼主ごとなどのプロジェクト', action: addRepo },
+    { done: repos.value.length > 0, label: t.value.home.steps.addRepo, sub: t.value.home.steps.addRepoSub, action: addRepo },
 ])
 const showSteps = computed(() => !steps.value[0].done || !steps.value[1].done)
 const scheduleTab = computed(() => !showSteps.value && app.homeTab === 'schedule')
@@ -50,8 +51,9 @@ const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getT
 const DAY = 86400000
 const recentGroups = computed(() => {
     const groups: { label: string; items: RecentDoc[] }[] = []
+    const g = t.value.home.recentGroup
     for (const d of (app.prefs.recentDocs ?? []).filter((d) => repos.value.some((r) => r.dir === d.dir))) {
-        const label = d.at >= dayStart ? '今日' : d.at >= dayStart - DAY ? '昨日' : d.at >= dayStart - 6 * DAY ? '今週' : 'それより前'
+        const label = d.at >= dayStart ? g.today : d.at >= dayStart - DAY ? g.yesterday : d.at >= dayStart - 6 * DAY ? g.thisWeek : g.earlier
         if (groups.at(-1)?.label === label) groups.at(-1)!.items.push(d)
         else groups.push({ label, items: [d] })
     }
@@ -71,7 +73,7 @@ async function loadUpcoming() {
 watch(() => [repos.value.map((r) => r.dir).join('|'), app.reloadKey, app.scheduleKey], loadUpcoming, { immediate: true })
 const overdueCount = computed(() => upcoming.value?.filter((u) => u.overdue).length ?? 0)
 const kindOf = (u: ScheduleItem): EventKind => ({ id: u.kind, label: u.kindLabel, color: u.color, task: u.task, remind: u.remind })
-const where = (u: ScheduleItem) => `${u.repo}・${u.docPath ? baseName(u.docPath).replace(/\.md$/i, '') : 'リポジトリ全体'}`
+const where = (u: ScheduleItem) => `${u.repo}${t.value.common.sep}${u.docPath ? baseName(u.docPath).replace(/\.md$/i, '') : t.value.home.wholeRepo}`
 const openUpcoming = (u: ScheduleItem) => app.openSchedule(u.dir)
 async function toggleDone(u: ScheduleItem) {
     const ok = await app.runOk(() => window.api.setEventDone(u.dir, u.id, u.date, !u.done))
@@ -92,38 +94,39 @@ function addRepo() {
         <header class="hero">
             <div class="brand">
                 <BrandLogo class="logo" />
-                <p class="tagline">法律案・契約書・規程など、条文でできた文書のエディタ・版管理アプリ</p>
+                <p class="tagline">{{ t.home.tagline }}</p>
             </div>
             <div class="greet">
                 <span class="date">{{ dateLine }}</span>
                 <strong class="hello">{{ hello }}</strong>
             </div>
-            <button class="search" @click="app.paletteOpen = true">
+            <button class="search" data-guide="search" @click="app.paletteOpen = true">
                 <UIcon name="i-lucide-search" />
-                <span>文書・条の見出し・改定案・操作を検索</span>
+                <span>{{ t.home.search }}</span>
                 <span class="cd-grow" />
                 <UKbd value="meta" />
                 <UKbd value="K" />
             </button>
             <div class="quick">
-                <UButton v-if="ready" label="新しい文書" icon="i-lucide-file-plus" @click="app.dialog = { kind: 'newDoc' }" />
+                <UButton v-if="ready" :label="t.common.newDoc" icon="i-lucide-file-plus" @click="app.dialog = { kind: 'newDoc' }" />
                 <UButton
                     v-if="ready"
-                    :label="`${app.repo?.name} のホーム`"
+                    :label="t.home.repoHomeOf(app.repo?.name)"
                     icon="i-lucide-layout-grid"
                     color="neutral"
                     variant="outline"
                     class="repo-btn"
+                    data-guide="docs"
                     @click="app.view = 'docs'"
                 />
                 <UButton
-                    label="リポジトリを追加"
+                    :label="t.home.addRepo"
                     icon="i-lucide-archive"
                     :color="ready ? 'neutral' : 'primary'"
                     :variant="ready ? 'outline' : 'solid'"
                     @click="addRepo"
                 />
-                <UButton label="設定" icon="i-lucide-settings" color="neutral" variant="ghost" @click="app.view = 'setup'" />
+                <UButton :label="t.common.settings" icon="i-lucide-settings" color="neutral" variant="ghost" @click="app.view = 'setup'" />
             </div>
         </header>
 
@@ -134,11 +137,11 @@ function addRepo() {
                 color="warning"
                 variant="subtle"
                 icon="i-lucide-folder-x"
-                :title="`リポジトリ「${r.name}」が見つかりません`"
-                :description="`${r.dir} にフォルダがありません。移動・名前の変更・削除がされたか、ドライブがつながっていない可能性があります。`"
+                :title="t.home.missing.title(r.name)"
+                :description="t.home.missing.description(r.dir)"
                 :actions="[
-                    { label: '新しい場所を選ぶ', color: 'warning', variant: 'solid', size: 'xs', onClick: () => app.relocateRepo(r.dir) },
-                    { label: '一覧から外す', color: 'neutral', variant: 'ghost', size: 'xs', onClick: () => app.forgetRepo(r.dir) },
+                    { label: t.home.missing.relocate, color: 'warning', variant: 'solid', size: 'xs', onClick: () => app.relocateRepo(r.dir) },
+                    { label: t.home.missing.forget, color: 'neutral', variant: 'ghost', size: 'xs', onClick: () => app.forgetRepo(r.dir) },
                 ]"
             />
         </div>
@@ -146,15 +149,15 @@ function addRepo() {
         <div class="body">
             <section class="cd-pane-col main">
                 <div class="cd-pane-bar">
-                    <span v-if="showSteps" class="cd-pane-title">はじめに</span>
+                    <span v-if="showSteps" class="cd-pane-title">{{ t.home.steps.title }}</span>
                     <SegmentSwitch
                         v-else
                         v-model="app.homeTab"
                         size="xs"
-                        aria-label="左のペイン"
+                        :aria-label="t.home.leftPane"
                         :items="[
-                            { value: 'recent', label: '最近開いた文書', icon: 'i-lucide-history' },
-                            { value: 'schedule', label: 'すべてのリポジトリの期日・有効期間', icon: 'i-lucide-calendar-days' },
+                            { value: 'recent', label: t.home.tabRecent, icon: 'i-lucide-history' },
+                            { value: 'schedule', label: t.home.tabSchedule, icon: 'i-lucide-calendar-days' },
                         ]"
                     />
                 </div>
@@ -170,18 +173,19 @@ function addRepo() {
                                 <strong>{{ s.label }}</strong>
                                 <span class="cd-muted">{{ s.sub }}</span>
                             </span>
-                            <UButton v-if="!s.done" label="設定する" size="xs" color="neutral" variant="outline" @click="s.action" />
+                            <UButton v-if="!s.done" :label="t.home.steps.setUp" size="xs" color="neutral" variant="outline" @click="s.action" />
                         </li>
                     </ol>
 
                     <template v-else>
                         <div v-if="!recentGroups.length" class="empty-big">
                             <UIcon name="i-lucide-file-text" class="big" />
-                            <p>文書を開くと、ここから続きを開けます。</p>
+                            <p>{{ t.home.recentEmpty }}</p>
                             <UButton
                                 v-if="ready"
-                                label="リポジトリホームで文書を選ぶ"
+                                :label="t.home.pickInRepoHome"
                                 icon="i-lucide-layout-grid"
+                                data-guide="docs"
                                 size="sm"
                                 color="neutral"
                                 variant="outline"
@@ -201,7 +205,7 @@ function addRepo() {
                                 {{ d.title }}
                                 <template #sub>{{ repoName(d.dir) }} ／ {{ d.path }}</template>
                                 <template #trail>
-                                    <span class="when">{{ isMissing(d) ? 'リポジトリなし' : when(d.at) }}</span>
+                                    <span class="when">{{ isMissing(d) ? t.home.noRepo : when(d.at) }}</span>
                                 </template>
                             </ListRow>
                         </div>
@@ -212,23 +216,22 @@ function addRepo() {
             <section v-if="!scheduleTab" class="cd-pane-col side">
                 <div class="scroll">
                     <div class="cd-list-group">
-                        <SectionHead label="これからの期日" icon="i-lucide-calendar-clock" :count="upcoming?.length" pinned>
-                            <UBadge v-if="overdueCount" :label="`期限切れ ${overdueCount}`" color="error" variant="subtle" size="sm" />
-                            <UTooltip text="すべてのリポジトリの期日・有効期間をタイムラインで見る">
+                        <SectionHead :label="t.home.upcoming" icon="i-lucide-calendar-clock" :count="upcoming?.length" pinned>
+                            <UBadge v-if="overdueCount" :label="t.home.overdueBadge(overdueCount)" color="error" variant="subtle" size="sm" />
+                            <UTooltip :text="t.home.timelineAll">
                                 <UButton
                                     icon="i-lucide-calendar-days"
                                     size="xs"
                                     square
                                     color="neutral"
                                     variant="ghost"
-                                    aria-label="すべてのリポジトリの期日・有効期間"
+                                    :aria-label="t.home.tabSchedule"
+                                    data-guide="schedule"
                                     @click="app.openScheduleAll()"
                                 />
                             </UTooltip>
                         </SectionHead>
-                        <p v-if="upcoming && !upcoming.length" class="cd-muted empty">
-                            これから 90 日の期日はありません。施行・公布・提出・届出・契約の更新などの日付は、リポジトリの「期日・有効期間」で足せます。
-                        </p>
+                        <p v-if="upcoming && !upcoming.length" class="cd-muted empty">{{ t.home.upcomingEmpty }}</p>
                         <OccurrenceRow
                             v-for="u in (upcoming ?? []).slice(0, SHOW)"
                             :key="u.dir + u.key"
@@ -238,11 +241,11 @@ function addRepo() {
                             @click="openUpcoming(u)"
                             @toggle="toggleDone(u)"
                         />
-                        <p v-if="(upcoming?.length ?? 0) > SHOW" class="cd-muted empty">ほか {{ upcoming!.length - SHOW }} 件</p>
+                        <p v-if="(upcoming?.length ?? 0) > SHOW" class="cd-muted empty">{{ t.common.moreCount(upcoming!.length - SHOW) }}</p>
                     </div>
 
                     <div v-if="app.toReview.length" class="cd-list-group">
-                        <SectionHead label="あなたの確認待ち" icon="i-lucide-message-square-check" :count="app.toReview.length" pinned />
+                        <SectionHead :label="t.home.toReview" icon="i-lucide-message-square-check" :count="app.toReview.length" pinned />
                         <ListRow
                             v-for="b in app.toReview"
                             :key="b.name"
@@ -251,20 +254,20 @@ function addRepo() {
                             @click="app.dialog = { kind: 'review', branch: b.name }"
                         >
                             {{ b.label }}
-                            <template #sub>{{ app.repo?.name }}・{{ app.statusOf(b).request?.by }} さんから</template>
+                            <template #sub>{{ app.repo?.name }}{{ t.common.sep }}{{ t.home.requestedBy(app.statusOf(b).request?.by ?? '') }}</template>
                             <template #trail>
-                                <UBadge label="確認する" color="primary" variant="subtle" size="sm" />
+                                <UBadge :label="t.home.reviewNow" color="primary" variant="subtle" size="sm" />
                             </template>
                         </ListRow>
                     </div>
 
                     <div class="cd-list-group">
-                        <SectionHead label="リポジトリ" icon="i-lucide-archive" :count="repos.length" pinned>
-                            <UTooltip text="リポジトリを追加">
-                                <UButton icon="i-lucide-plus" size="xs" square color="neutral" variant="ghost" aria-label="リポジトリを追加" @click="addRepo" />
+                        <SectionHead :label="t.home.repos" icon="i-lucide-archive" :count="repos.length" pinned>
+                            <UTooltip :text="t.home.addRepo">
+                                <UButton icon="i-lucide-plus" size="xs" square color="neutral" variant="ghost" :aria-label="t.home.addRepo" @click="addRepo" />
                             </UTooltip>
                         </SectionHead>
-                        <p v-if="!repos.length" class="cd-muted empty">まだリポジトリがありません。「＋」から追加してください。</p>
+                        <p v-if="!repos.length" class="cd-muted empty">{{ t.home.reposEmpty }}</p>
                         <template v-for="g in repoGroups" :key="g.section || '-'">
                             <div v-if="g.section" class="repo-sec">
                                 <UIcon name="i-lucide-folder" />{{ g.section }}<span class="n">{{ g.repos.length }}</span>
@@ -281,7 +284,7 @@ function addRepo() {
                                 {{ r.name }}
                                 <template #sub>{{ repoSub(r) }}</template>
                                 <template v-if="r.dir === app.repoDir && stateOf(r) === 'ok'" #trail>
-                                    <UBadge label="使用中" size="sm" variant="subtle" />
+                                    <UBadge :label="t.home.inUse" size="sm" variant="subtle" />
                                 </template>
                             </ListRow>
                         </template>

@@ -1,3 +1,5 @@
+import { t } from './i18n'
+
 export type AiProvider = 'anthropic' | 'openai' | 'ollama' | 'openrouter' | 'github'
 
 export interface AiConfig {
@@ -16,49 +18,35 @@ export interface AiProviderInfo {
     auth: 'key' | 'none' | 'oauth' | 'github'
 }
 
+// label と description は読むたびに今の言語で返す
+const providerInfo = (id: AiProvider, rest: Omit<AiProviderInfo, 'label' | 'description'>): AiProviderInfo => ({
+    get label() {
+        return t().labels.aiProviders[id].label
+    },
+    get description() {
+        return t().labels.aiProviders[id].description
+    },
+    ...rest,
+})
+
 export const AI_PROVIDERS: Record<AiProvider, AiProviderInfo> = {
-    anthropic: {
-        label: 'Claude（Anthropic）',
-        description: 'Anthropic の Claude を API キーで使用します。文書の内容は Anthropic に送られます。',
-        model: 'claude-opus-5-5',
-        auth: 'key',
-    },
-    openai: {
-        label: 'OpenAI・Gemini など（OpenAI 互換）',
-        description:
-            'OpenAI、Google Gemini、DeepSeek、LM Studio など、OpenAI 互換の API を持つサービスを、URL と API キーを指定して使用します。文書の内容はその接続先に送られます。',
-        base: 'https://api.openai.com/v1',
-        auth: 'key',
-    },
-    ollama: {
-        label: 'Ollama（ローカル の中）',
-        description:
-            'ローカル で動いている Ollama を使用します。API キーは不要で、文書は PC の外に送られません。道具（tools）に対応したモデル（qwen3、llama3.1、gpt-oss など）が必要です。',
-        base: 'http://127.0.0.1:11434/v1',
-        auth: 'none',
-    },
-    openrouter: {
-        label: 'OpenRouter（ブラウザでログイン）',
-        description:
-            'OpenRouter にブラウザでログインして使用します（API キーの入力は不要です）。Claude・GPT・Gemini などを選べます。料金は OpenRouter に支払います。文書の内容は OpenRouter と、選んだモデルの会社に送られます。',
-        base: 'https://openrouter.ai/api/v1',
-        auth: 'oauth',
-    },
-    github: {
-        label: 'GitHub Models（GitHub のログイン）',
-        description:
-            '設定の「GitHub/GitLab」でログインした GitHub アカウントで使用します。無料枠があり、回数に制限があります。文書の内容は GitHub（Microsoft）に送られます。',
-        base: 'https://models.github.ai/inference',
-        model: 'openai/gpt-4.1',
-        auth: 'github',
-    },
+    anthropic: providerInfo('anthropic', { model: 'claude-opus-5-5', auth: 'key' }),
+    openai: providerInfo('openai', { base: 'https://api.openai.com/v1', auth: 'key' }),
+    ollama: providerInfo('ollama', { base: 'http://127.0.0.1:11434/v1', auth: 'none' }),
+    openrouter: providerInfo('openrouter', { base: 'https://openrouter.ai/api/v1', auth: 'oauth' }),
+    github: providerInfo('github', { base: 'https://models.github.ai/inference', model: 'openai/gpt-4.1', auth: 'github' }),
 }
 
 export const OPENAI_PRESETS: { label: string; url: string }[] = [
     { label: 'OpenAI', url: 'https://api.openai.com/v1' },
     { label: 'Google Gemini', url: 'https://generativelanguage.googleapis.com/v1beta/openai' },
     { label: 'DeepSeek', url: 'https://api.deepseek.com/v1' },
-    { label: 'LM Studio（ローカル）', url: 'http://127.0.0.1:1234/v1' },
+    {
+        get label() {
+            return t().labels.lmStudioLocal
+        },
+        url: 'http://127.0.0.1:1234/v1',
+    },
 ]
 
 const LOOPBACK = ['127.0.0.1', 'localhost', '[::1]']
@@ -119,8 +107,8 @@ export function aiBaseOf(c: AiConfig): string {
 export function aiShortLabel(c: AiConfig): string {
     const name =
         c.provider === 'openai'
-            ? (OPENAI_PRESETS.find((p) => p.url === aiBaseOf(c))?.label ?? 'OpenAI 互換')
+            ? (OPENAI_PRESETS.find((p) => p.url === aiBaseOf(c))?.label ?? t().labels.openaiCompatible)
             : { anthropic: 'Claude', ollama: 'Ollama', openrouter: 'OpenRouter', github: 'GitHub Models' }[c.provider]
     const model = c.model ?? AI_PROVIDERS[c.provider].model
-    return model ? `${name}・${model}` : name
+    return model ? `${name}${t().common.sep}${model}` : name
 }

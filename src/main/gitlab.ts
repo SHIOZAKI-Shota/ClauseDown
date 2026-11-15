@@ -1,4 +1,5 @@
 import { isPrNumber } from '../shared/review'
+import { t } from '../shared/i18n'
 import { gitlabApi } from './gitlab-auth'
 import { getToken } from './settings'
 
@@ -18,7 +19,7 @@ export class GitLabError extends Error {
 
 async function call<T>(r: GitLabRepo, method: string, path: string, body?: unknown, form?: FormData): Promise<T> {
     const token = await getToken(r.base)
-    if (!token) throw new Error('GitLab にログインしていません。設定の「GitHub/GitLab」でログインしてください')
+    if (!token) throw new Error(t().errors.gitlab.notLoggedIn)
     const res = await fetch(gitlabApi(r.base) + path, {
         method,
         headers: {
@@ -43,14 +44,14 @@ async function call<T>(r: GitLabRepo, method: string, path: string, body?: unkno
 }
 
 function gitlabMessage(status: number, msg: string): string {
-    if (status === 401) return `GitLab のログインの期限が切れたか、アクセストークンが正しくありません（${msg}）`
-    if (status === 403) return `GitLab の権限が足りません。このプロジェクトで「Developer」以上の役割が必要です（${msg}）`
-    if (status === 404) return `GitLab でプロジェクトまたはマージリクエストが見つかりません（${msg}）`
+    if (status === 401) return t().errors.gitlab.unauthorized(msg)
+    if (status === 403) return t().errors.gitlab.forbidden(msg)
+    if (status === 404) return t().errors.gitlab.notFound(msg)
     return `GitLab：${msg}`
 }
 
 function num(v: unknown): number {
-    if (!isPrNumber(v)) throw new Error('プルリクエスト・課題の番号が正しくありません')
+    if (!isPrNumber(v)) throw new Error(t().errors.github.badNumber)
     return v
 }
 
@@ -151,9 +152,9 @@ export async function mergeMr(r: GitLabRepo, iid: number, message: string, sha: 
         return done.merge_commit_sha ?? done.squash_commit_sha ?? sha
     } catch (e) {
         if (!(e instanceof GitLabError)) throw e
-        if (e.status === 409) throw new Error('GitLab 側の改定案が、ローカル の改定案と違っています。同期してからもう一度反映してください')
+        if (e.status === 409) throw new Error(t().errors.forge.gitlabDivergedMerge)
         if (e.status === 405 || e.status === 406 || e.status === 422) {
-            throw new Error(`GitLab の設定により、まだ反映できません（承認の数や、パイプラインの結果を確かめてください）。${e.message}`)
+            throw new Error(t().errors.gitlab.notMergeable(e.message))
         }
         throw e
     }

@@ -1,28 +1,13 @@
-export const AI_SYSTEM = `あなたは、法律案・条例・契約書・規約・規程など、条文でできた文書の作成・編集・チェックを手伝う補助者です。文書は ClauseDown の Markdown で書かれています。
+import { locale, messagesOf, type Locale } from './i18n'
 
-## 文書の書き方
-- \`# 文書名\`、\`## 章\`、\`### 条の見出し {#名前}\`、\`- 項\`、\`  - 号\`、\`    - 号の細分\`
-- 条・項・号の番号は自動で振られます。md に「第3条」「２」「一」と書き込まないでください。read_doc の〔〕は計算した番号です
-- 条参照は \`[[名前]]\`（項まで指すときは \`[[名前:2]]\`）。参照先の条の見出しに \`{#名前}\` が要ります。条を足したり消したりしても参照の番号は自動で合います
-- \`### 見出し {branch}\` は枝番号の条、\`### {deleted}\` は削除された条、\`## 附則 {supplement}\` は附則、\`## {closing}\` は後文・署名欄、\`## 別表第一 {appendix}\` は別表
-- 項・号の下に字下げして書いた表や \`\`\`mermaid の図は、その項・号に付きます
-- 先頭の \`<!-- clausedown ... -->\` は書式設定です。頼まれない限り変えないでください
-- 書式の系統（\`doc: { style: … }\`）が日本以外のとき、番号と条参照は「Section 3.2(a)」「§ 3 Absatz 2」のような海外の書き方になります。md に番号を書き込まないのは同じです。条参照は \`[[名前:2:1]]\` のように項・号・細分まで続けて書けます
+// AI への指示（system prompt）。本文は i18n の ai.system。回答の言語も画面の言語に合わせる
+export const aiSystem = (l: Locale = locale()): string => messagesOf(l).ai.system
 
-## 編集するとき
-- 頼まれた範囲だけを、edit_doc で小さく置き換えてください
-- 版の保存・現行版への反映・施行日・納品は人が行います。あなたは作業フォルダを書き換えるだけです
-- 書き換えたら、最後にどの条をどう変えたかを短く報告してください
-- 指示があいまいで、文書の意味が変わる判断が要るときは、書き換える前に確認してください
+// 道具の呼び出しを自分で書かないモデル向けに、system prompt に足す注意
+export const aiToolUse = (l: Locale = locale()): string => messagesOf(l).ai.toolUse
 
-## リーガルチェックのとき
-- read_doc で全文を読み、check_doc も使ってください
-- 指摘は条の順に、1件ごとに「該当箇所（第○条第○項）／重要度（高・中・低）／問題点／根拠（法令名と条文。確かでなければ「要確認」）／修正案（文案）」で書いてください
-- あなたの知識はある時点までのものです。改正が多い分野や、法令で決まる数値・期間・期限は「最新の法令・通達で確認してください」と添えてください
-- 断定できないことは断定せず、専門家の判断が要る点ははっきり書いてください
-- チェックを頼まれただけのときは、文書を書き換えないでください
-
-回答は日本語で、簡潔に書いてください。`
+// MCP の prompt の引数の説明と、依頼文の前置き
+export const aiMcpText = (l: Locale = locale()) => messagesOf(l).ai.mcp
 
 export interface AiPreset {
     id: string
@@ -32,33 +17,15 @@ export interface AiPreset {
     prompt: string
 }
 
-export const AI_PRESETS: AiPreset[] = [
-    {
-        id: 'legal_check',
-        label: 'リーガルチェック',
-        icon: 'i-lucide-scale',
-        description: '法令との食い違い・抜け・あいまいな表現を条ごとに指摘します（文書は書き換えません）',
-        prompt: 'この文書をリーガルチェックしてください。',
-    },
-    {
-        id: 'polish',
-        label: '文言を整える',
-        icon: 'i-lucide-pen-line',
-        description: '意味を変えずに、法令文の書き方に合わせて表現をそろえます',
-        prompt: '意味を変えずに、法令文の書き方（「及び」「並びに」「又は」「若しくは」の使い分け、用語の統一など）に合わせて文言を整えてください。',
-    },
-    {
-        id: 'refs',
-        label: '条参照を直す',
-        icon: 'i-lucide-link',
-        description: '本文に直接書いた「第○条」を、番号が自動で合う条参照に置き換えます',
-        prompt: '本文中で「第○条」「前条」などと番号を直接書いている箇所のうち、条参照（[[名前]]）にしたほうがよいものを直してください。',
-    },
-    {
-        id: 'explain',
-        label: '改定内容の説明',
-        icon: 'i-lucide-message-square-text',
-        description: '現行版と比べた変更点を、関係者向けの説明文にまとめます',
-        prompt: '現行版と比べた変更点を compare_versions で調べ、依頼主・関係者に改定内容を説明する文章を作ってください（文書は書き換えないでください）。',
-    },
-]
+const PRESET_ICONS = {
+    legal_check: 'i-lucide-scale',
+    polish: 'i-lucide-pen-line',
+    refs: 'i-lucide-link',
+    explain: 'i-lucide-message-square-text',
+} as const
+
+// AI に頼む定型の依頼。表示・依頼文とも、今の画面の言語で作る
+export function aiPresets(l: Locale = locale()): AiPreset[] {
+    const p = messagesOf(l).ai.presets
+    return (Object.keys(PRESET_ICONS) as (keyof typeof PRESET_ICONS)[]).map((id) => ({ id, icon: PRESET_ICONS[id], ...p[id] }))
+}

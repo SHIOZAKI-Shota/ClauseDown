@@ -109,6 +109,25 @@ describe('画面', () => {
         await win.getByRole('button', { name: '種類を足す' }).waitFor()
     })
 
+    it('設定で英語に切り替えると、画面とメニューが英語になり、日本語に戻せる', async () => {
+        await store(`s.setPrefs({ language: 'en' })`)
+        await store(`s.view = 'home'`)
+        await seen('Upcoming due dates')
+        await expect.poll(() => win.evaluate(() => document.documentElement.lang)).toBe('en')
+        if (process.platform === 'darwin') {
+            const labels = await app.evaluate(({ Menu }) => Menu.getApplicationMenu()?.items.map((i) => i.label) ?? [])
+            expect(labels).toContain('Edit')
+        }
+        await store(`s.view = 'docs'`)
+        await store(`s.openDoc(${JSON.stringify(DOC)})`)
+        await win.locator('.cm-editor').first().waitFor()
+        await win.getByRole('button', { name: 'Save version' }).first().waitFor()
+        await store(`s.openSettings('setup', 'due')`)
+        await seen('Show desktop notifications for due dates')
+        await store(`s.setPrefs({ language: 'ja' })`)
+        await seen('期日をデスクトップに通知する')
+    })
+
     it('ここまでの画面でエラーが出ていない', () => {
         expect(errors).toEqual([])
     })

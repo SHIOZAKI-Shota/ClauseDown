@@ -1,3 +1,5 @@
+import { t } from '../shared/i18n'
+
 // 半角カタカナを見つける校正の規則（textlint の規則の形）。
 // リンク・画像・引用・強調の中は、元の文をそのまま写していることが多いので見ない。
 const HANKAKU = /[｡-ﾟ]+/g
@@ -27,7 +29,7 @@ function reporter(context: Context) {
                 const zenkaku = m[0].normalize('NFKC')
                 report(
                     node,
-                    new RuleError(`「${m[0]}」は半角のカタカナです。全角の「${zenkaku}」にしてください`, {
+                    new RuleError(t().errors.proofread.hankaku(m[0], zenkaku), {
                         padding: locator.range(range),
                         fix: fixer.replaceTextRange(range, zenkaku),
                     }),

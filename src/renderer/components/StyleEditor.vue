@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { useApp } from '~/stores/app'
 import { parseLegal } from '@shared/legal-parser'
 import { renderDoc } from '@shared/legal-renderer'
 import { BODY_FONTS, cssFont, isLatinFont, type DocStyle } from '@shared/prefs'
 import { sourceLabel, type StyleOverride, type StyleSource } from '@shared/folder-style'
 import { newDocText } from '@shared/doc-preset'
+import { useT } from '~/composables/useT'
 
 const props = defineProps<{
     modelValue: StyleOverride
@@ -13,6 +15,8 @@ const props = defineProps<{
     scopeName?: string
 }>()
 const emit = defineEmits<{ 'update:modelValue': [StyleOverride] }>()
+const t = useT()
+const ts = computed(() => t.value.settings.style)
 
 const value = <K extends keyof DocStyle>(k: K): DocStyle[K] => (props.modelValue[k] ?? props.inherited[k]) as DocStyle[K]
 const isSet = (k: keyof DocStyle) => props.full || props.modelValue[k] !== undefined
@@ -25,30 +29,29 @@ function unset(k: keyof DocStyle) {
     emit('update:modelValue', next)
 }
 function inheritNote(k: keyof DocStyle, text: string) {
-    return `${sourceLabel(props.from?.[k] ?? 'app')}（${text}）を使っています`
+    return ts.value.inherit(sourceLabel(props.from?.[k] ?? 'app'), text)
 }
 
 const SIZES = [9, 10, 10.5, 11, 12].map((v) => ({ label: `${v}pt`, value: v }))
-const LINES = [1.5, 1.6, 1.8, 2.0].map((v) => ({ label: `${v} 倍`, value: v }))
+const LINES = computed(() => [1.5, 1.6, 1.8, 2.0].map((v) => ({ label: ts.value.times(v), value: v })))
 const MARGINS = [15, 20, 25, 30].map((v) => ({ label: `${v}mm`, value: v }))
-const PRESET_LABEL = { law: '法令式', contract: '契約書式' } as const
+const PRESET_LABEL = computed(() => ts.value.presets)
 
-const ROWS: { key: keyof DocStyle; label: string; desc?: string; show: (s: DocStyle) => string }[] = [
-    { key: 'font', label: '本文のフォント', desc: 'プレビュー・PDF・Word で使用します。', show: (s) => s.font },
-    { key: 'fontSize', label: '文字の大きさ', show: (s) => `${s.fontSize}pt` },
-    { key: 'lineHeight', label: '行間', show: (s) => `${s.lineHeight} 倍` },
-    { key: 'margin', label: '用紙の余白', show: (s) => `${s.margin}mm` },
-    { key: 'pageNumbers', label: 'PDF にページ番号を入れる', desc: '例 [1 / 5]', show: (s) => (s.pageNumbers ? '入れる' : '入れない') },
-    {
-        key: 'newDocPreset',
-        label: '新しい文書の書式',
-        desc: '文書の名前に「契約」などが入っていれば、自動で契約書式にします。',
-        show: (s) => PRESET_LABEL[s.newDocPreset],
-    },
-]
+const ROWS = computed<{ key: keyof DocStyle; label: string; desc?: string; show: (s: DocStyle) => string }[]>(() => {
+    const r = ts.value.rows
+    return [
+        { key: 'font', label: r.font, desc: r.fontDesc, show: (s) => s.font },
+        { key: 'fontSize', label: r.fontSize, show: (s) => `${s.fontSize}pt` },
+        { key: 'lineHeight', label: r.lineHeight, show: (s) => ts.value.times(s.lineHeight) },
+        { key: 'margin', label: r.margin, show: (s) => `${s.margin}mm` },
+        { key: 'pageNumbers', label: r.pageNumbers, desc: r.pageNumbersDesc, show: (s) => (s.pageNumbers ? ts.value.on : ts.value.off) },
+        { key: 'newDocPreset', label: r.newDocPreset, desc: r.newDocPresetDesc, show: (s) => PRESET_LABEL.value[s.newDocPreset] },
+    ]
+})
 
 const effective = computed<DocStyle>(() => ({ ...props.inherited, ...props.modelValue }))
 
+const app = useApp()
 const SAMPLE = {
     law: newDocText(
         '〇〇に関する法律',
@@ -72,7 +75,12 @@ const SAMPLE = {
 `,
     ),
 }
-const sampleHtml = computed(() => renderDoc(parseLegal(SAMPLE[effective.value.newDocPreset])))
+// 英語の画面では、海外の書式の見本を出す（書式の系統を明示して、短い文でも英文の番号にする）
+const SAMPLE_EN = {
+    law: `# Data Protection Act\n<!-- clausedown\ndoc: { style: uk-law }\n-->\n\n## PART 1 Preliminary\n\n### Purpose\n\n- This Act sets out rules for the protection of personal data.\n- In this Act:\n  - "controller" means a person who determines the purposes of processing;\n  - "data subject" means the individual to whom personal data relates.\n`,
+    contract: `# Services Agreement\n<!-- clausedown\ndoc: { style: contract }\n-->\n\n### Services\n\n- The Supplier shall provide the services described in Schedule 1.\n- The Supplier shall:\n  - perform the services with reasonable skill and care; and\n  - comply with all applicable laws.\n`,
+}
+const sampleHtml = computed(() => renderDoc(parseLegal((app.locale === 'en' ? SAMPLE_EN : SAMPLE)[effective.value.newDocPreset])))
 const sampleStyle = computed(() => ({
     '--cd-font': cssFont(effective.value.font),
     ...(isLatinFont(effective.value.font) ? { '--cd-latin-font': cssFont(effective.value.font) } : {}),
@@ -124,28 +132,28 @@ const sampleStyle = computed(() => ({
                 <SegmentSwitch
                     v-else-if="r.key === 'newDocPreset'"
                     :model-value="value('newDocPreset')"
-                    aria-label="新しい文書の書式"
+                    :aria-label="ts.rows.newDocPreset"
                     :items="[
                         { value: 'law', label: PRESET_LABEL.law },
                         { value: 'contract', label: PRESET_LABEL.contract },
                     ]"
                     @update:model-value="(v) => v && set('newDocPreset', v)"
                 />
-                <UTooltip v-if="!full" :text="`${sourceLabel(from?.[r.key] ?? 'app')}に戻す`">
+                <UTooltip v-if="!full" :text="ts.revertTo(sourceLabel(from?.[r.key] ?? 'app'))">
                     <UButton
                         icon="i-lucide-undo-2"
                         size="sm"
                         square
                         color="neutral"
                         variant="ghost"
-                        :aria-label="`${r.label}を上の設定に戻す`"
+                        :aria-label="ts.revertAria(r.label)"
                         @click="unset(r.key)"
                     />
                 </UTooltip>
             </template>
             <UButton
                 v-else
-                :label="`${scopeName ?? 'ここ'}で変える`"
+                :label="ts.changeHere(scopeName)"
                 icon="i-lucide-pencil"
                 size="sm"
                 color="neutral"

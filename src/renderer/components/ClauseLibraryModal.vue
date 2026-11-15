@@ -4,7 +4,9 @@ import type { LegalDoc } from '@shared/legal-parser'
 import { articleTitle, parseLegal } from '@shared/legal-parser'
 import { renderDoc } from '@shared/legal-renderer'
 import { withImages } from '~/utils/images'
+import { useT } from '~/composables/useT'
 
+const t = useT()
 const props = defineProps<{ libraryDir: string; libraryName: string; target: LegalDoc; targetText: string }>()
 const emit = defineEmits<{ close: []; insert: [ClauseInsert] }>()
 
@@ -48,9 +50,12 @@ const preview = computed(() => (selected.value ? withImages(renderDoc(parseLegal
 const encode = (c: RefChoice) => (c.kind === 'article' ? `a:${c.index}` : c.kind)
 const decode = (v: string): RefChoice => (v.startsWith('a:') ? { kind: 'article', index: Number(v.slice(2)) } : { kind: v as 'text' | 'keep' })
 const choiceItems = computed(() => [
-    ...targetArticles(props.target).map((a, i) => ({ label: a.title ? `${a.label}（${articleTitle(a, props.target)}）` : a.label, value: `a:${i}` })),
-    { label: '参照を外して見出しの文字で残す', value: 'text' },
-    { label: 'そのまま残す（参照切れになります）', value: 'keep' },
+    ...targetArticles(props.target).map((a, i) => ({
+        label: a.title ? t.value.editor.clauses.articleOption(a.label, articleTitle(a, props.target)) : a.label,
+        value: `a:${i}`,
+    })),
+    { label: t.value.editor.clauses.asText, value: 'text' },
+    { label: t.value.editor.clauses.keep, value: 'keep' },
 ])
 
 function next() {
@@ -72,28 +77,24 @@ function finish() {
 <template>
     <UModal
         :open="true"
-        :title="step === 'pick' ? '条項ライブラリから入れる' : '条参照の対応づけ'"
-        :description="
-            step === 'pick'
-                ? `ライブラリ「${libraryName}」の条を選びます。カーソルのある条の後に入ります。`
-                : `「${selected?.title}」には、ほかの条への参照があります。入れる先の文書のどの条を指すかを選んでください。`
-        "
+        :title="step === 'pick' ? t.editor.clauses.pickTitle : t.editor.clauses.mapTitle"
+        :description="step === 'pick' ? t.editor.clauses.pickDescription(libraryName) : t.editor.clauses.mapDescription(String(selected?.title))"
         :ui="{ content: 'cd-wide' }"
         @update:open="(v) => !v && emit('close')"
     >
         <template #body>
             <div v-if="step === 'pick'" class="pick">
                 <div class="list">
-                    <UInput v-model="query" icon="i-lucide-search" placeholder="見出し・本文で探す" class="w-full" autofocus />
-                    <p v-if="loading" class="cd-muted">読み込んでいます…</p>
+                    <UInput v-model="query" icon="i-lucide-search" :placeholder="t.editor.clauses.search" class="w-full" autofocus />
+                    <p v-if="loading" class="cd-muted">{{ t.editor.clauses.loading }}</p>
                     <p v-else-if="error" class="err">{{ error }}</p>
-                    <p v-else-if="!clauses.length" class="cd-muted">ライブラリに条がありません。ライブラリのリポジトリに、条を書いた文書を作ってください。</p>
-                    <p v-else-if="!filtered.length" class="cd-muted">合う条がありません。</p>
+                    <p v-else-if="!clauses.length" class="cd-muted">{{ t.editor.clauses.empty }}</p>
+                    <p v-else-if="!filtered.length" class="cd-muted">{{ t.editor.clauses.noMatch }}</p>
                     <div v-for="[title, list] in groups" :key="title" class="group">
                         <p class="group-head">{{ title }}</p>
                         <button v-for="c in list" :key="c.key" class="item" :class="{ on: selected?.key === c.key }" @click="selected = c" @dblclick="next">
                             <span class="nm">{{ c.title || c.label }}</span>
-                            <UBadge v-if="c.refs.length" :label="`参照 ${c.refs.length}`" size="sm" color="neutral" variant="subtle" />
+                            <UBadge v-if="c.refs.length" :label="t.editor.clauses.refCount(c.refs.length)" size="sm" color="neutral" variant="subtle" />
                         </button>
                     </div>
                 </div>
@@ -105,7 +106,7 @@ function finish() {
                 <div v-for="r in selected?.refs ?? []" :key="r.id" class="map-row">
                     <div class="from">
                         <code>[[{{ r.id }}]]</code>
-                        <span class="cd-muted">{{ r.title ? `（${r.title}）` : '（ライブラリに見つからない条）' }}</span>
+                        <span class="cd-muted">{{ r.title ? t.editor.clauses.refTitle(r.title) : t.editor.clauses.refMissing }}</span>
                     </div>
                     <UIcon name="i-lucide-arrow-right" class="arrow" />
                     <USelect v-model="choices[r.id]" :items="choiceItems" class="to" />
@@ -114,10 +115,15 @@ function finish() {
         </template>
         <template #footer>
             <div class="cd-modal-foot">
-                <UButton v-if="step === 'map'" label="戻る" color="neutral" variant="ghost" @click="step = 'pick'" />
-                <UButton label="やめる" color="neutral" variant="outline" @click="emit('close')" />
-                <UButton v-if="step === 'pick'" :label="selected?.refs.length ? '次へ' : '挿入する'" :disabled="!selected" @click="next" />
-                <UButton v-else label="挿入する" @click="finish" />
+                <UButton v-if="step === 'map'" :label="t.editor.clauses.back" color="neutral" variant="ghost" @click="step = 'pick'" />
+                <UButton :label="t.editor.clauses.cancel" color="neutral" variant="outline" @click="emit('close')" />
+                <UButton
+                    v-if="step === 'pick'"
+                    :label="selected?.refs.length ? t.editor.clauses.next : t.editor.clauses.insert"
+                    :disabled="!selected"
+                    @click="next"
+                />
+                <UButton v-else :label="t.editor.clauses.insert" @click="finish" />
             </div>
         </template>
     </UModal>

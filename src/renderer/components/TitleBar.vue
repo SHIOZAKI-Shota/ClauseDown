@@ -2,6 +2,7 @@
 import { useApp } from '~/stores/app'
 
 const app = useApp()
+const t = useT()
 const emit = defineEmits<{ search: [] }>()
 const demo = isDemo()
 const inDoc = computed(() => ['editor', 'history', 'compare', 'releases'].includes(app.view))
@@ -12,11 +13,11 @@ function backToDoc() {
 
 <template>
     <header class="titlebar" :class="{ mac: IS_MAC && !demo }">
-        <button class="brand" title="初期ページへ" aria-label="ClauseDown（初期ページへ）" @click="app.view = 'home'">
+        <button class="brand" :title="t.shell.titleBar.home" :aria-label="t.shell.titleBar.homeAria" @click="app.view = 'home'">
             <BrandLogo class="logo" />
         </button>
 
-        <nav class="crumbs" aria-label="今いる場所">
+        <nav class="crumbs" :aria-label="t.shell.titleBar.crumbs">
             <RepoSwitcher v-if="app.settings?.repos.length" />
             <template v-if="app.repoDir && app.currentBranch">
                 <UIcon name="i-lucide-chevron-right" class="sep" />
@@ -28,7 +29,7 @@ function backToDoc() {
                     class="cd-crumb-btn doc"
                     :class="{ here: inDoc }"
                     :aria-current="inDoc ? 'page' : undefined"
-                    :title="inDoc ? app.currentDoc.path : `「${app.currentDoc.title}」に戻る`"
+                    :title="inDoc ? app.currentDoc.path : t.shell.titleBar.backTo(app.currentDoc.title)"
                     @click="backToDoc"
                 >
                     <UIcon name="i-lucide-file-text" class="ci" />
@@ -37,9 +38,9 @@ function backToDoc() {
             </template>
         </nav>
 
-        <button class="search" @click="emit('search')">
+        <button class="search" data-guide="search" @click="emit('search')">
             <UIcon name="i-lucide-search" />
-            <span class="txt">文書・条・操作を検索</span>
+            <span class="txt">{{ t.shell.titleBar.search }}</span>
             <span class="kbd">{{ IS_MAC ? '⌘K' : 'Ctrl K' }}</span>
         </button>
         <span class="cd-grow" />

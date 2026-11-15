@@ -1,4 +1,5 @@
 import { app, safeStorage } from 'electron'
+import { t } from '../shared/i18n'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import type { AppSettings } from '../shared/api'
@@ -122,7 +123,7 @@ async function saveStore(s: Store): Promise<void> {
         await fs.rm(tokenPath(), { force: true })
         return
     }
-    if (!safeStorage.isEncryptionAvailable()) throw new Error('ローカル では認証情報を暗号化して保存できません')
+    if (!safeStorage.isEncryptionAvailable()) throw new Error(t().errors.settings.noEncryptionAuth)
     await fs.mkdir(app.getPath('userData'), { recursive: true })
     await fs.writeFile(tokenPath(), safeStorage.encryptString(JSON.stringify(s)))
 }
@@ -205,7 +206,7 @@ export function credentialFromResponse(
 export type SecretName = 'ai-key' | 'mcp-token' | `ai-key-${string}`
 
 const secretPath = (name: SecretName) => {
-    if (!/^(ai-key|mcp-token|ai-key-[a-z0-9-]{1,80})$/.test(name)) throw new Error('不正な名前です')
+    if (!/^(ai-key|mcp-token|ai-key-[a-z0-9-]{1,80})$/.test(name)) throw new Error(t().errors.settings.badName)
     return join(app.getPath('userData'), `${name}.bin`)
 }
 
@@ -214,7 +215,7 @@ export async function saveSecret(name: SecretName, value: string): Promise<void>
         await fs.rm(secretPath(name), { force: true })
         return
     }
-    if (!safeStorage.isEncryptionAvailable()) throw new Error('ローカル では API キーなどを暗号化して保存できません')
+    if (!safeStorage.isEncryptionAvailable()) throw new Error(t().errors.settings.noEncryptionSecret)
     await fs.mkdir(app.getPath('userData'), { recursive: true })
     await fs.writeFile(secretPath(name), safeStorage.encryptString(value))
 }

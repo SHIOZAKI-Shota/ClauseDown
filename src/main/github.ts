@@ -1,4 +1,5 @@
 import { isPrNumber } from '../shared/review'
+import { t } from '../shared/i18n'
 import { getToken } from './settings'
 
 export interface GitHubRepo {
@@ -13,7 +14,7 @@ export function parseGitHub(url: string | null | undefined): GitHubRepo | null {
 }
 
 function num(v: unknown): number {
-    if (!isPrNumber(v)) throw new Error('プルリクエスト・課題の番号が正しくありません')
+    if (!isPrNumber(v)) throw new Error(t().errors.github.badNumber)
     return v
 }
 
@@ -30,7 +31,7 @@ export class GitHubError extends Error {
 
 async function call<T>(method: string, url: string, body?: unknown, headers: Record<string, string> = {}): Promise<T> {
     const token = await getToken()
-    if (!token) throw new Error('設定画面でアクセストークンを入力してください')
+    if (!token) throw new Error(t().errors.github.tokenRequired)
     const res = await fetch(url.startsWith('http') ? url : apiBase() + url, {
         method,
         headers: {
@@ -48,10 +49,7 @@ async function call<T>(method: string, url: string, body?: unknown, headers: Rec
             const j = (await res.json()) as { message?: string; errors?: { message?: string }[] }
             msg = [j.message, ...(j.errors ?? []).map((e) => e.message)].filter(Boolean).join(' / ')
         } catch {}
-        const issueHint =
-            res.status === 403 && /\/issues(\/|\?|$)/.test(url)
-                ? '。課題を使うには、GitHub App の権限に「Issues: Read and write」が必要です（App の持ち主が設定し、インストール先で承認します）'
-                : ''
+        const issueHint = res.status === 403 && /\/issues(\/|\?|$)/.test(url) ? t().errors.github.issuesPermission : ''
         throw new GitHubError(res.status, githubMessage(res.status, msg) + issueHint)
     }
     if (res.status === 204) return undefined as T
@@ -59,10 +57,10 @@ async function call<T>(method: string, url: string, body?: unknown, headers: Rec
 }
 
 function githubMessage(status: number, msg: string): string {
-    if (status === 401) return 'GitHub のアクセストークンが正しくありません'
-    if (status === 403) return `GitHub の権限が足りません（${msg}）`
-    if (/Can not approve your own pull request/i.test(msg)) return '自分が依頼した改定案は、GitHub では承認できません'
-    if (status === 405 && /protected|review/i.test(msg)) return `GitHub の設定により、まだ反映できません（${msg}）`
+    if (status === 401) return t().errors.github.badToken
+    if (status === 403) return t().errors.github.forbidden(msg)
+    if (/Can not approve your own pull request/i.test(msg)) return t().errors.github.ownPr
+    if (status === 405 && /protected|review/i.test(msg)) return t().errors.github.notMergeable(msg)
     return `GitHub：${msg}`
 }
 

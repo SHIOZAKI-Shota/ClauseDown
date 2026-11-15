@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { CommitInfo, EffectiveVersion } from '@shared/api'
 import type { ArticleTrail } from '@shared/article-history'
-import { TRAIL_KIND } from '~/composables/useArticleTrail'
 import { firstLine, fmtDate, fmtWareki } from '~/utils/format'
+import { useT } from '~/composables/useT'
 
+const t = useT()
 const props = defineProps<{
     label: string
     versions: EffectiveVersion[]
@@ -30,27 +31,27 @@ const saved = computed(() =>
 
 <template>
     <div class="trail">
-        <div class="head">{{ label }}の沿革</div>
-        <p v-if="trail.pending" class="pending"><UIcon name="i-lucide-pencil-line" />未施行の変更あり</p>
+        <div class="head">{{ t.editor.trail.title(label) }}</div>
+        <p v-if="trail.pending" class="pending"><UIcon name="i-lucide-pencil-line" />{{ t.editor.trail.pending }}</p>
 
-        <div class="group">施行版</div>
+        <div class="group">{{ t.editor.trail.effective }}</div>
         <button v-for="{ e, v } in effective" :key="v.tag" class="row" @click="emit('version', v)">
-            <span class="when">{{ fmtWareki(v.date) }}施行</span>
-            <span class="kind" :class="e.kind">{{ TRAIL_KIND[e.kind] }}</span>
+            <span class="when">{{ t.editor.trail.effectiveOn(fmtWareki(v.date)) }}</span>
+            <span class="kind" :class="e.kind">{{ t.shell.trail.kind[e.kind] }}</span>
             <span class="msg">{{ firstLine(v.message) }}</span>
         </button>
-        <p v-if="!effective.length" class="none">ありません</p>
+        <p v-if="!effective.length" class="none">{{ t.editor.trail.none }}</p>
 
-        <div class="group">保存した版</div>
-        <p v-if="loading" class="none"><UIcon name="i-lucide-loader-circle" class="spin" />読み込み中</p>
+        <div class="group">{{ t.editor.trail.saved }}</div>
+        <p v-if="loading" class="none"><UIcon name="i-lucide-loader-circle" class="spin" />{{ t.editor.trail.loading }}</p>
         <template v-else>
             <button v-for="{ e, c } in saved" :key="c.oid" class="row" @click="emit('commit', c)">
                 <span class="when">{{ fmtDate(c.timestamp, 'ymd') }}</span>
-                <span class="kind" :class="e.kind">{{ TRAIL_KIND[e.kind] }}</span>
+                <span class="kind" :class="e.kind">{{ t.shell.trail.kind[e.kind] }}</span>
                 <span class="msg">{{ firstLine(c.message) }}</span>
                 <span class="who">{{ c.author }}</span>
             </button>
-            <p v-if="!saved.length" class="none">ありません</p>
+            <p v-if="!saved.length" class="none">{{ t.editor.trail.none }}</p>
         </template>
     </div>
 </template>

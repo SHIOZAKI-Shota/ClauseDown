@@ -5,6 +5,7 @@ import { render as renderMermaid } from 'pele'
 import { tableSpans, visibleCells } from './table-span'
 import { mathError, renderMath, useMath } from './math'
 import { useLocalImages } from './images'
+import { t } from './i18n'
 
 interface CellTokens {
     open: number
@@ -99,12 +100,12 @@ export function renderBlock(raw: string, props?: CdProps): string {
     const fence = parseFence(raw)
     if (fence?.lang === 'mermaid') {
         const { svg, error } = mermaidSvg(fence.body)
-        if (error) return `<div class="cd-figure cd-figure-error">図を描けません：${esc(error)}<pre>${esc(fence.body)}</pre></div>`
+        if (error) return `<div class="cd-figure cd-figure-error">${esc(t().checks.figureError(error))}<pre>${esc(fence.body)}</pre></div>`
         return `<figure${propsAttrs(props, 'cd-figure')}>${svg}</figure>`
     }
     if (fence?.lang === 'math') {
         const error = mathError(fence.body, true)
-        if (error) return `<div class="cd-figure cd-figure-error">数式を描けません：${esc(error)}<pre>${esc(fence.body)}</pre></div>`
+        if (error) return `<div class="cd-figure cd-figure-error">${esc(t().checks.mathError(error))}<pre>${esc(fence.body)}</pre></div>`
         return `<div${propsAttrs(props, 'cd-math-block')}>${renderMath(fence.body, true)}</div>`
     }
     return `<div${propsAttrs(props, 'cd-block')}>${withCols(inlinePropsHtml(md.render(raw)), props)}</div>`

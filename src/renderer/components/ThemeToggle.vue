@@ -3,17 +3,18 @@ import { useTheme } from '~/composables/useTheme'
 
 withDefaults(defineProps<{ variant?: 'outline' | 'ghost'; size?: 'xs' | 'sm' | 'md' }>(), { variant: 'outline', size: 'md' })
 const { dark, toggle } = useTheme()
+const t = useT()
 </script>
 
 <template>
-    <UTooltip :text="dark ? 'ライトモードにする' : 'ダークモードにする'">
+    <UTooltip :text="dark ? t.shell.theme.toLight : t.shell.theme.toDark">
         <UButton
             :icon="dark ? 'i-lucide-sun' : 'i-lucide-moon'"
             color="neutral"
             :variant="variant"
             :size="size"
             square
-            :aria-label="dark ? 'ライトモードにする' : 'ダークモードにする'"
+            :aria-label="dark ? t.shell.theme.toLight : t.shell.theme.toDark"
             @click="toggle"
         />
     </UTooltip>

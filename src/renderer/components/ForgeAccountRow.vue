@@ -3,9 +3,12 @@ import type { ForgeAccount, ForgeLogin } from '@shared/api'
 import { GITHUB_APP } from '@shared/about'
 import { GITLAB_BASE } from '@shared/forge'
 import { useApp } from '~/stores/app'
+import { useT } from '~/composables/useT'
 
 const props = defineProps<{ account: ForgeAccount }>()
 const app = useApp()
+const t = useT()
+const f = computed(() => t.value.settings.forge)
 
 const a = computed(() => props.account)
 const github = computed(() => a.value.kind === 'github')
@@ -13,10 +16,10 @@ const selfHosted = computed(() => a.value.kind === 'gitlab' && a.value.base !== 
 const login = ref<ForgeLogin | null>(null)
 
 const description = computed(() => {
-    if (a.value.login) return a.value.method === 'app' ? `${a.value.login} としてログインしています` : `アクセストークンで接続しています（${a.value.login}）`
-    if (github.value) return 'ClauseDown の GitHub App でログインすると、許可したリポジトリだけに必要な権限で接続できます'
-    if (a.value.deviceLogin) return 'ブラウザで GitLab にログインして接続します'
-    return 'ブラウザでのログインには OAuth アプリの登録が必要です。それまでは「詳しい設定」でアクセストークンを入力してください'
+    if (a.value.login) return a.value.method === 'app' ? f.value.signedInAs(a.value.login) : f.value.byToken(a.value.login)
+    if (github.value) return f.value.githubHint
+    if (a.value.deviceLogin) return f.value.deviceHint
+    return f.value.oauthHint
 })
 
 async function startLogin() {
@@ -27,7 +30,7 @@ async function startLogin() {
     login.value = null
     if (acc) {
         await app.refreshAccounts()
-        app.notify(`${a.value.label} に ${acc.login ?? ''} としてログインしました`)
+        app.notify(f.value.signedIn(a.value.label, acc.login ?? ''))
     }
 }
 async function logout() {
@@ -38,7 +41,7 @@ const installApp = () => window.api.openExternal(GITHUB_APP.installUrl)
 async function copyCode() {
     if (!login.value) return
     await navigator.clipboard.writeText(login.value.userCode)
-    app.notify('コードをコピーしました')
+    app.notify(f.value.codeCopied)
 }
 
 const token = ref('')
@@ -54,7 +57,7 @@ const username = ref(app.settings?.username ?? 'x-access-token')
 const showAdvanced = ref(!!clientId.value || a.value.method === 'token' || (!a.value.login && !a.value.deviceLogin))
 
 async function saveToken() {
-    const ok = await app.runOk(() => window.api.setToken(a.value.base, token.value.trim()), 'アクセストークンを保存しました')
+    const ok = await app.runOk(() => window.api.setToken(a.value.base, token.value.trim()), f.value.tokenSaved)
     if (ok) {
         token.value = ''
         await app.refreshAccounts()
@@ -68,7 +71,7 @@ async function saveIds() {
         : selfHosted.value
           ? { ...s, gitlabHosts: (s.gitlabHosts ?? []).map((h) => (h.url === a.value.base ? { url: h.url, clientId: id } : h)) }
           : { ...s, gitlabClientId: id }
-    await app.run(() => app.saveSettings(next), '接続の設定を保存しました')
+    await app.run(() => app.saveSettings(next), f.value.idsSaved)
     await app.refreshAccounts()
 }
 async function removeHost() {
@@ -82,10 +85,10 @@ async function removeHost() {
 <template>
     <div class="forge">
         <SettingRow :label="a.label" :description="description">
-            <UButton v-if="a.login" label="ログアウト" size="sm" color="neutral" variant="outline" @click="logout" />
+            <UButton v-if="a.login" :label="f.logout" size="sm" color="neutral" variant="outline" @click="logout" />
             <UButton
                 v-else-if="a.deviceLogin"
-                label="ログイン"
+                :label="f.login"
                 :icon="github ? 'i-lucide-github' : 'i-lucide-gitlab'"
                 size="sm"
                 :loading="!!login"
@@ -93,30 +96,19 @@ async function removeHost() {
             />
         </SettingRow>
         <div v-if="login" class="code-box">
-            <span>ブラウザに次のコードを入力してください</span>
+            <span>{{ f.enterCode }}</span>
             <span class="code">{{ login.userCode }}</span>
-            <UButton icon="i-lucide-copy" size="xs" color="neutral" variant="outline" label="コピー" @click="copyCode" />
+            <UButton icon="i-lucide-copy" size="xs" color="neutral" variant="outline" :label="t.settings.copy" @click="copyCode" />
         </div>
-        <SettingRow
-            v-if="github"
-            label="リポジトリへのインストール"
-            description="ClauseDown の GitHub App を、アカウント（または Organization）の使うリポジトリにインストールします。リポジトリごとに、最初に一度だけ必要です。リポジトリを増やしたときも、ここから追加してください。"
-        >
-            <UButton label="インストールする" icon="i-lucide-external-link" size="sm" color="neutral" variant="outline" @click="installApp" />
+        <SettingRow v-if="github" :label="f.install" :description="f.installDesc">
+            <UButton :label="f.installButton" icon="i-lucide-external-link" size="sm" color="neutral" variant="outline" @click="installApp" />
         </SettingRow>
         <button class="adv-toggle" @click="showAdvanced = !showAdvanced">
-            <UIcon :name="showAdvanced ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'" />詳しい設定（管理者向け）
+            <UIcon :name="showAdvanced ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'" />{{ f.advanced }}
         </button>
         <template v-if="showAdvanced">
-            <SettingRow
-                label="アクセストークン"
-                :description="
-                    github
-                        ? 'GitHub App を使わない場合に入力します。'
-                        : 'GitLab の「アクセストークン」で作ったものを入力します。スコープは api・read_repository・write_repository を選んでください。'
-                "
-            >
-                <UInput v-model="token" :type="showToken ? 'text' : 'password'" class="cd-w-input" autocomplete="off" placeholder="入力すると上書きします">
+            <SettingRow :label="f.token" :description="github ? f.tokenGithubDesc : f.tokenGitlabDesc">
+                <UInput v-model="token" :type="showToken ? 'text' : 'password'" class="cd-w-input" autocomplete="off" :placeholder="f.overwrite">
                     <template #trailing>
                         <UButton
                             :icon="showToken ? 'i-lucide-eye-off' : 'i-lucide-eye'"
@@ -127,25 +119,19 @@ async function removeHost() {
                         />
                     </template>
                 </UInput>
-                <UButton label="保存" size="sm" color="neutral" variant="outline" :disabled="!token" @click="saveToken" />
+                <UButton :label="t.common.save" size="sm" color="neutral" variant="outline" :disabled="!token" @click="saveToken" />
             </SettingRow>
             <SettingRow
-                :label="github ? 'GitHub App の Client ID' : 'OAuth アプリの Application ID'"
-                :description="
-                    github
-                        ? '自分で登録した GitHub App を使うときだけ入力します。空欄なら ClauseDown の App を使用します。'
-                        : selfHosted
-                          ? 'GitLab の管理者が登録した OAuth アプリ（Confidential はオフ、Device authorization grant はオン）の Application ID。入れるとブラウザでログインできます。'
-                          : '自分で登録した OAuth アプリを使うときだけ入力します。'
-                "
+                :label="github ? f.githubClientId : f.oauthAppId"
+                :description="github ? f.clientIdGithubDesc : selfHosted ? f.clientIdSelfHostedDesc : f.clientIdDesc"
             >
                 <UInput v-model="clientId" class="cd-w-input" :placeholder="github ? 'Iv23li…' : ''" @change="saveIds" />
             </SettingRow>
-            <SettingRow v-if="github" label="ユーザー名" description="通常は変更しません（既定は x-access-token）。">
+            <SettingRow v-if="github" :label="f.username" :description="f.usernameDesc">
                 <UInput v-model="username" class="cd-w-small" @change="saveIds" />
             </SettingRow>
-            <SettingRow v-if="selfHosted" label="このサーバーを外す" description="ログインの情報も消えます。リポジトリのフォルダはそのまま残ります。">
-                <UButton label="外す" size="sm" color="error" variant="outline" @click="removeHost" />
+            <SettingRow v-if="selfHosted" :label="f.removeHost" :description="f.removeHostDesc">
+                <UButton :label="f.remove" size="sm" color="error" variant="outline" @click="removeHost" />
             </SettingRow>
         </template>
     </div>

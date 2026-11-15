@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import { t } from '../shared/i18n'
 import { author } from './git-base'
 import { newId, readRecord, readRecords, RECORD, writeRecord } from './records'
 import { allEffective } from './repo-home'
@@ -41,7 +42,7 @@ export async function saveEventKinds(dir: string, kinds: EventKind[]): Promise<v
     const missing = [...used].filter((k) => !next.some((n) => n.id === k))
     if (missing.length) {
         const names = (await getEventKinds(dir)).filter((k) => missing.includes(k.id)).map((k) => k.label)
-        throw new Error(`使用中の種類は削除できません：${names.join('、') || missing.join('、')}`)
+        throw new Error(t().errors.schedule.kindInUse(names.join(t().errors.schedule.listSep) || missing.join(t().errors.schedule.listSep)))
     }
     await writeRecord(dir, KINDS_FILE, next)
 }
@@ -52,7 +53,7 @@ export async function listEvents(dir: string): Promise<DueEvent[]> {
 }
 
 async function readEvent(dir: string, id: string): Promise<DueEvent | null> {
-    if (typeof id !== 'string' || !/^[\w-]+$/.test(id)) throw new Error('期日の指定が正しくありません')
+    if (typeof id !== 'string' || !/^[\w-]+$/.test(id)) throw new Error(t().errors.schedule.badId)
     const e = await readRecord<DueEvent>(dir, fileOf(id))
     return isEvent(e) && !e.deleted ? e : null
 }
@@ -61,7 +62,7 @@ export async function saveEvent(dir: string, input: DueEventInput): Promise<DueE
     const v = cleanEventInput(input)
     const now = new Date().toISOString()
     const prev = v.id ? await readEvent(dir, v.id) : null
-    if (v.id && !prev) throw new Error('この期日が見つかりません（ほかの PC で削除された可能性があります）')
+    if (v.id && !prev) throw new Error(t().errors.schedule.notFound)
     const { id: _id, ...rest } = v
     const event: DueEvent = {
         ...rest,
@@ -82,9 +83,9 @@ export async function deleteEvent(dir: string, id: string): Promise<void> {
 }
 
 export async function setEventDone(dir: string, id: string, date: string, done: boolean): Promise<void> {
-    if (!isDate(date)) throw new Error('日付が正しくありません')
+    if (!isDate(date)) throw new Error(t().errors.schedule.badDate)
     const prev = await readEvent(dir, id)
-    if (!prev) throw new Error('この期日が見つかりません（ほかの PC で削除された可能性があります）')
+    if (!prev) throw new Error(t().errors.schedule.notFound)
     const set = new Set(prev.done ?? [])
     if (done) set.add(date)
     else set.delete(date)
@@ -103,7 +104,7 @@ export async function occurrences(
     to: string,
     today: string,
 ): Promise<{ kinds: EventKind[]; events: DueEvent[]; items: Occurrence[]; periods: Period[] }> {
-    if (!isDate(from) || !isDate(to) || !isDate(today)) throw new Error('日付が正しくありません')
+    if (!isDate(from) || !isDate(to) || !isDate(today)) throw new Error(t().errors.schedule.badDate)
     const [kinds, events, tags, deliveries] = await Promise.all([
         getEventKinds(dir),
         listEvents(dir),
@@ -165,31 +166,31 @@ export async function occurrencesAll(
     to: string,
     today: string,
 ): Promise<{ repos: RepoSchedule[]; items: ScheduleItem[]; periods: (Period & { dir: string })[] }> {
-    if (!isDate(from) || !isDate(to) || !isDate(today)) throw new Error('日付が正しくありません')
+    if (!isDate(from) || !isDate(to) || !isDate(today)) throw new Error(t().errors.schedule.badDate)
     const { repos } = await loadSettings()
     const ok = (await Promise.all(repos.map((r) => repoPart(r, from, to, today)))).filter((p) => !!p)
     return { repos: ok.map((p) => p.repo), items: ok.flatMap((p) => p.items).sort(byDate), periods: ok.flatMap((p) => p.periods) }
 }
 
 export async function scheduleIcs(dir: string, today: string): Promise<{ name: string; text: string; count: number }> {
-    if (!isDate(today)) throw new Error('日付が正しくありません')
+    if (!isDate(today)) throw new Error(t().errors.schedule.badDate)
     const from = addDays(today, -365)
     const to = addDays(today, 365 * 5)
     let items: ScheduleItem[]
-    let name = 'ClauseDown の期日'
+    let name = t().notify.schedule.calendar
     if (dir) {
         const r = (await loadSettings()).repos.find((x) => x.dir === dir)
         const part = r ? await repoPart(r, from, to, today) : null
-        if (!r || !part) throw new Error('このリポジトリの期日を読めませんでした')
+        if (!r || !part) throw new Error(t().errors.schedule.unreadable)
         items = part.items
-        name = `${r.name} の期日`
+        name = t().notify.schedule.repoCalendar(r.name)
     } else items = (await occurrencesAll(from, to, today)).items
     items = items.filter(exportable)
     return { name, text: toIcs(items, name), count: items.length }
 }
 
 export async function scheduleAll(today: string, days = 365): Promise<ScheduleItem[]> {
-    if (!isDate(today)) throw new Error('日付が正しくありません')
+    if (!isDate(today)) throw new Error(t().errors.schedule.badDate)
     const to = addDays(today, Math.max(1, Math.min(3650, Math.trunc(days) || 365)))
     const { repos } = await loadSettings()
     const lists = await Promise.all(

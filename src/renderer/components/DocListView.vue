@@ -7,11 +7,13 @@ import { fmtDate, relTime, todayISO } from '~/utils/format'
 import { useStoredRef } from '~/composables/useStoredRef'
 import { usePane } from '~/composables/usePane'
 import { useDocActions } from '~/composables/useDocActions'
+import { useT } from '~/composables/useT'
 
 type SortKey = 'name' | 'articles' | 'effective' | 'next' | 'updated'
 type SortDir = 'asc' | 'desc'
 
 const app = useApp()
+const t = useT()
 const q = ref('')
 const showPreview = useStoredRef('clausedown.docListPreview', true)
 const sidePane = usePane('home-side', { size: 320, min: 260, max: 560 })
@@ -70,24 +72,18 @@ watch(tree, (t) => {
 const current = computed(() => findFolder(tree.value, cwd.value) ?? tree.value)
 const crumbs = computed(() => {
     const parts = cwd.value ? cwd.value.split('/') : []
-    return [{ path: '', name: app.repo?.name ?? 'リポジトリ' }, ...parts.map((name, i) => ({ path: parts.slice(0, i + 1).join('/'), name }))]
+    return [{ path: '', name: app.repo?.name ?? t.value.docs.repository }, ...parts.map((name, i) => ({ path: parts.slice(0, i + 1).join('/'), name }))]
 })
 const goUp = () => (cwd.value = cwd.value.includes('/') ? cwd.value.slice(0, cwd.value.lastIndexOf('/')) : '')
 
 const DEFAULT_DIR: Record<SortKey, SortDir> = { name: 'asc', articles: 'desc', effective: 'desc', next: 'asc', updated: 'desc' }
-const SORT_LABEL: Record<SortKey, string> = {
-    name: '名前順',
-    articles: '条の多い順',
-    effective: '施行日が新しい順',
-    next: '次の施行日が近い順',
-    updated: '更新が新しい順',
-}
-const sortItems = computed(() =>
-    (Object.keys(SORT_LABEL) as SortKey[]).map((k) => ({
+const sortItems = computed(() => {
+    const labels: Record<SortKey, string> = t.value.docs.list.sort
+    return (Object.keys(DEFAULT_DIR) as SortKey[]).map((k) => ({
         value: k,
-        label: k === sortKey.value && sortDir.value !== DEFAULT_DIR[k] ? `${SORT_LABEL[k]}（逆順）` : SORT_LABEL[k],
-    })),
-)
+        label: k === sortKey.value && sortDir.value !== DEFAULT_DIR[k] ? t.value.docs.list.reversed(labels[k]) : labels[k],
+    }))
+})
 const sortSelect = computed({
     get: () => sortKey.value,
     set: (k: SortKey) => {
@@ -157,31 +153,32 @@ function onContextMenu(e: MouseEvent) {
 }
 const newDocIn = (folder: string) => (app.dialog = { kind: 'newDoc', folder: folder || undefined })
 const menu = computed<ContextMenuItem[][]>(() => {
-    const t = target.value
-    if (t?.doc) {
-        const d = t.doc
+    const m = t.value.docs
+    const tg = target.value
+    if (tg?.doc) {
+        const d = tg.doc
         return actions.docMenu(d, [
-            { label: '改定履歴', icon: 'i-lucide-git-commit-horizontal', onSelect: () => app.openDoc(d.path, 'history') },
-            { label: '期日・有効期間・納品', icon: 'i-lucide-package', onSelect: () => app.openDoc(d.path, 'releases') },
+            { label: m.list.history, icon: 'i-lucide-git-commit-horizontal', onSelect: () => app.openDoc(d.path, 'history') },
+            { label: m.list.releases, icon: 'i-lucide-package', onSelect: () => app.openDoc(d.path, 'releases') },
         ])
     }
-    if (t?.folder !== undefined) {
-        const f = t.folder
+    if (tg?.folder !== undefined) {
+        const f = tg.folder
         return [
             [
-                { label: '開く', icon: 'i-lucide-folder-open', onSelect: () => (cwd.value = f) },
-                { label: 'この中に新しい文書', icon: 'i-lucide-file-plus', onSelect: () => newDocIn(f) },
+                { label: m.list.open, icon: 'i-lucide-folder-open', onSelect: () => (cwd.value = f) },
+                { label: m.newDocHere, icon: 'i-lucide-file-plus', onSelect: () => newDocIn(f) },
             ],
         ]
     }
-    return [[{ label: cwd.value ? `「${cwd.value}」に新しい文書` : '新しい文書', icon: 'i-lucide-file-plus', onSelect: () => newDocIn(cwd.value) }]]
+    return [[{ label: cwd.value ? m.newDocIn(cwd.value) : m.newDoc, icon: 'i-lucide-file-plus', onSelect: () => newDocIn(cwd.value) }]]
 })
 
-const VIEWS = [
-    { value: 'cards' as const, icon: 'i-lucide-layout-grid', tooltip: 'カード' },
-    { value: 'list' as const, icon: 'i-lucide-list', tooltip: '一覧' },
-    { value: 'table' as const, icon: 'i-lucide-table-2', tooltip: '詳細' },
-]
+const VIEWS = computed(() => [
+    { value: 'cards' as const, icon: 'i-lucide-layout-grid', tooltip: t.value.docs.list.views.cards },
+    { value: 'list' as const, icon: 'i-lucide-list', tooltip: t.value.docs.list.views.list },
+    { value: 'table' as const, icon: 'i-lucide-table-2', tooltip: t.value.docs.list.views.table },
+])
 </script>
 
 <template>
@@ -193,29 +190,30 @@ const VIEWS = [
             </div>
             <span class="cd-grow" />
             <UButton
-                label="期日・有効期間"
+                :label="t.docs.list.schedule"
                 icon="i-lucide-calendar-range"
+                data-guide="schedule"
                 color="neutral"
                 variant="outline"
-                :title="app.dueCount?.due ? `期限切れ ${app.dueCount.overdue} 件・30 日以内 ${app.dueCount.due - app.dueCount.overdue} 件` : undefined"
+                :title="app.dueCount?.due ? t.docs.list.dueTitle(app.dueCount.overdue, app.dueCount.due - app.dueCount.overdue) : undefined"
                 @click="app.openSchedule()"
             >
                 <template v-if="app.dueCount?.due" #trailing>
                     <UBadge :label="String(app.dueCount.due)" :color="app.dueCount.overdue ? 'error' : 'neutral'" variant="subtle" size="sm" />
                 </template>
             </UButton>
-            <UButton label="課題" icon="i-lucide-list-todo" color="neutral" variant="outline" @click="app.openIssues()">
+            <UButton :label="t.docs.list.issues" icon="i-lucide-list-todo" color="neutral" variant="outline" data-guide="issues" @click="app.openIssues()">
                 <template v-if="app.openIssueCount" #trailing>
                     <UBadge :label="String(app.openIssueCount)" color="neutral" variant="subtle" size="sm" />
                 </template>
             </UButton>
-            <UButton :label="cwd ? `「${current.name}」に新しい文書` : '新しい文書'" icon="i-lucide-plus" @click="newDocIn(cwd)" />
+            <UButton :label="cwd ? t.docs.newDocIn(current.name) : t.docs.newDoc" icon="i-lucide-plus" @click="newDocIn(cwd)" />
         </header>
 
         <div class="body">
-            <SidePane :pane="treePane" side="left" label="ディレクトリ" icon="i-lucide-folder-tree">
+            <SidePane :pane="treePane" side="left" :label="t.docs.directory" icon="i-lucide-folder-tree">
                 <div class="tree-body">
-                    <FolderTree v-model="cwd" :root="tree" :label="app.repo?.name ?? 'リポジトリ'" :actions="actions" />
+                    <FolderTree v-model="cwd" :root="tree" :label="app.repo?.name ?? t.docs.repository" :actions="actions" />
                 </div>
             </SidePane>
 
@@ -227,11 +225,11 @@ const VIEWS = [
                         color="neutral"
                         variant="ghost"
                         square
-                        aria-label="上のディレクトリへ"
+                        :aria-label="t.docs.list.goUp"
                         :disabled="!cwd || searching"
                         @click="goUp"
                     />
-                    <nav class="crumbs" aria-label="今いるディレクトリ">
+                    <nav class="crumbs" :aria-label="t.docs.list.breadcrumb">
                         <template v-for="(c, i) in crumbs" :key="c.path">
                             <UIcon v-if="i > 0" name="i-lucide-chevron-right" class="sep" />
                             <button
@@ -248,25 +246,25 @@ const VIEWS = [
                         </template>
                     </nav>
                     <span class="cd-grow" />
-                    <UInput v-model="q" icon="i-lucide-search" placeholder="リポジトリ全体から探す" size="sm" class="search" />
+                    <UInput v-model="q" icon="i-lucide-search" :placeholder="t.docs.list.search" size="sm" class="search" />
                 </div>
                 <div class="docs-tools">
                     <span class="muted">
-                        <template v-if="searching">「{{ q.trim() }}」の検索結果：</template>
-                        <template v-if="folders.length">ディレクトリ {{ folders.length }}・</template>文書 {{ docs.length }}
+                        <template v-if="searching">{{ t.docs.list.results(q.trim()) }}</template>
+                        <template v-if="folders.length">{{ t.docs.list.folderCount(folders.length) }}</template>{{ t.docs.list.docCount(docs.length) }}
                     </span>
-                    <USwitch v-if="!searching" v-model="recursive" size="sm" label="サブディレクトリの文書も表示" class="rec" />
+                    <USwitch v-if="!searching" v-model="recursive" size="sm" :label="t.docs.list.recursive" class="rec" />
                     <span class="cd-grow" />
                     <USelect v-if="viewMode !== 'table'" v-model="sortSelect" size="sm" class="sort" :items="sortItems" />
-                    <SegmentSwitch v-model="viewMode" aria-label="表示のしかた" :items="VIEWS" />
-                    <UTooltip v-if="viewMode === 'cards'" :text="showPreview ? 'カードのプレビューを消す' : 'カードにプレビューを出す'">
+                    <SegmentSwitch v-model="viewMode" :aria-label="t.docs.list.viewMode" :items="VIEWS" />
+                    <UTooltip v-if="viewMode === 'cards'" :text="showPreview ? t.docs.list.hidePreview : t.docs.list.showPreview">
                         <UButton
                             icon="i-lucide-image"
                             square
                             size="sm"
                             :color="showPreview ? 'primary' : 'neutral'"
                             :variant="showPreview ? 'soft' : 'outline'"
-                            aria-label="カードにプレビュー"
+                            :aria-label="t.docs.list.previewAria"
                             @click="showPreview = !showPreview"
                         />
                     </UTooltip>
@@ -274,9 +272,9 @@ const VIEWS = [
 
                 <UContextMenu :items="menu" size="sm">
                     <div class="docs-scroll" @contextmenu="onContextMenu">
-                        <p v-if="app.docs.length === 0" class="muted empty">まだ文書がありません。「新しい文書」から作成してください。</p>
+                        <p v-if="app.docs.length === 0" class="muted empty">{{ t.docs.list.empty }}</p>
                         <p v-else-if="!folders.length && !docs.length" class="muted empty">
-                            {{ searching ? '見つかりません。' : 'このディレクトリには文書がありません。' }}
+                            {{ searching ? t.docs.list.noResults : t.docs.list.emptyFolder }}
                         </p>
 
                         <table v-if="viewMode === 'table' && (folders.length || docs.length)" class="table">
@@ -284,35 +282,35 @@ const VIEWS = [
                                 <tr>
                                     <th>
                                         <button class="th" @click="sortBy('name')">
-                                            名前
+                                            {{ t.docs.list.col.name }}
                                             <UIcon v-if="sortIcon('name')" :name="sortIcon('name')" />
                                         </button>
                                     </th>
                                     <th class="num">
                                         <button class="th" @click="sortBy('articles')">
-                                            条
+                                            {{ t.docs.list.col.articles }}
                                             <UIcon v-if="sortIcon('articles')" :name="sortIcon('articles')" />
                                         </button>
                                     </th>
                                     <th>
                                         <button class="th" @click="sortBy('effective')">
-                                            施行中
+                                            {{ t.docs.list.col.effective }}
                                             <UIcon v-if="sortIcon('effective')" :name="sortIcon('effective')" />
                                         </button>
                                     </th>
                                     <th>
                                         <button class="th" @click="sortBy('next')">
-                                            次の施行
+                                            {{ t.docs.list.col.next }}
                                             <UIcon v-if="sortIcon('next')" :name="sortIcon('next')" />
                                         </button>
                                     </th>
                                     <th>
                                         <button class="th" @click="sortBy('updated')">
-                                            最終更新
+                                            {{ t.docs.list.col.updated }}
                                             <UIcon v-if="sortIcon('updated')" :name="sortIcon('updated')" />
                                         </button>
                                     </th>
-                                    <th>状態</th>
+                                    <th>{{ t.docs.list.col.status }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -331,7 +329,7 @@ const VIEWS = [
                                         <div class="name">
                                             <UIcon name="i-lucide-folder" class="ficon folder" />
                                             <span class="t">{{ searching ? f.path : f.name }}</span>
-                                            <span class="muted">{{ f.count }} 文書</span>
+                                            <span class="muted">{{ t.docs.list.docsInFolder(f.count) }}</span>
                                         </div>
                                     </td>
                                 </tr>
@@ -361,12 +359,12 @@ const VIEWS = [
                                     </td>
                                     <td>
                                         <span v-if="info(d)?.timestamp" :title="fmtDate(info(d)!.timestamp!, 'ymdhm')">
-                                            {{ info(d)!.author }}・{{ relTime(info(d)!.timestamp!) }}
+                                            {{ t.docs.list.byline(info(d)!.author, relTime(info(d)!.timestamp!)) }}
                                         </span>
-                                        <span v-else class="cd-muted">まだ版なし</span>
+                                        <span v-else class="cd-muted">{{ t.docs.list.noVersion }}</span>
                                     </td>
                                     <td>
-                                        <UBadge v-if="d.changed" label="未保存の変更" color="warning" variant="subtle" size="sm" />
+                                        <UBadge v-if="d.changed" :label="t.docs.list.unsaved" color="warning" variant="subtle" size="sm" />
                                     </td>
                                 </tr>
                             </tbody>
@@ -389,7 +387,8 @@ const VIEWS = [
                                     <span class="min">
                                         <span class="t">{{ searching ? f.path : f.name }}</span>
                                         <span class="muted"
-                                            >{{ f.count }} 文書<template v-if="f.children.length">・ディレクトリ {{ f.children.length }}</template></span
+                                            >{{ t.docs.list.docsInFolder(f.count)
+                                            }}<template v-if="f.children.length">{{ t.docs.list.subfolders(f.children.length) }}</template></span
                                         >
                                     </span>
                                 </button>
@@ -412,7 +411,7 @@ const VIEWS = [
                                         <span class="t">{{ d.title }}</span>
                                         <span class="cd-muted path">{{ showPath ? relPath(d) : d.path.split('/').pop() }}</span>
                                     </span>
-                                    <UIcon v-if="d.changed" name="i-lucide-circle-dot" class="dot" title="版を保存していない変更があります" />
+                                    <UIcon v-if="d.changed" name="i-lucide-circle-dot" class="dot" :title="t.docs.unsavedChanges" />
                                 </button>
                             </div>
 
@@ -431,32 +430,40 @@ const VIEWS = [
                                 >
                                     <div v-if="showPreview" class="preview">
                                         <DocThumb :path="d.path" />
-                                        <UBadge v-if="d.changed" label="未保存の変更" color="warning" variant="solid" size="sm" class="flag" />
+                                        <UBadge v-if="d.changed" :label="t.docs.list.unsaved" color="warning" variant="solid" size="sm" class="flag" />
                                     </div>
                                     <div class="info">
                                         <div class="t">{{ d.title }}</div>
                                         <div class="cd-muted path">{{ showPath ? relPath(d) : d.path.split('/').pop() }}</div>
                                         <div class="stats">
-                                            <span v-if="info(d)"> <UIcon name="i-lucide-list-ordered" />{{ info(d)!.articles }} 条 </span>
-                                            <span v-if="effectiveOf(d).current" :title="`施行中の版：${effectiveOf(d).current} 施行`">
-                                                <UIcon name="i-lucide-badge-check" />{{ fmtDate(effectiveOf(d).current!, 'ymd') }} 施行
+                                            <span v-if="info(d)"> <UIcon name="i-lucide-list-ordered" />{{ t.docs.list.articles(info(d)!.articles) }} </span>
+                                            <span v-if="effectiveOf(d).current" :title="t.docs.list.effectiveTitle(effectiveOf(d).current!)">
+                                                <UIcon name="i-lucide-badge-check" />{{ t.docs.list.effectiveOn(fmtDate(effectiveOf(d).current!, 'ymd')) }}
                                             </span>
-                                            <span v-if="effectiveOf(d).next" class="next" :title="`次の施行日：${effectiveOf(d).next}`">
-                                                <UIcon name="i-lucide-calendar-clock" />{{ fmtDate(effectiveOf(d).next!, 'ymd') }} 予定
+                                            <span v-if="effectiveOf(d).next" class="next" :title="t.docs.list.nextTitle(effectiveOf(d).next!)">
+                                                <UIcon name="i-lucide-calendar-clock" />{{ t.docs.list.nextOn(fmtDate(effectiveOf(d).next!, 'ymd')) }}
                                             </span>
                                         </div>
                                         <div class="foot">
-                                            <UBadge v-if="d.changed && !showPreview" label="未保存の変更" color="warning" variant="subtle" size="sm" />
-                                            <span v-else-if="info(d)?.timestamp" class="cd-muted updated" :title="fmtDate(info(d)!.timestamp!, 'ymdhm')"
-                                                >{{ info(d)!.author }}・{{ relTime(info(d)!.timestamp!) }}</span
-                                            >
+                                            <UBadge v-if="d.changed && !showPreview" :label="t.docs.list.unsaved" color="warning" variant="subtle" size="sm" />
+                                            <span v-else-if="info(d)?.timestamp" class="cd-muted updated" :title="fmtDate(info(d)!.timestamp!, 'ymdhm')">{{
+                                                t.docs.list.byline(info(d)!.author, relTime(info(d)!.timestamp!))
+                                            }}</span>
                                             <span class="cd-grow" />
-                                            <UButton label="改定履歴" size="xs" color="neutral" variant="ghost" @click.stop="app.openDoc(d.path, 'history')" />
                                             <UButton
-                                                label="期日・有効期間・納品"
+                                                :label="t.docs.list.history"
                                                 size="xs"
                                                 color="neutral"
                                                 variant="ghost"
+                                                data-guide="history"
+                                                @click.stop="app.openDoc(d.path, 'history')"
+                                            />
+                                            <UButton
+                                                :label="t.docs.list.releases"
+                                                size="xs"
+                                                color="neutral"
+                                                variant="ghost"
+                                                data-guide="releases"
                                                 @click.stop="app.openDoc(d.path, 'releases')"
                                             />
                                         </div>
@@ -468,7 +475,7 @@ const VIEWS = [
                 </UContextMenu>
             </div>
 
-            <SidePane :pane="sidePane" side="right" label="メモ・改定案・期日・有効期間" icon="i-lucide-notebook-text">
+            <SidePane :pane="sidePane" side="right" :label="t.docs.list.sidePane" icon="i-lucide-notebook-text">
                 <div class="side-body">
                     <HomeNote />
                     <HomeDrafts />

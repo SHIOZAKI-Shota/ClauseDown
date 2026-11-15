@@ -1,3 +1,5 @@
+import { t } from '../shared/i18n'
+
 // 英文契約の言い回しを確かめる校正の規則（textlint の規則の形）。
 // 意味があいまいになりやすい書き方と、短く言い換えられる決まり文句を指摘する。和文には当たらない。
 const SKIP = new Set(['Link', 'Image', 'BlockQuote', 'Emphasis'])
@@ -11,15 +13,15 @@ interface Phrase {
 const PHRASES: Phrase[] = [
     {
         re: /\band\/or\b/gi,
-        message: () => '「and/or」は範囲があいまいです。「A or B, or both」のように書き分けてください',
+        message: () => t().errors.proofread.legalEn.andOr,
     },
-    { re: /\bin the event that\b/gi, fix: 'if', message: (f) => `「${f}」は「if」で足ります` },
-    { re: /\bprior to\b/gi, fix: 'before', message: (f) => `「${f}」は「before」で足ります` },
-    { re: /\bsubsequent to\b/gi, fix: 'after', message: (f) => `「${f}」は「after」で足ります` },
-    { re: /\bshall be entitled to\b/gi, fix: 'may', message: (f) => `「${f}」は「may」で足ります` },
+    { re: /\bin the event that\b/gi, fix: 'if', message: (f) => t().errors.proofread.legalEn.simpler(f, 'if') },
+    { re: /\bprior to\b/gi, fix: 'before', message: (f) => t().errors.proofread.legalEn.simpler(f, 'before') },
+    { re: /\bsubsequent to\b/gi, fix: 'after', message: (f) => t().errors.proofread.legalEn.simpler(f, 'after') },
+    { re: /\bshall be entitled to\b/gi, fix: 'may', message: (f) => t().errors.proofread.legalEn.simpler(f, 'may') },
     {
         re: /\b(?:herein|hereto|hereof|hereunder|hereinafter)\b/gi,
-        message: (f) => `「${f}」は指す範囲があいまいです。「in this Agreement」「in this Section」のように書いてください`,
+        message: (f) => t().errors.proofread.legalEn.herein(f),
     },
 ]
 
@@ -74,7 +76,7 @@ function reporter(context: Context) {
             const minority = counts[0] < counts[1] ? 0 : 1
             const other = minority === 0 ? 'including without limitation' : 'including but not limited to'
             for (const x of including.filter((i) => i.kind === minority))
-                report(x.node, new RuleError(`「${x.text}」と「${other}」が混ざっています。どちらかにそろえてください`, { padding: locator.range(x.range) }))
+                report(x.node, new RuleError(t().errors.proofread.legalEn.mixed(x.text, other), { padding: locator.range(x.range) }))
         },
     }
 }

@@ -1,7 +1,9 @@
+import { aiPrompts } from '../../shared/ai-prompts'
 import Anthropic from '@anthropic-ai/sdk'
+import { t } from '../../shared/i18n'
 import { z } from 'zod'
 import type { AiEvent } from '../../shared/api'
-import { AI_SYSTEM } from '../../shared/ai-presets'
+import { aiSystem } from '../../shared/ai-presets'
 import { TOOLS, runTool, toolLabel, type ToolContext } from '../ai-tools'
 
 const MAX_TURNS = 40
@@ -19,11 +21,12 @@ const TOOL_DEFS: Anthropic.Beta.BetaTool[] = TOOLS.map((t) => {
 })
 
 export function explainAnthropic(e: unknown): string {
-    if (e instanceof Anthropic.AuthenticationError) return 'Claude API キーが正しくありません。設定の「AI」で入れ直してください'
-    if (e instanceof Anthropic.PermissionDeniedError) return 'この API キーでは Claude を使えません（権限がありません）'
-    if (e instanceof Anthropic.NotFoundError) return 'このモデルは使えません。設定の「AI」でモデルを選び直してください'
-    if (e instanceof Anthropic.RateLimitError) return '短時間に送れる回数の上限に達しました。少し待ってからもう一度お試しください'
-    if (e instanceof Anthropic.APIConnectionTimeoutError) return 'Claude からの応答が時間内に返りませんでした。少し待ってからもう一度お試しください'
+    const m = t().errors.ai.anthropic
+    if (e instanceof Anthropic.AuthenticationError) return m.auth
+    if (e instanceof Anthropic.PermissionDeniedError) return m.permission
+    if (e instanceof Anthropic.NotFoundError) return m.notFound
+    if (e instanceof Anthropic.RateLimitError) return m.rateLimit
+    if (e instanceof Anthropic.APIConnectionTimeoutError) return m.timeout
     if (e instanceof Anthropic.APIConnectionError) {
         const causes: string[] = []
         for (let c: unknown = e.cause; c && causes.length < 3; c = (c as { cause?: unknown }).cause) {
@@ -31,10 +34,10 @@ export function explainAnthropic(e: unknown): string {
             causes.push([code, message].filter(Boolean).join(' '))
         }
         console.error('[anthropic] connection error', e)
-        return `Claude に接続できません。インターネットの接続を確かめてください${causes.length ? `（詳細: ${causes.join(' / ')}）` : ''}`
+        return m.connection(causes.join(' / '))
     }
-    if (e instanceof Anthropic.InternalServerError) return 'Claude 側で一時的な問題が起きています。少し待ってからもう一度お試しください'
-    if (e instanceof Anthropic.APIError) return `Claude API の呼び出しに失敗しました（${e.status ?? ''} ${e.message}）`
+    if (e instanceof Anthropic.InternalServerError) return m.server
+    if (e instanceof Anthropic.APIError) return m.api(`${e.status ?? ''} ${e.message}`)
     return (e as Error)?.message ?? String(e)
 }
 
@@ -69,7 +72,7 @@ export async function runAnthropic(
                 thinking: { type: 'adaptive', display: 'summarized' },
                 output_config: { effort: 'high' },
                 cache_control: { type: 'ephemeral' },
-                system: AI_SYSTEM,
+                system: aiSystem(),
                 tools: TOOL_DEFS,
                 messages: history,
             },
@@ -101,15 +104,11 @@ export async function runAnthropic(
                         type: 'tool_result' as const,
                         tool_use_id: u.id,
                         is_error: true,
-                        content: '途中で止まったため実行していません',
+                        content: aiPrompts().stopped,
                     })),
                 })
             }
-            throw new Error(
-                message.stop_reason === 'refusal'
-                    ? 'この依頼には AI が回答できませんでした。言い方を変えてお試しください'
-                    : '回答が長すぎて途中で切れました。範囲を絞って指示してください',
-            )
+            throw new Error(message.stop_reason === 'refusal' ? t().errors.ai.refused : t().errors.ai.tooLong)
         }
         if (message.stop_reason === 'pause_turn') continue
         if (!uses.length) return
@@ -131,7 +130,7 @@ export async function runAnthropic(
 
 export async function testAnthropic(key: string, model: string): Promise<string> {
     const client = new Anthropic({ apiKey: key })
-    const m = await client.messages.create({ model, max_tokens: 200, messages: [{ role: 'user', content: '「接続できました」とだけ答えてください。' }] })
+    const m = await client.messages.create({ model, max_tokens: 200, messages: [{ role: 'user', content: aiPrompts().ping }] })
     return m.content
         .map((b) => (b.type === 'text' ? b.text : ''))
         .join('')

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import type { HouritsuConversion } from '@shared/houritsu'
 import { useApp } from '~/stores/app'
+import { useT } from '~/composables/useT'
 
 const props = defineProps<{ dir: string; paths: string[] }>()
 const emit = defineEmits<{ close: [] }>()
 const app = useApp()
+const t = useT()
 
 const open = ref(true)
 const busy = ref(false)
@@ -20,7 +22,7 @@ async function convert() {
     if (!r) return
     if (props.dir === app.repoDir) await app.refreshDocs()
     if (!r.warnings.length && !r.skipped.length) {
-        app.notify(`${r.converted} 件の文書を ClauseDown の形に変えて、版を保存しました`)
+        app.notify(t.value.editor.houritsu.converted(r.converted))
         open.value = false
         return
     }
@@ -29,29 +31,23 @@ async function convert() {
 </script>
 
 <template>
-    <UModal v-model:open="open" :title="result ? '変換しました' : 'houritsu の形式の文書があります'" :dismissible="!busy">
+    <UModal v-model:open="open" :title="result ? t.editor.houritsu.titleDone : t.editor.houritsu.title" :dismissible="!busy">
         <template #body>
             <div v-if="!result" class="body">
-                <p>
-                    「{{ repoName }}」に、houritsu（e-Gov の法令を Markdown にしたもの）の形式の文書が {{ paths.length }} 件あります。 ClauseDown
-                    の形に変えて、1 つの版として保存しますか？
-                </p>
+                <p>{{ t.editor.houritsu.intro(repoName, paths.length) }}</p>
                 <ul class="cd-muted notes">
-                    <li>条・項・号の番号と本文は、そのまま残ります。</li>
-                    <li>編・節・款・目の見出しは消え、章の見出しだけが残ります。</li>
-                    <li>
-                        元の形は、版の履歴に残ります。設定の Developer
-                        の「試験中の機能」で「Markdown（houritsu）に書き出す」をオンにすると、書き出しで元の形に戻して保存することもできます。
-                    </li>
+                    <li>{{ t.editor.houritsu.keepNumbers }}</li>
+                    <li>{{ t.editor.houritsu.dropHeadings }}</li>
+                    <li>{{ t.editor.houritsu.original }}</li>
                 </ul>
             </div>
             <div v-else class="body">
-                <p>{{ result.converted }} 件の文書を ClauseDown の形に変えて、版を保存しました。</p>
+                <p>{{ t.editor.houritsu.convertedDone(result.converted) }}</p>
                 <p v-if="result.skipped.length" class="cd-muted">
-                    保存していない変更がある {{ result.skipped.length }} 件は、変えていません：{{ result.skipped.join('、') }}
+                    {{ t.editor.houritsu.skipped(result.skipped.length, result.skipped.join(t.editor.houritsu.listSep)) }}
                 </p>
                 <template v-if="result.warnings.length">
-                    <p>次の文書は、内容を確かめてください。</p>
+                    <p>{{ t.editor.houritsu.check }}</p>
                     <ul class="warns">
                         <li v-for="w in result.warnings" :key="w.path">
                             <strong>{{ w.path }}</strong>
@@ -64,10 +60,10 @@ async function convert() {
         <template #footer>
             <div class="cd-modal-foot">
                 <template v-if="!result">
-                    <UButton label="変えない" color="neutral" variant="outline" :disabled="busy" @click="open = false" />
-                    <UButton label="変えて版を保存" :loading="busy" @click="convert" />
+                    <UButton :label="t.editor.houritsu.cancel" color="neutral" variant="outline" :disabled="busy" @click="open = false" />
+                    <UButton :label="t.editor.houritsu.convert" :loading="busy" @click="convert" />
                 </template>
-                <UButton v-else label="閉じる" @click="open = false" />
+                <UButton v-else :label="t.common.close" @click="open = false" />
             </div>
         </template>
     </UModal>

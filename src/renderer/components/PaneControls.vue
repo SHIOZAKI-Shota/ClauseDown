@@ -7,11 +7,12 @@ const props = defineProps<{
     label: string
 }>()
 
+const t = useT()
 const collapseIcon = computed(() => (props.side === 'left' ? 'i-lucide-panel-left-close' : 'i-lucide-panel-right-close'))
 </script>
 
 <template>
-    <UTooltip :text="`${label}を折りたたむ`">
+    <UTooltip :text="t.shell.pane.collapse(label)">
         <UButton
             :icon="collapseIcon"
             size="xs"
@@ -19,7 +20,7 @@ const collapseIcon = computed(() => (props.side === 'left' ? 'i-lucide-panel-lef
             color="neutral"
             variant="ghost"
             class="shrink-0"
-            :aria-label="`${label}を折りたたむ`"
+            :aria-label="t.shell.pane.collapse(label)"
             @click="pane.collapse()"
         />
     </UTooltip>

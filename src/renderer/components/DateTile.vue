@@ -6,7 +6,7 @@ const props = defineProps<{
     active?: boolean
     fadePast?: boolean
 }>()
-const WEEK = ['日', '月', '火', '水', '木', '金', '土']
+const t = useT()
 const today = todayISO()
 const d = computed(() => new Date(`${props.date}T00:00:00`))
 const otherYear = computed(() => d.value.getFullYear() !== Number(today.slice(0, 4)))
@@ -17,7 +17,7 @@ const n = computed(() => daysUntil(props.date, today))
     <span class="tile" :class="[urgencyOf(n), { active, past: fadePast && n < 0 }]" :title="date">
         <span v-if="otherYear" class="y">{{ d.getFullYear() }}</span>
         <span class="md">{{ d.getMonth() + 1 }}/{{ d.getDate() }}</span>
-        <span class="w">{{ WEEK[d.getDay()] }}</span>
+        <span class="w">{{ t.common.weekday(d.getDay()) }}</span>
     </span>
 </template>
 

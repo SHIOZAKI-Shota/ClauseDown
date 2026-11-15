@@ -2,7 +2,9 @@
 import { computed } from 'vue'
 import { CONFIG_CHOICES, getConfigValue, JA_ONLY_KEYS, setConfigValue, type ConfigKey, type DocConfig } from '@shared/config'
 import { STYLE_NAMES, type StyleId } from '@shared/legal-styles'
+import { useT } from '~/composables/useT'
 
+const t = useT()
 const props = defineProps<{ config: DocConfig; warnings: string[]; styleId?: StyleId }>()
 const emit = defineEmits<{ change: [DocConfig]; preset: ['law' | 'contract'] }>()
 
@@ -10,7 +12,7 @@ const keys = Object.keys(CONFIG_CHOICES) as ConfigKey[]
 const itemsOf = (key: ConfigKey) =>
     Object.entries(CONFIG_CHOICES[key].options).map(([value, label]) => ({
         value,
-        label: key === 'doc.style' && value === 'auto' && props.styleId ? `自動（${STYLE_NAMES[props.styleId]}）` : (label as string),
+        label: key === 'doc.style' && value === 'auto' && props.styleId ? t.value.editor.config.styleAuto(STYLE_NAMES[props.styleId]) : (label as string),
     }))
 const japanese = computed(() => (props.styleId ?? 'ja') === 'ja')
 const disabled = (key: ConfigKey) => (key === 'doc.contractType' ? props.styleId !== 'contract' : !japanese.value && JA_ONLY_KEYS.includes(key))
@@ -23,10 +25,10 @@ function update(key: ConfigKey, value: string) {
 <template>
     <div class="panel">
         <div class="presets">
-            <span class="cd-muted">まとめて設定：</span>
-            <UButton label="法令式" size="xs" color="neutral" variant="outline" :disabled="!japanese" @click="emit('preset', 'law')" />
-            <UButton label="契約書式" size="xs" color="neutral" variant="outline" :disabled="!japanese" @click="emit('preset', 'contract')" />
-            <span v-if="!japanese" class="cd-muted">日本の書式でだけ使えます。灰色の項目も同じです。</span>
+            <span class="cd-muted">{{ t.editor.config.presets }}</span>
+            <UButton :label="t.editor.config.law" size="xs" color="neutral" variant="outline" :disabled="!japanese" @click="emit('preset', 'law')" />
+            <UButton :label="t.editor.config.contract" size="xs" color="neutral" variant="outline" :disabled="!japanese" @click="emit('preset', 'contract')" />
+            <span v-if="!japanese" class="cd-muted">{{ t.editor.config.jaOnly }}</span>
         </div>
         <div class="grid">
             <UFormField v-for="key in keys" :key="key" :label="CONFIG_CHOICES[key].label" size="sm" :class="{ off: disabled(key) }">
@@ -40,7 +42,7 @@ function update(key: ConfigKey, value: string) {
                 />
             </UFormField>
         </div>
-        <UAlert v-if="warnings.length" color="error" variant="subtle" :description="warnings.join(' ／ ')" title="設定に誤りがあります" />
+        <UAlert v-if="warnings.length" color="error" variant="subtle" :description="warnings.join(t.editor.config.warnSep)" :title="t.editor.config.invalid" />
     </div>
 </template>
 
