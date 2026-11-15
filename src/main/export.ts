@@ -5,13 +5,14 @@ import type { DeliverInput, DeliveryRecord, DocBase, ExportRequest } from '../sh
 import { mermaidSvg, parseFence } from '../shared/blocks'
 import { compareSources } from '../shared/article-diff'
 import { compareToDocx, docToDocx, inlineToDocx, type Figures, type Images } from '../shared/docx-export'
+import { compareWords } from '../shared/legal-styles'
 import { imageLine, imagePathOf, rewriteImages } from '../shared/images'
 import { dataUrl, readImage } from './images'
 import { toHouritsu } from '../shared/houritsu'
 import { LEGAL_CSS } from '../shared/legal-css'
 import { withLineMarks } from '../shared/line-marks'
 import { displayLine, MATH_CSS, mathKey, renderMath } from '../shared/math'
-import { parseLegal, type Item, type LegalDoc, type Paragraph } from '../shared/legal-parser'
+import { docLang, parseLegal, type Item, type LegalDoc, type Paragraph } from '../shared/legal-parser'
 import { renderCompareTable, renderDoc, renderInlineDiff } from '../shared/legal-renderer'
 import { cleanStyle, DEFAULT_STYLE, styleVars, type DocStyle } from '../shared/prefs'
 import { loadSettings } from './settings'
@@ -186,11 +187,14 @@ export function makeBuilders(style: DocStyle, css = '', base?: DocBase): Builder
         },
         cmpPdf: async (o, n, title) =>
             toPdf(
-                await inlineImages(page(renderCompareTable(compareSources(o, n), { title, omitUnchanged: true }), title, style, true, css), base),
+                await inlineImages(
+                    page(renderCompareTable(compareSources(o, n), { title, omitUnchanged: true, lang: docLang(n || o) }), title, style, true, css),
+                    base,
+                ),
                 true,
                 style,
             ),
-        cmpDocx: (o, n, title) => compareToDocx(compareSources(o, n), { title, omitUnchanged: true, style }),
+        cmpDocx: (o, n, title) => compareToDocx(compareSources(o, n), { title, omitUnchanged: true, style, lang: docLang(n || o) }),
     }
 }
 
@@ -221,10 +225,12 @@ async function build(req: ExportRequest): Promise<Uint8Array> {
     if (req.kind === 'doc' && req.format === 'html') return new TextEncoder().encode(await docHtml(req.source, style, prefs.typesetCss, baseOf(req)))
     if (req.kind === 'doc') return req.format === 'docx' ? b.docDocx(req.source) : b.docPdf(req.source)
     const rows = compareSources(req.oldSource, req.newSource)
-    const opts = { title: req.title, omitUnchanged: req.omitUnchanged }
+    const lang = docLang(req.newSource || req.oldSource)
+    const words = compareWords(lang)
+    const opts = { title: req.title, omitUnchanged: req.omitUnchanged, lang }
     if (req.compareStyle === 'inline') {
         if (req.format === 'docx') return inlineToDocx(rows, { ...opts, style })
-        const head = `<p class="cd-title">${req.title.replace(/[<>&]/g, '')}</p><p style="text-align: center; margin-bottom: 1em"><del class="cd-del">削除文字</del>　<ins class="cd-ins">追加文字</ins></p>`
+        const head = `<p class="cd-title">${req.title.replace(/[<>&]/g, '')}</p><p style="text-align: center; margin-bottom: 1em"><del class="cd-del">${words.deletedText}</del>${lang === 'ja' ? '　' : '&nbsp;&nbsp;'}<ins class="cd-ins">${words.addedText}</ins></p>`
         return toPdf(await inlineImages(page(head + renderInlineDiff(rows, opts), req.title, style, false, prefs.typesetCss), baseOf(req)), false, style)
     }
     if (req.format === 'docx') return compareToDocx(rows, { ...opts, style })

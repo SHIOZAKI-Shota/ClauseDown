@@ -197,6 +197,23 @@ describe('描画した HTML にスクリプトを混入できない', () => {
         expect(failures.slice(0, 3)).toEqual([])
     })
 
+    it('海外の書式でも、文書の各所の攻撃用の文字列から危険な要素・属性が出ない', () => {
+        failures.length = 0
+        for (const style of ['contract', 'us-law', 'uk-law', 'eu', 'de', 'fr', 'decimal']) {
+            const head = `<!-- clausedown\ndoc: { style: ${style} }\n-->\n`
+            for (const [si, slot] of SLOTS.entries()) {
+                for (const p of P) {
+                    const src = head + slot(p)
+                    tryCheck(`${style} renderDoc slot${si}`, () => withImg(renderDoc(parseLegal(src))), src)
+                    const base = head + SLOTS[7]('Original text')
+                    tryCheck(`${style} compareTable slot${si}`, () => renderCompareTable(compareSources(base, src), { title: p, lang: 'en' }), src)
+                    tryCheck(`${style} inlineDiff slot${si}`, () => renderInlineDiff(compareSources(src, base), { lang: 'fr' }), src)
+                }
+            }
+        }
+        expect(failures.slice(0, 3)).toEqual([])
+    })
+
     it('記号をランダムに並べた入力でも、危険な要素・属性が出ず、例外も出ない', () => {
         failures.length = 0
         const ATOMS = [

@@ -1,5 +1,6 @@
 import type { ProofreadConfig, ProofreadIssue } from '../shared/api'
 import { noHankakuKana } from './proofread-hankaku'
+import { legalEnglish } from './proofread-legal-en'
 import { LEGAL_OKURIGANA_YAML, LEGAL_TERMS_YAML } from './proofread-legal'
 import { DEFAULT_JOSHI_ALLOW, MAX_TEN, PROOFREAD_RULES, ruleLabel, ruleOn } from '../shared/proofread-rules'
 
@@ -53,7 +54,7 @@ type Lint = (
 ) => Promise<{ ruleId: string; message: string; range?: [number, number]; index: number; fix?: { range: [number, number] } }[]>
 let lint: Promise<Lint> | null = null
 
-const LOCAL_RULES: Record<string, unknown> = { 'no-hankaku-kana': noHankakuKana }
+const LOCAL_RULES: Record<string, unknown> = { 'no-hankaku-kana': noHankakuKana, 'legal-en': legalEnglish }
 
 type RuleLoader = (pkg: string) => Promise<unknown>
 let loadRule: RuleLoader = (pkg) => import(pkg)

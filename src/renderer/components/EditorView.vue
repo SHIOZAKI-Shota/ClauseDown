@@ -3,11 +3,12 @@ import type { DropdownMenuItem } from '@nuxt/ui'
 import { parseLegal, articleTitle } from '@shared/legal-parser'
 import { renderDoc } from '@shared/legal-renderer'
 import { autoMerge } from '@shared/merge3'
-import { DEFAULT_CONFIG, writeConfig, type DocConfig } from '@shared/config'
+import { DEFAULT_CONFIG, readConfig, writeConfig, type DocConfig } from '@shared/config'
 import { extOfMime } from '@shared/images'
 import { clauseInsertLine, type ClauseInsert } from '@shared/clauses'
 import { backRefs } from '@shared/doc-view'
 import { isEnabled } from '@shared/experiments'
+import { spellLang } from '@shared/legal-styles'
 import { useApp } from '~/stores/app'
 import { lastAtOrBefore, positionLabel } from '~/utils/legal-editor'
 import { toPlain } from '~/utils/ipc'
@@ -452,8 +453,10 @@ function changeConfig(c: DocConfig) {
     text.value = writeConfig(text.value, c)
 }
 function preset(kind: 'law' | 'contract') {
-    if (kind === 'law') return changeConfig(structuredClone(DEFAULT_CONFIG))
+    const doc = { ...readConfig(text.value).config.doc }
+    if (kind === 'law') return changeConfig({ ...structuredClone(DEFAULT_CONFIG), doc })
     changeConfig({
+        doc,
         chapter: { numeral: 'arabic' },
         article: { numeral: 'arabic', title: 'inline', numbering: 'continuous' },
         paragraph: { firstNumbered: false, numeral: 'arabic', indent: 'nested' },
@@ -805,7 +808,7 @@ const saveState = computed(() => (saving.value === 'pending' ? '書き込み中�
             </UDropdownMenu>
             <UButton label="版を保存" icon="i-lucide-save" size="sm" :disabled="!changed" @click="openSave" />
         </div>
-        <ConfigPanel v-if="showConfig" :config="doc.config" :warnings="doc.warnings" @change="changeConfig" @preset="preset" />
+        <ConfigPanel v-if="showConfig" :config="doc.config" :warnings="doc.warnings" :style-id="doc.styleId" @change="changeConfig" @preset="preset" />
         <div ref="body" class="body">
             <PaneRail v-if="outlinePane.state.value.collapsed" :pane="outlinePane" side="left" label="文書・目次" icon="i-lucide-list-tree" />
             <template v-else>
@@ -833,6 +836,7 @@ const saveState = computed(() => (saving.value === 'pending' ? '書き込み中�
                             :proofread="app.prefs.proofread"
                             :readonly="aiRunning"
                             :diff-base="savedText"
+                            :spell-lang="app.prefs.spellcheck !== false ? spellLang(doc.styleId, doc.lang) : null"
                             @cursor="onCursor"
                             @scroll="onScroll"
                             @shortcut="onShortcut"

@@ -54,7 +54,7 @@ describe('parseLegal（既定の法令式）', () => {
     it('タイトル・前文・章', () => {
         expect(doc.title).toBe('就業規則')
         expect(doc.preamble).toBe('この規則は前文です。')
-        expect(doc.chapters.map(chapterHeading)).toEqual(['第一章　総則', '第二章　勤務', '附則', ''])
+        expect(doc.chapters.map((ch) => chapterHeading(ch))).toEqual(['第一章　総則', '第二章　勤務', '附則', ''])
         expect(doc.chapters[3].raw.trim()).toBe('以上')
         expect(doc.warnings).toEqual([])
     })

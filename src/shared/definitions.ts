@@ -32,9 +32,38 @@ function maskIgnored(source: string): string {
     return out
 }
 
-function sentenceStart(text: string, at: number): number {
-    for (let i = at - 1; i >= 0; i--) if (text[i] === '。' || text[i] === '\n') return i + 1
+function sentenceStart(text: string, at: number, latin = false): number {
+    for (let i = at - 1; i >= 0; i--) {
+        if (text[i] === '。' || text[i] === '\n') return i + 1
+        if (latin && (text[i] === '.' || text[i] === ';') && /\s/.test(text[i + 1] ?? '')) return i + 1
+    }
     return 0
+}
+
+const isLatinTerm = (term: string) => /^[A-Za-z0-9\u00c0-\u024f]/.test(term)
+const Q_OPEN = '["\u201c]'
+const Q_CLOSE = '["\u201d]'
+const EN_TERM = `${Q_OPEN}([A-Za-z0-9\u00c0-\u024f][^"\u201c\u201d\n]{0,80}?)${Q_CLOSE}`
+const EN_PAREN_RE = /\(([^()\n]*["\u201c][^()\n]*)\)/g
+const EN_PAREN_FILLER =
+    /^[\s,;]*(?:(?:hereinafter(?:\s+referred\s+to\s+as)?|referred\s+to\s+as|collectively|individually|each|together|jointly|and|or|the|a|an|as|called)[\s,;]*)*$/i
+const EN_MEANS_RE = new RegExp(`${EN_TERM}\\s+(?:shall\\s+mean|means|shall\\s+have\\s+the\\s+meaning|has\\s+the\\s+meaning|refers\\s+to)\\b`, 'g')
+
+function englishDefinitions(text: string, out: Definition[]) {
+    for (const m of text.matchAll(EN_PAREN_RE)) {
+        const body = m[1]
+        const quoted = [...body.matchAll(new RegExp(EN_TERM, 'g'))]
+        if (!quoted.length || !EN_PAREN_FILLER.test(body.replace(new RegExp(EN_TERM, 'g'), ' '))) continue
+        const inner = m.index! + 1
+        for (const q of quoted) {
+            const from = inner + q.index! + 1
+            out.push({ term: q[1], from, to: from + q[1].length, sentenceFrom: sentenceStart(text, m.index!, true), kind: 'hereinafter' })
+        }
+    }
+    for (const m of text.matchAll(EN_MEANS_RE)) {
+        const from = m.index! + 1
+        out.push({ term: m[1], from, to: from + m[1].length, sentenceFrom: sentenceStart(text, m.index!, true), kind: 'means' })
+    }
 }
 
 export function findDefinitions(source: string): Definition[] {
@@ -51,6 +80,7 @@ export function findDefinitions(source: string): Definition[] {
         const from = m.index! + 1
         out.push({ term: m[1], from, to: from + m[1].length, sentenceFrom: sentenceStart(text, m.index!), kind: 'means' })
     }
+    if (/["\u201c]/.test(text)) englishDefinitions(text, out)
     return out.sort((a, b) => a.from - b.from)
 }
 
@@ -72,7 +102,16 @@ function scopes(source: string, starts: number[]): [number, number][] {
         .filter(([a, b]) => b > a)
 }
 
+const escRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+function latinTermRe(term: string): RegExp {
+    const forms = [escRe(term) + "(?:s|es|['\u2019]s|s['\u2019])?"]
+    if (/[^aeiou]y$/i.test(term)) forms.push(escRe(term.slice(0, -1)) + "ies(?:['\u2019])?")
+    return new RegExp(`(?<![\\p{L}\\p{N}])(?:${forms.join('|')})(?![\\p{L}\\p{N}])`, 'gu')
+}
+
 function occurrences(text: string, term: string): number[] {
+    if (isLatinTerm(term)) return [...text.matchAll(latinTermRe(term))].map((m) => m.index!)
     const out: number[] = []
     for (let i = text.indexOf(term); i >= 0; i = text.indexOf(term, i + term.length)) out.push(i)
     return out

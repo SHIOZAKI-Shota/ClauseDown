@@ -6,6 +6,7 @@ import {
     LineRuleType,
     Packer,
     Paragraph as DocxParagraph,
+    Tab,
     Table,
     TableCell,
     TableRow,
@@ -15,10 +16,11 @@ import {
     type ISectionOptions,
 } from 'docx'
 import MarkdownIt from 'markdown-it'
-import { chapterHeading, resolveRefs, type Article, type Item, type LegalDoc, type Paragraph } from './legal-parser'
+import { chapterHeading, docStyle, resolveRefs, type Article, type Item, type LegalDoc, type Paragraph } from './legal-parser'
+import { compareWords, type DocLang } from './legal-styles'
 import { collapseUnchanged, type CompareRow, type Part } from './article-diff'
 import { parseFence, parseTable } from './blocks'
-import type { DocStyle } from './prefs'
+import { isLatinFont, LATIN_FALLBACK, type DocStyle } from './prefs'
 import { inlineRuns, mergeProps, type CdProps } from './cd-prop'
 import { tableSpans } from './table-span'
 import { imageLine } from './images'
@@ -70,15 +72,22 @@ function halfPoints(size: string | undefined): number | undefined {
 
 const ALIGN = { left: AlignmentType.LEFT, center: AlignmentType.CENTER, right: AlignmentType.RIGHT } as const
 
-function runs(text: string, opts: { bold?: boolean; props?: CdProps } = {}): TextRun[] {
+function runs(text: string, opts: { bold?: boolean; allCaps?: boolean; props?: CdProps } = {}): TextRun[] {
     const out: TextRun[] = []
     for (const r of inlineRuns(text)) {
         const p = mergeProps(opts.props, r.props)
-        r.text
-            .split('\n')
-            .forEach((t, i) =>
-                out.push(new TextRun({ text: t, bold: opts.bold, break: i ? 1 : undefined, size: halfPoints(p?.fontSize), font: p?.fontFamily })),
-            )
+        const base = { bold: opts.bold, allCaps: opts.allCaps, size: halfPoints(p?.fontSize), font: p?.fontFamily }
+        r.text.split('\n').forEach((line, i) => {
+            const cells = line.split('\t')
+            if (cells.length === 1) {
+                out.push(new TextRun({ ...base, text: line, break: i ? 1 : undefined }))
+                return
+            }
+            cells.forEach((t, j) => {
+                if (j) out.push(new TextRun({ ...base, children: [new Tab()] }))
+                if (t || (!j && i)) out.push(new TextRun({ ...base, text: t, break: !j && i ? 1 : undefined }))
+            })
+        })
     }
     return out
 }
@@ -87,7 +96,7 @@ function para(text: string, left: number, hanging: number, opts: { bold?: boolea
     const p = opts.props
     return new DocxParagraph({
         alignment: p?.textAlign ? ALIGN[p.textAlign] : opts.center ? AlignmentType.CENTER : undefined,
-        indent: { left: left * EM, hanging: hanging * EM },
+        indent: { left: Math.round(left * EM), hanging: Math.round(hanging * EM) },
         pageBreakBefore: p?.break || undefined,
         spacing: p?.lineHeight ? { line: Math.round(Number(p.lineHeight) * 240 * 0.8) } : undefined,
         children: runs(text, { bold: opts.bold, props: p }),
@@ -97,10 +106,10 @@ function para(text: string, left: number, hanging: number, opts: { bold?: boolea
 function imagePara(src: string, alt: string, indent: number, ctx: Ctx): DocxParagraph {
     const img = ctx.images?.get(src)
     if (!img) return para(alt ? `［図：${alt}］` : '［図］', indent, 0)
-    const maxPx = ((ctx.width - indent * EM) / 1440) * 96
+    const maxPx = ((ctx.width - Math.round(indent * EM)) / 1440) * 96
     const scale = Math.min(1, maxPx / img.width)
     return new DocxParagraph({
-        indent: { left: indent * EM },
+        indent: { left: Math.round(indent * EM) },
         children: [
             new ImageRun({ type: img.type, data: img.data, transformation: { width: Math.round(img.width * scale), height: Math.round(img.height * scale) } }),
         ],
@@ -108,11 +117,11 @@ function imagePara(src: string, alt: string, indent: number, ctx: Ctx): DocxPara
 }
 
 function figurePara(fig: { png: Uint8Array; width: number; height: number }, indent: number, ctx: Ctx, center = false): DocxParagraph {
-    const maxPx = ((ctx.width - indent * EM) / 1440) * 96
+    const maxPx = ((ctx.width - Math.round(indent * EM)) / 1440) * 96
     const scale = Math.min(1, maxPx / fig.width)
     return new DocxParagraph({
         alignment: center ? AlignmentType.CENTER : undefined,
-        indent: { left: indent * EM },
+        indent: { left: Math.round(indent * EM) },
         children: [
             new ImageRun({ type: 'png', data: fig.png, transformation: { width: Math.round(fig.width * scale), height: Math.round(fig.height * scale) } }),
         ],
@@ -178,12 +187,12 @@ function tableBlock(rows: string[][], indent: number, ctx: Ctx, props?: CdProps)
     const cols = Math.max(...rows.map((r) => r.length))
     const grid = rows.map((r) => Array.from({ length: cols }, (_, c) => r[c] ?? ''))
     const spans = tableSpans(grid)
-    const width = ctx.width - indent * EM
+    const width = ctx.width - Math.round(indent * EM)
     const widths = colWidths(cols, width, props)
     const spanWidth = (c: number, n: number) => widths.slice(c - n + 1, c + 1).reduce((a, b) => a + b, 0)
     return new Table({
         columnWidths: widths,
-        indent: { size: indent * EM, type: WidthType.DXA },
+        indent: { size: Math.round(indent * EM), type: WidthType.DXA },
         width: { size: width, type: WidthType.DXA },
         rows: grid.map(
             (r, i) =>
@@ -287,9 +296,78 @@ function partsBlocks(parts: { md: string; props?: CdProps }[], out: Block[], ctx
     for (const part of parts) richBlocks(part.md, out, ctx, mergeProps(inherit, part.props))
 }
 
+const LT = 720 / EM
+
+function latinItems(list: Item[], out: Block[], ctx: Ctx, base: number, inherit?: CdProps) {
+    for (const it of list) {
+        const props = mergeProps(inherit, it.props)
+        const left = (base + it.level + 1) * LT
+        textParas(it.label ? `${it.label}\t` : '', it.text, left, it.label ? LT : 0, out, ctx, { props })
+        attachBlocks(it.blocks, left, out, ctx, it.blockProps, inherited(props))
+        latinItems(it.children, out, ctx, base, inherited(props))
+    }
+}
+
+function latinParagraphs(list: Paragraph[], out: Block[], ctx: Ctx, lead?: { text: string; bold?: boolean }, inherit?: CdProps, first?: CdProps) {
+    const labeled = list.some((p) => p.label)
+    list.forEach((p, idx) => {
+        const props = mergeProps(inherit, idx === 0 ? first : undefined, p.props)
+        const left = labeled ? LT : 0
+        const label = p.label ? `${p.label}\t` : ''
+        if (idx === 0 && lead) {
+            out.push(
+                new DocxParagraph({
+                    children: [...runs(`${lead.text} `, { bold: true, props }), ...runs(`${p.label ? `${p.label} ` : ''}${plain(p.text, ctx.doc)}`, { props })],
+                }),
+            )
+        } else textParas(label, p.text, left, p.label ? LT : 0, out, ctx, { props })
+        attachBlocks(p.blocks, left, out, ctx, p.blockProps, inherited(props))
+        latinItems(p.items, out, ctx, labeled ? 0 : -1, inherited(props))
+    })
+}
+
+function latinArticle(a: Article, out: Block[], ctx: Ctx, inherit?: CdProps) {
+    const style = docStyle(ctx.doc)
+    const own = mergeProps(inherit, a.props)
+    const body = inherited(own)
+    if (a.deleted) {
+        out.push(para(style.deletedLine(a.label), 0, 0, { props: own }))
+        return
+    }
+    const title = a.title && ctx.doc.config.article.title !== 'none' ? plain(a.title, ctx.doc) : ''
+    const label = style.headLabel(a.label)
+    const titleText = title ? `${title}${style.titleSuffix(title)}` : ''
+    if (style.headKind === 'stacked') {
+        out.push(para(label, 0, 0, { center: true, props: own }))
+        if (titleText) out.push(para(titleText, 0, 0, { center: true, bold: true, props: body }))
+        latinParagraphs(a.paragraphs, out, ctx, undefined, body)
+        return
+    }
+    const headRuns = () => [
+        ...runs(label, { bold: true, props: own }),
+        ...(titleText ? runs(` ${titleText}`, { bold: true, allCaps: style.titleUpper, props: own }) : []),
+    ]
+    if (style.head(a.label, title, !!a.paragraphs[0]?.label).runIn === null || a.paragraphs.length === 0) {
+        out.push(new DocxParagraph({ pageBreakBefore: own?.break || undefined, keepNext: true, children: headRuns() }))
+        latinParagraphs(a.paragraphs, out, ctx, undefined, body)
+        return
+    }
+    const [first, ...rest] = a.paragraphs
+    out.push(
+        new DocxParagraph({
+            pageBreakBefore: own?.break || undefined,
+            children: [...headRuns(), ...runs(` ${first.label ? `${first.label} ` : ''}${plain(first.text, ctx.doc)}`, { props: body })],
+        }),
+    )
+    attachBlocks(first.blocks, 0, out, ctx, first.blockProps, body)
+    latinItems(first.items, out, ctx, rest.some((p) => p.label) ? 0 : -1, body)
+    if (rest.length) latinParagraphs(rest, out, ctx, undefined, body)
+}
+
 const articleGap = () => new DocxParagraph({ spacing: { before: 0, after: 0, line: 120, lineRule: LineRuleType.EXACT }, children: [] })
 
 function article(a: Article, out: Block[], ctx: Ctx, inherit?: CdProps) {
+    if (ctx.doc.styleId && ctx.doc.styleId !== 'ja') return latinArticle(a, out, ctx, inherit)
     const style = ctx.doc.config.article.title
     const own = mergeProps(inherit, a.props)
     const body = inherited(own)
@@ -311,7 +389,13 @@ function article(a: Article, out: Block[], ctx: Ctx, inherit?: CdProps) {
     }
 }
 
-function build(children: (DocxParagraph | Table)[], landscape = false, style?: DocStyle): Promise<Buffer> {
+function runFont(font: string, latin: boolean) {
+    if (!latin) return font
+    const western = isLatinFont(font) ? font : LATIN_FALLBACK
+    return { ascii: western, hAnsi: western, cs: western, eastAsia: isLatinFont(font) ? FONT : font }
+}
+
+function build(children: (DocxParagraph | Table)[], landscape = false, style?: DocStyle, latin = false): Promise<Buffer> {
     const m = marginTwip(style)
     const section: ISectionOptions = {
         properties: {
@@ -326,7 +410,7 @@ function build(children: (DocxParagraph | Table)[], landscape = false, style?: D
         styles: {
             default: {
                 document: {
-                    run: { font: style?.font ?? FONT, size: style ? Math.round(style.fontSize * 2) : SIZE },
+                    run: { font: runFont(style?.font ?? FONT, latin), size: style ? Math.round(style.fontSize * 2) : SIZE },
                     paragraph: { spacing: { line: Math.round((style?.lineHeight ?? 1.5) * 240 * 0.8) } },
                 },
             },
@@ -354,12 +438,12 @@ export function docToDocx(doc: LegalDoc, figures?: Figures, style?: DocStyle, im
         }
         if (ch.kind === 'appendix') {
             out.push(new DocxParagraph({ pageBreakBefore: own?.break || undefined }))
-            out.push(para(chapterHeading(ch), 0, 0, { bold: true, props: inherited(own) }))
+            out.push(para(chapterHeading(ch, doc), 0, 0, { bold: true, props: inherited(own) }))
             if (ch.parts) partsBlocks(ch.parts, out, ctx, inherited(own))
             else richBlocks(ch.raw, out, ctx)
             continue
         }
-        const heading = chapterHeading(ch)
+        const heading = chapterHeading(ch, doc)
         if (heading) out.push(para(heading, 0, 0, { center: true, props: own }))
         else if (own?.break) out.push(new DocxParagraph({ pageBreakBefore: true, children: [] }))
         paragraphs(ch.intro, out, ctx, undefined, inherited(own))
@@ -368,7 +452,7 @@ export function docToDocx(doc: LegalDoc, figures?: Figures, style?: DocStyle, im
             article(a, out, ctx, inherited(own))
         })
     }
-    return build(out, false, style)
+    return build(out, false, style, !!doc.styleId && doc.styleId !== 'ja')
 }
 
 function cellParas(parts: Part[], fallback?: string): DocxParagraph[] {
@@ -395,19 +479,20 @@ function cell(children: DocxParagraph[], shade = false) {
     })
 }
 
-export function compareToDocx(rows: CompareRow[], opts: { title?: string; omitUnchanged?: boolean; style?: DocStyle } = {}): Promise<Buffer> {
+export function compareToDocx(rows: CompareRow[], opts: { title?: string; omitUnchanged?: boolean; style?: DocStyle; lang?: DocLang } = {}): Promise<Buffer> {
+    const w = compareWords(opts.lang)
     const list = opts.omitUnchanged ? collapseUnchanged(rows) : rows
     const center = (t: string) => [new DocxParagraph({ alignment: AlignmentType.CENTER, children: [new TextRun(t)] })]
     const tableRows = [
-        new TableRow({ tableHeader: true, children: [cell(center('改正後'), true), cell(center('改正前'), true)] }),
+        new TableRow({ tableHeader: true, children: [cell(center(w.revised), true), cell(center(w.current), true)] }),
         ...list.map((r) =>
             r.status === 'omitted'
-                ? new TableRow({ children: [cell(center('（略）')), cell(center('（略）'))] })
+                ? new TableRow({ children: [cell(center(w.omitted)), cell(center(w.omitted))] })
                 : new TableRow({
                       cantSplit: true,
                       children: [
-                          cell(cellParas(r.newParts, r.status === 'removed' ? '（削る）' : undefined)),
-                          cell(cellParas(r.oldParts, r.status === 'added' ? '（新設）' : undefined)),
+                          cell(cellParas(r.newParts, r.status === 'removed' ? w.removed : undefined)),
+                          cell(cellParas(r.oldParts, r.status === 'added' ? w.added : undefined)),
                       ],
                   }),
         ),
@@ -415,7 +500,7 @@ export function compareToDocx(rows: CompareRow[], opts: { title?: string; omitUn
     const children: (DocxParagraph | Table)[] = []
     if (opts.title) children.push(new DocxParagraph({ alignment: AlignmentType.CENTER, children: [new TextRun(opts.title)] }))
     children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: tableRows }))
-    return build(children, true, opts.style)
+    return build(children, true, opts.style, !!opts.lang && opts.lang !== 'ja')
 }
 
 function inlineParas(r: CompareRow): DocxParagraph[] {
@@ -443,7 +528,8 @@ function inlineParas(r: CompareRow): DocxParagraph[] {
     )
 }
 
-export function inlineToDocx(rows: CompareRow[], opts: { title?: string; omitUnchanged?: boolean; style?: DocStyle } = {}): Promise<Buffer> {
+export function inlineToDocx(rows: CompareRow[], opts: { title?: string; omitUnchanged?: boolean; style?: DocStyle; lang?: DocLang } = {}): Promise<Buffer> {
+    const w = compareWords(opts.lang)
     const list = opts.omitUnchanged ? collapseUnchanged(rows) : rows
     const children: (DocxParagraph | Table)[] = []
     if (opts.title) children.push(new DocxParagraph({ alignment: AlignmentType.CENTER, children: [new TextRun(opts.title)] }))
@@ -451,16 +537,16 @@ export function inlineToDocx(rows: CompareRow[], opts: { title?: string; omitUnc
         new DocxParagraph({
             alignment: AlignmentType.CENTER,
             children: [
-                new TextRun({ text: '削除文字', color: 'C02626', strike: true }),
-                new TextRun('　'),
-                new TextRun({ text: '追加文字', color: '1D4ED8', underline: {} }),
+                new TextRun({ text: w.deletedText, color: 'C02626', strike: true }),
+                new TextRun(opts.lang && opts.lang !== 'ja' ? '  ' : '　'),
+                new TextRun({ text: w.addedText, color: '1D4ED8', underline: {} }),
             ],
         }),
     )
     list.forEach((r, i) => {
         if (i) children.push(articleGap())
-        if (r.status === 'omitted') children.push(new DocxParagraph({ alignment: AlignmentType.CENTER, children: [new TextRun('（略）')] }))
+        if (r.status === 'omitted') children.push(new DocxParagraph({ alignment: AlignmentType.CENTER, children: [new TextRun(w.omitted)] }))
         else children.push(...inlineParas(r))
     })
-    return build(children, false, opts.style)
+    return build(children, false, opts.style, !!opts.lang && opts.lang !== 'ja')
 }

@@ -1,8 +1,9 @@
 import MarkdownIt from 'markdown-it'
-import { chapterHeading, resolveRefs, type Article, type Item, type LegalDoc, type Paragraph } from './legal-parser'
+import { chapterHeading, docStyle, resolveRefs, type Article, type Item, type LegalDoc, type Paragraph } from './legal-parser'
+import { compareWords, type DocLang } from './legal-styles'
 import { collapseUnchanged, type CompareRow, type InlinePart, type Part } from './article-diff'
 import { renderBlock, renderRich, renderRichParts } from './blocks'
-import { inlinePropsHtml, propsAttrs, type CdProps } from './cd-prop'
+import { inlinePropsHtml, propsAttrs, stripInlineProps, type CdProps } from './cd-prop'
 import { useMath } from './math'
 import { useLocalImages } from './images'
 
@@ -17,13 +18,15 @@ function inline(text: string, doc: LegalDoc): string {
     )
 }
 
-const num = (label: string) => (label ? `<span class="cd-num">${esc(label)}</span>　` : '')
+const isLatin = (doc: LegalDoc) => !!doc.styleId && doc.styleId !== 'ja'
+const sepOf = (doc: LegalDoc) => (isLatin(doc) ? ' ' : '　')
+const num = (label: string, doc: LegalDoc) => (label ? `<span class="cd-num">${esc(label)}</span>${sepOf(doc)}` : '')
 
 function renderItems(items: Item[], doc: LegalDoc): string {
     return items
         .map(
             (it) =>
-                `<p${propsAttrs(it.props, `cd-item cd-lv${Math.min(it.level, 4)}`)} data-line="${it.line}">${num(it.label)}${inline(it.text, doc)}</p>` +
+                `<p${propsAttrs(it.props, `cd-item cd-lv${Math.min(it.level, 4)}`)} data-line="${it.line}">${num(it.label, doc)}${inline(it.text, doc)}</p>` +
                 blocks(it.blocks, it.level + 1, it.blockProps) +
                 renderItems(it.children, doc),
         )
@@ -34,18 +37,42 @@ function blocks(list: string[], level: number, props?: (CdProps | undefined)[]):
     return list.map((b, i) => `<div class="cd-attach cd-lv${Math.min(level, 4)}">${renderBlock(b, props?.[i])}</div>`).join('')
 }
 
-function renderParagraphs(paras: Paragraph[], doc: LegalDoc, head?: string): string {
+function renderParagraphs(paras: Paragraph[], doc: LegalDoc, head?: string, headHtml?: string): string {
     return paras
         .map((p, idx) => {
-            const lead = idx === 0 && head ? `<span class="cd-num">${esc(head)}</span>　` : ''
+            const lead = idx === 0 && headHtml ? headHtml : idx === 0 && head ? `<span class="cd-num">${esc(head)}</span>　` : ''
             const cls = lead ? 'cd-para cd-first' : 'cd-para'
-            const body = p.text || p.label || lead ? `<p${propsAttrs(p.props, cls)} data-line="${p.line}">${lead}${num(p.label)}${inline(p.text, doc)}</p>` : ''
+            const body =
+                p.text || p.label || lead ? `<p${propsAttrs(p.props, cls)} data-line="${p.line}">${lead}${num(p.label, doc)}${inline(p.text, doc)}</p>` : ''
             return `${body}${blocks(p.blocks, 1, p.blockProps)}${renderItems(p.items, doc)}`
         })
         .join('')
 }
 
+function renderLatinArticle(a: Article, doc: LegalDoc): string {
+    const style = docStyle(doc)
+    const id = a.id ? ` id="art-${esc(a.id)}"` : ''
+    const html = `<div${propsAttrs(a.props, 'cd-article')}${id} data-line="${a.line}">`
+    if (a.deleted) {
+        return `${html}<p class="cd-para cd-first"><span class="cd-num cd-art-label">${esc(style.headLabel(a.label))}</span> ${esc(style.deletedWord)}</p></div>`
+    }
+    const showTitle = !!a.title && doc.config.article.title !== 'none'
+    const plain = showTitle ? stripInlineProps(resolveRefs(a.title, doc)) : ''
+    const label = `<span class="cd-num cd-art-label">${esc(style.headLabel(a.label))}</span>`
+    const title = showTitle ? `<span class="cd-art-name">${inline(a.title, doc)}${esc(style.titleSuffix(plain))}</span>` : ''
+    if (style.headKind === 'stacked') {
+        let out = `${html}<p class="cd-art-head cd-stacked">${label}</p>`
+        if (title) out += `<p class="cd-art-title">${title}</p>`
+        return `${out}${renderParagraphs(a.paragraphs, doc)}</div>`
+    }
+    const lead = title ? `${label} ${title}` : label
+    const own = style.head(a.label, plain, !!a.paragraphs[0]?.label).runIn === null
+    if (own || a.paragraphs.length === 0) return `${html}<p class="cd-art-head">${lead}</p>${renderParagraphs(a.paragraphs, doc)}</div>`
+    return `${html}${renderParagraphs(a.paragraphs, doc, undefined, `${lead} `)}</div>`
+}
+
 function renderArticle(a: Article, doc: LegalDoc): string {
+    if (isLatin(doc)) return renderLatinArticle(a, doc)
     const style = doc.config.article.title
     const id = a.id ? ` id="art-${esc(a.id)}"` : ''
     let html = `<div${propsAttrs(a.props, 'cd-article')}${id} data-line="${a.line}">`
@@ -65,14 +92,16 @@ function renderArticle(a: Article, doc: LegalDoc): string {
 }
 
 export function renderDoc(doc: LegalDoc): string {
-    let html = `<article class="cd-doc cd-indent-${doc.config.paragraph.indent}">`
+    let html = isLatin(doc)
+        ? `<article class="cd-doc cd-latin cd-style-${doc.styleId} cd-lang-${doc.lang}" lang="${doc.lang}">`
+        : `<article class="cd-doc cd-indent-${doc.config.paragraph.indent}">`
     if (doc.title) html += `<h1 class="cd-title">${esc(doc.title)}</h1>`
     if (doc.preamble)
         html += `<section class="cd-preamble">${doc.preambleParts ? renderRichParts(doc.preambleParts) : inlinePropsHtml(md.render(doc.preamble))}</section>`
     for (const ch of doc.chapters) {
         const body = () => (ch.parts ? renderRichParts(ch.parts) : renderRich(ch.raw))
         if (ch.kind === 'appendix') {
-            html += `<section${propsAttrs(ch.props, 'cd-appendix')} data-line="${ch.line}"><h2 class="cd-appendix-title">${esc(chapterHeading(ch))}</h2>${body()}</section>`
+            html += `<section${propsAttrs(ch.props, 'cd-appendix')} data-line="${ch.line}"><h2 class="cd-appendix-title">${esc(chapterHeading(ch, doc))}</h2>${body()}</section>`
             continue
         }
         if (ch.kind === 'closing') {
@@ -80,7 +109,7 @@ export function renderDoc(doc: LegalDoc): string {
             continue
         }
         html += `<section${propsAttrs(ch.props, `cd-chapter cd-${ch.kind}`)}>`
-        const heading = chapterHeading(ch)
+        const heading = chapterHeading(ch, doc)
         if (heading) html += `<h2 class="cd-chapter-title" data-line="${ch.line}">${esc(heading)}</h2>`
         html += renderParagraphs(ch.intro, doc)
         html += ch.articles.map((a) => renderArticle(a, doc)).join('')
@@ -115,11 +144,12 @@ function renderInline(parts: InlinePart[]): string {
 }
 
 export function renderInlineDiff(rows: CompareRow[], opts: CompareOptions = {}): string {
+    const words = compareWords(opts.lang)
     const list = opts.omitUnchanged ? collapseUnchanged(rows) : rows
     const body = list
         .map((r) =>
             r.status === 'omitted'
-                ? '<div class="cd-inline-row cd-omit"><p>（略）</p></div>'
+                ? `<div class="cd-inline-row cd-omit"><p>${words.omitted}</p></div>`
                 : `<div class="cd-inline-row cd-${r.status} cd-row-${r.kind}">${renderInline(r.inline)}</div>`,
         )
         .join('')
@@ -129,19 +159,21 @@ export function renderInlineDiff(rows: CompareRow[], opts: CompareOptions = {}):
 export interface CompareOptions {
     title?: string
     omitUnchanged?: boolean
+    lang?: DocLang
 }
 
 export function renderCompareTable(rows: CompareRow[], opts: CompareOptions = {}): string {
+    const words = compareWords(opts.lang)
     const list = opts.omitUnchanged ? collapseUnchanged(rows) : rows
     const body = list
         .map((r) => {
-            if (r.status === 'omitted') return `<tr class="cd-omit"><td>（略）</td><td>（略）</td></tr>`
+            if (r.status === 'omitted') return `<tr class="cd-omit"><td>${words.omitted}</td><td>${words.omitted}</td></tr>`
             const cls = `cd-${r.status} cd-row-${r.kind}`
-            const left = r.status === 'removed' ? '<p>（削る）</p>' : renderParts(r.newParts)
-            const right = r.status === 'added' ? '<p>（新設）</p>' : renderParts(r.oldParts)
+            const left = r.status === 'removed' ? `<p>${words.removed}</p>` : renderParts(r.newParts)
+            const right = r.status === 'added' ? `<p>${words.added}</p>` : renderParts(r.oldParts)
             return `<tr class="${cls}"><td>${left}</td><td>${right}</td></tr>`
         })
         .join('')
     const caption = opts.title ? `<caption>${esc(opts.title)}</caption>` : ''
-    return `<table class="cd-compare">${caption}<thead><tr><th>改正後</th><th>改正前</th></tr></thead><tbody>${body}</tbody></table>`
+    return `<table class="cd-compare">${caption}<thead><tr><th>${words.revised}</th><th>${words.current}</th></tr></thead><tbody>${body}</tbody></table>`
 }

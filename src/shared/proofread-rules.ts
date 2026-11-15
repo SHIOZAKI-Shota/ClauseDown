@@ -49,6 +49,12 @@ export const PROOFREAD_RULES: ProofreadRule[] = [
     },
     { id: 'no-hankaku-kana', label: '半角カナ', description: '「ｶﾀｶﾅ」のような半角のカタカナ', defaultOn: true },
     {
+        id: 'legal-en',
+        label: '英文契約の言い回し',
+        description: '「and/or」「herein」のようなあいまいな書き方と、「prior to」→「before」のような短くできる決まり文句。和文には当たりません',
+        defaultOn: true,
+    },
+    {
         id: 'max-ten',
         label: '読点の多い文',
         description: '一文に読点（、）が多すぎる。条文向けに上限を多めにしています',

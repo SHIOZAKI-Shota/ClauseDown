@@ -6,11 +6,11 @@ import { Decoration, EditorView, keymap, ViewPlugin, WidgetType, type Decoration
 import { tags as t } from '@lezer/highlight'
 import { parseFence, mermaidSvg } from '@shared/blocks'
 import type { Article, Item, LegalDoc, Paragraph } from '@shared/legal-parser'
-import { articleTitle } from '@shared/legal-parser'
+import { articleTitle, docStyle } from '@shared/legal-parser'
 import { checkDefinitions } from '@shared/definitions'
 import { findMath, mathError } from '@shared/math'
 import type { ProofreadIssue } from '@shared/api'
-import { backRefs, type BackRef } from '@shared/doc-view'
+import { backRefs, lineLabels, type BackRef } from '@shared/doc-view'
 
 export const legalTheme = EditorView.theme({
     '&': { height: '100%', fontSize: 'var(--cd-ed-size, 14px)', backgroundColor: 'var(--cd-ed-bg)', color: 'var(--cd-ed-text)' },
@@ -121,6 +121,8 @@ interface Hint {
 
 export function hintsOf(doc: LegalDoc): Hint[] {
     const out: Hint[] = []
+    const latin = !!doc.styleId && doc.styleId !== 'ja'
+    const deleted = (label: string) => (latin ? docStyle(doc).deletedLine(label) : `${label} 削除`)
     const items = (list: Item[]) => {
         for (const it of list) {
             if (it.line >= 0) out.push({ line: it.line, label: it.label, kind: 'item' })
@@ -138,7 +140,7 @@ export function hintsOf(doc: LegalDoc): Hint[] {
         if (ch.label && ch.line >= 0) out.push({ line: ch.line, label: ch.label, kind: 'chapter' })
         paras(ch.intro)
         for (const a of ch.articles) {
-            out.push({ line: a.line, label: a.deleted ? `${a.label} 削除` : a.label, kind: 'article' })
+            out.push({ line: a.line, label: a.deleted ? deleted(a.label) : a.label, kind: 'article' })
             paras(a.paragraphs, a.label)
         }
     }
@@ -205,7 +207,7 @@ class BackRefWidget extends WidgetType {
 }
 
 const ATTR_RE = /\s\{[^{}]*\}\s*$/
-const REF_RE = /\[\[([^\]:]+)(?::\d+)?(?::\d+)?\]\]/g
+const REF_RE = /\[\[([^\]:]+)(?::\d+)*\]\]/g
 const PROP_INLINE_RE = /\](\{[^{}]*\})/g
 const PROP_LINE_RE = /^\s*(?::{3,}.*|\{[^{}]*\})\s*$/
 
@@ -287,7 +289,7 @@ function refCompletions(ctx: CompletionContext) {
             if (a.deleted) continue
             const id = a.id ?? idFor(a, ld)
             options.push({
-                label: `${a.refLabel}${a.title ? `（${articleTitle(a, ld)}）` : ''}`,
+                label: `${a.refLabel}${a.title ? (ld.styleId && ld.styleId !== 'ja' ? ` (${articleTitle(a, ld)})` : `（${articleTitle(a, ld)}）`) : ''}`,
                 detail: a.id ? `[[${a.id}]]` : '名前を付けて参照',
                 apply: (view, _c, from, to) => {
                     from -= 2
@@ -424,6 +426,11 @@ function positionIndex(ld: LegalDoc): PositionIndex {
     const add = (line: number, label: string) => {
         idx.lines.push(line)
         idx.labels.push(label)
+    }
+    if (ld.styleId && ld.styleId !== 'ja') {
+        for (const [line, label] of [...lineLabels(ld)].sort((a, b) => a[0] - b[0])) if (label) add(line, label)
+        positionIndexes.set(ld, idx)
+        return idx
     }
     for (const ch of ld.chapters) {
         if (ch.line >= 0 && ch.label) add(ch.line, ch.label)

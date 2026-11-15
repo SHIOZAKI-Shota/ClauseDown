@@ -1,7 +1,7 @@
 import MarkdownIt from 'markdown-it'
 import { readConfig, type DocConfig } from './config'
-import { formatNumber, type NumeralStyle } from './numerals'
 import { blockLines } from './blocks'
+import { legalStyle, resolveStyle, type ArticleNo, type RefTarget, type DocLang, type LegalStyle, type StyleId } from './legal-styles'
 import { extractProps, stripInlineProps, type CdProps } from './cd-prop'
 
 export interface Item {
@@ -72,7 +72,13 @@ export interface LegalDoc {
     preambleParts?: RawPart[]
     chapters: Chapter[]
     refs: Record<string, Article>
+    styleId: StyleId
+    lang: DocLang
 }
+
+export const docLang = (source: string): DocLang => parseLegal(source).lang
+
+export const docStyle = (doc: Pick<LegalDoc, 'styleId' | 'lang' | 'config'>): LegalStyle => legalStyle(doc.styleId ?? 'ja', doc.config, doc.lang ?? 'ja')
 
 const md = new MarkdownIt({ html: true, linkify: false })
 md.core.ruler.disable(['inline', 'replacements', 'smartquotes', 'text_join'], true)
@@ -113,8 +119,6 @@ function fixedNumber(flags: Iterable<string>): { fixed?: number; branchPath?: nu
 
 const ITEM_ATTR_RE = /^\{((?:[nb]=[\d.]+\s*)+)\}\s*/
 
-const branchSuffix = (path: number[] | undefined, style: NumeralStyle) => (path ?? []).map((b) => `の${formatNumber(b, style)}`).join('')
-
 const parsed = new Map<string, LegalDoc>()
 const PARSED_MAX = 4
 
@@ -138,7 +142,8 @@ function parseUncached(input: string): LegalDoc {
     const tokens = md.parse(source, {})
 
     const refs: Record<string, Article> = Object.create(null)
-    const doc: LegalDoc = { title: '', config, warnings, preamble: '', chapters: [], refs }
+    const { id: styleId, lang } = resolveStyle(config, source)
+    const doc: LegalDoc = { title: '', config, warnings, preamble: '', chapters: [], refs, styleId, lang }
     const preambleRanges: [number, number][] = []
     const propsAt = (line: number) => (line >= 0 ? at[line] : undefined)
 
@@ -301,13 +306,7 @@ function parseUncached(input: string): LegalDoc {
     return doc
 }
 
-function subitemStyles(config: DocConfig): NumeralStyle[] {
-    const order: NumeralStyle[] = ['iroha', 'paren', 'roman']
-    const first = config.subitem.style as NumeralStyle
-    return [first, ...order.filter((s) => s !== first)]
-}
-
-function numberItems(items: Item[], config: DocConfig, styles: NumeralStyle[]) {
+function numberItems(items: Item[], config: DocConfig, style: LegalStyle) {
     let n = 0
     for (const item of items) {
         const m = ITEM_ATTR_RE.exec(item.text)
@@ -316,15 +315,12 @@ function numberItems(items: Item[], config: DocConfig, styles: NumeralStyle[]) {
         n = fixed.fixed ?? (fixed.branchPath ? n : n + 1)
         item.number = n
         item.branchPath = fixed.branchPath
-        const style: NumeralStyle = item.level === 1 ? (config.item.style as NumeralStyle) : styles[Math.min(item.level - 2, styles.length - 1)]
-        item.label = formatNumber(item.number, style) + branchSuffix(item.branchPath, style === 'kanji' ? 'kanji' : 'arabic')
-        numberItems(item.children, config, styles)
+        item.label = style.itemLabel(item.number, item.branchPath, item.level, config)
+        numberItems(item.children, config, style)
     }
 }
 
-function numberParagraphs(paras: Paragraph[], config: DocConfig, forceNumbered: boolean) {
-    const styles = subitemStyles(config)
-    const style = config.paragraph.numeral as NumeralStyle
+function numberParagraphs(paras: Paragraph[], config: DocConfig, style: LegalStyle, forceNumbered: boolean, owner: ArticleNo | null, chapterNo: number) {
     let n = 0
     paras.forEach((p, idx) => {
         const m = ITEM_ATTR_RE.exec(p.text)
@@ -333,31 +329,32 @@ function numberParagraphs(paras: Paragraph[], config: DocConfig, forceNumbered: 
         n = fixed.fixed ?? (fixed.branchPath ? n : n + 1)
         p.number = n
         p.branchPath = fixed.branchPath
-        const numbered = idx > 0 || config.paragraph.firstNumbered || forceNumbered || !!m
-        p.label = numbered ? formatNumber(n, style) + branchSuffix(p.branchPath, style === 'circled' ? 'arabic' : style) : ''
-        numberItems(p.items, config, styles)
+        const numbered = style.paragraphNumbered(idx, paras.length, forceNumbered || !!m, config)
+        p.label = numbered ? style.paragraphLabel(n, p.branchPath, owner, chapterNo, config) : ''
+        numberItems(p.items, config, style)
     })
 }
 
 export function articleLabel(n: number, branch: number, config: DocConfig, path?: number[]): string {
-    const style = config.article.numeral as NumeralStyle
-    const base = `第${formatNumber(n, style)}条`
-    if (path?.length) return base + branchSuffix(path, style)
-    return branch > 0 ? `${base}の${formatNumber(branch + 1, style)}` : base
+    return legalStyle('ja', config).articleLabel({ number: n, branch, branchPath: path }, 0, config)
 }
 
 function number(doc: LegalDoc) {
     const { config } = doc
+    const style = docStyle(doc)
+    const perChapter = style.perChapter || config.article.numbering === 'perChapter'
     let chapterNo = 0
     let articleNo = 0
     for (const ch of doc.chapters) {
         if (ch.kind === 'chapter') {
             chapterNo++
             ch.number = chapterNo
-            ch.label = config.chapter.numeral === 'none' ? '' : `第${formatNumber(chapterNo, config.chapter.numeral as NumeralStyle)}章`
-            if (config.article.numbering === 'perChapter') articleNo = 0
+            ch.label = style.chapterLabel(chapterNo, config)
+            if (perChapter) articleNo = 0
         }
-        let n = ch.kind === 'supplement' ? 0 : articleNo
+        const reset = ch.kind === 'supplement' && style.resetInSupplement
+        const owner = ch.kind === 'chapter' ? ch.number : 0
+        let n = reset ? 0 : articleNo
         let prev: Article | null = null
         for (const a of ch.articles) {
             if (a.branchPath) {
@@ -372,31 +369,53 @@ function number(doc: LegalDoc) {
                 n = a.fixed ?? n + 1
                 a.number = n
             }
-            a.label = articleLabel(a.number, a.branch, config, a.branchPath)
-            a.refLabel = ch.kind === 'supplement' ? `附則${a.label}` : a.label
-            numberParagraphs(a.paragraphs, config, false)
+            a.label = style.articleLabel(a, owner, config)
+            a.refLabel = style.articleRef(a, owner, config, ch.kind === 'supplement')
+            numberParagraphs(a.paragraphs, config, style, false, a, owner)
             if (a.id) {
                 if (doc.refs[a.id]) doc.warnings.push(`条の名前「${a.id}」が重複しています`)
                 doc.refs[a.id] = a
             }
             prev = a
         }
-        if (ch.kind !== 'supplement') articleNo = n
-        numberParagraphs(ch.intro, config, ch.kind === 'supplement' && ch.intro.length > 1)
+        if (!reset) articleNo = n
+        numberParagraphs(ch.intro, config, style, ch.kind === 'supplement' && ch.intro.length > 1, null, owner)
     }
 }
 
-const REF_RE = /\[\[([^\]:]+)(?::(\d+))?(?::(\d+))?\]\]/g
+export const REF_RE = /\[\[([^\]:]+)((?::\d+)*)\]\]/g
+
+function findItem(list: Item[], n: number): Item | undefined {
+    return list.find((it) => it.number === n && !it.branchPath)
+}
+
+export function refText(a: Article, path: number[], doc: LegalDoc): string {
+    const style = docStyle(doc)
+    const [para, ...items] = path
+    const t: RefTarget = { article: a, articleRef: a.refLabel, items: [] }
+    let kids: Item[] = []
+    if (para !== undefined) {
+        const index = a.paragraphs.findIndex((p) => p.number === para && !p.branchPath)
+        const p = index >= 0 ? a.paragraphs[index] : undefined
+        const label = p
+            ? p.label || (a.paragraphs.length > 1 ? style.paragraphLabel(para, undefined, a, 0, doc.config) : '')
+            : style.paragraphLabel(para, undefined, a, 0, doc.config)
+        t.paragraph = { number: para, label, index: index >= 0 ? index : para - 1, count: a.paragraphs.length }
+        kids = p?.items ?? []
+    }
+    items.forEach((n, i) => {
+        const found = findItem(kids, n)
+        t.items.push({ number: n, level: i + 1, label: found?.label ?? style.itemLabel(n, undefined, i + 1, doc.config) })
+        kids = found?.children ?? []
+    })
+    return style.ref(t, doc.config)
+}
 
 export function resolveRefs(text: string, doc: LegalDoc, onMissing?: (id: string) => string): string {
-    const style = doc.config.article.numeral as NumeralStyle
-    return text.replace(REF_RE, (whole, id: string, para?: string, item?: string) => {
+    return text.replace(REF_RE, (whole, id: string, rest: string) => {
         const a = doc.refs[id.trim()]
         if (!a) return onMissing ? onMissing(id) : whole
-        let out = a.refLabel
-        if (para) out += `第${formatNumber(Number(para), style)}項`
-        if (item) out += `第${formatNumber(Number(item), style)}号`
-        return out
+        return refText(a, rest ? rest.slice(1).split(':').map(Number) : [], doc)
     })
 }
 
@@ -409,15 +428,17 @@ function dedent(ls: string[]): string {
         .trimEnd()
 }
 
-export function chapterHeading(ch: Chapter): string {
-    if (ch.kind === 'supplement') return ch.title || '附則'
-    if (ch.kind === 'appendix') return ch.title || '別表'
-    return [ch.label, ch.title].filter(Boolean).join('　')
+export function chapterHeading(ch: Chapter, doc?: LegalDoc): string {
+    const style = doc ? docStyle(doc) : null
+    if (ch.kind === 'supplement') return ch.title || (style?.supplementName ?? '附則')
+    if (ch.kind === 'appendix') return ch.title || (style?.appendixName ?? '別表')
+    return [ch.label, ch.title].filter(Boolean).join(style?.sep ?? '　')
 }
 
 export const articleTitle = (a: Article, doc: LegalDoc): string => (a.title ? stripInlineProps(resolveRefs(a.title, doc)) : '')
 
 export function articleLines(a: Article, doc: LegalDoc): string[] {
+    if (doc.styleId && doc.styleId !== 'ja') return latinArticleLines(a, doc)
     const { config } = doc
     const out: string[] = []
     const step = config.paragraph.indent === 'nested' ? 1 : 0
@@ -457,21 +478,57 @@ export function articleLines(a: Article, doc: LegalDoc): string[] {
     return out
 }
 
+export const shownTitle = (a: Article, doc: LegalDoc): string => (doc.config.article.title === 'none' || a.deleted ? '' : articleTitle(a, doc))
+
+const LATIN_PAD = '    '
+
+function latinArticleLines(a: Article, doc: LegalDoc): string[] {
+    const style = docStyle(doc)
+    const out: string[] = []
+    const r = (s: string) => stripInlineProps(resolveRefs(s, doc)).replace(/\n/g, ' ')
+    const pad = (n: number) => LATIN_PAD.repeat(n)
+    if (a.deleted) return [style.deletedLine(a.label)]
+    const head = style.head(a.label, shownTitle(a, doc), !!a.paragraphs[0]?.label)
+    out.push(...head.lines)
+    const withNum = (label: string, text: string) => (label ? `${label} ${text}` : text)
+    const pushBlocks = (blocks: string[], level: number) => {
+        for (const b of blocks) for (const l of blockLines(b)) out.push(`${pad(level)}${l}`)
+    }
+    const pushItems = (items: Item[], base: number) => {
+        for (const it of items) {
+            out.push(`${pad(base + it.level)}${withNum(it.label, r(it.text))}`)
+            pushBlocks(it.blocks, base + it.level + 1)
+            pushItems(it.children, base)
+        }
+    }
+    if (a.paragraphs.length === 0 && head.runIn) out.push(head.runIn)
+    a.paragraphs.forEach((p, idx) => {
+        const line = withNum(p.label, r(p.text))
+        out.push(idx === 0 && head.runIn ? `${head.runIn} ${line}` : line)
+        pushBlocks(p.blocks, 1)
+        pushItems(p.items, 0)
+    })
+    return out
+}
+
 export function introLines(ch: Chapter, doc: LegalDoc): string[] {
     const out: string[] = []
-    const r = (s: string) => stripInlineProps(resolveRefs(s, doc)).replace(/\n/g, '')
+    const latin = !!doc.styleId && doc.styleId !== 'ja'
+    const sp = latin ? ' ' : '　'
+    const indent = (n: number) => (latin ? LATIN_PAD : '　').repeat(n)
+    const r = (s: string) => stripInlineProps(resolveRefs(s, doc)).replace(/\n/g, latin ? ' ' : '')
     const pushBlocks = (blocks: string[], level: number) => {
-        for (const b of blocks) for (const l of blockLines(b)) out.push(`${'　'.repeat(level)}${l}`)
+        for (const b of blocks) for (const l of blockLines(b)) out.push(`${indent(level)}${l}`)
     }
     const pushItems = (items: Item[]) => {
         for (const it of items) {
-            out.push(`${'　'.repeat(it.level)}${it.label}　${r(it.text)}`)
+            out.push(`${indent(it.level)}${it.label}${sp}${r(it.text)}`)
             pushBlocks(it.blocks, it.level + 1)
             pushItems(it.children)
         }
     }
     for (const p of ch.intro) {
-        if (p.text || p.label) out.push(p.label ? `${p.label}　${r(p.text)}` : r(p.text))
+        if (p.text || p.label) out.push(p.label ? `${p.label}${sp}${r(p.text)}` : r(p.text))
         pushBlocks(p.blocks, 1)
         pushItems(p.items)
     }

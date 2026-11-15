@@ -20,13 +20,20 @@ const props = withDefaults(
         proofread?: boolean
         readonly?: boolean
         diffBase?: string | null
+        spellLang?: string | null
     }>(),
-    { wrap: true, readonly: false, diffBase: null, proofread: true },
+    { wrap: true, readonly: false, diffBase: null, proofread: true, spellLang: null },
 )
 const wrapping = new Compartment()
 const proofreading = new Compartment()
 const proofreadExt = proofreadLinter((text) => window.api.proofread(text))
 const locking = new Compartment()
+const spelling = new Compartment()
+const spellExt = (lang: string | null) =>
+    EditorView.contentAttributes.of(lang ? { spellcheck: 'true', lang, autocorrect: 'off', autocapitalize: 'off' } : { spellcheck: 'false' })
+function applySpell(lang: string | null) {
+    if (lang) void window.api.setSpellLanguages([lang]).catch(() => {})
+}
 const lockExt = (on: boolean) => [EditorState.readOnly.of(on), EditorView.editable.of(!on)]
 const emit = defineEmits<{
     'update:modelValue': [string]
@@ -52,6 +59,7 @@ onMounted(() => {
                 wrapping.of(props.wrap ? EditorView.lineWrapping : []),
                 proofreading.of(props.proofread ? proofreadExt : []),
                 locking.of(lockExt(props.readonly)),
+                spelling.of(spellExt(props.spellLang)),
                 EditorState.tabSize.of(2),
                 ...legalExtensions(),
                 diffHighlight(),
@@ -136,6 +144,14 @@ watch(
 watch(
     () => props.proofread,
     (on) => view?.dispatch({ effects: proofreading.reconfigure(on ? proofreadExt : []) }),
+)
+watch(
+    () => props.spellLang,
+    (lang) => {
+        applySpell(lang)
+        view?.dispatch({ effects: spelling.reconfigure(spellExt(lang)) })
+    },
+    { immediate: true },
 )
 watch(
     () => props.readonly,
