@@ -35,11 +35,11 @@ const status = computed(() => {
         case 'latest':
             return '最新のバージョンです'
         case 'available':
-            return `バージョン ${u.version} があります${u.date ? `（${u.date}）` : ''}`
+            return `バージョン ${u.version} があります${u.date ? `（${u.date}）` : ''}${u.via === 'brew' ? '。Homebrew で更新します' : ''}`
         case 'downloading':
             return `バージョン ${u.version} をダウンロードしています（${u.percent ?? 0}%）`
         case 'ready':
-            return `バージョン ${u.version} の準備ができました`
+            return u.via === 'brew' ? `再起動すると、Homebrew でバージョン ${u.version} に更新します` : `バージョン ${u.version} の準備ができました`
         case 'error':
             return u.message ?? '更新でエラーが起きました'
         case 'dev':
@@ -65,7 +65,7 @@ async function install() {
         <SettingRow label="更新" :description="status">
             <UButton
                 v-if="update?.state === 'available' || (update?.state === 'error' && update.version)"
-                :label="IS_MAC ? '配布ページを開く' : 'ダウンロード'"
+                :label="update.via === 'brew' ? '更新する' : IS_MAC ? '配布ページを開く' : 'ダウンロード'"
                 icon="i-lucide-download"
                 size="sm"
                 @click="download"

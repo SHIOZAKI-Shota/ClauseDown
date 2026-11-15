@@ -735,8 +735,8 @@
                 font-size: 14px;
                 color: var(--ink-2);
             }
-            .install .links {
-                margin: 12px 0 0;
+            .get .links {
+                margin: 16px 0 0;
                 padding-top: 12px;
                 border-top: 1px solid var(--rule);
                 font-size: 14px;
@@ -1691,6 +1691,111 @@
                 font-weight: 500;
             }
 
+            .dl-cards {
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+            }
+            .dl-card {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto;
+                align-items: center;
+                gap: 4px 16px;
+                padding: 20px 24px;
+                border: 1px solid var(--line);
+                border-radius: 6px;
+                background: var(--sheet);
+            }
+            .dl-card.mine {
+                order: -1;
+                border-color: var(--ai);
+            }
+            .dl-card h3 {
+                display: flex;
+                align-items: baseline;
+                gap: 12px;
+                margin: 0;
+                font-size: 20px;
+            }
+            .dl-card h3 span {
+                font: 400 13px var(--sans);
+                color: var(--ink-3);
+            }
+            .dl-card .btn {
+                grid-column: 2;
+                grid-row: 1 / 3;
+            }
+            .dl-file {
+                margin: 0;
+                font-size: 13px;
+                color: var(--ink-3);
+            }
+            .cmds {
+                grid-column: 1 / -1;
+                display: grid;
+                gap: 8px;
+                margin: 8px 0 0;
+                padding: 12px 0 0;
+                border-top: 1px solid var(--rule);
+                list-style: none;
+            }
+            .cmds li {
+                display: grid;
+                grid-template-columns: 96px minmax(0, 1fr);
+                align-items: center;
+                gap: 12px;
+            }
+            .cmds .soon {
+                display: none;
+            }
+            .cl {
+                font-size: 13px;
+                color: var(--ink-2);
+            }
+            .cc {
+                display: flex;
+                align-items: center;
+                min-width: 0;
+                border: 1px solid var(--rule);
+                border-radius: 4px;
+                background: var(--paper-2);
+            }
+            .cc code {
+                flex: 1;
+                min-width: 0;
+                overflow-x: auto;
+                padding: 6px 10px;
+                font: 400 12.5px/1.6 var(--mono);
+                white-space: nowrap;
+                scrollbar-width: thin;
+            }
+            .copy {
+                display: grid;
+                place-items: center;
+                flex: none;
+                width: 32px;
+                height: 32px;
+                padding: 0;
+                border: 0;
+                border-left: 1px solid var(--rule);
+                background: transparent;
+                color: var(--ink-3);
+                cursor: pointer;
+            }
+            .copy:hover,
+            .copy.done {
+                color: var(--ai);
+            }
+            .copy svg {
+                width: 15px;
+                height: 15px;
+            }
+            .copied {
+                min-height: 1.5em;
+                margin: 0;
+                font-size: 13px;
+                color: var(--ai);
+            }
             .get dl {
                 display: grid;
                 grid-template-columns: max-content minmax(0, 1fr);
@@ -1898,6 +2003,15 @@
                 }
             }
             @media (max-height: 760px) {
+                .get .install h3 {
+                    display: none;
+                }
+                .get .os {
+                    padding-block: 8px;
+                }
+                .get .os ol {
+                    font-size: 13px;
+                }
                 .peek {
                     --peek: calc((100dvh - 65px) * 0.36);
                 }
@@ -2030,7 +2144,7 @@
                         <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
                     </svg>
                 </button>
-                <a class="btn" data-dl="short" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest" target="_blank" rel="noreferrer noopener">ダウンロード</a>
+                <a class="btn" data-dl="short" href="#get">ダウンロード</a>
             </div>
         </header>
 
@@ -2041,9 +2155,9 @@
                         <h1 class="title">条文のための<br />統合管理編集ツール</h1>
                         <p class="intro">「第○条」が並ぶ法律案・条例・契約書・規程を Markdown で記述し、条番号と参照の自動更新、版の履歴、新旧対照表、施行日を一元管理する Windows・macOS 用アプリです。</p>
                         <div class="cta">
-                            <a class="btn" data-dl="main" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest" target="_blank" rel="noreferrer noopener">Windows・Mac 版をダウンロード</a>
+                            <a class="btn" data-dl="main" href="#get">Windows・Mac 版をダウンロード</a>
                         </div>
-                        <p class="dl-meta"><span data-rel>無料・MIT ライセンス</span><a data-dl="alt" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest" target="_blank" rel="noreferrer noopener">ほかの OS 版</a></p>
+                        <p class="dl-meta"><span data-rel>無料・MIT ライセンス</span><a data-dl="alt" href="#get">ほかの OS 版</a></p>
                     </div>
                     <div class="peek">
                         <p class="peek-hint" aria-hidden="true">\ クリックしてデモを見る /</p>
@@ -2688,39 +2802,49 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                     <div class="l">
                     <h2><span class="ch">第六条</span>ダウンロード</h2>
                     <p class="intro">無料で利用できます。MIT ライセンスのもと、ソースコードを GitHub で公開しています。</p>
-                    <div class="cta">
-                        <a class="btn" data-dl="main" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest" target="_blank" rel="noreferrer noopener">Windows・Mac 版をダウンロード</a>
-                    </div>
-                    <p class="dl-meta"><span data-rel>最新版はリリースのページから入手できます</span><a data-dl="alt" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest" target="_blank" rel="noreferrer noopener">ほかの OS 版</a></p>
-                    <dl class="req">
-                        <dt>対応 OS</dt>
-                        <dd>Windows（64 ビット）、macOS（Apple シリコン）</dd>
-                        <dt>更新</dt>
-                        <dd>新しい版の公開時には、アプリ内で通知します。</dd>
-                        <dt>窓口</dt>
-                        <dd><a href="https://github.com/SHIOZAKI-Shota/ClauseDown/issues" target="_blank" rel="noreferrer noopener">GitHub の Issues</a>（質問・不具合の報告）</dd>
-                    </dl>
-                    </div>
-                    <div class="r">
                     <div class="install">
                         <h3>インストール</h3>
-                        <p class="install-note">配布ファイルには署名がないため、初回だけ OS の警告が表示されます。</p>
+                        <p class="install-note">署名がないため、ダウンロードしたファイルから入れると初回だけ OS の警告が出ます。右のコマンドで入れた場合は出ません。</p>
                         <div class="os">
                             <h4>Windows</h4>
                             <ol>
-                                <li>ダウンロードした「ClauseDown-Setup-（版）.exe」を開きます。</li>
-                                <li>「Windows によって PC が保護されました」と表示されたら、「詳細情報」→「実行」を押します。</li>
-                                <li>インストール先を選び、完了したら ClauseDown を起動します。</li>
+                                <li>「ClauseDown-Setup-（版）.exe」を開きます。</li>
+                                <li>「PC が保護されました」と出たら、「詳細情報」→「実行」を押します。</li>
+                                <li>インストール先を選んで完了します。</li>
                             </ol>
                         </div>
                         <div class="os">
                             <h4>macOS</h4>
                             <ol>
-                                <li>ダウンロードした「ClauseDown-（版）-arm64.dmg」を開き、ClauseDown を「アプリケーション」フォルダにドラッグします。</li>
-                                <li>初回の起動で開けないと表示されたら、「システム設定」→「プライバシーとセキュリティ」の「このまま開く」を押します。</li>
+                                <li>dmg を開き、ClauseDown を「アプリケーション」へドラッグします。</li>
+                                <li>開けないと出たら、「システム設定」→「プライバシーとセキュリティ」の「このまま開く」を押します。</li>
                             </ol>
                         </div>
-                        <p class="links"><a data-changelog href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest" target="_blank" rel="noreferrer noopener">最新版の変更点</a>　<a href="docs/manual/" target="_blank" rel="noreferrer noopener">操作マニュアル</a></p>
+                    </div>
+                    <p class="links"><a data-changelog href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest" target="_blank" rel="noreferrer noopener">最新版の変更点</a>　<a href="docs/manual/" target="_blank" rel="noreferrer noopener">操作マニュアル</a>　<a href="https://github.com/SHIOZAKI-Shota/ClauseDown/issues" target="_blank" rel="noreferrer noopener">質問・不具合の報告</a></p>
+                    </div>
+                    <div class="r">
+                    <div class="dl-cards">
+                        <div class="dl-card" data-os="win">
+                            <h3>Windows<span>64 ビット</span></h3>
+                            <p class="dl-file" data-file="win">ClauseDown-Setup-（版）.exe</p>
+                            <a class="btn" data-get="win" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest" target="_blank" rel="noreferrer noopener">Windows 版をダウンロード</a>
+                            <ul class="cmds">
+                                <li><span class="cl">PowerShell</span><span class="cc"><code>irm https://shiozaki-shota.github.io/ClauseDown/install.ps1 | iex</code><button class="copy" type="button" aria-label="コマンドをコピー" title="コピー"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg></button></span></li>
+                                <li class="soon"><span class="cl">winget</span><span class="cc"><code>winget install ShiozakiShota.ClauseDown</code><button class="copy" type="button" aria-label="コマンドをコピー" title="コピー"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg></button></span></li>
+                                <li><span class="cl">Git Bash</span><span class="cc"><code>curl -fsSL https://shiozaki-shota.github.io/ClauseDown/install.sh | sh</code><button class="copy" type="button" aria-label="コマンドをコピー" title="コピー"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg></button></span></li>
+                            </ul>
+                        </div>
+                        <div class="dl-card" data-os="mac">
+                            <h3>macOS<span>Apple シリコン</span></h3>
+                            <p class="dl-file" data-file="mac">ClauseDown-（版）-arm64.dmg</p>
+                            <a class="btn" data-get="mac" href="https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest" target="_blank" rel="noreferrer noopener">macOS 版をダウンロード</a>
+                            <ul class="cmds">
+                                <li><span class="cl">ターミナル</span><span class="cc"><code>curl -fsSL https://shiozaki-shota.github.io/ClauseDown/install.sh | sh</code><button class="copy" type="button" aria-label="コマンドをコピー" title="コピー"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg></button></span></li>
+                                <li class="soon"><span class="cl">Homebrew</span><span class="cc"><code>brew install --cask shiozaki-shota/tap/clausedown</code><button class="copy" type="button" aria-label="コマンドをコピー" title="コピー"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg></button></span></li>
+                            </ul>
+                        </div>
+                        <p class="copied" role="status" aria-live="polite"></p>
                     </div>
                     </div>
                 </div>
@@ -3059,16 +3183,17 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
             const ua = navigator.userAgent
             const myOs = /Mac/i.test(ua) && !/iPhone|iPad/i.test(ua) ? 'mac' : /Windows/i.test(ua) ? 'win' : null
             const OS_LABEL = { win: 'Windows 版', mac: 'macOS 版' }
-            const setDownloads = (urls, rel) => {
-                const other = myOs === 'win' ? 'mac' : 'win'
-                for (const a of document.querySelectorAll('[data-dl="main"]')) {
-                    if (myOs) a.textContent = `${OS_LABEL[myOs]}をダウンロード${rel ? `（${rel.tag_name}）` : ''}`
-                    if (myOs && urls[myOs]) a.href = urls[myOs]
-                }
-                for (const a of document.querySelectorAll('[data-dl="short"]')) if (myOs && urls[myOs]) a.href = urls[myOs]
-                for (const a of document.querySelectorAll('[data-dl="alt"]')) {
-                    if (myOs) a.textContent = other === 'mac' ? 'macOS（Apple シリコン）版はこちら' : 'Windows 版はこちら'
-                    if (myOs && urls[other]) a.href = urls[other]
+            const setDownloads = (assets, rel) => {
+                for (const a of document.querySelectorAll('[data-dl="main"]')) if (myOs) a.textContent = `${OS_LABEL[myOs]}をダウンロード${rel ? `（${rel.tag_name}）` : ''}`
+                for (const a of document.querySelectorAll('[data-dl="alt"]')) if (myOs) a.textContent = myOs === 'win' ? 'macOS（Apple シリコン）版はこちら' : 'Windows 版はこちら'
+                for (const os of ['win', 'mac']) {
+                    const f = assets[os]
+                    if (!f) continue
+                    const a = document.querySelector(`[data-get="${os}"]`)
+                    a.href = f.browser_download_url
+                    a.removeAttribute('target')
+                    a.removeAttribute('rel')
+                    document.querySelector(`[data-file="${os}"]`).textContent = `${f.name}（${Math.round(f.size / 1048576)} MB）`
                 }
                 if (!rel) return
                 const d = new Date(rel.published_at)
@@ -3079,15 +3204,36 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                     a.textContent = `${rel.tag_name} の変更点`
                 }
             }
+            if (myOs) document.querySelector(`.dl-card[data-os="${myOs}"]`)?.classList.add('mine')
             setDownloads({}, null)
             fetch('https://api.github.com/repos/SHIOZAKI-Shota/ClauseDown/releases/latest')
                 .then((r) => (r.ok ? r.json() : null))
                 .then((rel) => {
                     if (!rel) return
-                    const find = (re) => rel.assets?.find((x) => re.test(x.name))?.browser_download_url
-                    setDownloads({ win: find(/\.exe$/), mac: find(/\.dmg$/) }, rel)
+                    const find = (re) => rel.assets?.find((x) => re.test(x.name))
+                    setDownloads({ win: find(/^ClauseDown-Setup-[\d.]+\.exe$/), mac: find(/-arm64\.dmg$/) }, rel)
                 })
                 .catch(() => {})
+            const copied = document.querySelector('.copied')
+            let copiedTimer = 0
+            for (const b of document.querySelectorAll('.copy')) {
+                b.addEventListener('click', async () => {
+                    const text = b.previousElementSibling.textContent
+                    try {
+                        await navigator.clipboard.writeText(text)
+                    } catch {
+                        return
+                    }
+                    document.querySelectorAll('.copy.done').forEach((x) => x.classList.remove('done'))
+                    b.classList.add('done')
+                    copied.textContent = 'コピーしました'
+                    clearTimeout(copiedTimer)
+                    copiedTimer = setTimeout(() => {
+                        b.classList.remove('done')
+                        copied.textContent = ''
+                    }, 1800)
+                })
+            }
 
             const AUTO = root.classList.contains('motion')
             function tabSet(section, intervals) {

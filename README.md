@@ -54,6 +54,19 @@ ClauseDown は法律案・条例・契約書・規約・規程など、「第○
 
   <a href="docs/manual/README.md#16-ai-に確認や書き直しを頼む"><img src="docs/manual/images/feature-ai.png" width="720" alt="AI に頼む"></a>
 
+## インストール
+
+[公式サイト](https://shiozaki-shota.github.io/ClauseDown/#get) か [Releases](https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest) からダウンロードするか、次のコマンドで入れます。コマンドで入れたときは、署名がないことによる OS の警告は出ません。
+
+| OS | 方法 | コマンド |
+|---|---|---|
+| Windows | PowerShell | `irm https://shiozaki-shota.github.io/ClauseDown/install.ps1 \| iex` |
+| Windows | winget | `winget install ShiozakiShota.ClauseDown` |
+| macOS（Apple シリコン） | ターミナル | `curl -fsSL https://shiozaki-shota.github.io/ClauseDown/install.sh \| sh` |
+| macOS（Apple シリコン） | Homebrew | `brew install --cask shiozaki-shota/tap/clausedown` |
+
+Windows の Git Bash でも、macOS と同じ curl のコマンドで入れられます。新しい版は、アプリの「このソフトについて」から入れられます（[アプリを更新する](docs/manual/README.md#アプリを更新する)）。`winget upgrade ShiozakiShota.ClauseDown`・`brew upgrade --cask shiozaki-shota/tap/clausedown`、またはインストールのコマンドの再実行でも更新できます。
+
 ## 使い方
 
 操作の手順はすべて [操作マニュアル](docs/manual/README.md)
@@ -152,7 +165,9 @@ npm run release    # dist と同じものを作り、GitHub Releases に公開�
 
 VS Code のターミナルでは `ELECTRON_RUN_AS_NODE=1` が設定されていることがあります。`npm run dev` は自動で外しますが、`electron .` などを直接実行するときは外してください。
 
-macOS 版は Apple の Developer ID で署名・公証していません（アドホック署名）。そのため、ダウンロードした dmg から入れたアプリは、初回の起動を macOS が止めます。「システム設定」→「プライバシーとセキュリティ」の「このまま開く」で起動できます。また、アプリの中からの自動更新はできないので、macOS では更新の確認だけを行い、配布ページを開きます（`src/main/updater.ts`）。
+macOS 版は Apple の Developer ID で署名・公証していません（アドホック署名）。そのため、ダウンロードした dmg から入れたアプリは、初回の起動を macOS が止めます。「システム設定」→「プライバシーとセキュリティ」の「このまま開く」で起動できます。また、アプリの中からの自動更新はできないので、macOS では更新の確認だけを行い、配布ページを開きます（`src/main/updater.ts`）。ただし Homebrew で入れたときは、アプリを閉じてから `brew upgrade --cask shiozaki-shota/tap/clausedown` を実行し、起動し直します（`src/main/brew.ts`）。インストールのスクリプト（`site/install.sh`）と Homebrew の cask（`packaging/homebrew/clausedown.rb`）は検疫属性を外すので、「このまま開く」は要りません。
+
+リリースを公開すると、`.github/workflows/distribute.yml` が winget-pkgs への PR と、Homebrew の tap（[SHIOZAKI-Shota/homebrew-tap](https://github.com/SHIOZAKI-Shota/homebrew-tap)）の更新を行います。トークン（public_repo）をシークレット `DISTRIBUTE_TOKEN` に登録しておきます。
 
 ### GitHub・GitLab との接続の準備
 
