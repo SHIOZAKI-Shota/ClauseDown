@@ -193,3 +193,45 @@ export async function signPdf(bytes: Uint8Array, opts: SignPdfOptions): Promise<
         throw new Error(t().signing.errors.sign((e as Error).message))
     }
 }
+
+export interface PdfSignatureInfo {
+    signer: string
+    signedAt?: string
+}
+
+function pdfDate(raw: string | undefined): string | undefined {
+    const m = raw ? /D:(\d{4})(\d{2})(\d{2})(\d{2})?(\d{2})?(\d{2})?/.exec(raw) : null
+    if (!m) return undefined
+    const [, y, mo, d, h = '00', mi = '00', s = '00'] = m
+    return `${y}-${mo}-${d}T${h}:${mi}:${s}`
+}
+
+export function listSignatures(bytes: Uint8Array): PdfSignatureInfo[] {
+    const text = Buffer.from(bytes).toString('latin1')
+    const out: PdfSignatureInfo[] = []
+    for (const m of text.matchAll(/\/ByteRange\s*\[\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s*\]/g)) {
+        const [a, b, c] = m.slice(1, 4).map(Number)
+        if (!(a + b < c && c <= text.length)) continue
+        const hexContents = text
+            .slice(a + b, c)
+            .replace(/[<>\s]/g, '')
+            .replace(/(00)+$/, '')
+        const around = text.slice(Math.max(0, m.index - 2000), Math.min(text.length, c + 2000))
+        const signedAt = pdfDate(/\/M\s*\(([^)]*)\)/.exec(around)?.[1])
+        let signer = ''
+        try {
+            const info = new pkijs.ContentInfo({ schema: asn1js.fromBER(Buffer.from(hexContents, 'hex')).result })
+            const sd = new pkijs.SignedData({ schema: info.content })
+            const sid = sd.signerInfos[0]?.sid
+            const certs = (sd.certificates ?? []).filter((x): x is pkijs.Certificate => x instanceof pkijs.Certificate)
+            const cert =
+                (sid instanceof pkijs.IssuerAndSerialNumber && certs.find((x) => x.serialNumber.isEqual(sid.serialNumber) && x.issuer.isEqual(sid.issuer))) ||
+                certs[0]
+            if (cert) signer = displayName(cert.subject)
+        } catch {
+            continue
+        }
+        out.push({ signer, ...(signedAt ? { signedAt } : {}) })
+    }
+    return out
+}

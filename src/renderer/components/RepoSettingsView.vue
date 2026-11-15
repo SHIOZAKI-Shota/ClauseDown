@@ -81,6 +81,10 @@ function onStyle(v: StyleOverride) {
 }
 
 const policySigned = ref(false)
+async function exportSigners() {
+    const out = await app.run(() => window.api.exportAllowedSigners(app.repoDir!))
+    if (out) app.notifyExported(t.value.signing.policy.exported, out)
+}
 const rules = reactive<RepoRules>({ ...app.rules, approvers: [...app.rules.approvers] })
 watch(
     () => app.rules,
@@ -134,6 +138,9 @@ watch(
 
         <SettingsSection id="rules" :title="t.repo.settings.sections.rules">
             <PolicyRules v-if="!isDemo()" @status="(st) => (policySigned = !!st?.signed)" />
+            <SettingRow v-if="!isDemo()" :label="t.signing.policy.exportSigners" :description="t.signing.policy.exportSignersDesc">
+                <UButton :label="t.signing.policy.exportButton" size="sm" color="neutral" variant="outline" icon="i-lucide-download" @click="exportSigners" />
+            </SettingRow>
             <template v-if="!policySigned">
                 <SettingRow :label="t.repo.settings.requireApproval" :description="t.repo.settings.requireApprovalDesc">
                     <USwitch v-model="rules.requireApproval" />

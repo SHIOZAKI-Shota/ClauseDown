@@ -1,11 +1,14 @@
 import { BrowserWindow, dialog, net } from 'electron'
-import { promises as fsp } from 'node:fs'
+import { existsSync, promises as fsp } from 'node:fs'
+import { basename, dirname, join } from 'node:path'
 import { HttpTimestampAuthority, type Signer } from '@libpdf/core'
 import { t } from '../shared/i18n'
 import { cleanSigning, DEFAULT_SIGNING, TSA_PRESETS, type CertInfo, type SigningSettings } from '../shared/signing'
-import type { DeepPartial, SigningStatus } from '../shared/api'
+import type { DeepPartial, ReceivedPdf, ReceivedPdfInput, SigningStatus } from '../shared/api'
 import { loadSecret, saveSecret, updateSettings } from './settings'
-import { certSummary, checkTsaUrl, createSelfSigned, keySigner, p12Signer, signPdf, TsaError, type Tsa } from './pdf-sign'
+import { certSummary, checkTsaUrl, createSelfSigned, keySigner, listSignatures, p12Signer, signPdf, TsaError, type Tsa } from './pdf-sign'
+import { listDeliveries, recordReceived } from './workflow'
+import { author, identity } from './git-base'
 import { appKey, externalConfig, signingSettings } from './signing'
 import { mynaAvailable, openMynaSigner } from './myna'
 
@@ -184,4 +187,47 @@ async function askWithoutTsa(parent: BrowserWindow | null, e: Error): Promise<bo
     }
     const r = parent ? await dialog.showMessageBox(parent, box) : await dialog.showMessageBox(box)
     return r.response === 0
+}
+
+const MAX_PDF = 100 * 1024 * 1024
+const picked = new Set<string>()
+
+export async function pickReceivedPdf(parent: BrowserWindow | null): Promise<ReceivedPdf | null> {
+    const opts = { properties: ['openFile'] as 'openFile'[], filters: [{ name: 'PDF', extensions: ['pdf'] }] }
+    const r = parent ? await dialog.showOpenDialog(parent, opts) : await dialog.showOpenDialog(opts)
+    const path = r.filePaths[0]
+    if (r.canceled || !path) return null
+    const stat = await fsp.stat(path)
+    if (stat.size > MAX_PDF) throw new Error(t().signing.received.tooLarge)
+    const bytes = new Uint8Array(await fsp.readFile(path))
+    picked.add(path)
+    return { path, name: basename(path), signatures: listSignatures(bytes) }
+}
+
+function freePath(folder: string, source: string): string {
+    const base = `${basename(source).replace(/\.pdf$/i, '')}${t().signing.received.suffix}`
+    let out = join(folder, `${base}.pdf`)
+    for (let i = 2; existsSync(out); i++) out = join(folder, `${base} (${i}).pdf`)
+    return out
+}
+
+export async function saveReceivedPdf(parent: BrowserWindow | null, input: ReceivedPdfInput): Promise<string | null> {
+    if (!picked.has(input.path)) throw new Error(t().signing.received.notPicked)
+    const delivery = (await listDeliveries(input.dir)).find((d) => d.id === input.deliveryId)
+    if (!delivery) return null
+    const bytes = new Uint8Array(await fsp.readFile(input.path))
+    let out: string | null = null
+    if (delivery.folder && existsSync(delivery.folder)) out = freePath(delivery.folder, input.path)
+    else {
+        const opts = { defaultPath: freePath(dirname(input.path), input.path), filters: [{ name: 'PDF', extensions: ['pdf'] }] }
+        const r = parent ? await dialog.showSaveDialog(parent, opts) : await dialog.showSaveDialog(opts)
+        out = r.canceled || !r.filePath ? null : r.filePath
+    }
+    if (!out) return null
+    await fsp.writeFile(out, bytes)
+    picked.delete(input.path)
+    const me = (await identity(input.dir).catch(() => null))?.name ?? (await author(input.dir)).name
+    const entry = { file: basename(out), at: new Date().toISOString(), by: me, signers: listSignatures(bytes).map((s) => s.signer) }
+    await recordReceived(input.dir, delivery.id, entry)
+    return out
 }

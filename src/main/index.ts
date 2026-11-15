@@ -177,6 +177,7 @@ function assertPicked(dir: unknown) {
 }
 
 const DIR_FIRST = new Set([
+    'exportAllowedSigners',
     'verifyCommits',
     'publishSigningKey',
     'policyStatus',
@@ -355,7 +356,7 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
         const kept = new Set((next.repos ?? []).map((r) => norm(r.dir)))
         await updateSettings((cur) => {
             for (const r of cur.repos ?? []) if (!kept.has(norm(r.dir))) git.forgetRepo(r.dir)
-            return { ...next, mcp: cur.mcp, ai: cur.ai }
+            return { ...next, mcp: cur.mcp, ai: cur.ai, signing: cur.signing, policyPins: cur.policyPins }
         })
         applyLocale(await loadSettings())
     },
@@ -515,6 +516,12 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
         await assertAllowedDir(dir)
         return verify.forgePublicKeys(dir, String(login))
     },
+    pickReceivedPdf: () => sign.pickReceivedPdf(win),
+    saveReceivedPdf: async (input) => {
+        await assertAllowedDir(input?.dir)
+        return sign.saveReceivedPdf(win, input)
+    },
+    exportAllowedSigners: (dir) => verify.exportAllowedSigners(win, dir),
     verifyCommits: async (dir, oids) => {
         await assertAllowedDir(dir)
         return verify.verifyCommits(dir, Array.isArray(oids) ? oids.map(String) : [])

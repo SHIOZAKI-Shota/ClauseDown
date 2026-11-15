@@ -222,6 +222,7 @@ export interface DeliveryRecord {
     memo: string
     items: DeliveryItem[]
     signed?: boolean
+    received?: { file: string; at: string; by: string; signers: string[] }[]
     files: string[]
     folder: string
     at: string
@@ -447,6 +448,9 @@ export interface Api {
     cosignPolicy(dir: string, file: string): Promise<PolicyStatus>
     acceptGenesisChange(dir: string): Promise<PolicyStatus>
     forgePublicKeys(dir: string, login: string): Promise<string[]>
+    pickReceivedPdf(): Promise<ReceivedPdf | null>
+    saveReceivedPdf(input: ReceivedPdfInput): Promise<string | null>
+    exportAllowedSigners(dir: string): Promise<string | null>
     listSeals(): Promise<SealMeta[]>
     saveSeal(meta: { kind: SealMeta['kind']; label: string }, png: Uint8Array): Promise<SealMeta>
     readSeal(id: string): Promise<Uint8Array>
@@ -600,4 +604,16 @@ export interface PolicyStatus {
     warnings: PolicyWarning[]
     pending: PolicyPending[]
     me: { name: string; login?: string; publicKey?: string; previousKeys: string[]; isAdmin: boolean; isApprover: boolean }
+}
+
+export interface ReceivedPdf {
+    path: string
+    name: string
+    signatures: { signer: string; signedAt?: string }[]
+}
+
+export interface ReceivedPdfInput {
+    path: string
+    dir: string
+    deliveryId: string
 }

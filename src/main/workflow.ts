@@ -303,6 +303,14 @@ async function rememberFolder(dir: string, id: string, folder: string) {
     await fsp.writeFile(folderFile(dir), JSON.stringify(all, null, 2), 'utf8')
 }
 
+export async function recordReceived(dir: string, id: string, entry: NonNullable<DeliveryRecord['received']>[number]): Promise<void> {
+    if (!/^[\w-]+$/.test(id)) return
+    const name = `${RECORD.deliveries}${id}.json`
+    const rec = (await readRecords<DeliveryRecord>(dir, RECORD.deliveries)).find((d) => d?.id === id)
+    if (!rec) return
+    await writeRecord(dir, name, { ...rec, folder: '', received: [...(rec.received ?? []), entry] })
+}
+
 export async function listDeliveries(dir: string, docPath?: string): Promise<DeliveryRecord[]> {
     const list = (await readRecords<DeliveryRecord>(dir, RECORD.deliveries)).filter((d) => d && isStr(d.docPath) && isStr(d.at) && Array.isArray(d.items))
     const folders = await deliveryFolders(dir)

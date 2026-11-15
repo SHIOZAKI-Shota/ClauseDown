@@ -189,6 +189,23 @@ export const signing: Messages['signing'] = {
         requireSigned: 'Do not count unsigned approvals',
         requireSignedDesc: 'Only approvals signed with an app key count toward merging. The merge commit is also made and signed on this PC',
     },
+    received: {
+        fromDelivery: 'Save the signed PDF you received',
+        title: 'Save a returned signed PDF',
+        file: (name) => `File: ${name}`,
+        existing: 'Signatures in the PDF',
+        none: 'The PDF has no signatures',
+        unknownSigner: '(unknown signer)',
+        note: 'The PDF is copied unchanged to the delivery folder and added to the delivery record. Signatures are not checked here, so check them in a PDF viewer',
+        save: 'Save',
+        done: (path) => `Saved the signed PDF: ${path}`,
+        record: 'Signed PDFs received',
+        recordRow: (file, by) => `${file} (${by})`,
+        signers: (names) => `Signed by: ${names}`,
+        suffix: '_received',
+        tooLarge: 'The PDF exceeds the size limit (100 MB)',
+        notPicked: 'Choose the PDF to save again',
+    },
     policy: {
         errors: {
             alreadySigned: 'These rules are already signed',
@@ -214,6 +231,12 @@ export const signing: Messages['signing'] = {
             rollback: (n) => `The rules were rolled back (this PC had verified up to version ${n}). The previous rules are still in use`,
             removed: 'The signed rules were deleted. The previous rules are still in use',
         },
+        exportSigners: 'Export key list (allowed_signers)',
+        exportSignersDesc:
+            'Exports keys from the approval rules, GitHub/GitLab and the signer list in git allowed_signers format. Set it as git config gpg.ssh.allowedSignersFile to check version signatures with git verify-commit outside the app',
+        exportButton: 'Export',
+        exported: 'Exported the key list',
+        toSign: (n) => `Approval rules change (version ${n})`,
         approvalCount: (n, need) => `${n} of ${need} approvals`,
         rotate: 'Apply key rotation',
         rotateDesc:

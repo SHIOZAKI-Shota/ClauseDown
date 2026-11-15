@@ -184,6 +184,31 @@ describe('承認者の鍵の固定', () => {
     })
 })
 
+describe('鍵一覧の書き出しと、確認待ち', () => {
+    it('承認規則の鍵は有効期間付きで書き出し、署名待ちは管理者で未署名のときだけ確認待ちになる', async () => {
+        const dir = await repo()
+        as('A')
+        await policy.signLegacyRules(dir)
+        const { allowedSigners } = await import('../src/main/verify')
+        const text = await allowedSigners(dir)
+        expect(text).toMatch(new RegExp(`^管理者A namespaces="git",valid-after="\\d{14}Z" ${keys.A.publicKey.replace(/[+/]/g, '\\$&')}$`, 'm'))
+
+        let st = await policy.policyStatus(dir)
+        st = await policy.proposePolicy(dir, { ...st.draft, admins: [person('A'), person('B')], adminThreshold: 2 })
+        as('B')
+        st = await policy.cosignPolicy(dir, st.pending[0].file)
+        as('A')
+        st = await policy.proposePolicy(dir, { ...st.draft, approvalThreshold: 1 })
+        const toSign = (x: typeof st) => x.pending.filter((p) => x.me.isAdmin && !p.signedByMe)
+        expect(toSign(st)).toHaveLength(0)
+        as('B')
+        expect(toSign(await policy.policyStatus(dir))).toHaveLength(1)
+        as('C')
+        expect(toSign(await policy.policyStatus(dir))).toHaveLength(0)
+        as('A')
+    })
+})
+
 describe('必要な承認の人数', () => {
     it('2 人必要なら 1 人では反映できず、同じ人の 2 回は 1 人と数える', async () => {
         const { reviewStatus } = await import('../src/shared/review')

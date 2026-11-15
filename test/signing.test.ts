@@ -68,6 +68,19 @@ describe('版の署名（アプリの鍵）', () => {
         expect(log.trim().split('\n')[0]).toBe('G')
     })
 
+    it.skipIf(!HAS_GIT)('書き出した鍵の一覧（allowed_signers）で、本物の git が版の署名を確認できる', async () => {
+        const { allowedSigners } = await import('../src/main/verify')
+        const text = await allowedSigners(dir)
+        expect(text).toContain(`t@example.com namespaces="git" ${key.publicKey}`)
+        const file = join(dir, '.git', 'exported_signers')
+        fs.writeFileSync(file, text)
+        const out = execFileSync('git', ['-c', 'gpg.format=ssh', '-c', `gpg.ssh.allowedSignersFile=${file}`, 'verify-commit', 'HEAD'], {
+            cwd: dir,
+            stdio: ['ignore', 'pipe', 'pipe'],
+        })
+        expect(out).toBeDefined()
+    })
+
     it('改ざんした版は git が受け付けない', () => {
         if (!HAS_GIT) return
         const raw = execFileSync('git', ['cat-file', 'commit', 'HEAD'], { cwd: dir }).toString().replace('初版', '偽版')

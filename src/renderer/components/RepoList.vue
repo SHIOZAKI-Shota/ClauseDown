@@ -133,8 +133,8 @@ function onDragEnd() {
                             <UIcon :name="missing(r.dir) ? 'i-lucide-folder-x' : r.url ? 'i-lucide-cloud' : 'i-lucide-hard-drive'" />
                             <span class="nm">{{ r.name }}</span>
                             <UBadge
-                                v-if="r.dir === app.repoDir && app.toReview.length"
-                                :label="t.repo.list.toReview(app.toReview.length)"
+                                v-if="r.dir === app.repoDir && app.reviewCount"
+                                :label="t.repo.list.toReview(app.reviewCount)"
                                 color="warning"
                                 variant="subtle"
                                 size="sm"

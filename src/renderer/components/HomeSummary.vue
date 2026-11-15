@@ -11,6 +11,7 @@ const openFolder = () => app.run(() => window.api.openPath(app.repoDir!))
 function review() {
     const b = app.toReview[0]
     if (b) app.dialog = { kind: 'review', branch: b.name }
+    else if (app.policyToSign.length) app.openSettings('repo', 'rules')
 }
 </script>
 
@@ -34,8 +35,8 @@ function review() {
                 </div>
             </template>
         </UPopover>
-        <button v-if="app.toReview.length" class="fact primary" @click="review">
-            <UIcon name="i-lucide-user-check" />{{ t.home.summary.toReview(app.toReview.length) }}
+        <button v-if="app.reviewCount" class="fact primary" @click="review">
+            <UIcon name="i-lucide-user-check" />{{ t.home.summary.toReview(app.reviewCount) }}
         </button>
         <UTooltip :text="t.home.summary.openFolder">
             <UButton icon="i-lucide-folder-open" size="xs" color="neutral" variant="ghost" :aria-label="t.home.summary.openFolder" @click="openFolder" />

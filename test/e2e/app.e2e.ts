@@ -203,6 +203,39 @@ describe('画面', () => {
         if (process.env.CLAUSEDOWN_SHOTS) await win.screenshot({ path: join(process.env.CLAUSEDOWN_SHOTS, 'policy.png') })
     })
 
+    it('受領：返送された署名済み PDF を、変更せずに納品フォルダへ保存し、納品の記録に残す', async () => {
+        const pdfMethod = await win.evaluate('window.api.signingStatus().then((s) => s.signing.pdf.method)')
+        expect(pdfMethod).toBe('self')
+        const outDir = join(tmp, 'delivered')
+        fs.mkdirSync(outDir)
+        await app.evaluate(({ dialog }, path) => {
+            dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [path] })) as typeof dialog.showOpenDialog
+        }, outDir)
+        const oid = await win.evaluate(`window.api.log(${JSON.stringify(dir)}, ${JSON.stringify(DOC)}).then((l) => l[0].oid)`)
+        const input = { docPath: DOC, oid, to: '相手方', memo: '', items: ['docPdf'], publishRelease: false, sign: true }
+        const rec = (await win.evaluate(`window.api.deliver(${JSON.stringify(dir)}, ${JSON.stringify(input)})`)) as {
+            id: string
+            folder: string
+            files: string[]
+        }
+        const returned = join(rec.folder, rec.files[0])
+        await app.evaluate(({ dialog }, path) => {
+            dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [path] })) as typeof dialog.showOpenDialog
+        }, returned)
+        const picked = (await win.evaluate('window.api.pickReceivedPdf()')) as { path: string; signatures: { signer: string }[] }
+        expect(picked.signatures).toHaveLength(1)
+        const out = (await win.evaluate(`window.api.saveReceivedPdf(${JSON.stringify({ path: picked.path, dir, deliveryId: rec.id })})`)) as string
+        expect(out).toBe(join(rec.folder, rec.files[0].replace(/\.pdf$/, '_受領.pdf')))
+        expect(fs.readFileSync(out).equals(fs.readFileSync(returned))).toBe(true)
+        const list = (await win.evaluate(`window.api.listDeliveries(${JSON.stringify(dir)}, ${JSON.stringify(DOC)})`)) as {
+            id: string
+            received?: { file: string; signers: string[] }[]
+        }[]
+        const got = list.find((d) => d.id === rec.id)?.received
+        expect(got?.map((x) => x.file)).toEqual([out.split(/[\\/]/).pop()])
+        expect(got?.[0].signers).toHaveLength(1)
+    })
+
     it('ここまでの画面でエラーが出ていない', () => {
         expect(errors).toEqual([])
     })

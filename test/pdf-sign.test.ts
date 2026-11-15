@@ -6,7 +6,7 @@ import * as asn1js from 'asn1js'
 import * as pkijs from 'pkijs'
 import { describe, expect, it } from 'vitest'
 import { setLocale } from '../src/shared/i18n'
-import { assertValid, certSummary, createSelfSigned, keySigner, p12Signer, signPdf, TsaError } from '../src/main/pdf-sign'
+import { assertValid, certSummary, createSelfSigned, keySigner, listSignatures, p12Signer, signPdf, TsaError } from '../src/main/pdf-sign'
 
 setLocale('ja')
 
@@ -125,6 +125,15 @@ describe('PDF の電子署名', () => {
         expect(ok).toBe(true)
         expect(attrs).toContain('1.2.840.113549.1.9.16.2.47')
         expect(attrs).not.toContain('1.2.840.113549.1.9.5')
+    })
+
+    it('署名の一覧：複数の署名がある PDF から、署名者名を署名順に読み取る', async () => {
+        const first = await createSelfSigned({ name: '甲 一郎' })
+        const second = await createSelfSigned({ name: '乙 二郎' })
+        const once = await signPdf(PRINTED, { signer: await keySigner(first.key, first.cert) })
+        const twice = await signPdf(once, { signer: await keySigner(second.key, second.cert) })
+        expect(listSignatures(twice).map((s) => s.signer)).toEqual(['甲 一郎', '乙 二郎'])
+        expect(listSignatures(PRINTED)).toEqual([])
     })
 
     it('署名した後に 1 バイトでも変えると検証に失敗する', async () => {

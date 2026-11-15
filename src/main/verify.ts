@@ -157,3 +157,45 @@ export async function forgePublicKeys(dir: string, login: string): Promise<strin
     if (!m || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(login)) return []
     return forgeKeys(m.base, login)
 }
+
+const sshTime = (iso: string) => {
+    const d = new Date(iso)
+    const p = (n: number) => String(n).padStart(2, '0')
+    return `${d.getUTCFullYear()}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}${p(d.getUTCHours())}${p(d.getUTCMinutes())}${p(d.getUTCSeconds())}Z`
+}
+const principal = (v: string) => v.trim().replace(/[\s,"*?!]+/g, '_') || 'unknown'
+
+export async function allowedSigners(dir: string): Promise<string> {
+    const settings = await loadSettings()
+    const m = matchRemote(await remoteUrl(dir).catch(() => ''), knownBases(settings))
+    const host = m ? new URL(m.base).host : ''
+    const lines = new Map<string, string>()
+    const add = (who: string, publicKey: string, validFrom?: string, validUntil?: string) => {
+        const key = publicKey.trim().split(/\s+/).slice(0, 2).join(' ')
+        if (!blobOfPublicKey(key)) return
+        const opts = ['namespaces="git"']
+        if (validFrom) opts.push(`valid-after="${sshTime(validFrom)}"`)
+        if (validUntil) opts.push(`valid-before="${sshTime(validUntil)}"`)
+        const line = `${principal(who)} ${opts.join(',')} ${key}`
+        lines.set(`${principal(who)} ${key} ${validFrom ?? ''}`, line)
+    }
+    const policy = (await loadPolicy(dir).catch(() => null))?.doc
+    for (const p of [...(policy?.approvers ?? []), ...(policy?.admins ?? [])])
+        for (const k of p.keys) add(p.login ?? p.name, k.publicKey, k.validFrom, k.validUntil)
+    for (const [, e] of await keyring(dir)) {
+        if (e.source === 'policy') continue
+        const who =
+            e.source === 'own' ? settings.author.email || e.name || 'me' : e.source === 'forge' && e.login ? `${e.login}@${host}` : (e.login ?? e.name ?? '')
+        add(who, e.publicKey)
+    }
+    return [...lines.values()].join('\n') + '\n'
+}
+
+export async function exportAllowedSigners(parent: Electron.BrowserWindow | null, dir: string): Promise<string | null> {
+    const { dialog } = await import('electron')
+    const opts = { defaultPath: 'allowed_signers' }
+    const r = parent ? await dialog.showSaveDialog(parent, opts) : await dialog.showSaveDialog(opts)
+    if (r.canceled || !r.filePath) return null
+    await fs.promises.writeFile(r.filePath, await allowedSigners(dir), 'utf8')
+    return r.filePath
+}
