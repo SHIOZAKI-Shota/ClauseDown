@@ -188,18 +188,18 @@ describe('画面', () => {
         await win.screenshot({ path: join(tmp, '..', 'clausedown-seal-e2e.png') })
     })
 
-    it('決まりの署名：署名なしの決まりに署名し、承認者を足す変更を提案すると第 2 版になる', async () => {
+    it('規則の署名：署名なしの規則に署名し、承認者を足す変更を提案すると第 2 版になる', async () => {
         await store(`s.openSettings('repo', 'rules')`)
-        await seen('署名なしの決まり')
-        await win.getByRole('button', { name: '決まりに署名' }).click()
-        await seen('署名済みの決まり（第 1 版）')
+        await seen('署名なしの規則')
+        await win.getByRole('button', { name: '規則に署名' }).click()
+        await seen('署名済みの規則（第 1 版）')
         const names = win.getByPlaceholder('名前', { exact: true }).filter({ visible: true })
         const rows = await names.count()
         await win.getByRole('button', { name: '追加', exact: true }).filter({ visible: true }).first().click()
         await expect.poll(() => names.count()).toBe(rows + 1)
         await names.first().fill('山田')
         await win.getByRole('button', { name: '変更を提案' }).click()
-        await seen('署名済みの決まり（第 2 版）')
+        await seen('署名済みの規則（第 2 版）')
         if (process.env.CLAUSEDOWN_SHOTS) await win.screenshot({ path: join(process.env.CLAUSEDOWN_SHOTS, 'policy.png') })
     })
 

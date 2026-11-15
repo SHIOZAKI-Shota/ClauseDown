@@ -54,7 +54,7 @@ async function repo() {
     return dir
 }
 
-describe('決まりの署名（版の連鎖）', () => {
+describe('規則の署名（版の連鎖）', () => {
     let dir = ''
     beforeAll(async () => {
         dir = await repo()
@@ -62,7 +62,7 @@ describe('決まりの署名（版の連鎖）', () => {
         await wf.saveRules(dir, { requireApproval: true, approvers: ['田中'] })
     })
 
-    it('署名なしの決まりに署名すると第 1 版になり、承認者と管理者を引き継ぐ', async () => {
+    it('署名なしの規則に署名すると第 1 版になり、承認者と管理者を引き継ぐ', async () => {
         expect((await policy.policyStatus(dir)).signed).toBe(false)
         const st = await policy.signLegacyRules(dir)
         expect(st.signed).toBe(true)
@@ -74,7 +74,7 @@ describe('決まりの署名（版の連鎖）', () => {
         expect((await wf.getRules(dir)).approvers).toEqual(['田中'])
     })
 
-    it('署名済みの決まりを直接書き換える操作は拒否する', async () => {
+    it('署名済みの規則を直接書き換える操作は拒否する', async () => {
         await expect(wf.saveRules(dir, { requireApproval: false, approvers: [] })).rejects.toThrow('署名済み')
     })
 
@@ -92,7 +92,7 @@ describe('決まりの署名（版の連鎖）', () => {
         as('A')
     })
 
-    it('記録用ブランチの決まりの中身を書き換えると、その版から先は採用しない', async () => {
+    it('記録用ブランチの規則の中身を書き換えると、その版から先は採用しない', async () => {
         const [[file, raw]] = (await readRecordEntries<{ envelope: { payload: string } }>(dir, 'policy/')).filter(([f]) => f.startsWith('policy/000002-'))
         const doc = JSON.parse(Buffer.from(raw.envelope.payload, 'base64').toString())
         await writeRecord(dir, file, {
@@ -108,7 +108,7 @@ describe('決まりの署名（版の連鎖）', () => {
 })
 
 describe('管理者の人数（閾値）と、新しい管理者の自己署名', () => {
-    it('2 人の管理者が必要な決まりは、2 人目の署名で確定する', async () => {
+    it('2 人の管理者が必要な規則は、2 人目の署名で確定する', async () => {
         const dir = await repo()
         as('A')
         await policy.signLegacyRules(dir)
@@ -157,7 +157,7 @@ describe('手元の記録による巻き戻し・差し替えの検知', () => {
 })
 
 describe('承認者の鍵の固定', () => {
-    it('決まりに鍵を登録した承認者を、別の鍵で名乗った承認は署名ありと認めない', async () => {
+    it('規則に鍵を登録した承認者を、別の鍵で名乗った承認は署名ありと認めない', async () => {
         const dir = await repo()
         as('A')
         await policy.signLegacyRules(dir)
