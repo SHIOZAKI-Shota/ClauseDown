@@ -1212,6 +1212,93 @@ shot('editor-print.png', async () => {
         .click()
 })
 
+let signingReady = false
+async function signingSetup() {
+    if (signingReady) return
+    await win.evaluate(`(async () => {
+        await window.api.generateSigningKey()
+        await window.api.createSelfSignedCert({ name: ${JSON.stringify(ME.name)}, org: 'Acme Corp.', email: ${JSON.stringify(ME.email)}, years: 3 })
+        await window.api.setSigningPrefs({ pdf: { reason: 'Approval of the agreement', location: 'New York', tsa: { enabled: true } } })
+    })()`)
+    signingReady = true
+}
+
+shot(['setup-signature.png', 'setup-signature-pdf.png'], async () => {
+    await signingSetup()
+    await repoHome(dirs.rules)
+    await store(`s.openSettings('setup', 'signature')`)
+    await wait(1500)
+    await save('setup-signature.png')
+    await win
+        .getByRole('heading', { name: 'PDF signing' })
+        .first()
+        .evaluate((el) => el.scrollIntoView({ block: 'start' }))
+    await wait(800)
+    await save('setup-signature-pdf.png')
+})
+
+shot('repo-policy.png', async () => {
+    await signingSetup()
+    await repoHome(dirs.rules)
+    await win.evaluate(
+        `window.api.policyStatus(${JSON.stringify(dirs.rules)}).then((p) => p.version ? p : window.api.signLegacyRules(${JSON.stringify(dirs.rules)}))`,
+    )
+    await store(`s.openSettings('repo', 'rules')`)
+    await wait(1500)
+    await save('repo-policy.png')
+})
+
+shot(['seal-modal.png', 'feature-signing.png'], async () => {
+    await viewport(1440, 900)
+    await openDoc(dirs.contracts, MSA)
+    await cursorAt('By: ____________', { end: true })
+    await win.getByRole('button', { name: 'Insert' }).first().click()
+    await wait(500)
+    await win.getByRole('menuitem', { name: 'Seal or signature' }).first().click()
+    await wait(800)
+    await win
+        .getByRole('radio', { name: 'Latin (stamp)' })
+        .or(win.getByRole('button', { name: 'Latin (stamp)' }))
+        .first()
+        .click()
+    await win.getByLabel('Name').first().fill(ME.name)
+    await win.getByLabel('Bottom text (optional)').first().fill('ACME CORP.')
+    await wait(800)
+    await save('seal-modal.png')
+    await win.getByRole('button', { name: 'Insert', exact: true }).last().click()
+    await wait(2000)
+    await cursorAt('By: ____________', { end: true })
+    await win
+        .locator('.preview .cd-seal, .preview img')
+        .last()
+        .evaluate((el) => el.scrollIntoView({ block: 'center' }))
+        .catch(() => {})
+    await wait(1200)
+    await save('feature-signing.png')
+    await discard()
+})
+
+shot('received-modal.png', async () => {
+    await app.evaluate(({ ipcMain }) => {
+        ipcMain.removeHandler('pickReceivedPdf')
+        ipcMain.handle('pickReceivedPdf', async () => ({
+            path: '/tmp/Employee Handbook (signed by HR).pdf',
+            name: 'Employee Handbook (signed by HR).pdf',
+            signatures: [
+                { signer: 'Alex Morgan', signedAt: '2026-04-01T01:00:00.000Z' },
+                { signer: 'Jordan Lee', signedAt: '2026-04-02T06:30:00.000Z' },
+            ],
+        }))
+    })
+    await openDoc(dirs.rules, HANDBOOK, 'releases')
+    await wait(1500)
+    await win.getByText('Acme Corp. HR Department').filter({ visible: true }).first().click()
+    await wait(1200)
+    await win.getByRole('button', { name: 'Save the signed PDF you received' }).first().click()
+    await wait(1200)
+    await save('received-modal.png')
+})
+
 // ---------- 実行 ----------
 
 const want = (name: string) => !ONLY.length || ONLY.includes(name)

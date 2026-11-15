@@ -93,6 +93,7 @@ This manual is also available in Japanese: [日本語版](../README.md)
     - [Signing approvals](#signing-approvals)
     - [Signing the rules](#signing-the-rules)
     - [Adding a digital signature to PDFs](#adding-a-digital-signature-to-pdfs)
+    - [Saving a returned signed PDF](#saving-a-returned-signed-pdf)
     - [Signing with a My Number Card](#signing-with-a-my-number-card)
     - [Inserting seals and signature images](#inserting-seals-and-signature-images)
 
@@ -353,7 +354,7 @@ To give an article a fixed number, write `{n=10}` after its heading to make it A
 
 Click **+ Article**, **+ Para.**, **+ Item** or **+ Sub-item** on the toolbar to add a line of that kind after the cursor. Press Tab to demote a paragraph to an item or an item to a sub-item, and Shift+Tab to promote it.
 
-**Insert** lets you add everything described in this manual: chapters, articles (branch-numbered, deleted, or with a set number), paragraphs and items (sub-items, set numbers, branch numbers), a preamble, supplementary provisions, a closing and signature block, an appendix, tables (with merged cells), diagrams (such as flowcharts), math, images, cross-references, page breaks and formatting.
+**Insert** lets you add everything described in this manual: chapters, articles (branch-numbered, deleted, or with a set number), paragraphs and items (sub-items, set numbers, branch numbers), a preamble, supplementary provisions, a closing and signature block, seals and signatures ([chapter 19](#inserting-seals-and-signature-images)), an appendix, tables (with merged cells), diagrams (such as flowcharts), math, images, cross-references, page breaks and formatting.
 
 You can also add an image by copying it (for example, a screenshot) and pasting it into the editor, or by dropping an image file onto the editor. The image is saved in `images/<document name>/` in the same folder as the document, and a line such as `![図](images/<document name>/<date and time>.png)` is inserted. When you save a version, the image is recorded with it and is included in PDF and Word exports. PNG, JPEG, GIF and WebP files up to 20 MB are supported.
 
@@ -687,6 +688,8 @@ The review request screen shows the request and its activity on the left, and a 
 
 If the draft is changed after approval, the approval must be given again. If **Who can approve** is not set in the repository settings, anyone except the requester can approve; the requester cannot approve their own draft. Drafts you have been asked to review also appear under **Waiting for your review** on Home.
 
+Signing approvals makes impersonated approvers and tampered records detectable. If **Approvals required** is set to 2 or more in repository settings, a draft cannot be merged until that many different approvers have approved it ([chapter 19](#signing-approvals)).
+
 ### Merging into the current version
 
 Click **Merge into current** to open the merge screen. If the repository settings require approval and the draft has not been approved, the process stops here and suggests **Open review request**.
@@ -733,6 +736,8 @@ Choose an effective version and click **Deliver**.
 4. Click **Choose folder and create** and choose a folder. Inside it, the app creates a folder named with the date, folder name and document title (for example "20261107_就業規則_納品") and places the chosen files in it.
 
 The delivery is recorded in **Delivery records**. If the remote is on GitHub or GitLab, you can also attach the deliverables to a release on the remote.
+
+If a PDF signing method is chosen under **Digital signatures** in Settings, **Sign digitally** in the delivery dialog adds a digital signature to the delivered PDFs ([chapter 19](#adding-a-digital-signature-to-pdfs)). When the other party signs and returns a PDF, **Save the signed PDF you received** in the delivery record saves it to the delivery folder and adds it to the record ([chapter 19](#saving-a-returned-signed-pdf)).
 
 ---
 
@@ -1101,6 +1106,7 @@ Open these with **Settings** at the bottom of the left pane. They are saved only
 | Sync | Sync on startup, push when saving a version |
 | Due dates | Desktop notifications |
 | Export | Default folder for exported files, whether to add the date to file names |
+| Digital signatures | Signing keys for versions and approvals, PDF signing method and timestamps, seals and signature images ([chapter 19](#19-digital-signatures)) |
 | Print, PDF and Word formatting | Defaults for body font, font size, line spacing, margins and page numbers |
 | GitHub/GitLab | Signing in to remotes ([chapter 14](#14-sharing-with-other-computers-and-other-people)) |
 | AI | AI provider ([chapter 16](#16-asking-ai-to-check-or-rewrite)) |
@@ -1140,6 +1146,8 @@ Open these by choosing **Repository settings** from the repository name in the t
 ![Repository formatting](images/repo-style.png)
 
 **Approval rules**: Turn on **Require approval before merging into current** to prevent unapproved drafts from being merged into the current version. Enter names under **Who can approve** to count approvals only from those people. Use the name from each person's **Profile**, or their GitHub or GitLab username.
+
+For the number of approvals required, how unsigned approvals are treated, signing the rules and exporting the key list, see [chapter 19](#signing-the-rules).
 
 ![Approval rules](images/repo-rules.png)
 
@@ -1209,6 +1217,8 @@ The **Digital signatures** section of Settings turns on four features. All of th
 
 Under **Sign versions**, choose the key used for signing.
 
+![Digital signature settings](images/setup-signature.png)
+
 | Option | What it does |
 |---|---|
 | Off | Versions are not signed |
@@ -1242,6 +1252,12 @@ With **Sign approvals and change requests** on, review requests, approvals and c
 
 **Do not count unsigned approvals**: available under **Rules** in repository settings when approval is required. Only signed approvals then count toward merging, and the merge commit is also created and signed on this PC.
 
+**Exporting the key list**: under **Approval rules** in repository settings, **Export key list** writes the keys from the approval rules, GitHub/GitLab and the signer list in git's `allowed_signers` format, including the validity periods of approval-rule keys. Set it as follows to check version signatures with `git verify-commit` outside the app.
+
+```sh
+git config gpg.ssh.allowedSignersFile <exported file>
+```
+
 **Signer list**: in repositories that aren't connected to GitHub or GitLab, click **Add to this repository's signer list** so others can check your key. The list trusts whichever key was added first, so it is a weaker check than keys registered on GitHub or GitLab.
 
 ### Signing the rules
@@ -1249,6 +1265,8 @@ With **Sign approvals and change requests** on, review requests, approvals and c
 The repository's **Approval rules** (whether approval is required, the approvers and so on) start out unsigned, so anyone who can write to the repository can change them. The requester could even swap the approvers or turn off required approval.
 
 Click **Sign the rules** to sign the current rules as version 1. After that, every change needs signatures from the **rules administrators**. The design follows TUF, the standard for securing software updates, and gittuf, which applies it to git.
+
+![Signed approval rules](images/repo-policy.png)
 
 | Item | What it does |
 |---|---|
@@ -1258,6 +1276,7 @@ Click **Sign the rules** to sign the current rules as version 1. After that, eve
 | Signatures required for changes | How many administrator signatures are needed to apply a rules change |
 
 - **Proposing changes**: edit the rules and click **Propose change** to create the next version signed with your key. It is applied once enough administrators have signed; until then it appears under **Changes awaiting signatures**, where other administrators click **Sign**.
+- **Shown as awaiting your review**: changes you need to sign as an administrator also appear under **Waiting for your review** on Home. Clicking one opens Approval rules in repository settings.
 - **Adding keys**: the key button on each row adds your own key, a pasted public key, or the signing keys published on GitHub/GitLab. A newly added administrator must also sign that version.
 - **Key rotation**: after recreating your key in Settings > Digital signatures, **Apply key rotation** appears. It sets an end time on the old key and adds the new one. Approvals signed with the old key before the rotation stay valid as of when they were made.
 - **Tamper detection**: changes without enough administrator signatures, or rules whose content was altered, are not applied, and the last valid version stays in use. Each PC remembers the versions it has verified, and warns (keeping the earlier rules) if the rules are deleted, rolled back or given a new origin.
@@ -1267,6 +1286,8 @@ Click **Sign the rules** to sign the current rules as version 1. After that, eve
 ### Adding a digital signature to PDFs
 
 Under **Sign with**, choose a certificate. Signatures use the PAdES format (ETSI.CAdES.detached) and don't change how the PDF looks.
+
+![PDF signing settings](images/setup-signature-pdf.png)
 
 | Option | What it does |
 |---|---|
@@ -1284,6 +1305,19 @@ With **Sign when exporting** on, PDFs are signed when you export them. With **Si
 
 **Long-term validation data**: when on, certificate revocation data is embedded too (PAdES B-LT). Only useful with certificates from a certificate authority.
 
+### Saving a returned signed PDF
+
+Save a PDF that the other party signed and sent back to the delivery folder, and add it to the delivery record. The PDF is not changed at all, so their signature stays valid.
+
+![Saving a returned signed PDF](images/received-modal.png)
+
+1. On the Due dates & delivery tab, open the delivery record, click **Save the signed PDF you received**, and choose the returned PDF.
+2. Check the signers and signing times in the PDF, then click **Save**.
+
+The PDF is copied to the delivery folder as `<original name>_received.pdf`, and the file name, who saved it, when, and the signers are listed under **Signed PDFs received** in the record. If the delivery folder isn't on this PC, you choose where to save it. Signatures are not checked here, so check them in a PDF viewer such as Acrobat.
+
+**Signing order**: we recommend delivering a PDF you have already signed and having the other party sign last. That way the returned PDF carries both signatures. If they sign first and you also need to sign, sign it in a PDF viewer such as Acrobat.
+
 ### Signing with a My Number Card
 
 You can sign PDFs with the digital signature certificate on a Japanese My Number Card. You need a smart card reader. You don't need to install the JPKI client software.
@@ -1300,6 +1334,8 @@ You can sign PDFs with the digital signature certificate on a Japanese My Number
 ### Inserting seals and signature images
 
 Choose **Insert** > **Seal or signature** to place a seal or handwritten signature image in the signature block.
+
+![Inserting a seal or signature](images/seal-modal.png)
 
 - **Make a seal**: enter a name to create a round red seal. Kanji names take 1 to 4 characters; 2 or 3 are stacked vertically, and 4 are placed in two columns read from the right. Choose Latin to create a stamp with the name around the circle.
 - **Draw**: sign with your mouse or pen. Pen pressure sets the line width.
@@ -1321,3 +1357,5 @@ Acme Corp. by Jane Smith, CEO ![Seal](images/Agreement/20261115-101010.png){seal
 
 If the cursor is outside the signature block (`## {closing}`), you're asked whether to insert into the signature block; one is added at the end of the document if there is none. Seal and signature images appear in the preview, PDFs and Word files. In Word they sit after the name instead of overlapping it.
 
+
+![A seal inserted in the signature block](images/feature-signing.png)
