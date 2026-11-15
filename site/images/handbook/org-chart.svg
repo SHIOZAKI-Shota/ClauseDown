@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 560" font-family="Helvetica, Arial, sans-serif" font-size="26" text-anchor="middle">
+    <rect width="1440" height="560" fill="#fff" />
+    <g fill="none" stroke="#222" stroke-width="3">
+        <path d="M720 120 V200 M720 142 H940 M240 200 H1200 M240 200 V240 M720 200 V240 M1200 200 V240" />
+        <path d="M240 320 V360 M120 360 H360 M120 360 V400 M360 360 V400" />
+        <path d="M720 320 V360 M600 360 H840 M600 360 V400 M840 360 V400" />
+        <path d="M1200 320 V360 M1080 360 H1320 M1080 360 V400 M1320 360 V400" />
+    </g>
+    <g stroke="#222" stroke-width="3" fill="#fff">
+        <rect x="600" y="40" width="240" height="80" fill="#f1f1f3" />
+        <rect x="940" y="112" width="200" height="60" />
+        <rect x="120" y="240" width="240" height="80" />
+        <rect x="600" y="240" width="240" height="80" />
+        <rect x="1080" y="240" width="240" height="80" />
+        <rect x="24" y="400" width="192" height="72" />
+        <rect x="264" y="400" width="192" height="72" />
+        <rect x="504" y="400" width="192" height="72" />
+        <rect x="744" y="400" width="192" height="72" />
+        <rect x="984" y="400" width="192" height="72" />
+        <rect x="1224" y="400" width="192" height="72" />
+    </g>
+    <g fill="#222">
+        <text x="720" y="90" font-size="32" font-weight="700">CEO</text>
+        <text x="1040" y="151">Internal Audit</text>
+        <text x="240" y="289">Administration</text>
+        <text x="720" y="289">Sales</text>
+        <text x="1200" y="289">Manufacturing</text>
+        <text x="120" y="445" font-size="22">General Affairs</text>
+        <text x="360" y="445">HR</text>
+        <text x="600" y="445">Sales 1</text>
+        <text x="840" y="445">Sales 2</text>
+        <text x="1080" y="445">Production</text>
+        <text x="1320" y="445">Quality</text>
+        <text x="720" y="530" fill="#666" font-size="22">(As of April 1, 2026)</text>
+    </g>
+</svg>

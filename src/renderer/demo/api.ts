@@ -22,10 +22,12 @@ import { seed, STATE_VERSION } from './seed'
 import {
     ancestors,
     branchLabel,
+    DEMO_LANG,
     draftRef,
     effectiveTag,
     firstParentLine,
     headOf,
+    LANG_PARAM,
     MAIN,
     newId,
     newOid,
@@ -35,7 +37,8 @@ import {
     type DemoState,
 } from './state'
 
-const KEY = 'clausedown-demo'
+// 見本の言語ごとに別に保存する（サイトの言語を切り替えても、もう一方の言語の状態を消さない）
+const KEY = DEMO_LANG === 'en' ? 'clausedown-demo-en' : 'clausedown-demo'
 const UNAVAILABLE = () => t().demo.unavailable
 
 function load(): DemoState {
@@ -287,7 +290,7 @@ const impl: Partial<Api> = {
         if (window.parent !== window) window.parent.postMessage({ type: 'clausedown-theme', theme }, location.origin)
     }),
     platform: async () => 'web',
-    systemLanguages: async () => [...navigator.languages],
+    systemLanguages: async () => (LANG_PARAM ? [LANG_PARAM] : [...navigator.languages]),
     listFonts: async () => [],
     setZoom: async () => {},
     repoStatus: async (dirs) => Object.fromEntries(dirs.map((d) => [d, state.repos.some((r) => r.dir === d) ? 'ok' : 'missing'])),

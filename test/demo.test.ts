@@ -23,6 +23,41 @@ describe('公式サイトのデモの初期データ', () => {
     })
 })
 
+describe('英語の画面で見せるデモの初期データ', () => {
+    const JA = /[ぁ-んァ-ヶ一-龠]/
+    const s = seed('en')
+
+    it('英語の見本の文書を、日本語とは別のリポジトリで持つ', () => {
+        expect(s.repos).toHaveLength(5)
+        expect(s.settings.author.name).toBe('Demo user')
+        expect(new Set(s.settings.repos.map((r) => r.section))).toEqual(new Set(['Acme Corp.', 'Riverside City']))
+        expect(s.settings.prefs.recentDocs?.every((d) => s.repos.some((r) => r.dir === d.dir && d.path in r.commits[r.branches[MAIN]].files))).toBe(true)
+    })
+
+    it('どのリポジトリも改定の履歴・施行日・課題・期日を持ち、日本語が混じらない', () => {
+        for (const r of s.repos) {
+            expect(Object.keys(r.commits[r.branches[MAIN]].files)).toHaveLength(1)
+            expect(Object.keys(r.commits).length).toBeGreaterThanOrEqual(2)
+            expect(Object.keys(r.tags).length).toBeGreaterThanOrEqual(1)
+            expect(r.issues.length).toBeGreaterThanOrEqual(1)
+            expect(r.events.length).toBeGreaterThanOrEqual(2)
+            const texts = [
+                r.name,
+                r.note,
+                ...Object.values(r.commits).flatMap((c) => [c.message, c.author, ...Object.keys(c.files), ...Object.values(c.files)]),
+                ...Object.keys(r.branches).map((b) => b.replace(/^案\//, '')),
+                ...r.issues.flatMap((i) => [i.title, i.body, i.author, ...i.comments.flatMap((c) => [c.body, c.by])]),
+                ...r.reviews.flatMap((v) => [v.by, v.text]),
+                ...r.events.flatMap((e) => [e.title, e.note ?? '', e.by]),
+                ...r.kinds.map((k) => k.label),
+                ...r.deliveries.flatMap((d) => [d.title, d.client, d.to, d.memo, d.by]),
+            ]
+            for (const t of texts) expect(t).not.toMatch(JA)
+        }
+        for (const r of s.settings.repos) expect(`${r.name}${r.section}`).not.toMatch(JA)
+    })
+})
+
 describe('公式サイトのデモの API', () => {
     const api = createDemoApi()
     const dir = '/demo/mihon-shugyo'
