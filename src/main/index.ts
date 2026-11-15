@@ -477,10 +477,17 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
         if (dir) await assertAllowedDir(dir)
         return signing.testExternalSigning(dir)
     },
-    importPdfCert: (data, password) => sign.importPdfCert(data, password),
+    importPdfCert: (data, password, label) => sign.importPdfCert(data, password, label),
     createSelfSignedCert: (opts) => sign.createSelfSignedCert(opts),
-    removePdfCert: () => sign.removePdfCert(),
-    exportPdfCert: () => sign.exportPdfCert(win),
+    addMynaCert: (label) => sign.addMynaCert(label),
+    updatePdfCert: (id, patch) => sign.updatePdfCert(String(id), patch),
+    removePdfCert: (id) => sign.removePdfCert(String(id)),
+    setDefaultPdfCert: (id) => sign.setDefaultPdfCert(String(id)),
+    setRepoPdfCert: async (dir, id) => {
+        await assertAllowedDir(dir)
+        return sign.setRepoPdfCert(dir, id ? String(id) : null)
+    },
+    exportPdfCert: (id) => sign.exportPdfCert(win, String(id)),
     setTsaPassword: (password) => sign.setTsaPassword(password),
     testTimestamp: () => sign.testTimestamp(),
     mynaStatus: () => mynaStatus(),

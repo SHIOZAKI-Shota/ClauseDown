@@ -205,10 +205,20 @@ export function credentialFromResponse(
     }
 }
 
-export type SecretName = 'ai-key' | 'mcp-token' | `ai-key-${string}` | 'sign-ssh-key' | 'sign-pdf-p12' | 'sign-pdf-pass' | 'sign-pdf-key' | 'sign-tsa-pass'
+export type SecretName =
+    | 'ai-key'
+    | 'mcp-token'
+    | `ai-key-${string}`
+    | 'sign-ssh-key'
+    | 'sign-pdf-p12'
+    | 'sign-pdf-pass'
+    | 'sign-pdf-key'
+    | `sign-pdf-${'p12' | 'pass' | 'key'}-${string}`
+    | 'sign-tsa-pass'
 
 const secretPath = (name: SecretName) => {
-    if (!/^(ai-key|mcp-token|ai-key-[a-z0-9-]{1,80}|sign-(ssh-key|pdf-p12|pdf-pass|pdf-key|tsa-pass))$/.test(name)) throw new Error(t().errors.settings.badName)
+    if (!/^(ai-key|mcp-token|ai-key-[a-z0-9-]{1,80}|sign-(ssh-key|pdf-p12|pdf-pass|pdf-key|tsa-pass)|sign-pdf-(p12|pass|key)-[a-z0-9]{12})$/.test(name))
+        throw new Error(t().errors.settings.badName)
     return join(app.getPath('userData'), `${name}.bin`)
 }
 

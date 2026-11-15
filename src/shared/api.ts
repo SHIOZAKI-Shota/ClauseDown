@@ -7,7 +7,7 @@ import type { ForgeKind, GitLabHost } from './forge'
 import type { AiConfig, AiProvider } from './ai-providers'
 import type { HouritsuConversion } from './houritsu'
 import type { DueEvent, DueEventInput, EventKind, Occurrence, Period, RepoSchedule, ScheduleItem } from './schedule'
-import type { CertInfo, SigInfo, SigningSettings } from './signing'
+import type { CertInfo, PdfCertEntry, SigInfo, SigningSettings } from './signing'
 import type { PolicyDoc, PolicyDraft } from './policy'
 
 export type { RepoRules, ReviewAction, ReviewEvent, AppPrefs, DocStyle }
@@ -208,6 +208,7 @@ export interface DeliverInput {
     publishRelease: boolean
     sign?: boolean
     pin?: string
+    certId?: string
 }
 
 export interface DeliveryRecord {
@@ -282,6 +283,7 @@ export interface DocBase {
 export interface ExportSign {
     sign?: boolean
     pin?: string
+    certId?: string
 }
 
 export type ExportRequest =
@@ -433,10 +435,14 @@ export interface Api {
     deleteSigningKey(): Promise<SigningStatus>
     registerSigningKey(base: string): Promise<KeyRegistration>
     testExternalSigning(dir?: string): Promise<ExternalSigningConfig>
-    importPdfCert(data: Uint8Array, password: string): Promise<CertInfo>
-    createSelfSignedCert(opts: { name: string; email?: string; org?: string; years?: number }): Promise<CertInfo>
-    removePdfCert(): Promise<void>
-    exportPdfCert(): Promise<string | null>
+    importPdfCert(data: Uint8Array, password: string, label?: string): Promise<PdfCertEntry>
+    createSelfSignedCert(opts: { name: string; email?: string; org?: string; years?: number; label?: string }): Promise<PdfCertEntry>
+    addMynaCert(label?: string): Promise<PdfCertEntry>
+    updatePdfCert(id: string, patch: Pick<PdfCertEntry, 'label' | 'reason' | 'location' | 'contactInfo'>): Promise<SigningSettings>
+    removePdfCert(id: string): Promise<SigningSettings>
+    setDefaultPdfCert(id: string): Promise<SigningSettings>
+    setRepoPdfCert(dir: string, id: string | null): Promise<SigningSettings>
+    exportPdfCert(id: string): Promise<string | null>
     setTsaPassword(password: string): Promise<void>
     testTimestamp(): Promise<{ ok: true }>
     mynaStatus(): Promise<MynaStatus>
@@ -571,7 +577,7 @@ export interface KeyRegistration {
     manualUrl?: string
 }
 
-export type { CertInfo, SigInfo }
+export type { CertInfo, PdfCertEntry, SigInfo }
 
 export interface SealMeta {
     id: string

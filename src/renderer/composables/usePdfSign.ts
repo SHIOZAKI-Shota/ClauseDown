@@ -1,7 +1,17 @@
 import type { MynaStatus, SigningStatus } from '@shared/api'
+import { resolveCert, type PdfCertEntry } from '@shared/signing'
+
+export interface SignPrompt {
+    name: string
+    certs: PdfCertEntry[]
+    certId: string
+    askCert: boolean
+    myna: MynaStatus | null
+    resolve: (r: { certId: string; pin?: string } | null) => void
+}
 
 const status = ref<SigningStatus | null>(null)
-const prompt = ref<{ name: string; myna: MynaStatus | null; resolve: (pin: string | null) => void } | null>(null)
+const prompt = ref<SignPrompt | null>(null)
 
 export function usePdfSign() {
     async function load(): Promise<SigningStatus | null> {
@@ -9,19 +19,30 @@ export function usePdfSign() {
         return status.value
     }
 
-    const ready = computed(() => (status.value?.signing.pdf.method ?? 'none') !== 'none')
+    const certs = computed(() => status.value?.signing.pdf.certs ?? [])
+    const ready = computed(() => certs.value.length > 0)
+    const defaultFor = (dir?: string) => (status.value ? resolveCert(status.value.signing.pdf, dir)?.id : undefined)
 
-    async function plan(kind: 'export' | 'deliver', name: string, want?: boolean): Promise<{ sign: boolean; pin?: string } | null> {
-        const s = (await load())?.signing.pdf
-        if (!s || s.method === 'none') return { sign: false }
-        const sign = want ?? (kind === 'export' ? s.onExport : s.onDeliver)
+    async function plan(
+        kind: 'export' | 'deliver',
+        name: string,
+        want?: boolean,
+        opts: { dir?: string; certId?: string } = {},
+    ): Promise<{ sign: boolean; certId?: string; pin?: string } | null> {
+        const pdf = (await load())?.signing.pdf
+        if (!pdf?.certs.length) return { sign: false }
+        const sign = want ?? (kind === 'export' ? pdf.onExport : pdf.onDeliver)
         if (!sign) return { sign: false }
-        if (s.method !== 'myna') return { sign: true }
-        const myna = await window.api.mynaStatus().catch(() => null)
-        const pin = await new Promise<string | null>((resolve) => (prompt.value = { name, myna, resolve }))
+        const certId = (opts.certId && pdf.certs.some((c) => c.id === opts.certId) ? opts.certId : resolveCert(pdf, opts.dir)?.id) ?? pdf.certs[0].id
+        const askCert = !opts.certId && pdf.certs.length > 1
+        if (!askCert && pdf.certs.find((c) => c.id === certId)?.kind !== 'myna') return { sign: true, certId }
+        const myna = pdf.certs.some((c) => c.kind === 'myna') ? await window.api.mynaStatus().catch(() => null) : null
+        const r = await new Promise<{ certId: string; pin?: string } | null>(
+            (resolve) => (prompt.value = { name, certs: pdf.certs, certId, askCert, myna, resolve }),
+        )
         prompt.value = null
-        return pin ? { sign: true, pin } : null
+        return r ? { sign: true, ...r } : null
     }
 
-    return { status, ready, load, plan, prompt }
+    return { status, certs, ready, defaultFor, load, plan, prompt }
 }

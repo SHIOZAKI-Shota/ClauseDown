@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { SegmentItem } from '~/components/SegmentSwitch.vue'
 import type { CertInfo, DeepPartial, MynaStatus, SealMeta, SigningStatus } from '@shared/api'
-import { TSA_PRESETS, type CommitSignMode, type PdfSignMethod, type SigningSettings } from '@shared/signing'
+import { TSA_PRESETS, type CommitSignMode, type PdfCertEntry, type SigningSettings } from '@shared/signing'
 import { FORGE_LABEL } from '@shared/forge'
 import { useApp } from '~/stores/app'
 import { useT } from '~/composables/useT'
@@ -17,7 +17,7 @@ const busy = ref(false)
 
 async function refresh() {
     status.value = (await app.run(() => window.api.signingStatus(app.repoDir ?? undefined))) ?? null
-    if (status.value?.signing.pdf.method === 'myna' || status.value?.myna) myna.value = (await app.run(() => window.api.mynaStatus())) ?? null
+    if (status.value?.signing.pdf.certs.some((c) => c.kind === 'myna')) myna.value = (await app.run(() => window.api.mynaStatus())) ?? null
 }
 onMounted(refresh)
 
@@ -29,9 +29,6 @@ async function patch(p: DeepPartial<SigningSettings>) {
 
 const modeItems = computed<SegmentItem<CommitSignMode>[]>(() =>
     (['off', 'app', 'external'] as const).map((value) => ({ value, label: s.value.commit.modes[value] })),
-)
-const methodItems = computed<SegmentItem<PdfSignMethod>[]>(() =>
-    (['none', 'p12', 'self', 'myna'] as const).filter((m) => m !== 'myna' || status.value?.myna).map((value) => ({ value, label: s.value.pdf.methods[value] })),
 )
 
 async function createKey() {
@@ -69,6 +66,25 @@ async function publishKey() {
 }
 const registeredAt = (base: string) => cfg.value?.commit.registered[base]?.at?.slice(0, 10)
 
+const certs = computed(() => cfg.value?.pdf.certs ?? [])
+const adding = ref<'p12' | 'self' | null>(null)
+const newLabel = ref('')
+const addItems = computed(() => [
+    [
+        { label: s.value.pdf.addKinds.p12, icon: 'i-lucide-file-key', onSelect: () => startAdd('p12') },
+        { label: s.value.pdf.addKinds.self, icon: 'i-lucide-badge-check', onSelect: () => startAdd('self') },
+        ...(status.value?.myna && !certs.value.some((c) => c.kind === 'myna')
+            ? [{ label: s.value.pdf.addKinds.myna, icon: 'i-lucide-id-card', onSelect: () => void addMyna() }]
+            : []),
+    ],
+])
+function startAdd(kind: 'p12' | 'self') {
+    adding.value = kind
+    newLabel.value = ''
+    p12File.value = null
+    p12Password.value = ''
+}
+
 const p12Input = ref<HTMLInputElement | null>(null)
 const p12File = ref<Uint8Array | null>(null)
 const p12Password = ref('')
@@ -84,28 +100,65 @@ async function onP12(e: Event) {
 }
 async function importP12() {
     if (!p12File.value) return
-    const cert = await app.run(() => window.api.importPdfCert(p12File.value!, p12Password.value), s.value.pdf.imported)
+    const cert = await app.run(() => window.api.importPdfCert(p12File.value!, p12Password.value, newLabel.value), s.value.pdf.imported)
     p12Password.value = ''
     if (cert) {
         p12File.value = null
+        adding.value = null
         await refresh()
     }
 }
 
 const self = reactive({ name: app.settings?.author.name ?? '', org: '', email: app.settings?.author.email ?? '', years: 3 })
 async function createSelf() {
-    const cert = await app.run(() => window.api.createSelfSignedCert({ ...self }), s.value.pdf.created)
+    const cert = await app.run(() => window.api.createSelfSignedCert({ ...self, label: newLabel.value }), s.value.pdf.created)
+    if (cert) {
+        adding.value = null
+        await refresh()
+    }
+}
+async function addMyna() {
+    const cert = await app.run(() => window.api.addMynaCert())
     if (cert) await refresh()
 }
-async function removeCert() {
-    await app.run(() => window.api.removePdfCert())
-    await refresh()
+
+function applySigning(next: SigningSettings | undefined | null) {
+    if (next && status.value) status.value = { ...status.value, signing: next }
 }
-const exportCer = () => app.run(() => window.api.exportPdfCert())
+async function removeCert(c: PdfCertEntry) {
+    if (!confirm(s.value.pdf.confirmRemove(c.label || s.value.pdf.kinds[c.kind]))) return
+    applySigning(await app.run(() => window.api.removePdfCert(c.id)))
+}
+async function makeDefault(c: PdfCertEntry) {
+    applySigning(await app.run(() => window.api.setDefaultPdfCert(c.id)))
+}
+const exportCer = (c: PdfCertEntry) => app.run(() => window.api.exportPdfCert(c.id))
+
+const editing = ref<string | null>(null)
+const draft = reactive({ label: '', reason: '', location: '', contactInfo: '' })
+function startEdit(c: PdfCertEntry) {
+    editing.value = c.id
+    Object.assign(draft, { label: c.label, reason: c.reason ?? '', location: c.location ?? '', contactInfo: c.contactInfo ?? '' })
+}
+async function saveEdit() {
+    if (!editing.value) return
+    applySigning(await app.run(() => window.api.updatePdfCert(editing.value!, { ...draft })))
+    editing.value = null
+}
+
+const DAY = 86_400_000
+function expiry(c: PdfCertEntry): { level: 'error' | 'warning'; text: string } | null {
+    if (!c.cert) return null
+    const left = new Date(c.cert.notAfter).getTime() - Date.now()
+    const date = c.cert.notAfter.slice(0, 10)
+    if (left < 0) return { level: 'error', text: s.value.pdf.expired(date) }
+    if (left < 30 * DAY) return { level: 'warning', text: s.value.pdf.expiring(date) }
+    return null
+}
 
 const certRows = (c: CertInfo) => [
     [s.value.pdf.subject, c.subject + (c.email ? ` <${c.email}>` : '')],
-    [s.value.pdf.issuer, c.selfSigned ? s.value.pdf.methods.self : c.issuer],
+    [s.value.pdf.issuer, c.selfSigned ? s.value.pdf.kinds.self : c.issuer],
     [s.value.pdf.valid, `${c.notBefore.slice(0, 10)} – ${c.notAfter.slice(0, 10)}`],
     [s.value.pdf.fingerprint, c.fingerprint.slice(0, 23) + '…'],
 ]
@@ -233,74 +286,111 @@ async function refreshMyna() {
         </SettingRow>
 
         <h3 class="cd-subhead">{{ s.pdf.heading }}</h3>
-        <SettingRow :label="s.pdf.method" :description="s.pdf.methodDesc">
-            <SegmentSwitch :model-value="cfg.pdf.method" :items="methodItems" @update:model-value="(v) => v && patch({ pdf: { method: v } }).then(refresh)" />
-        </SettingRow>
-
-        <template v-if="cfg.pdf.method === 'p12' || cfg.pdf.method === 'self'">
-            <div v-if="cfg.pdf.cert && (cfg.pdf.method === 'self') === cfg.pdf.cert.selfSigned" class="cert">
-                <dl>
-                    <template v-for="[k, v] in certRows(cfg.pdf.cert)" :key="k">
-                        <dt>{{ k }}</dt>
-                        <dd>{{ v }}</dd>
-                    </template>
-                </dl>
-                <div class="actions">
-                    <UButton :label="s.pdf.exportCer" size="sm" color="neutral" variant="outline" icon="i-lucide-download" @click="exportCer" />
-                    <UButton :label="s.pdf.removeCert" size="sm" color="error" variant="ghost" @click="removeCert" />
-                </div>
-                <p v-if="cfg.pdf.cert.selfSigned" class="cd-muted note">{{ s.pdf.selfNote }}</p>
+        <p class="cd-muted note">{{ s.pdf.certsDesc }}</p>
+        <div v-for="c in certs" :key="c.id" class="cert">
+            <div class="cert-head">
+                <span class="cert-name">{{ c.label || s.pdf.kinds[c.kind] }}</span>
+                <span class="cd-chip">{{ s.pdf.kinds[c.kind] }}</span>
+                <UBadge v-if="cfg.pdf.defaultCert === c.id" :label="s.pdf.default" color="primary" variant="subtle" size="sm" />
+                <UBadge v-if="expiry(c)" :label="expiry(c)!.text" :color="expiry(c)!.level" variant="subtle" size="sm" />
+                <span class="grow" />
+                <UButton v-if="cfg.pdf.defaultCert !== c.id" :label="s.pdf.makeDefault" size="xs" color="neutral" variant="ghost" @click="makeDefault(c)" />
+                <UButton :label="s.pdf.edit" size="xs" color="neutral" variant="ghost" icon="i-lucide-pencil" @click="startEdit(c)" />
+                <UButton
+                    v-if="c.kind !== 'myna'"
+                    :label="s.pdf.exportCer"
+                    size="xs"
+                    color="neutral"
+                    variant="ghost"
+                    icon="i-lucide-download"
+                    @click="exportCer(c)"
+                />
+                <UButton :label="s.pdf.removeCert" size="xs" color="error" variant="ghost" @click="removeCert(c)" />
             </div>
-            <template v-else-if="cfg.pdf.method === 'p12'">
-                <SettingRow :label="s.pdf.importP12">
-                    <input ref="p12Input" type="file" accept=".p12,.pfx,application/x-pkcs12" hidden @change="onP12" />
-                    <UButton :label="s.pdf.importP12" size="sm" color="neutral" variant="outline" icon="i-lucide-file-key" @click="pickP12" />
-                </SettingRow>
-                <SettingRow v-if="p12File" :label="s.pdf.password">
+            <dl v-if="c.cert">
+                <template v-for="[k, v] in certRows(c.cert)" :key="k">
+                    <dt>{{ k }}</dt>
+                    <dd>{{ v }}</dd>
+                </template>
+            </dl>
+            <template v-if="c.kind === 'myna'">
+                <div class="myna">
+                    <span class="cd-muted">{{ mynaLine }}</span>
+                    <UButton :label="s.myna.refresh" size="xs" color="neutral" variant="outline" icon="i-lucide-refresh-cw" @click="refreshMyna" />
+                </div>
+                <p class="cd-muted note">{{ s.myna.disclosure }}</p>
+            </template>
+            <p v-if="c.cert?.selfSigned" class="cd-muted note">{{ s.pdf.selfNote }}</p>
+            <div v-if="editing === c.id" class="edit">
+                <UFormField :label="s.pdf.label" :help="s.pdf.labelHint"><UInput v-model="draft.label" class="cd-w-input" /></UFormField>
+                <UFormField :label="s.pdf.reason" :help="s.pdf.overrideHint"
+                    ><UInput v-model="draft.reason" :placeholder="cfg.pdf.reason" class="cd-w-input"
+                /></UFormField>
+                <UFormField :label="s.pdf.location"><UInput v-model="draft.location" :placeholder="cfg.pdf.location" class="cd-w-input" /></UFormField>
+                <UFormField :label="s.pdf.contact"><UInput v-model="draft.contactInfo" :placeholder="cfg.pdf.contactInfo" class="cd-w-input" /></UFormField>
+                <div class="actions">
+                    <UButton :label="t.common.cancel" size="sm" color="neutral" variant="ghost" @click="editing = null" />
+                    <UButton :label="t.common.save" size="sm" @click="saveEdit" />
+                </div>
+            </div>
+        </div>
+        <p v-if="!certs.length" class="cd-muted note">{{ s.pdf.noCerts }}</p>
+        <UDropdownMenu :items="addItems">
+            <UButton :label="s.pdf.addCert" size="sm" color="neutral" variant="outline" icon="i-lucide-plus" class="self-start" />
+        </UDropdownMenu>
+
+        <div v-if="adding" class="cert add">
+            <UFormField :label="s.pdf.label" :help="s.pdf.labelHint"><UInput v-model="newLabel" class="cd-w-input" /></UFormField>
+            <template v-if="adding === 'p12'">
+                <input ref="p12Input" type="file" accept=".p12,.pfx,application/x-pkcs12" hidden @change="onP12" />
+                <UFormField :label="s.pdf.importP12">
+                    <UButton :label="s.pdf.pickP12" size="sm" color="neutral" variant="outline" icon="i-lucide-file-key" @click="pickP12" />
+                    <span v-if="p12File" class="cd-muted picked">{{ s.pdf.p12Picked }}</span>
+                </UFormField>
+                <UFormField v-if="p12File" :label="s.pdf.password">
                     <UInput v-model="p12Password" type="password" autocomplete="off" class="cd-w-input" @keydown.enter="importP12" />
-                    <UButton :label="s.pdf.importP12" size="sm" @click="importP12" />
-                </SettingRow>
+                </UFormField>
+                <div class="actions">
+                    <UButton :label="t.common.cancel" size="sm" color="neutral" variant="ghost" @click="adding = null" />
+                    <UButton :label="s.pdf.importP12" size="sm" :disabled="!p12File" @click="importP12" />
+                </div>
             </template>
             <template v-else>
-                <SettingRow :label="s.pdf.selfName"><UInput v-model="self.name" class="cd-w-input" /></SettingRow>
-                <SettingRow :label="s.pdf.selfOrg"><UInput v-model="self.org" class="cd-w-input" /></SettingRow>
-                <SettingRow :label="s.pdf.selfEmail"><UInput v-model="self.email" type="email" class="cd-w-input" /></SettingRow>
-                <SettingRow :label="s.pdf.selfYears" :description="s.pdf.selfNote">
+                <UFormField :label="s.pdf.selfName"><UInput v-model="self.name" class="cd-w-input" /></UFormField>
+                <UFormField :label="s.pdf.selfOrg"><UInput v-model="self.org" class="cd-w-input" /></UFormField>
+                <UFormField :label="s.pdf.selfEmail"><UInput v-model="self.email" type="email" class="cd-w-input" /></UFormField>
+                <UFormField :label="s.pdf.selfYears" :help="s.pdf.selfNote">
                     <UInput v-model.number="self.years" type="number" min="1" max="10" class="cd-w-small" />
+                </UFormField>
+                <div class="actions">
+                    <UButton :label="t.common.cancel" size="sm" color="neutral" variant="ghost" @click="adding = null" />
                     <UButton :label="s.pdf.createSelf" size="sm" :disabled="!self.name.trim()" @click="createSelf" />
-                </SettingRow>
+                </div>
             </template>
-        </template>
+        </div>
 
-        <template v-if="cfg.pdf.method === 'myna'">
-            <SettingRow :label="s.myna.status" :description="s.myna.disclosure">
-                <span class="cd-muted">{{ mynaLine }}</span>
-                <UButton :label="s.myna.refresh" size="sm" color="neutral" variant="outline" icon="i-lucide-refresh-cw" @click="refreshMyna" />
-            </SettingRow>
-        </template>
-
-        <template v-if="cfg.pdf.method !== 'none'">
+        <template v-if="certs.length">
             <SettingRow :label="s.pdf.onExport">
                 <USwitch :model-value="cfg.pdf.onExport" @update:model-value="(v: boolean) => patch({ pdf: { onExport: v } })" />
             </SettingRow>
             <SettingRow :label="s.pdf.onDeliver">
                 <USwitch :model-value="cfg.pdf.onDeliver" @update:model-value="(v: boolean) => patch({ pdf: { onDeliver: v } })" />
             </SettingRow>
-            <SettingRow :label="s.pdf.reason">
+            <SettingRow :label="s.pdf.reasonCommon" :description="s.pdf.commonDesc">
                 <UInput
                     :model-value="cfg.pdf.reason"
                     class="cd-w-input"
                     @change="(e: Event) => patch({ pdf: { reason: (e.target as HTMLInputElement).value } })"
                 />
             </SettingRow>
-            <SettingRow :label="s.pdf.location">
+            <SettingRow :label="s.pdf.locationCommon">
                 <UInput
                     :model-value="cfg.pdf.location"
                     class="cd-w-input"
                     @change="(e: Event) => patch({ pdf: { location: (e.target as HTMLInputElement).value } })"
                 />
             </SettingRow>
-            <SettingRow :label="s.pdf.contact">
+            <SettingRow :label="s.pdf.contactCommon">
                 <UInput
                     :model-value="cfg.pdf.contactInfo"
                     class="cd-w-input"
@@ -343,7 +433,7 @@ async function refreshMyna() {
                     </SettingRow>
                 </template>
             </template>
-            <SettingRow v-if="cfg.pdf.method !== 'myna'" :label="s.pdf.longTerm" :description="s.pdf.longTermDesc">
+            <SettingRow v-if="certs.some((c) => c.kind !== 'myna')" :label="s.pdf.longTerm" :description="s.pdf.longTermDesc">
                 <USwitch
                     :model-value="cfg.pdf.longTerm"
                     :disabled="!cfg.pdf.tsa.enabled"
@@ -413,8 +503,43 @@ async function refreshMyna() {
 }
 .cert .actions {
     display: flex;
+    justify-content: flex-end;
     gap: 8px;
     margin-top: 10px;
+}
+.cert-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+.cert-name {
+    font-weight: 600;
+}
+.grow {
+    flex: 1;
+}
+.myna {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+.edit,
+.add {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.edit {
+    border-top: 1px solid var(--ui-border);
+    margin-top: 10px;
+    padding-top: 10px;
+}
+.picked {
+    margin-left: 8px;
+    font-size: 12px;
 }
 .seals {
     display: flex;

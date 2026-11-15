@@ -269,7 +269,7 @@ export async function exportFile(parent: BrowserWindow | null, req: ExportReques
     const opts = { defaultPath: prefs.exportDir ? join(prefs.exportDir, `${name}.${ext}`) : `${name}.${ext}`, filters }
     const result = parent ? await dialog.showSaveDialog(parent, opts) : await dialog.showSaveDialog(opts)
     if (result.canceled || !result.filePath) return null
-    const signer = req.sign && req.format === 'pdf' ? await openSignSession(parent, req.pin) : undefined
+    const signer = req.sign && req.format === 'pdf' ? await openSignSession(parent, { certId: req.certId, pin: req.pin, dir: req.dir }) : undefined
     try {
         await fsp.writeFile(result.filePath, await build(req, signer))
     } finally {
@@ -289,7 +289,7 @@ export async function deliverWithDialog(parent: BrowserWindow | null, dir: strin
     if (r.canceled || !r.filePaths[0]) return null
     const { style } = resolveStyle(prefs.docStyle, await listFolderStyles(dir), input.docPath)
     const pdfs = input.items.some((i) => i === 'docPdf' || i === 'cmpPdf')
-    const signer = input.sign && pdfs ? await openSignSession(parent, input.pin) : undefined
+    const signer = input.sign && pdfs ? await openSignSession(parent, { certId: input.certId, pin: input.pin, dir }) : undefined
     try {
         return await deliver(dir, { ...input, pin: undefined }, r.filePaths[0], makeBuilders(style, prefs.typesetCss, { dir, docPath: input.docPath }, signer))
     } finally {

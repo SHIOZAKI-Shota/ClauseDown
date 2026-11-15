@@ -89,7 +89,7 @@ const title = computed(() => t.value.compare.title(app.currentDoc?.title ?? '', 
 
 const pdfSign = usePdfSign()
 async function exportAs(format: 'pdf' | 'docx') {
-    const signing = format === 'pdf' ? await pdfSign.plan('export', `${title.value}.pdf`) : { sign: false }
+    const signing = format === 'pdf' ? await pdfSign.plan('export', `${title.value}.pdf`, undefined, { dir: app.repoDir ?? undefined }) : { sign: false }
     if (!signing) return
     const out = await app.run(() =>
         window.api.exportFile({

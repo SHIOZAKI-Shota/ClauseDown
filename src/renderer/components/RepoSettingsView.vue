@@ -8,6 +8,7 @@ import { sameJson, toPlain } from '~/utils/ipc'
 import { useSavedFlash } from '~/composables/useSavedFlash'
 import { useDebounced } from '~/composables/useDebounced'
 import { useT } from '~/composables/useT'
+import { usePdfSign } from '~/composables/usePdfSign'
 
 const app = useApp()
 const t = useT()
@@ -80,6 +81,24 @@ function onStyle(v: StyleOverride) {
     saveStyle()
 }
 
+const pdfSign = usePdfSign()
+const FOLLOW = '__default'
+const repoCert = ref(FOLLOW)
+const certOptions = computed(() => [
+    { value: FOLLOW, label: t.value.signing.pdf.followDefault },
+    ...pdfSign.certs.value.map((c) => ({ value: c.id, label: c.label || t.value.signing.pdf.kinds[c.kind] })),
+])
+onMounted(async () => {
+    if (isDemo()) return
+    const st = await pdfSign.load()
+    repoCert.value = (app.repoDir && st?.signing.pdf.repoCerts[app.repoDir]) || FOLLOW
+})
+async function setRepoCert(v: string) {
+    if (!app.repoDir) return
+    repoCert.value = v
+    if (await app.run(() => window.api.setRepoPdfCert(app.repoDir!, v === FOLLOW ? null : v))) flash()
+}
+
 const policySigned = ref(false)
 async function exportSigners() {
     const out = await app.run(() => window.api.exportAllowedSigners(app.repoDir!))
@@ -119,6 +138,9 @@ watch(
             </SettingRow>
             <SettingRow :label="t.repo.settings.folder" :description="app.repoDir ?? ''">
                 <UButton :label="t.repo.settings.openFolder" icon="i-lucide-folder-open" size="sm" color="neutral" variant="outline" @click="openFolder" />
+            </SettingRow>
+            <SettingRow v-if="pdfSign.certs.value.length > 1" :label="t.signing.pdf.repoCert" :description="t.signing.pdf.repoCertDesc">
+                <USelect :model-value="repoCert" :items="certOptions" class="cd-w-input" @update:model-value="(v: string) => setRepoCert(v)" />
             </SettingRow>
             <SettingRow :label="t.repo.removeFromList" :description="t.repo.settings.removeDesc">
                 <UButton :label="t.repo.removeFromList" size="sm" color="error" variant="outline" @click="removeRepo" />

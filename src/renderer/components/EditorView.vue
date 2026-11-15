@@ -686,7 +686,7 @@ async function discard() {
 async function exportAs(format: 'pdf' | 'docx' | 'html' | 'md') {
     await writeNow()
     const name = doc.value.title || path.replace(/\.md$/, '')
-    const signing = format === 'pdf' ? await pdfSign.plan('export', `${name}.pdf`) : { sign: false }
+    const signing = format === 'pdf' ? await pdfSign.plan('export', `${name}.pdf`, undefined, { dir: app.repoDir ?? undefined }) : { sign: false }
     if (!signing) return
     const out = await app.run(() =>
         window.api.exportFile({ kind: 'doc', format, source: text.value, name, style: toPlain(app.style), dir: app.repoDir!, docPath: path, ...signing }),

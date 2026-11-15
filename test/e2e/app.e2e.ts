@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { _electron, type ElectronApplication, type Page } from 'playwright-core'
 import electronPath from 'electron'
 import { addDays } from '../../src/shared/schedule'
+import { listSignatures } from '../../src/main/pdf-sign'
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url))
 const repos: { name: string; dir: string }[] = []
@@ -136,23 +137,24 @@ describe('画面', () => {
             .getByText(/^SHA256:/)
             .first()
             .waitFor({ timeout: 15000 })
-        await win.getByRole('radio', { name: '自己署名' }).click()
+        await win.getByRole('button', { name: '証明書を追加' }).click()
+        await win.getByRole('menuitem', { name: '自己署名の証明書を作成' }).click()
+        await win.getByLabel('名前').filter({ visible: true }).first().fill('個人')
         await win.getByRole('button', { name: '自己署名の証明書を作成' }).click()
         await win.getByRole('button', { name: '証明書を書き出し' }).waitFor({ timeout: 30000 })
+        await seen('既定')
         if (process.env.CLAUSEDOWN_SHOTS) await win.screenshot({ path: join(process.env.CLAUSEDOWN_SHOTS, 'signing-settings.png'), fullPage: true })
         const mynaBuilt = fs
             .readdirSync(join(ROOT, 'native/myna'))
             .some((f) => f.startsWith(`clausedown-myna.${process.platform}-${process.arch}`) && f.endsWith('.node'))
         if (mynaBuilt) {
-            await win.getByRole('radio', { name: 'マイナンバーカード' }).click()
-            await seen('カードの状態')
+            await win.getByRole('button', { name: '証明書を追加' }).click()
+            await win.getByRole('menuitem', { name: 'マイナンバーカードを追加' }).click()
             await win
                 .getByText(/カードリーダーが見つかりません|カードが未設置です|リーダー：/)
                 .first()
                 .waitFor()
             if (process.env.CLAUSEDOWN_SHOTS) await win.screenshot({ path: join(process.env.CLAUSEDOWN_SHOTS, 'signing-myna.png') })
-            await win.getByRole('radio', { name: '自己署名' }).click()
-            await win.getByRole('button', { name: '証明書を書き出し' }).waitFor()
         }
 
         await win.evaluate(`window.api.writeDoc(${JSON.stringify(dir)}, ${JSON.stringify(DOC)}, '# 就業規則\\n\\n### 目的\\n- 署名のテスト\\n')`)
@@ -169,6 +171,15 @@ describe('画面', () => {
         const pdf = fs.readFileSync(out).toString('latin1')
         expect(pdf).toContain('/ETSI.CAdES.detached')
         expect(pdf).toMatch(/\/ByteRange\s*\[/)
+        expect(listSignatures(new Uint8Array(fs.readFileSync(out))).map((x) => x.signer)).toEqual(['テスト'])
+
+        const corp = (await win.evaluate(`window.api.createSelfSignedCert({ name: '見本株式会社 代表取締役', label: '法人' })`)) as { id: string }
+        await win.evaluate(`window.api.exportFile(${JSON.stringify({ ...req, certId: corp.id })})`)
+        expect(listSignatures(new Uint8Array(fs.readFileSync(out))).map((x) => x.signer)).toEqual(['見本株式会社 代表取締役'])
+        await win.evaluate(`window.api.setRepoPdfCert(${JSON.stringify(dir)}, ${JSON.stringify(corp.id)})`)
+        await win.evaluate(`window.api.exportFile(${JSON.stringify(req)})`)
+        expect(listSignatures(new Uint8Array(fs.readFileSync(out))).map((x) => x.signer)).toEqual(['見本株式会社 代表取締役'])
+        await win.evaluate(`window.api.setRepoPdfCert(${JSON.stringify(dir)}, null)`)
     })
 
     it('電子署名：挿入メニューから丸印を作って署名欄に入れると、プレビューに印影が出る', async () => {
@@ -204,8 +215,8 @@ describe('画面', () => {
     })
 
     it('受領：返送された署名済み PDF を、変更せずに納品フォルダへ保存し、納品の記録に残す', async () => {
-        const pdfMethod = await win.evaluate('window.api.signingStatus().then((s) => s.signing.pdf.method)')
-        expect(pdfMethod).toBe('self')
+        const certCount = await win.evaluate('window.api.signingStatus().then((s) => s.signing.pdf.certs.length)')
+        expect(certCount).toBeGreaterThan(0)
         const outDir = join(tmp, 'delivered')
         fs.mkdirSync(outDir)
         await app.evaluate(({ dialog }, path) => {

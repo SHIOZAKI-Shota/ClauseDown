@@ -3,7 +3,18 @@ import { existsSync, promises as fsp } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import { HttpTimestampAuthority, type Signer } from '@libpdf/core'
 import { t } from '../shared/i18n'
-import { cleanSigning, DEFAULT_SIGNING, TSA_PRESETS, type CertInfo, type SigningSettings } from '../shared/signing'
+import { randomBytes } from 'node:crypto'
+import {
+    CERT_ID_RE,
+    cleanSigning,
+    DEFAULT_SIGNING,
+    LEGACY_CERT_ID,
+    MAX_PDF_CERTS,
+    resolveCert,
+    TSA_PRESETS,
+    type PdfCertEntry,
+    type SigningSettings,
+} from '../shared/signing'
 import type { DeepPartial, ReceivedPdf, ReceivedPdfInput, SigningStatus } from '../shared/api'
 import { loadSecret, saveSecret, updateSettings } from './settings'
 import { certSummary, checkTsaUrl, createSelfSigned, keySigner, listSignatures, p12Signer, signPdf, TsaError, type Tsa } from './pdf-sign'
@@ -47,8 +58,9 @@ export async function setSigningPrefs(patch: DeepPartial<SigningSettings>): Prom
     if (safe.commit) delete safe.commit.key
     if (safe.commit) delete safe.commit.registered
     if (safe.pdf) {
-        delete safe.pdf.cert
-        delete safe.pdf.selfCert
+        delete safe.pdf.certs
+        delete safe.pdf.defaultCert
+        delete safe.pdf.repoCerts
     }
     if (safe.pdf?.tsa?.url) checkTsaUrl(safe.pdf.tsa.url)
     return saveSigning((s) => merge(s, safe))
@@ -58,47 +70,133 @@ export async function setTsaPassword(password: string): Promise<void> {
     await saveSecret('sign-tsa-pass', String(password ?? ''))
 }
 
-export async function importPdfCert(data: Uint8Array, password: string): Promise<CertInfo> {
+function newCertId(): string {
+    const a = 'abcdefghijklmnopqrstuvwxyz0123456789'
+    return [...randomBytes(12)].map((x) => a[x % a.length]).join('')
+}
+
+type CertSecret = 'p12' | 'pass' | 'key'
+const LEGACY_SECRET = { p12: 'sign-pdf-p12', pass: 'sign-pdf-pass', key: 'sign-pdf-key' } as const
+
+async function certSecret(id: string, kind: CertSecret): Promise<string | null> {
+    if (!CERT_ID_RE.test(id)) return null
+    const value = await loadSecret(`sign-pdf-${kind}-${id}`)
+    if (value || !Object.values(LEGACY_CERT_ID).includes(id)) return value
+    const old = await loadSecret(LEGACY_SECRET[kind])
+    if (old) {
+        await saveSecret(`sign-pdf-${kind}-${id}`, old)
+        await saveSecret(LEGACY_SECRET[kind], '')
+    }
+    return old
+}
+
+async function dropCertSecrets(id: string): Promise<void> {
+    if (!CERT_ID_RE.test(id)) return
+    await Promise.all((['p12', 'pass', 'key'] as const).map((k) => saveSecret(`sign-pdf-${k}-${id}`, '')))
+}
+
+async function assertRoom(kind: PdfCertEntry['kind']): Promise<void> {
+    const s = await signingSettings()
+    if (s.pdf.certs.length >= MAX_PDF_CERTS) throw new Error(t().signing.errors.tooManyCerts(MAX_PDF_CERTS))
+    if (kind === 'myna' && s.pdf.certs.some((c) => c.kind === 'myna')) throw new Error(t().signing.errors.mynaExists)
+}
+
+async function addCert(entry: PdfCertEntry): Promise<PdfCertEntry> {
+    await saveSigning((s) => ({ ...s, pdf: { ...s.pdf, certs: [...s.pdf.certs, entry], defaultCert: s.pdf.defaultCert ?? entry.id } }))
+    return entry
+}
+
+const labelOf = (label: unknown, fallback: string) => (typeof label === 'string' ? label.trim().slice(0, 80) : '') || fallback
+
+export async function importPdfCert(data: Uint8Array, password: string, label?: string): Promise<PdfCertEntry> {
+    await assertRoom('p12')
     const bytes = new Uint8Array(data)
     const signer = await p12Signer(bytes, String(password ?? ''))
     const cert = await certSummary(signer.certificate)
-    await saveSecret('sign-pdf-p12', Buffer.from(bytes).toString('base64'))
-    await saveSecret('sign-pdf-pass', String(password ?? ''))
-    await saveSigning((s) => ({ ...s, pdf: { ...s.pdf, method: 'p12', cert } }))
-    return cert
+    const id = newCertId()
+    await saveSecret(`sign-pdf-p12-${id}`, Buffer.from(bytes).toString('base64'))
+    await saveSecret(`sign-pdf-pass-${id}`, String(password ?? ''))
+    return addCert({ id, label: labelOf(label, cert.subject), kind: 'p12', cert })
 }
 
-export async function createSelfSignedCert(opts: { name: string; email?: string; org?: string; years?: number }): Promise<CertInfo> {
+export async function createSelfSignedCert(opts: { name: string; email?: string; org?: string; years?: number; label?: string }): Promise<PdfCertEntry> {
+    await assertRoom('self')
     const years = Math.min(10, Math.max(1, Math.round(Number(opts?.years) || 3)))
     const made = await createSelfSigned({ name: String(opts?.name ?? ''), email: opts?.email, org: opts?.org, years })
     const cert = await certSummary(made.cert)
-    await saveSecret('sign-pdf-key', Buffer.from(made.key).toString('base64'))
-    await saveSigning((s) => ({ ...s, pdf: { ...s.pdf, method: 'self', cert, selfCert: Buffer.from(made.cert).toString('base64') } }))
-    return cert
+    const id = newCertId()
+    await saveSecret(`sign-pdf-key-${id}`, Buffer.from(made.key).toString('base64'))
+    return addCert({ id, label: labelOf(opts?.label, cert.subject), kind: 'self', cert, selfCert: Buffer.from(made.cert).toString('base64') })
 }
 
-export async function removePdfCert(): Promise<void> {
-    await Promise.all([saveSecret('sign-pdf-p12', ''), saveSecret('sign-pdf-pass', ''), saveSecret('sign-pdf-key', '')])
-    await saveSigning((s) => ({ ...s, pdf: { ...s.pdf, method: s.pdf.method === 'myna' ? 'myna' : 'none', cert: undefined, selfCert: undefined } }))
+export async function addMynaCert(label?: string): Promise<PdfCertEntry> {
+    if (!(await mynaAvailable())) throw new Error(t().signing.errors.mynaMissing)
+    await assertRoom('myna')
+    return addCert({ id: newCertId(), label: labelOf(label, t().signing.pdf.mynaLabel), kind: 'myna' })
 }
 
-async function certDer(s: SigningSettings): Promise<Uint8Array | null> {
-    if (s.pdf.method === 'self' && s.pdf.selfCert) return new Uint8Array(Buffer.from(s.pdf.selfCert, 'base64'))
-    if (s.pdf.method === 'p12') {
-        const signer = await storedP12()
-        return signer?.certificate ?? null
-    }
+export async function updatePdfCert(id: string, patch: Pick<PdfCertEntry, 'label' | 'reason' | 'location' | 'contactInfo'>): Promise<SigningSettings> {
+    const pick = (v: unknown) => (typeof v === 'string' ? v : undefined)
+    return saveSigning((s) => ({
+        ...s,
+        pdf: {
+            ...s.pdf,
+            certs: s.pdf.certs.map((c) =>
+                c.id !== id
+                    ? c
+                    : {
+                          ...c,
+                          label: pick(patch?.label) ?? c.label,
+                          reason: pick(patch?.reason) ?? c.reason,
+                          location: pick(patch?.location) ?? c.location,
+                          contactInfo: pick(patch?.contactInfo) ?? c.contactInfo,
+                      },
+            ),
+        },
+    }))
+}
+
+export async function removePdfCert(id: string): Promise<SigningSettings> {
+    await dropCertSecrets(id)
+    return saveSigning((s) => ({
+        ...s,
+        pdf: { ...s.pdf, certs: s.pdf.certs.filter((c) => c.id !== id), defaultCert: s.pdf.defaultCert === id ? undefined : s.pdf.defaultCert },
+    }))
+}
+
+export async function setDefaultPdfCert(id: string): Promise<SigningSettings> {
+    return saveSigning((s) => ({ ...s, pdf: { ...s.pdf, defaultCert: id } }))
+}
+
+export async function setRepoPdfCert(dir: string, id: string | null): Promise<SigningSettings> {
+    return saveSigning((s) => {
+        const repoCerts = { ...s.pdf.repoCerts }
+        if (id) repoCerts[dir] = id
+        else delete repoCerts[dir]
+        return { ...s, pdf: { ...s.pdf, repoCerts } }
+    })
+}
+
+function certById(s: SigningSettings, id: string): PdfCertEntry {
+    const c = s.pdf.certs.find((x) => x.id === id)
+    if (!c) throw new Error(t().signing.errors.noCert)
+    return c
+}
+
+async function storedP12(id: string): Promise<Signer | null> {
+    const p12 = await certSecret(id, 'p12')
+    if (!p12) return null
+    return p12Signer(new Uint8Array(Buffer.from(p12, 'base64')), (await certSecret(id, 'pass')) ?? '')
+}
+
+async function certDer(c: PdfCertEntry): Promise<Uint8Array | null> {
+    if (c.kind === 'self' && c.selfCert) return new Uint8Array(Buffer.from(c.selfCert, 'base64'))
+    if (c.kind === 'p12') return (await storedP12(c.id))?.certificate ?? null
     return null
 }
 
-async function storedP12(): Promise<Signer | null> {
-    const p12 = await loadSecret('sign-pdf-p12')
-    if (!p12) return null
-    return p12Signer(new Uint8Array(Buffer.from(p12, 'base64')), (await loadSecret('sign-pdf-pass')) ?? '')
-}
-
-export async function exportPdfCert(parent: BrowserWindow | null): Promise<string | null> {
-    const der = await certDer(await signingSettings())
+export async function exportPdfCert(parent: BrowserWindow | null, id: string): Promise<string | null> {
+    const der = await certDer(certById(await signingSettings(), id))
     if (!der) throw new Error(t().signing.errors.noCert)
     const opts = { defaultPath: 'certificate.cer', filters: [{ name: t().signing.certFile, extensions: ['cer'] }] }
     const r = parent ? await dialog.showSaveDialog(parent, opts) : await dialog.showSaveDialog(opts)
@@ -131,22 +229,21 @@ export async function testTimestamp(): Promise<{ ok: true }> {
     return { ok: true }
 }
 
-async function currentSigner(s: SigningSettings, pin?: string): Promise<{ signer: Signer; close?: () => Promise<void> }> {
-    if (s.pdf.method === 'p12') {
-        const signer = await storedP12()
+async function signerFor(c: PdfCertEntry, pin?: string): Promise<{ signer: Signer; close?: () => Promise<void> }> {
+    if (c.kind === 'p12') {
+        const signer = await storedP12(c.id)
         if (signer) return { signer }
     }
-    if (s.pdf.method === 'self' && s.pdf.selfCert) {
-        const key = await loadSecret('sign-pdf-key')
-        if (key) return { signer: await keySigner(new Uint8Array(Buffer.from(key, 'base64')), new Uint8Array(Buffer.from(s.pdf.selfCert, 'base64'))) }
+    if (c.kind === 'self' && c.selfCert) {
+        const key = await certSecret(c.id, 'key')
+        if (key) return { signer: await keySigner(new Uint8Array(Buffer.from(key, 'base64')), new Uint8Array(Buffer.from(c.selfCert, 'base64'))) }
     }
-    if (s.pdf.method === 'myna') return openMynaSigner(pin ?? '')
+    if (c.kind === 'myna') return openMynaSigner(pin ?? '')
     throw new Error(t().signing.errors.noCert)
 }
 
 export async function pdfSigningReady(): Promise<boolean> {
-    const s = await signingSettings()
-    return s.pdf.method !== 'none'
+    return (await signingSettings()).pdf.certs.length > 0
 }
 
 export interface SignSession {
@@ -154,11 +251,25 @@ export interface SignSession {
     close(): Promise<void>
 }
 
-export async function openSignSession(parent: BrowserWindow | null, pin?: string): Promise<SignSession> {
+export interface SignOptions {
+    certId?: string
+    pin?: string
+    dir?: string
+}
+
+export async function openSignSession(parent: BrowserWindow | null, o: SignOptions = {}): Promise<SignSession> {
     const s = await signingSettings()
-    const { signer, close } = await currentSigner(s, pin)
+    const cert = o.certId ? certById(s, o.certId) : resolveCert(s.pdf, o.dir)
+    if (!cert) throw new Error(t().signing.errors.noCert)
+    const { signer, close } = await signerFor(cert, o.pin)
     const tsa = await tsaOf(s)
-    const opts = { signer, reason: s.pdf.reason, location: s.pdf.location, contactInfo: s.pdf.contactInfo, longTerm: s.pdf.method !== 'myna' && s.pdf.longTerm }
+    const opts = {
+        signer,
+        reason: cert.reason || s.pdf.reason,
+        location: cert.location || s.pdf.location,
+        contactInfo: cert.contactInfo || s.pdf.contactInfo,
+        longTerm: cert.kind !== 'myna' && s.pdf.longTerm,
+    }
     let useTsa = tsa
     return {
         sign: async (bytes) => {
