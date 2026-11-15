@@ -147,6 +147,7 @@
             }
             body {
                 margin: 0;
+                padding-top: 65px;
                 background: var(--paper);
                 color: var(--ink);
                 font: 400 16px/1.85 var(--sans);
@@ -170,9 +171,12 @@
                 overflow-wrap: anywhere;
             }
 
+            /* sticky だと、ヘッダーの部品にフォーカスしたときに scroll-padding の陰にあるとみなされ、前のセクションへ戻ってしまう */
             header.top {
-                position: sticky;
+                position: fixed;
                 top: 0;
+                left: 0;
+                right: 0;
                 z-index: 20;
                 display: grid;
                 grid-template-columns: var(--cols);
@@ -266,22 +270,72 @@
                 gap: 8px;
             }
             .lang {
+                position: relative;
+            }
+            .lang-btn {
+                display: grid;
+                place-items: center;
+                width: 32px;
                 height: 32px;
-                padding: 0 26px 0 10px;
+                padding: 0;
                 border: 1px solid var(--rule);
                 border-radius: var(--radius);
-                background: transparent
-                    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2363636c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
-                    no-repeat right 8px center / 12px;
+                background: transparent;
                 color: var(--ink);
-                font: 13px/1 var(--sans);
                 cursor: pointer;
-                -webkit-appearance: none;
-                appearance: none;
             }
-            .lang option {
+            .lang-btn svg {
+                width: 16px;
+                height: 16px;
+            }
+            .lang-btn[aria-expanded='true'] {
                 background: var(--sheet);
+            }
+            .lang-menu {
+                position: absolute;
+                top: calc(100% + 6px);
+                right: 0;
+                display: flex;
+                flex-direction: column;
+                min-width: 120px;
+                padding: 4px;
+                border: 1px solid var(--line);
+                border-radius: var(--radius);
+                background: var(--sheet);
+                box-shadow: 0 6px 20px rgb(0 0 0 / 0.12);
+            }
+            .lang-menu[hidden] {
+                display: none;
+            }
+            .lang-menu button {
+                position: relative;
+                padding: 6px 10px 6px 28px;
+                border: 0;
+                border-radius: var(--radius);
+                background: transparent;
                 color: var(--ink);
+                font: 13px/1.4 var(--sans);
+                text-align: left;
+                cursor: pointer;
+            }
+            .lang-menu button:hover,
+            .lang-menu button:focus-visible {
+                background: var(--paper-2);
+            }
+            .lang-menu button[aria-checked='true'] {
+                font-weight: 500;
+            }
+            .lang-menu button[aria-checked='true']::before {
+                content: '';
+                position: absolute;
+                left: 9px;
+                top: 50%;
+                width: 12px;
+                height: 12px;
+                margin-top: -6px;
+                background: var(--ai);
+                -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+                mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
             }
 
             .btn {
@@ -1209,6 +1263,15 @@
                 line-height: 2.2;
                 color: var(--ink-3);
             }
+            /* 英語の項番（5.1）は短いので詰め、幅の狭い画面では項目名に場所を譲る */
+            :root[lang='en'] .menu button {
+                grid-template-columns: 32px minmax(0, 1fr) auto;
+            }
+            @media (max-width: 1279px) {
+                :root[lang='en'] .menu .n {
+                    display: none;
+                }
+            }
             .menu li.on,
             .menu li:hover {
                 background: var(--ai-wash);
@@ -1695,6 +1758,22 @@
                 height: calc(100dvh - 65px - 440px);
                 min-height: 200px;
             }
+            /* 説明文の行数は言語で変わるので、画面の高さに収まるよう画像の枠のほうを縮める */
+            @media (min-width: 961px) and (min-height: 641px) {
+                #features .two > .r {
+                    height: calc(100dvh - 65px);
+                }
+                #features .feature-view {
+                    flex: 1;
+                    min-height: 0;
+                    grid-template-rows: minmax(0, 1fr);
+                }
+                #features .shot-frame {
+                    flex: 1 1 0;
+                    height: auto;
+                    min-height: 120px;
+                }
+            }
             .feature-view img {
                 display: block;
                 width: 100%;
@@ -2138,10 +2217,6 @@
                 .ctl {
                     margin-left: auto;
                 }
-                .lang {
-                    padding: 0 22px 0 8px;
-                    background-position: right 6px center;
-                }
                 .editor {
                     grid-template-columns: 1fr;
                 }
@@ -2203,10 +2278,19 @@
                     <a href="https://github.com/SHIOZAKI-Shota/ClauseDown" target="_blank" rel="noreferrer noopener">GitHub</a>
                 </nav>
                 <div class="ctl">
-                <select class="lang" id="lang" aria-label="Language / 言語" title="Language / 言語">
-                    <option value="ja" lang="ja">日本語</option>
-                    <option value="en" lang="en">English</option>
-                </select>
+                <div class="lang" id="lang">
+                    <button class="lang-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="lang-menu" aria-label="Language / 言語" title="Language / 言語">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M2 12h20" />
+                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10Z" />
+                        </svg>
+                    </button>
+                    <div class="lang-menu" id="lang-menu" role="menu" hidden>
+                        <button type="button" role="menuitemradio" data-lang="ja" lang="ja" aria-checked="false">日本語</button>
+                        <button type="button" role="menuitemradio" data-lang="en" lang="en" aria-checked="false">English</button>
+                    </div>
+                </div>
                 <button class="theme" type="button" id="theme" aria-label="ダークモードにする" title="ダークモードにする">
                     <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
@@ -2995,6 +3079,9 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
             const demoFrame = () => document.querySelector('#demo iframe')
             // ---- 言語（日本語・英語）。日本語は HTML のまま、英語はこの辞書から入れる ----
             const LANG_KEY = 'clausedown-lang'
+            const langBtn = document.querySelector('#lang .lang-btn')
+            const langMenu = document.getElementById('lang-menu')
+            const langItems = [...langMenu.querySelectorAll('[data-lang]')]
             let LANG = document.documentElement.lang === 'en' ? 'en' : 'ja'
             const isEn = () => LANG === 'en'
             const SECTION_NO = { demo: 1, 'top-hero': 2, motions: 3, local: 4, features: 5, get: 6, faq: 7 }
@@ -3673,8 +3760,7 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                     document.getElementById('caret')?.remove()
                     document.getElementById('issue-caret')?.remove()
                 }
-                const select = document.getElementById('lang')
-                if (select.value !== LANG) select.value = LANG
+                for (const b of langItems) b.setAttribute('aria-checked', String(b.dataset.lang === LANG))
             }
             // 言語を切り替えたときに作り直すもの（後ろの処理が登録する）
             const langHooks = []
@@ -3690,7 +3776,38 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                 applyText()
                 for (const fn of langHooks) fn()
             }
-            document.getElementById('lang').addEventListener('change', (e) => setLang(e.target.value))
+            function openLangMenu(open, focus) {
+                langMenu.hidden = !open
+                langBtn.setAttribute('aria-expanded', String(open))
+                if (open && focus) (langItems.find((b) => b.dataset.lang === LANG) ?? langItems[0]).focus()
+            }
+            langBtn.addEventListener('click', () => openLangMenu(langMenu.hidden, false))
+            langBtn.addEventListener('keydown', (e) => {
+                if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+                e.preventDefault()
+                openLangMenu(true, true)
+            })
+            langMenu.addEventListener('click', (e) => {
+                const b = e.target.closest('[data-lang]')
+                if (!b) return
+                openLangMenu(false)
+                langBtn.focus()
+                if (b.dataset.lang !== LANG) setLang(b.dataset.lang)
+            })
+            langMenu.addEventListener('keydown', (e) => {
+                const i = langItems.indexOf(document.activeElement)
+                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                    e.preventDefault()
+                    const n = langItems.length
+                    langItems[(i + (e.key === 'ArrowDown' ? 1 : n - 1)) % n].focus()
+                } else if (e.key === 'Escape' || e.key === 'Tab') {
+                    openLangMenu(false)
+                    if (e.key === 'Escape') langBtn.focus()
+                }
+            })
+            document.addEventListener('pointerdown', (e) => {
+                if (!langMenu.hidden && !e.target.closest('#lang')) openLangMenu(false)
+            })
             applyText()
             root.classList.remove('i18n-wait')
             // ---- ここまで言語 ----
