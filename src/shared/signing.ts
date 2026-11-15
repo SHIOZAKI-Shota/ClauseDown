@@ -38,6 +38,7 @@ export interface SigningSettings {
     commit: {
         mode: CommitSignMode
         key?: SshKeyInfo
+        previousKeys?: string[]
         registered: Record<string, { at: string; manual?: boolean }>
         localMerge: boolean
     }
@@ -85,6 +86,7 @@ export function cleanSigning(v: unknown): SigningSettings {
             mode: c.mode === 'off' || c.mode === 'external' ? c.mode : 'app',
             key: c.key && typeof c.key.fingerprint === 'string' && typeof c.key.publicKey === 'string' ? c.key : undefined,
             registered: c.registered && typeof c.registered === 'object' ? c.registered : {},
+            previousKeys: Array.isArray(c.previousKeys) ? c.previousKeys.filter((k): k is string => typeof k === 'string').slice(-10) : [],
             localMerge: bool(c.localMerge, false),
         },
         approvals: { sign: bool(s.approvals?.sign, true) },
@@ -108,5 +110,5 @@ export type SigState = 'verified' | 'unknown-key' | 'bad' | 'pgp' | 'none'
 export interface SigInfo {
     state: SigState
     fingerprint?: string
-    signer?: { login?: string; name?: string; source: 'own' | 'forge' | 'repo' }
+    signer?: { login?: string; name?: string; source: 'own' | 'forge' | 'repo' | 'policy' }
 }

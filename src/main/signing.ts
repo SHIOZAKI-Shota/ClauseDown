@@ -41,7 +41,9 @@ export async function generateSigningKey(): Promise<SshKeyInfo> {
     const info: SshKeyInfo = { fingerprint: k.fingerprint, publicKey: k.publicKey, createdAt: new Date().toISOString() }
     await updateSettings((s) => {
         const signing = s.signing ?? structuredClone(DEFAULT_SIGNING)
-        signing.commit = { ...signing.commit, key: info, registered: {} }
+        const old = signing.commit.key?.publicKey
+        const previousKeys = [...(signing.commit.previousKeys ?? []), ...(old ? [old] : [])].slice(-10)
+        signing.commit = { ...signing.commit, key: info, previousKeys, registered: {} }
         return { ...s, signing }
     })
     return info

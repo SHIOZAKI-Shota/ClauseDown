@@ -11,6 +11,7 @@ export const labels = {
         outdated: '承認したあとで改定案が変更されています。もう一度承認を受けてください',
         changes: '修正の依頼が出ています。直して再度確認を依頼してください',
         requested: 'まだ承認されていません',
+        partial: (n: number, need: number) => `承認は ${n}／${need} 人です。あと ${need - n} 人の承認が必要です`,
         unsigned: '署名のない承認しかありません。このリポジトリでは、署名済みの承認のみを有効とします',
     },
     colors: {

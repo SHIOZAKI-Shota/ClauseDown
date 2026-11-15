@@ -35,6 +35,8 @@ export interface RepoRules {
     requireApproval: boolean
     approvers: string[]
     requireSignedApproval?: boolean
+    approvalThreshold?: number
+    approverKeys?: Record<string, { publicKey: string; validFrom: string; validUntil?: string }[]>
 }
 
 export interface Reviewer {
@@ -72,6 +74,8 @@ export interface ReviewStatus {
     events: ReviewEvent[]
     canMerge: boolean
     reason?: string
+    approvals?: number
+    needed?: number
 }
 
 // 読むたびに今の言語で返す
@@ -101,31 +105,49 @@ const byTime = (a: ReviewEvent, b: ReviewEvent) => timeOf(a) - timeOf(b) || Numb
 export function reviewStatus(all: ReviewEvent[], branch: string, tipOid: string, rules: RepoRules): ReviewStatus {
     const events = all.filter((e) => e.branch === branch && !e.mirror).sort(byTime)
     let request: ReviewEvent | undefined
-    let decision: ReviewEvent | undefined
+    const latest = new Map<string, ReviewEvent>()
     let unsigned = false
     for (const e of events) {
         if (e.action === 'request') {
             request = e
-            decision = undefined
+            latest.clear()
+            unsigned = false
         } else if (e.action === 'withdraw') {
             request = undefined
-            decision = undefined
+            latest.clear()
         } else if (request && (e.action === 'approve' || e.action === 'changes')) {
-            if (e.action === 'approve' && !canApprove(reviewerOf(e), request, rules, e.source)) continue
+            const who = reviewerOf(e)
+            if (e.action === 'approve' && !canApprove(who, request, rules, e.source)) continue
             if (e.action === 'approve' && rules.requireSignedApproval && e.signed !== 'verified') {
                 unsigned = true
                 continue
             }
-            decision = e
+            latest.set((who.login ?? who.name ?? '').toLowerCase(), e)
         }
     }
+    const needed = Math.max(1, Math.round(rules.approvalThreshold ?? 1))
+    const decisions = [...latest.values()].sort(byTime)
+    const changes = decisions.filter((d) => d.action === 'changes').at(-1)
+    const fresh = decisions.filter((d) => d.action === 'approve' && d.oid === tipOid)
+    const stale = decisions.filter((d) => d.action === 'approve' && d.oid !== tipOid)
     let state: ReviewState = 'none'
+    let decision: ReviewEvent | undefined
     if (request) {
-        if (!decision) state = 'requested'
-        else if (decision.action === 'changes') state = 'changes'
-        else state = decision.oid === tipOid ? 'approved' : 'outdated'
+        if (changes) {
+            state = 'changes'
+            decision = changes
+        } else if (fresh.length >= needed) {
+            state = 'approved'
+            decision = fresh.at(-1)
+        } else if (!fresh.length && stale.length) {
+            state = 'outdated'
+            decision = stale.at(-1)
+        } else {
+            state = 'requested'
+            decision = fresh.at(-1)
+        }
     }
-    const status: ReviewStatus = { state, request, decision, events, canMerge: true }
+    const status: ReviewStatus = { state, request, decision, events, canMerge: true, approvals: fresh.length, needed }
     if (rules.requireApproval && state !== 'approved') {
         status.canMerge = false
         const blocked = t().labels.reviewBlocked
@@ -136,9 +158,11 @@ export function reviewStatus(all: ReviewEvent[], branch: string, tipOid: string,
                   ? blocked.outdated
                   : state === 'changes'
                     ? blocked.changes
-                    : unsigned
-                      ? blocked.unsigned
-                      : blocked.requested
+                    : fresh.length
+                      ? blocked.partial(fresh.length, needed)
+                      : unsigned
+                        ? blocked.unsigned
+                        : blocked.requested
     }
     return status
 }

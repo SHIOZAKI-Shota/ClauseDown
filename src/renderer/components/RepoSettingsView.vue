@@ -80,6 +80,7 @@ function onStyle(v: StyleOverride) {
     saveStyle()
 }
 
+const policySigned = ref(false)
 const rules = reactive<RepoRules>({ ...app.rules, approvers: [...app.rules.approvers] })
 watch(
     () => app.rules,
@@ -89,7 +90,7 @@ watch(
     rules,
     useDebounced(async () => {
         const next = toPlain<RepoRules>(rules)
-        if (sameJson(next, app.rules)) return
+        if (policySigned.value || sameJson(next, app.rules)) return
         await app.run(() => window.api.saveRules(app.repoDir!, next))
         await app.refreshDocs()
         flash()
@@ -132,17 +133,20 @@ watch(
         </SettingsSection>
 
         <SettingsSection id="rules" :title="t.repo.settings.sections.rules">
-            <SettingRow :label="t.repo.settings.requireApproval" :description="t.repo.settings.requireApprovalDesc">
-                <USwitch v-model="rules.requireApproval" />
-            </SettingRow>
-            <SettingRow :label="t.signing.repo.requireSigned" :description="t.signing.repo.requireSignedDesc">
-                <USwitch v-model="rules.requireSignedApproval" :disabled="!rules.requireApproval" />
-            </SettingRow>
-            <SettingRow :label="t.repo.settings.approvers" :description="t.repo.settings.approversDesc" stacked>
-                <UInputTags v-model="rules.approvers" :placeholder="t.repo.settings.approversPlaceholder" class="cd-full" />
-                <p v-if="app.identity?.login" class="muted">{{ t.repo.settings.youAre(app.identity.login) }}</p>
-            </SettingRow>
-            <p v-if="app.forge" class="muted">{{ t.repo.settings.forgeReviewNote(app.forgeLabel) }}</p>
+            <PolicyRules v-if="!isDemo()" @status="(st) => (policySigned = !!st?.signed)" />
+            <template v-if="!policySigned">
+                <SettingRow :label="t.repo.settings.requireApproval" :description="t.repo.settings.requireApprovalDesc">
+                    <USwitch v-model="rules.requireApproval" />
+                </SettingRow>
+                <SettingRow :label="t.signing.repo.requireSigned" :description="t.signing.repo.requireSignedDesc">
+                    <USwitch v-model="rules.requireSignedApproval" :disabled="!rules.requireApproval" />
+                </SettingRow>
+                <SettingRow :label="t.repo.settings.approvers" :description="t.repo.settings.approversDesc" stacked>
+                    <UInputTags v-model="rules.approvers" :placeholder="t.repo.settings.approversPlaceholder" class="cd-full" />
+                    <p v-if="app.identity?.login" class="muted">{{ t.repo.settings.youAre(app.identity.login) }}</p>
+                </SettingRow>
+                <p v-if="app.forge" class="muted">{{ t.repo.settings.forgeReviewNote(app.forgeLabel) }}</p>
+            </template>
         </SettingsSection>
 
         <SettingsSection id="kinds" :title="t.repo.settings.sections.kinds">

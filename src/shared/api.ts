@@ -8,6 +8,7 @@ import type { AiConfig, AiProvider } from './ai-providers'
 import type { HouritsuConversion } from './houritsu'
 import type { DueEvent, DueEventInput, EventKind, Occurrence, Period, RepoSchedule, ScheduleItem } from './schedule'
 import type { CertInfo, SigInfo, SigningSettings } from './signing'
+import type { PolicyDoc, PolicyDraft } from './policy'
 
 export type { RepoRules, ReviewAction, ReviewEvent, AppPrefs, DocStyle }
 
@@ -36,6 +37,7 @@ export interface AppSettings {
     experiments?: Partial<Record<ExperimentId, boolean>>
     clauseLibrary?: string
     signing?: SigningSettings
+    policyPins?: Record<string, { genesis: string; version: number; doc: PolicyDoc }>
 }
 
 export interface McpConfig {
@@ -439,6 +441,12 @@ export interface Api {
     mynaStatus(): Promise<MynaStatus>
     verifyCommits(dir: string, oids: string[]): Promise<Record<string, SigInfo>>
     publishSigningKey(dir: string): Promise<void>
+    policyStatus(dir: string): Promise<PolicyStatus>
+    signLegacyRules(dir: string): Promise<PolicyStatus>
+    proposePolicy(dir: string, draft: PolicyDraft): Promise<PolicyStatus>
+    cosignPolicy(dir: string, file: string): Promise<PolicyStatus>
+    acceptGenesisChange(dir: string): Promise<PolicyStatus>
+    forgePublicKeys(dir: string, login: string): Promise<string[]>
     listSeals(): Promise<SealMeta[]>
     saveSeal(meta: { kind: SealMeta['kind']; label: string }, png: Uint8Array): Promise<SealMeta>
     readSeal(id: string): Promise<Uint8Array>
@@ -566,4 +574,30 @@ export interface SealMeta {
     kind: 'seal' | 'sign' | 'image'
     label: string
     createdAt: string
+}
+
+export interface PolicyWarning {
+    kind: 'invalid' | 'unapproved' | 'forked' | 'genesisChanged' | 'rollback' | 'removed'
+    version: number
+}
+
+export interface PolicyPending {
+    file: string
+    version: number
+    createdAt: string
+    createdBy: string
+    have: number
+    needed: number
+    signedByMe: boolean
+    draft: PolicyDraft
+}
+
+export interface PolicyStatus {
+    signed: boolean
+    version: number
+    genesis: string
+    draft: PolicyDraft
+    warnings: PolicyWarning[]
+    pending: PolicyPending[]
+    me: { name: string; login?: string; publicKey?: string; previousKeys: string[]; isAdmin: boolean; isApprover: boolean }
 }

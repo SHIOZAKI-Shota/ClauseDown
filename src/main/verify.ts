@@ -12,12 +12,13 @@ import { loadCredential, loadSettings, updateSettings } from './settings'
 import { signingSettings } from './signing'
 import { blobOfPublicKey, commitPayload, fingerprintOf, sshVerify, tagPayload, NS_GIT } from './ssh-sig'
 import { getRules } from './workflow'
+import { loadPolicy } from './policy'
 
 export interface SignerEntry {
     name?: string
     login?: string
     publicKey: string
-    source: 'own' | 'forge' | 'repo'
+    source: 'own' | 'forge' | 'repo' | 'policy'
 }
 
 const isGitHub = (base: string) => base === GITHUB_BASE
@@ -77,11 +78,16 @@ export async function keyring(dir: string, emails: string[] = []): Promise<Map<s
         const blob = blobOfPublicKey(entry.publicKey)
         if (!blob) return
         const fp = fingerprintOf(blob)
-        if (!ring.has(fp) || entry.source === 'forge') ring.set(fp, entry)
+        const rank = { policy: 3, forge: 2, own: 1, repo: 0 }
+        const cur = ring.get(fp)
+        if (!cur || rank[entry.source] > rank[cur.source]) ring.set(fp, entry)
     }
     const settings = await loadSettings()
     const own = settings.signing?.commit.key
     if (own) add({ publicKey: own.publicKey, name: settings.author.name || undefined, source: 'own' })
+    const policy = (await loadPolicy(dir).catch(() => null))?.doc
+    for (const p of [...(policy?.approvers ?? []), ...(policy?.admins ?? [])])
+        for (const k of p.keys) add({ publicKey: k.publicKey, name: p.name, login: p.login, source: 'policy' })
     for (const s of await readRecords<SignerEntry & { publicKey: string }>(dir, RECORD.signers).catch(() => [])) {
         if (typeof s?.publicKey === 'string') add({ publicKey: s.publicKey, name: s.name, login: s.login, source: 'repo' })
     }
@@ -144,4 +150,10 @@ export async function verifyTag(dir: string, oid: string): Promise<SigInfo> {
     const { object } = await git.readObject({ fs, dir, oid, format: 'content' })
     const { payload, signature } = tagPayload(new TextDecoder().decode(object as Uint8Array))
     return infoOf(signature, payload, await keyring(dir))
+}
+
+export async function forgePublicKeys(dir: string, login: string): Promise<string[]> {
+    const m = matchRemote(await remoteUrl(dir).catch(() => ''), knownBases(await loadSettings()))
+    if (!m || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(login)) return []
+    return forgeKeys(m.base, login)
 }

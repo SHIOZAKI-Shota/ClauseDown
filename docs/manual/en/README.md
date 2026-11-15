@@ -91,6 +91,7 @@ This manual is also available in Japanese: [日本語版](../README.md)
   - [19. Digital signatures](#19-digital-signatures)
     - [Signing versions](#signing-versions)
     - [Signing approvals](#signing-approvals)
+    - [Signing the rules](#signing-the-rules)
     - [Adding a digital signature to PDFs](#adding-a-digital-signature-to-pdfs)
     - [Signing with a My Number Card](#signing-with-a-my-number-card)
     - [Inserting seals and signature images](#inserting-seals-and-signature-images)
@@ -1242,6 +1243,26 @@ With **Sign approvals and change requests** on, review requests, approvals and c
 **Do not count unsigned approvals**: available under **Rules** in repository settings when approval is required. Only signed approvals then count toward merging, and the merge commit is also created and signed on this PC.
 
 **Signer list**: in repositories that aren't connected to GitHub or GitLab, click **Add to this repository's signer list** so others can check your key. The list trusts whichever key was added first, so it is a weaker check than keys registered on GitHub or GitLab.
+
+### Signing the rules
+
+The repository's **Approval rules** (whether approval is required, the approvers and so on) start out unsigned, so anyone who can write to the repository can change them. The requester could even swap the approvers or turn off required approval.
+
+Click **Sign the rules** to sign the current rules as version 1. After that, every change needs signatures from the **rules administrators**. The design follows TUF, the standard for securing software updates, and gittuf, which applies it to git.
+
+| Item | What it does |
+|---|---|
+| Approvers | Register a name, login and public key. For approvers with a key, only approvals signed with that key count, which prevents impersonation |
+| Approvals required | Once approvals from this many different approvers are given, the draft can be merged. Repeated approvals from the same person count once |
+| Rules administrators | The people who sign rules changes. Register two or more in case a key is lost |
+| Signatures required for changes | How many administrator signatures are needed to apply a rules change |
+
+- **Proposing changes**: edit the rules and click **Propose change** to create the next version signed with your key. It is applied once enough administrators have signed; until then it appears under **Changes awaiting signatures**, where other administrators click **Sign**.
+- **Adding keys**: the key button on each row adds your own key, a pasted public key, or the signing keys published on GitHub/GitLab. A newly added administrator must also sign that version.
+- **Key rotation**: after recreating your key in Settings > Digital signatures, **Apply key rotation** appears. It sets an end time on the old key and adds the new one. Approvals signed with the old key before the rotation stay valid as of when they were made.
+- **Tamper detection**: changes without enough administrator signatures, or rules whose content was altered, are not applied, and the last valid version stays in use. Each PC remembers the versions it has verified, and warns (keeping the earlier rules) if the rules are deleted, rolled back or given a new origin.
+- **Origin fingerprint**: version 1 can't be verified by anyone's signature, so it relies on trusting its creator. Check the displayed origin fingerprint with the others.
+- For repositories connected to GitHub or GitLab, also use the site's branch protection (required reviewers) so merges are blocked on the site too.
 
 ### Adding a digital signature to PDFs
 

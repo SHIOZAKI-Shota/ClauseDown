@@ -79,6 +79,9 @@ async function act(action: ReviewAction) {
                 <div class="side">
                     <div class="state">
                         <UBadge :label="STATE_LABEL[status.state]" :color="STATE_COLOR[status.state]" size="lg" variant="subtle" />
+                        <span v-if="(status.needed ?? 1) > 1" class="muted">{{
+                            t.signing.policy.approvalCount(status.approvals ?? 0, status.needed ?? 1)
+                        }}</span>
                         <span v-if="prOf(status.request)" class="muted">{{ reviewRefLabel(status.request?.forge ?? 'github', prOf(status.request)!) }}</span>
                     </div>
                     <p class="cd-muted">{{ t.review.rules(app.rules.requireApproval, app.rules.approvers) }}</p>

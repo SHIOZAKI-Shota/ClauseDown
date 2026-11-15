@@ -10,25 +10,24 @@ import { parseLegal } from '../shared/legal-parser'
 import { author, identity } from './git-base'
 import * as g from './git'
 import { forgeOf } from './forge'
-import { newId, readRecord, readRecords, RECORD, writeRecord } from './records'
+import { newId, readRecords, RECORD, writeRecord } from './records'
 import { repoKey } from './repo-lock'
 import { afterMain, newOnMain, reviewBodyLines } from './issues'
 import { appKey, signingSettings, signOpts } from './signing'
+import { repoRoot } from './repo-id'
+import { loadPolicy, readChain } from './policy'
+import { keyValidAt } from '../shared/policy'
 import { dsseSign, verifyReviewEvent } from './attest'
 import { reviewStatement } from '../shared/attestation'
 import { keyring } from './verify'
 import { fingerprintOf, blobOfPublicKey } from './ssh-sig'
 
 export async function getRules(dir: string): Promise<RepoRules> {
-    const r = (await readRecord<RepoRules>(dir, RECORD.rules)) as Partial<RepoRules> | null
-    return {
-        requireApproval: typeof r?.requireApproval === 'boolean' ? r.requireApproval : DEFAULT_RULES.requireApproval,
-        approvers: Array.isArray(r?.approvers) ? r.approvers.filter((a): a is string => typeof a === 'string') : DEFAULT_RULES.approvers,
-        requireSignedApproval: r?.requireSignedApproval === true,
-    }
+    return (await loadPolicy(dir)).rules
 }
 
 export async function saveRules(dir: string, rules: RepoRules): Promise<void> {
+    if ((await readChain(dir)).head) throw new Error(t().signing.policy.errors.signedRules)
     const clean: RepoRules = {
         requireApproval: !!rules.requireApproval,
         approvers: [...new Set(rules.approvers.map((a) => a.trim()).filter(Boolean))],
@@ -53,31 +52,23 @@ const isStr = (v: unknown): v is string => typeof v === 'string'
 const DECISION_TTL = 60_000
 const decisionMemo = new Map<string, Map<string, { at: number; events: ReviewEvent[] }>>()
 
-const rootMemo = new Map<string, string>()
-
-export async function repoRoot(dir: string): Promise<string> {
-    const key = repoKey(dir)
-    const hit = rootMemo.get(key)
-    if (hit) return hit
-    const main = await g.mainBranch(dir)
-    const commits = await git.log({ fs, dir, ref: main })
-    const root = commits.at(-1)?.oid ?? ''
-    if (root) rootMemo.set(key, root)
-    return root
-}
+export { repoRoot } from './repo-id'
 
 async function annotateSignatures(dir: string, events: ReviewEvent[]): Promise<ReviewEvent[]> {
     if (!events.some((e) => e.attestation)) return events
     const root = await repoRoot(dir).catch(() => '')
     const ring = await keyring(dir).catch(() => new Map())
+    const pinnedKeys = (await getRules(dir).catch(() => DEFAULT_RULES)).approverKeys ?? {}
     const same = (a?: string, b?: string) => !!a && !!b && a.toLowerCase() === b.toLowerCase()
     const verified = (e: ReviewEvent) => {
         if (!e.attestation) return false
         const r = verifyReviewEvent(e, root)
         if (!r.ok || !r.fingerprint) return false
+        const login = e.byLogin ?? e.forgeUser
+        const keys = (login && pinnedKeys[`@${login}`]) || pinnedKeys[e.by]
+        if (keys) return keys.some((k) => keyValidAt(k, e.at) && fingerprintOf(blobOfPublicKey(k.publicKey) ?? Buffer.alloc(0)) === r.fingerprint)
         const who = ring.get(r.fingerprint)
         if (!who) return false
-        const login = e.byLogin ?? e.forgeUser
         if (who.source === 'forge') return same(who.login, login)
         return login ? same(who.login, login) || (!who.login && who.name === e.by) : who.name === e.by || who.source === 'own'
     }

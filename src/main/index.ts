@@ -15,6 +15,7 @@ import * as signing from './signing'
 import * as verify from './verify'
 import { mynaStatus } from './myna'
 import * as seals from './seals'
+import * as policy from './policy'
 import { checkUpdate, downloadUpdate, initUpdater, installUpdate, updateState } from './updater'
 import * as wf from './workflow'
 import * as schedule from './schedule'
@@ -176,6 +177,14 @@ function assertPicked(dir: unknown) {
 }
 
 const DIR_FIRST = new Set([
+    'verifyCommits',
+    'publishSigningKey',
+    'policyStatus',
+    'signLegacyRules',
+    'proposePolicy',
+    'cosignPolicy',
+    'acceptGenesisChange',
+    'forgePublicKeys',
     'openRepo',
     'initRepo',
     'listDocs',
@@ -482,6 +491,30 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
     saveSeal: (meta, png) => seals.saveSeal(meta, png),
     readSeal: (id) => seals.readSeal(id),
     deleteSeal: (id) => seals.deleteSeal(id),
+    policyStatus: async (dir) => {
+        await assertAllowedDir(dir)
+        return policy.policyStatus(dir)
+    },
+    signLegacyRules: async (dir) => {
+        await assertAllowedDir(dir)
+        return policy.signLegacyRules(dir)
+    },
+    proposePolicy: async (dir, draft) => {
+        await assertAllowedDir(dir)
+        return policy.proposePolicy(dir, draft)
+    },
+    cosignPolicy: async (dir, file) => {
+        await assertAllowedDir(dir)
+        return policy.cosignPolicy(dir, String(file))
+    },
+    acceptGenesisChange: async (dir) => {
+        await assertAllowedDir(dir)
+        return policy.acceptGenesisChange(dir)
+    },
+    forgePublicKeys: async (dir, login) => {
+        await assertAllowedDir(dir)
+        return verify.forgePublicKeys(dir, String(login))
+    },
     verifyCommits: async (dir, oids) => {
         await assertAllowedDir(dir)
         return verify.verifyCommits(dir, Array.isArray(oids) ? oids.map(String) : [])
