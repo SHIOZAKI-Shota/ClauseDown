@@ -737,7 +737,7 @@ Choose an effective version and click **Deliver**.
 
 The delivery is recorded in **Delivery records**. If the remote is on GitHub or GitLab, you can also attach the deliverables to a release on the remote.
 
-If a PDF signing method is chosen under **Digital signatures** in Settings, **Sign digitally** in the delivery dialog adds a digital signature to the delivered PDFs ([chapter 19](#adding-a-digital-signature-to-pdfs)). When the other party signs and returns a PDF, **Save the signed PDF you received** in the delivery record saves it to the delivery folder and adds it to the record ([chapter 19](#saving-a-returned-signed-pdf)).
+If a PDF signing certificate is registered under **Digital signatures** in Settings, **Sign digitally** in the delivery dialog adds a digital signature to the delivered PDFs. With two or more certificates, choose which one next to it ([chapter 19](#adding-a-digital-signature-to-pdfs)). When the other party signs and returns a PDF, **Save the signed PDF you received** in the delivery record saves it to the delivery folder and adds it to the record ([chapter 19](#saving-a-returned-signed-pdf)).
 
 ---
 
@@ -1106,7 +1106,7 @@ Open these with **Settings** at the bottom of the left pane. They are saved only
 | Sync | Sync on startup, push when saving a version |
 | Due dates | Desktop notifications |
 | Export | Default folder for exported files, whether to add the date to file names |
-| Digital signatures | Signing keys for versions and approvals, PDF signing method and timestamps, seals and signature images ([chapter 19](#19-digital-signatures)) |
+| Digital signatures | Signing keys for versions and approvals, PDF signing certificates and timestamps, seals and signature images ([chapter 19](#19-digital-signatures)) |
 | Print, PDF and Word formatting | Defaults for body font, font size, line spacing, margins and page numbers |
 | GitHub/GitLab | Signing in to remotes ([chapter 14](#14-sharing-with-other-computers-and-other-people)) |
 | AI | AI provider ([chapter 16](#16-asking-ai-to-check-or-rewrite)) |
@@ -1285,17 +1285,39 @@ Click **Sign the rules** to sign the current rules as version 1. After that, eve
 
 ### Adding a digital signature to PDFs
 
-Under **Sign with**, choose a certificate. Signatures use the PAdES format (ETSI.CAdES.detached) and don't change how the PDF looks.
+Once you register a certificate under **PDF signing**, exported PDFs get a digital signature. Signatures use the PAdES format (ETSI.CAdES.detached) and don't change how the PDF looks. You can register up to 10 certificates, for example a personal one and a company one.
 
 ![PDF signing settings](images/setup-signature-pdf.png)
 
-| Option | What it does |
-|---|---|
-| Certificate file | Imports a certificate issued by a certificate authority (.p12/.pfx). The password is kept in the operating system's secure storage. This gives the strongest legal effect |
-| Self-signed | The app creates a certificate. Tampering is detected, but Acrobat and similar viewers show the signer as unknown. Use **Export certificate** to send the .cer file to the recipient; once they trust it, the signature shows as valid |
-| My Number Card | See the next section |
+Use **Add certificate** to register one of three kinds. Give each certificate a name such as "Personal" or "Acme Corp. (CEO)".
 
-With **Sign when exporting** on, PDFs are signed when you export them. With **Sign when delivering** on, **Sign digitally** is ticked by default in the delivery window. Word and HTML files are not signed.
+| Kind | What it does |
+|---|---|
+| Certificate file | Imports a certificate issued by a certificate authority (.p12/.pfx). The password is kept in the operating system's secure storage. Japan's commercial registration certificate (商業登記電子証明書) is registered this way too |
+| Self-signed | The app creates a certificate. Tampering is detected, but Acrobat and similar viewers show the signer as unknown. Use **Export certificate** to send the .cer file to the recipient; once they trust it, the signature shows as valid |
+| My Number Card | Only one can be registered. See [Signing with a My Number Card](#signing-with-a-my-number-card) |
+
+**Choosing a certificate**: what a signature proves, and how strongly, depends on the certificate.
+
+| Situation | Recommended certificate |
+|---|---|
+| Contracts you sign as an individual (freelancers, sole proprietors) | My Number Card with a timestamp |
+| Contracts between companies, signed by the representative | Commercial registration certificate with a timestamp |
+| Contracts signed by staff, or when the other party checks in Acrobat | A certificate from a commercial certificate authority (for example one on Adobe's AATL) |
+| Internal checks, or when you only need to detect tampering | Self-signed |
+
+Internal approvals can be recorded with [approval signatures](#signing-approvals) instead of PDF signatures. A self-signed PDF can still be submitted as evidence, but you need other evidence that the key belongs to the signer, such as a record of exchanging the certificate with the other party beforehand.
+
+**Default certificate and choosing when signing**
+
+- Click **Make default** on a certificate to set the app default. Under **General** in repository settings, **PDF certificate for this repository** sets a default per repository. The repository default is saved on this PC only, not in the repository.
+- With two or more certificates, **Certificate to sign with** appears when you export a PDF. The repository default (or the app default if none) is selected; press Enter to confirm. In the delivery window, choose the certificate next to **Sign digitally**.
+
+![Certificate to sign with](images/pdf-sign-dialog.png)
+
+- With **Sign when exporting** on, PDFs are signed when you export them. With **Sign when delivering** on, **Sign digitally** is ticked by default in the delivery window. Word and HTML files are not signed.
+- **Reason, location and contact**: set them per certificate with **Edit**. Blank fields use the shared values.
+- **Expiry**: certificates that expire within 30 days show **Expires soon**, and expired ones show **Expired**.
 
 **Timestamps**: when on, a timestamp authority certifies when you signed (PAdES B-T), so you can show the signature was valid at signing time even after the certificate expires.
 
@@ -1322,11 +1344,12 @@ The PDF is copied to the delivery folder as `<original name>_received.pdf`, and 
 
 You can sign PDFs with the digital signature certificate on a Japanese My Number Card. You need a smart card reader. You don't need to install the JPKI client software.
 
-1. Under **Sign with**, choose **My Number Card** and put the card on the reader. **Card status** shows the reader and the remaining signing password attempts.
-2. When you export or deliver a PDF, you're asked for the signing password (6 to 16 letters and digits). The password is never saved.
+1. Register it with **Add certificate** > **Add My Number Card** and put the card on the reader. The certificate list shows the reader and the remaining signing password attempts.
+2. When you choose the My Number Card while exporting or delivering a PDF, you're asked for the signing password (6 to 16 letters and digits). The password is never saved.
 3. With one attempt left, you're asked to confirm again. Five wrong attempts in a row lock the card, which can only be unlocked at your municipal office.
 
 - **Your four personal details are shared**: the certificate contains your name, address, date of birth and sex. Anyone you send the signed PDF to can see them.
+- **Use a timestamp**: the signing certificate is revoked when you move or change your name, and it expires on your fifth birthday after issue. With a timestamp you can still show the signature was valid when you signed.
 - **No long-term validation data**: revocation data for My Number Card certificates is only provided to signature verifiers designated by law, so signatures go up to B-T (timestamp).
 - **How Acrobat shows it**: J-LIS certificates aren't in Acrobat's built-in trust list, so the signer may show as unknown.
 - This feature uses [myna-card](https://github.com/soltia48/myna-card) to read the card.

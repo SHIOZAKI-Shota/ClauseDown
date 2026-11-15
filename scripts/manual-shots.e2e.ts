@@ -1217,8 +1217,10 @@ async function signingSetup() {
     if (signingReady) return
     await win.evaluate(`(async () => {
         await window.api.generateSigningKey()
-        await window.api.createSelfSignedCert({ name: ${JSON.stringify(ME.name)}, org: 'Acme Corp.', email: ${JSON.stringify(ME.email)}, years: 3 })
-        await window.api.setSigningPrefs({ pdf: { reason: 'Approval of the agreement', location: 'New York', tsa: { enabled: true } } })
+        await window.api.createSelfSignedCert({ name: ${JSON.stringify(ME.name)}, email: ${JSON.stringify(ME.email)}, years: 3, label: 'Personal' })
+        const corp = await window.api.createSelfSignedCert({ name: ${JSON.stringify(ME.name)}, org: 'Acme Corp.', years: 2, label: 'Acme Corp. (CEO)' })
+        await window.api.updatePdfCert(corp.id, { reason: 'Execution of the agreement' })
+        await window.api.setSigningPrefs({ pdf: { reason: 'Approval', location: 'New York', tsa: { enabled: true } } })
     })()`)
     signingReady = true
 }
@@ -1235,6 +1237,17 @@ shot(['setup-signature.png', 'setup-signature-pdf.png'], async () => {
         .evaluate((el) => el.scrollIntoView({ block: 'start' }))
     await wait(800)
     await save('setup-signature-pdf.png')
+})
+
+shot('pdf-sign-dialog.png', async () => {
+    await signingSetup()
+    await openDoc(dirs.contracts, MSA)
+    await win.getByRole('button', { name: 'Export' }).first().click()
+    await wait(600)
+    await win.getByRole('menuitem', { name: 'Export as PDF' }).first().click()
+    await wait(1200)
+    await save('pdf-sign-dialog.png')
+    await win.keyboard.press('Escape')
 })
 
 shot('repo-policy.png', async () => {
