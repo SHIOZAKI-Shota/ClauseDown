@@ -1579,10 +1579,83 @@
                 justify-content: stretch;
             }
             .cover {
+                position: relative;
+                isolation: isolate;
                 flex: 1;
                 display: flex;
                 flex-direction: column;
                 overflow: hidden;
+            }
+            .cover-bg {
+                position: absolute;
+                inset: 0;
+                z-index: -1;
+                display: flex;
+                justify-content: center;
+                gap: 48px;
+                overflow: hidden;
+                color: var(--ink);
+                opacity: 0.14;
+                font: 400 14px/2 var(--serif);
+                pointer-events: none;
+                user-select: none;
+                -webkit-mask-image: radial-gradient(ellipse 52% 48% at 50% 36%, transparent 45%, #000 100%);
+                mask-image: radial-gradient(ellipse 52% 48% at 50% 36%, transparent 45%, #000 100%);
+            }
+            :root[data-dark] .cover-bg {
+                opacity: 0.17;
+            }
+            .cover-bg .col {
+                flex: none;
+                width: 300px;
+            }
+            .cover-bg .col > div {
+                will-change: transform;
+            }
+            .motion .cover-bg .col > div {
+                animation: cover-drift var(--t, 240s) linear infinite;
+            }
+            .cover-bg .col:nth-child(even) > div {
+                --t: 300s;
+            }
+            .cover-bg .col:nth-child(3n) > div {
+                --t: 270s;
+            }
+            @keyframes cover-drift {
+                to {
+                    transform: translateY(-50%);
+                }
+            }
+            .cover-bg h4 {
+                margin: 0;
+                padding-top: 20px;
+                font: 700 14px/2 var(--serif);
+            }
+            .cover-bg p {
+                margin: 0;
+                text-indent: -1em;
+                padding-left: 1em;
+            }
+            .cover-bg p.i {
+                padding-left: 2em;
+            }
+            .cover-points {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 6px 0;
+                margin: 28px 0 0;
+                padding: 0;
+                list-style: none;
+                font-size: 14px;
+                color: var(--ink-2);
+            }
+            .cover-points li {
+                padding: 0 16px;
+                border-left: 1px solid var(--rule);
+            }
+            .cover-points li:first-child {
+                border-left: 0;
             }
             .cover-text {
                 flex: 1;
@@ -2193,6 +2266,22 @@
                 .cover-text {
                     padding: 32px 16px;
                 }
+                .cover-bg {
+                    opacity: 0.1;
+                }
+                .cover-points {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 8px 12px;
+                    margin-top: 20px;
+                    font-size: 13px;
+                    line-height: 1.5;
+                }
+                .cover-points li,
+                .cover-points li:first-child {
+                    padding: 0;
+                    border-left: 0;
+                }
                 .peek {
                     --peek: 180px;
                     padding: 0 16px;
@@ -2308,6 +2397,7 @@
         <main>
             <section id="cover" class="slide">
                 <div class="cover">
+                    <div class="cover-bg" id="cover-bg" aria-hidden="true"></div>
                     <div class="cover-text">
                         <h1 class="title" data-i18n-html="cover.title">条文のための<br />統合管理編集ツール</h1>
                         <p class="intro" data-i18n="cover.intro">「第○条」が並ぶ法律案・条例・契約書・規程を Markdown で記述し、条番号と参照の自動更新、版の履歴、新旧対照表、施行日を一元管理する Windows・macOS 用アプリです。</p>
@@ -2315,6 +2405,12 @@
                             <a class="btn" data-dl="main" href="#get" data-i18n="dl.main">Windows・Mac 版をダウンロード</a>
                         </div>
                         <p class="dl-meta"><span data-rel data-i18n="dl.free">無料・MIT ライセンス</span><a data-dl="alt" href="#get" data-i18n="dl.alt">ほかの OS 版</a></p>
+                        <ul class="cover-points">
+                            <li data-i18n="cover.p1">条番号と参照を自動で更新</li>
+                            <li data-i18n="cover.p2">版の履歴と新旧対照表</li>
+                            <li data-i18n="cover.p3">施行日・期日を一元管理</li>
+                            <li data-i18n="cover.p4">PDF・Word に書き出し</li>
+                        </ul>
                     </div>
                     <div class="peek">
                         <p class="peek-hint" aria-hidden="true" data-i18n="cover.hint">\ クリックしてデモを見る /</p>
@@ -3114,6 +3210,10 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                 'dl.main': 'Download for Windows or Mac',
                 'dl.free': 'Free, MIT License',
                 'dl.alt': 'Other platforms',
+                'cover.p1': 'Automatic article numbering',
+                'cover.p2': 'Version history and redlines',
+                'cover.p3': 'Effective dates and deadlines',
+                'cover.p4': 'PDF and Word export',
                 'cover.hint': 'Click to open the demo',
                 'cover.peek': 'Open the editor demo',
 
@@ -3847,6 +3947,52 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                 })
             }
             langHooks.push(render)
+
+            const COVER_BG = {
+                ja: [
+                    ['第一条（目的）', '甲は、乙に対し、別表第一に定める業務を委託し、乙はこれを受託する。'],
+                    ['第二条（定義）', 'この契約において、次の各号に掲げる用語の意義は、当該各号に定めるところによる。', '・一　成果物　本業務の結果として乙が甲に納入する一切の物', '・二　秘密情報　相手方から開示を受けた技術上又は営業上の情報'],
+                    ['第三条（再委託）', '乙は、甲の書面による事前の承諾を得なければ、本業務の全部又は一部を第三者に再委託してはならない。'],
+                    ['第四条（委託料）', '本業務の委託料は、別表第二のとおりとする。', '２　甲は、毎月末日締め翌月末日までに、乙の指定する口座に振り込んで支払う。'],
+                    ['第五条（検収）', '甲は、成果物の納入を受けた日から十日以内に検査を行い、合格又は不合格を通知する。', '２　前項の期間内に通知をしないときは、検査に合格したものとみなす。'],
+                    ['第六条（成果物の権利）', '成果物の著作権は、第四条の委託料の支払が完了した時に、乙から甲に移転する。'],
+                    ['第七条（秘密保持）', '甲及び乙は、秘密情報を、相手方の承諾なく第三者に開示し、又は漏えいしてはならない。', '２　前項の義務は、この契約の終了後三年間存続する。'],
+                    ['第八条（施行期日）', 'この規則は、令和八年四月一日から施行する。'],
+                    ['第九条（適用範囲）', 'この規則は、会社に雇用されるすべての従業員に適用する。', '２　パートタイム従業員の就業に関する事項は、別に定める。'],
+                    ['第十条（解除）', '甲又は乙は、相手方が次の各号のいずれかに該当したときは、直ちにこの契約を解除することができる。', '・一　支払を停止したとき', '・二　破産手続開始の申立てがあったとき'],
+                    ['第十一条（補助金の額）', '補助金の額は、補助対象経費の三分の二以内の額とし、百万円を限度とする。'],
+                    ['第十二条（協議）', 'この契約に定めのない事項は、甲乙誠実に協議して定める。'],
+                ],
+                en: [
+                    ['Section 1. Purpose', 'Customer engages Provider to perform the Services described in Schedule 1, and Provider accepts the engagement.'],
+                    ['Section 2. Definitions', 'In this Agreement:', '・(a) "Deliverables" means all materials delivered under this Agreement;', '・(b) "Confidential Information" means information marked as confidential.'],
+                    ['Section 3. Subcontracting', 'Provider shall not subcontract any part of the Services without prior written consent.'],
+                    ['Section 4. Fees', '4.1 The fees are set out in Schedule 2.', '4.2 Customer shall pay each invoice within 30 days.'],
+                    ['Section 5. Acceptance', '5.1 Customer shall inspect each Deliverable within 10 days after delivery.', '5.2 Absent notice, the Deliverable is deemed accepted.'],
+                    ['Section 6. Ownership', 'All rights in the Deliverables pass to Customer upon payment of the fees under Section 4.'],
+                    ['Section 7. Confidentiality', '7.1 Each Party shall keep the Confidential Information of the other Party confidential.', '7.2 This Section 7 survives for three years.'],
+                    ['Section 8. Commencement', 'These Rules take effect on April 1, 2026.'],
+                    ['Section 9. Scope', 'These Rules apply to all employees of the Company.'],
+                    ['Section 10. Termination', 'Either Party may terminate this Agreement immediately if the other Party:', '・(a) suspends payment of its debts; or', '・(b) files a petition in bankruptcy.'],
+                    ['Section 11. Amount of Grant', 'The grant is two thirds of the eligible costs, up to $5,000.'],
+                    ['Section 12. Governing Law', 'This Agreement is governed by the laws of the State of New York.'],
+                ],
+            }
+            const coverBg = document.getElementById('cover-bg')
+            function renderCoverBg() {
+                const list = COVER_BG.ja.flatMap((a, i) => [['ja', a], ['en', COVER_BG.en[(i + 5) % COVER_BG.en.length]]])
+                const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c])
+                const article = ([lang, [h, ...ps]]) =>
+                    `<div lang="${lang}"><h4>${esc(h)}</h4>${ps.map((p) => (p.startsWith('・') ? `<p class="i">${esc(p.slice(1))}</p>` : `<p>${esc(p)}</p>`)).join('')}</div>`
+                let html = ''
+                for (let c = 0; c < 7; c++) {
+                    const order = list.map((_, i) => list[(i + c * 7) % list.length])
+                    const body = order.map(article).join('')
+                    html += `<div class="col"><div>${body}${body}</div></div>`
+                }
+                coverBg.innerHTML = html
+            }
+            renderCoverBg()
 
             const SPLIT = [25, 100 / 3]
             const peek = document.getElementById('peek')

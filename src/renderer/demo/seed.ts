@@ -258,10 +258,10 @@ function yoko(): DemoRepo {
 
 export function seed(lang: Locale = DEMO_LANG): DemoState {
     if (lang === 'en') return seedEn()
-    const repos = [shugyo(), itaku(), chosaku(), jorei(), yoko()]
+    const repos = [itaku(), shugyo(), chosaku(), jorei(), yoko()]
     const section: Record<string, string> = {
-        '/demo/mihon-shugyo': '見本株式会社',
         '/demo/mihon-itaku': '見本株式会社',
+        '/demo/mihon-shugyo': '見本株式会社',
         '/demo/mihon-chosaku': '見本出版株式会社',
         '/demo/mihon-jorei': '見本市',
         '/demo/mihon-yoko': '見本市',

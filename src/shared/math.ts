@@ -32,6 +32,7 @@ export function scanMath(src: string, pos: number): MathSpan | null {
         break
     }
     const tex = src.slice(start, end)
+    if (!display && tex.includes('\n')) return null
     if (!tex.trim() || JAPANESE.test(tex.replace(/\\text\{[^{}]*\}/g, ''))) return null
     return { from: pos, to: end + open, tex, display }
 }

@@ -285,10 +285,10 @@ function grants(): DemoRepo {
 }
 
 export function seedEn(): DemoState {
-    const repos = [handbook(), services(), nda(), license(), grants()]
+    const repos = [services(), handbook(), nda(), license(), grants()]
     const section: Record<string, string> = {
-        '/demo/acme-handbook': 'Acme Corp.',
         '/demo/acme-services': 'Acme Corp.',
+        '/demo/acme-handbook': 'Acme Corp.',
         '/demo/acme-nda': 'Acme Corp.',
         '/demo/acme-license': 'Acme Corp.',
         '/demo/riverside-grants': 'Riverside City',

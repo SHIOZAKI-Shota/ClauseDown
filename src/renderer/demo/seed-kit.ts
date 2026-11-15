@@ -6,7 +6,7 @@ import type { ReviewAction } from '@shared/review'
 import { DEFAULT_KINDS, type DueEvent } from '@shared/schedule'
 import { effectiveTag, MAIN, newId, newOid, type DemoIssue, type DemoRepo, type DemoState } from './state'
 
-export const STATE_VERSION = 2
+export const STATE_VERSION = 3
 
 export function edit(text: string, from: string, to: string): string {
     if (!text.includes(from)) throw new Error(`見本の文書に「${from.slice(0, 30)}」がありません`)

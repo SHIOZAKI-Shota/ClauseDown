@@ -30,6 +30,10 @@ describe('数式', () => {
 
     it('金額の $ や日本語を含む範囲は数式にしない。\\$ は文字のまま', () => {
         expect(findMath('US$1,000及びUS$2,000とする。')).toEqual([])
+        expect(findMath('| Fee | US$8,000 |\n| Retainer | US$3,000 |\n\n$$x = \\dfrac{a}{b}$$').map((m) => [m.tex, m.display])).toEqual([
+            ['x = \\dfrac{a}{b}', true],
+        ])
+        expect(findMath('$a\nb$')).toEqual([])
         expect(findMath('$と$')).toEqual([])
         expect(findMath('\\$5 と $x$').map((m) => m.tex)).toEqual(['x'])
         expect(findMath('$\\text{月額} \\times 12$').map((m) => m.tex)).toEqual(['\\text{月額} \\times 12'])
