@@ -90,6 +90,15 @@ async function act(action: ReviewAction) {
                                 <div>
                                     <strong>{{ e.by }}</strong> {{ t.review.events[e.action] }}<span class="cd-muted">　{{ fmtDate(e.at, 'mdhm') }}</span>
                                     <UBadge
+                                        v-if="(e.action === 'approve' || e.action === 'changes') && e.signed"
+                                        :label="e.signed === 'verified' ? t.signing.review.signed : t.signing.review.unsigned"
+                                        :title="e.signed === 'verified' ? t.signing.review.signedTip : t.signing.review.unsignedTip"
+                                        :icon="e.signed === 'verified' ? 'i-lucide-shield-check' : 'i-lucide-shield-off'"
+                                        size="sm"
+                                        :color="e.signed === 'verified' ? 'success' : 'neutral'"
+                                        variant="subtle"
+                                    />
+                                    <UBadge
                                         v-if="e.source === 'github' || e.source === 'gitlab'"
                                         :label="FORGE_LABEL[e.source]"
                                         size="sm"

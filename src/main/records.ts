@@ -4,6 +4,7 @@ import git from './igit'
 import http from 'isomorphic-git/http/node'
 import { withRepoLock } from './repo-lock'
 import { author, hasRemote, onAuth, RECORDS_BRANCH, tryResolve } from './git-base'
+import { signOpts } from './signing'
 
 const LOCAL = `refs/heads/${RECORDS_BRANCH}`
 const REMOTE = `refs/remotes/origin/${RECORDS_BRANCH}`
@@ -17,6 +18,7 @@ export const RECORD = {
     issues: 'issues/',
     issueLinks: 'issue-links/',
     issueComments: 'issue-comments/',
+    signers: 'signers/',
 } as const
 
 async function filesOf(dir: string, oid: string | null, into = new Map<string, string>(), prefix = '') {
@@ -80,7 +82,18 @@ async function commitFiles(dir: string, files: Map<string, string>, parents: str
     const tree = await writeTreeOf(dir, [...files.entries()])
     const who = await author(dir)
     const sig = { ...who, timestamp: Math.floor(Date.now() / 1000), timezoneOffset: new Date().getTimezoneOffset() }
-    const oid = await git.writeCommit({ fs, dir, commit: { message, tree, parent: parents, author: sig, committer: sig } })
+    const oid = await git.commit({
+        fs,
+        dir,
+        ref: LOCAL,
+        message,
+        tree,
+        parent: parents,
+        author: sig,
+        committer: sig,
+        noUpdateBranch: true,
+        ...(await signOpts(dir, 'record')),
+    })
     await git.writeRef({ fs, dir, ref: LOCAL, value: oid, force: true })
     return oid
 }

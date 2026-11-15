@@ -13,6 +13,7 @@ export const labels: Messages['labels'] = {
         outdated: 'The draft changed after it was approved. Get it approved again.',
         changes: 'Changes were requested. Make the fixes and request another review.',
         requested: 'Not approved yet',
+        unsigned: 'Only unsigned approvals were given. This repository counts signed approvals only.',
     },
     colors: {
         blue: 'Blue',

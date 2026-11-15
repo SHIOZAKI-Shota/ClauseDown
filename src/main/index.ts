@@ -10,6 +10,11 @@ import * as git from './git'
 import * as docOps from './doc-ops'
 import * as repoHome from './repo-home'
 import { deliverWithDialog, exportFile, exportScheduleIcs, previewPdf } from './export'
+import * as sign from './sign-service'
+import * as signing from './signing'
+import * as verify from './verify'
+import { mynaStatus } from './myna'
+import * as seals from './seals'
 import { checkUpdate, downloadUpdate, initUpdater, installUpdate, updateState } from './updater'
 import * as wf from './workflow'
 import * as schedule from './schedule'
@@ -443,6 +448,43 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
     exportFile: async (req) => {
         if (req?.dir) await assertAllowedDir(req.dir)
         return keepExported(await exportFile(win, req))
+    },
+    signingStatus: async (dir) => {
+        if (dir) await assertAllowedDir(dir)
+        return sign.signingStatus(dir)
+    },
+    setSigningPrefs: (patch) => sign.setSigningPrefs(patch),
+    generateSigningKey: async () => {
+        await signing.generateSigningKey()
+        return sign.signingStatus()
+    },
+    deleteSigningKey: async () => {
+        await signing.deleteSigningKey()
+        return sign.signingStatus()
+    },
+    registerSigningKey: (base) => verify.registerSigningKey(String(base)),
+    testExternalSigning: async (dir) => {
+        if (dir) await assertAllowedDir(dir)
+        return signing.testExternalSigning(dir)
+    },
+    importPdfCert: (data, password) => sign.importPdfCert(data, password),
+    createSelfSignedCert: (opts) => sign.createSelfSignedCert(opts),
+    removePdfCert: () => sign.removePdfCert(),
+    exportPdfCert: () => sign.exportPdfCert(win),
+    setTsaPassword: (password) => sign.setTsaPassword(password),
+    testTimestamp: () => sign.testTimestamp(),
+    mynaStatus: () => mynaStatus(),
+    publishSigningKey: async (dir) => {
+        await assertAllowedDir(dir)
+        return wf.publishSigningKey(dir)
+    },
+    listSeals: () => seals.listSeals(),
+    saveSeal: (meta, png) => seals.saveSeal(meta, png),
+    readSeal: (id) => seals.readSeal(id),
+    deleteSeal: (id) => seals.deleteSeal(id),
+    verifyCommits: async (dir, oids) => {
+        await assertAllowedDir(dir)
+        return verify.verifyCommits(dir, Array.isArray(oids) ? oids.map(String) : [])
     },
     previewPdf: async (source, style, base) => {
         if (base?.dir) await assertAllowedDir(base.dir)

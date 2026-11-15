@@ -33,12 +33,12 @@
         "test": "vitest run",
         "test:e2e": "npm run build && vitest run -c vitest.e2e.config.ts",
         "manual:shots": "npm run build && vitest run -c vitest.e2e.config.ts scripts/manual-shots.e2e.ts",
-        "dist": "npm run build && electron-builder --mac --win --publish never",
-        "dist:win": "npm run build && electron-builder --win --publish never",
-        "dist:mac": "npm run build && electron-builder --mac --publish never",
-        "release": "npm run build && electron-builder --mac --win --publish always",
-        "release:win": "npm run build && electron-builder --win --publish always",
-        "release:mac": "npm run build && electron-builder --mac --publish always",
+        "dist": "npm run build && npm run build:myna && electron-builder --mac --win --publish never",
+        "dist:win": "npm run build && npm run build:myna && electron-builder --win --publish never",
+        "dist:mac": "npm run build && npm run build:myna && electron-builder --mac --publish never",
+        "release": "npm run build && npm run build:myna && electron-builder --mac --win --publish always",
+        "release:win": "npm run build && npm run build:myna && electron-builder --win --publish always",
+        "release:mac": "npm run build && npm run build:myna && electron-builder --mac --publish always",
         "ship": "node scripts/ship.mjs",
         "postinstall": "node node_modules/electron/install.js && nuxt prepare",
         "testdata": "node scripts/make-testdata.mjs",
@@ -46,7 +46,8 @@
         "format": "oxfmt",
         "format:check": "oxfmt --check",
         "build:demo": "CLAUSEDOWN_DEMO=1 nuxt generate",
-        "site": "node scripts/site.mjs"
+        "site": "node scripts/site.mjs",
+        "build:myna": "napi build --release --platform --cwd native/myna --output-dir ."
     },
     "dependencies": {
         "@textlint/kernel": "^15.8.0",
@@ -75,12 +76,15 @@
         "@iconify-json/lucide": "^1.2.150",
         "@internationalized/date": "^3.12.4",
         "@lezer/highlight": "^1.2.5",
+        "@libpdf/core": "0.5.3",
         "@modelcontextprotocol/sdk": "^1.32.2",
+        "@napi-rs/cli": "^3.10.12",
         "@nuxt/ui": "^4.12.0",
         "@pinia/nuxt": "^1.0.3",
         "@types/node": "^26.6.6",
         "@typescript/native": "npm:typescript@^7.0.2",
         "@vueuse/core": "^14.4.0",
+        "asn1js": "^3.1.0",
         "codemirror": "^6.0.2",
         "diff": "^9.0.0",
         "docx": "^9.15.1",
@@ -98,7 +102,9 @@
         "pathe": "^2.0.3",
         "pdfjs-dist": "^6.5.438",
         "pele": "^1.13.0",
+        "perfect-freehand": "^1.2.3",
         "pinia": "^4.1.0",
+        "pkijs": "^3.4.3",
         "playwright-core": "^1.64.1",
         "tailwindcss": "^4.3.4",
         "temml": "^0.14.0",
@@ -131,6 +137,13 @@
             {
                 "from": "build/mcp-bridge",
                 "to": "mcp-bridge"
+            },
+            {
+                "from": "native/myna",
+                "to": "native/myna",
+                "filter": [
+                    "*.node"
+                ]
             }
         ],
         "win": {

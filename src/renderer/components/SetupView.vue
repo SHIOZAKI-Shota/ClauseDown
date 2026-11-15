@@ -28,6 +28,7 @@ const SECTION_ICONS = {
     sync: 'i-lucide-refresh-cw',
     due: 'i-lucide-calendar-clock',
     export: 'i-lucide-download',
+    signature: 'i-lucide-signature',
     print: 'i-lucide-type',
     remote: 'i-lucide-cloud',
     ai: 'i-lucide-sparkles',
@@ -562,6 +563,10 @@ async function addSamples() {
             <SettingRow :label="t.settings.export.dateSuffix" :description="t.settings.export.dateSuffixDesc">
                 <USwitch :model-value="app.prefs.exportDateSuffix" @update:model-value="(v: boolean) => setPref('exportDateSuffix', v)" />
             </SettingRow>
+        </SettingsSection>
+
+        <SettingsSection v-if="shown('signature')" id="signature" :title="t.settings.sections.signature">
+            <SigningSettings />
         </SettingsSection>
 
         <SettingsSection id="print" :title="t.settings.sections.print">

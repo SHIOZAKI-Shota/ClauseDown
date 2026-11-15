@@ -21,9 +21,9 @@ import { compareWords, type DocLang } from './legal-styles'
 import { collapseUnchanged, type CompareRow, type Part } from './article-diff'
 import { parseFence, parseTable } from './blocks'
 import { isLatinFont, LATIN_FALLBACK, type DocStyle } from './prefs'
-import { inlineRuns, mergeProps, type CdProps } from './cd-prop'
+import { inlineRuns, mergeProps, parseImageProps, stripImageMarks, type CdProps } from './cd-prop'
 import { tableSpans } from './table-span'
-import { imageLine } from './images'
+import { imageLine, inlineImages } from './images'
 import { displayLine, mathKey, useMath } from './math'
 
 export type Figures = Map<string, { png: Uint8Array; width: number; height: number }>
@@ -51,7 +51,7 @@ const inlineMd = useMath(new MarkdownIt({ html: false, linkify: false }))
 
 function plain(text: string, doc: LegalDoc): string {
     let out = ''
-    for (const block of inlineMd.parseInline(resolveRefs(text, doc), {})) {
+    for (const block of inlineMd.parseInline(resolveRefs(stripImageMarks(text), doc), {})) {
         for (const t of block.children ?? []) {
             if (t.type === 'text' || t.type === 'code_inline' || t.type === 'image' || t.type === 'math_inline') out += t.content
             else if (t.type === 'hardbreak') out += '\n'
@@ -103,17 +103,40 @@ function para(text: string, left: number, hanging: number, opts: { bold?: boolea
     })
 }
 
-function imagePara(src: string, alt: string, indent: number, ctx: Ctx): DocxParagraph {
+const PX_PER_MM = 96 / 25.4
+const alignmentOf = (p?: CdProps) => (p?.textAlign ? ALIGN[p.textAlign] : undefined)
+
+function imageRun(src: string, attrs: string | undefined, maxPx: number, ctx: Ctx): ImageRun | null {
     const img = ctx.images?.get(src)
-    if (!img) return para(alt ? `［図：${alt}］` : '［図］', indent, 0)
-    const maxPx = ((ctx.width - Math.round(indent * EM)) / 1440) * 96
-    const scale = Math.min(1, maxPx / img.width)
+    if (!img) return null
+    const mark = attrs !== undefined ? parseImageProps(attrs) : null
+    const scale = mark ? (parseFloat(mark.height) * PX_PER_MM) / img.height : Math.min(1, maxPx / img.width)
+    return new ImageRun({ type: img.type, data: img.data, transformation: { width: Math.round(img.width * scale), height: Math.round(img.height * scale) } })
+}
+
+const missing = (alt: string) => (alt ? `［図：${alt}］` : '［図］')
+
+function imagePara(src: string, alt: string, indent: number, ctx: Ctx, attrs?: string, props?: CdProps): DocxParagraph {
+    const run = imageRun(src, attrs, ((ctx.width - Math.round(indent * EM)) / 1440) * 96, ctx)
+    if (!run) return para(missing(alt), indent, 0, { props })
     return new DocxParagraph({
+        alignment: alignmentOf(props),
         indent: { left: Math.round(indent * EM) },
-        children: [
-            new ImageRun({ type: img.type, data: img.data, transformation: { width: Math.round(img.width * scale), height: Math.round(img.height * scale) } }),
-        ],
+        children: [run],
     })
+}
+
+function lineWithImages(line: string, ctx: Ctx, props?: CdProps): DocxParagraph {
+    const children: (TextRun | ImageRun)[] = []
+    let last = 0
+    for (const im of inlineImages(line)) {
+        if (im.index > last) children.push(...runs(plain(line.slice(last, im.index), ctx.doc), { props }))
+        const run = imageRun(im.src, im.attrs, (ctx.width / 1440) * 96, ctx)
+        children.push(run ?? new TextRun(missing(im.alt)))
+        last = im.index + im.length
+    }
+    if (last < line.length) children.push(...runs(plain(line.slice(last), ctx.doc), { props }))
+    return new DocxParagraph({ alignment: alignmentOf(props), children })
 }
 
 function figurePara(fig: { png: Uint8Array; width: number; height: number }, indent: number, ctx: Ctx, center = false): DocxParagraph {
@@ -155,7 +178,7 @@ function textParas(lead: string, text: string, left: number, hanging: number, ou
             continue
         }
         flush()
-        out.push(imagePara(im.src, im.alt, left, ctx))
+        out.push(imagePara(im.src, im.alt, left, ctx, im.attrs))
     }
     flush()
 }
@@ -282,7 +305,13 @@ function richBlocks(raw: string, out: Block[], ctx: Ctx, inherit?: CdProps) {
         return p
     }
     const text = (chunk: string) => {
-        for (const line of chunk.split('\n')) if (line.trim()) out.push(para(plain(line, ctx.doc), 0, 0, { props: take() }))
+        for (const line of chunk.split('\n')) {
+            if (!line.trim()) continue
+            const im = imageLine(line)
+            if (im) out.push(imagePara(im.src, im.alt, 0, ctx, im.attrs, take()))
+            else if (inlineImages(line).length) out.push(lineWithImages(line, ctx, take()))
+            else out.push(para(plain(line, ctx.doc), 0, 0, { props: take() }))
+        }
     }
     for (const m of raw.matchAll(re)) {
         text(raw.slice(last, m.index))

@@ -374,6 +374,11 @@ function currentLine(): string {
     return view.state.doc.lineAt(view.state.selection.main.head).text
 }
 
+function cursorLineIndex(): number {
+    if (!view) return 0
+    return view.state.doc.lineAt(view.state.selection.main.head).number - 1
+}
+
 function goToLine(n: number) {
     if (!view) return
     const line = view.state.doc.line(Math.min(Math.max(n + 1, 1), view.state.doc.lines))
@@ -416,6 +421,7 @@ defineExpose({
     selectionInfo,
     insertRef,
     currentLine,
+    cursorLineIndex,
     goToLine,
     undo,
     redo,

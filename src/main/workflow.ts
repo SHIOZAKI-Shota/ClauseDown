@@ -13,12 +13,18 @@ import { forgeOf } from './forge'
 import { newId, readRecord, readRecords, RECORD, writeRecord } from './records'
 import { repoKey } from './repo-lock'
 import { afterMain, newOnMain, reviewBodyLines } from './issues'
+import { appKey, signingSettings, signOpts } from './signing'
+import { dsseSign, verifyReviewEvent } from './attest'
+import { reviewStatement } from '../shared/attestation'
+import { keyring } from './verify'
+import { fingerprintOf, blobOfPublicKey } from './ssh-sig'
 
 export async function getRules(dir: string): Promise<RepoRules> {
     const r = (await readRecord<RepoRules>(dir, RECORD.rules)) as Partial<RepoRules> | null
     return {
         requireApproval: typeof r?.requireApproval === 'boolean' ? r.requireApproval : DEFAULT_RULES.requireApproval,
         approvers: Array.isArray(r?.approvers) ? r.approvers.filter((a): a is string => typeof a === 'string') : DEFAULT_RULES.approvers,
+        requireSignedApproval: r?.requireSignedApproval === true,
     }
 }
 
@@ -26,6 +32,7 @@ export async function saveRules(dir: string, rules: RepoRules): Promise<void> {
     const clean: RepoRules = {
         requireApproval: !!rules.requireApproval,
         approvers: [...new Set(rules.approvers.map((a) => a.trim()).filter(Boolean))],
+        requireSignedApproval: !!rules.requireApproval && !!rules.requireSignedApproval,
     }
     await writeRecord(dir, RECORD.rules, clean)
 }
@@ -46,7 +53,49 @@ const isStr = (v: unknown): v is string => typeof v === 'string'
 const DECISION_TTL = 60_000
 const decisionMemo = new Map<string, Map<string, { at: number; events: ReviewEvent[] }>>()
 
+const rootMemo = new Map<string, string>()
+
+export async function repoRoot(dir: string): Promise<string> {
+    const key = repoKey(dir)
+    const hit = rootMemo.get(key)
+    if (hit) return hit
+    const main = await g.mainBranch(dir)
+    const commits = await git.log({ fs, dir, ref: main })
+    const root = commits.at(-1)?.oid ?? ''
+    if (root) rootMemo.set(key, root)
+    return root
+}
+
+async function annotateSignatures(dir: string, events: ReviewEvent[]): Promise<ReviewEvent[]> {
+    if (!events.some((e) => e.attestation)) return events
+    const root = await repoRoot(dir).catch(() => '')
+    const ring = await keyring(dir).catch(() => new Map())
+    const same = (a?: string, b?: string) => !!a && !!b && a.toLowerCase() === b.toLowerCase()
+    const verified = (e: ReviewEvent) => {
+        if (!e.attestation) return false
+        const r = verifyReviewEvent(e, root)
+        if (!r.ok || !r.fingerprint) return false
+        const who = ring.get(r.fingerprint)
+        if (!who) return false
+        const login = e.byLogin ?? e.forgeUser
+        if (who.source === 'forge') return same(who.login, login)
+        return login ? same(who.login, login) || (!who.login && who.name === e.by) : who.name === e.by || who.source === 'own'
+    }
+    for (const e of events) if (e.attestation) e.signed = verified(e) ? 'verified' : 'unverified'
+    const mirrors = events.filter((e) => e.mirror && e.signed === 'verified')
+    for (const e of events) {
+        if (e.source !== 'github' && e.source !== 'gitlab') continue
+        const hit = mirrors.find((m) => m.branch === e.branch && m.oid === e.oid && m.action === e.action && same(m.byLogin, e.by))
+        e.signed = hit ? 'verified' : 'unverified'
+    }
+    return events
+}
+
 export async function listReviews(dir: string, fresh = false): Promise<ReviewEvent[]> {
+    return annotateSignatures(dir, await rawReviews(dir, fresh))
+}
+
+async function rawReviews(dir: string, fresh: boolean): Promise<ReviewEvent[]> {
     const events = (await readRecords<ReviewEvent>(dir, RECORD.reviews)).filter(
         (e) => e && isStr(e.branch) && isStr(e.action) && isStr(e.at) && (e.source ?? 'app') === 'app',
     )
@@ -105,8 +154,15 @@ export async function addReview(dir: string, input: ReviewInput): Promise<void> 
         source: 'app',
     }
     const events = await readRecords<ReviewEvent>(dir, RECORD.reviews)
-    const open = openRequests(events).get(input.branch)
+    const open = openRequests(events.filter((e) => !e.mirror)).get(input.branch)
     if (input.action !== 'request' && !open) throw new Error(t().errors.workflow.noOpenRequest)
+    const signIt = async (e: ReviewEvent) => {
+        if (!(await signingSettings()).approvals.sign) return e
+        const key = await appKey().catch(() => null)
+        if (!key) return e
+        const { envelope, publicKey } = dsseSign(reviewStatement(e, await repoRoot(dir)), key)
+        return { ...e, attestation: envelope, publicKey }
+    }
 
     const forge = await forgeOf(dir)
     if (forge) {
@@ -132,11 +188,40 @@ export async function addReview(dir: string, input: ReviewInput): Promise<void> 
                 const custom = input.text.trim() || input.action !== 'approve' ? text : null
                 await forge.submit(pr, input.action, forge.kind === 'github' ? text : custom, ev.oid)
                 decisionMemo.delete(repoKey(dir))
+                const mirror = await signIt({ ...ev, mirror: { forge: forge.kind, pr } })
+                if (mirror.attestation) await writeRecord(dir, `${RECORD.reviews}${ev.id}.json`, mirror)
                 return
             }
         }
     }
-    await writeRecord(dir, `${RECORD.reviews}${ev.id}.json`, ev)
+    await writeRecord(dir, `${RECORD.reviews}${ev.id}.json`, await signIt(ev))
+}
+
+export async function publishSigningKey(dir: string): Promise<void> {
+    const key = await appKey()
+    const info = (await signingSettings()).commit.key
+    if (!key || !info) throw new Error(t().signing.errors.noSshKey)
+    const who = (await identity(dir)) ?? { name: (await author(dir)).name, login: undefined }
+    const blob = blobOfPublicKey(info.publicKey)!
+    const entry = { name: who.name, login: who.login, publicKey: info.publicKey, at: new Date().toISOString() }
+    const { envelope } = dsseSign({ _type: 'https://clausedown.app/signer/v1', ...entry }, key)
+    await writeRecord(dir, `${RECORD.signers}${fingerprintOf(blob).replace(/[^A-Za-z0-9]/g, '')}.json`, { ...entry, attestation: envelope })
+}
+
+function approvalTrailers(status: ReturnType<typeof reviewStatus>, tip: string): string {
+    const after = status.request ? Date.parse(status.request.at) : 0
+    const seen = new Set<string>()
+    const lines: string[] = []
+    for (const e of status.events) {
+        if (e.action !== 'approve' || e.oid !== tip || Date.parse(e.at) < after) continue
+        const login = e.source === 'github' || e.source === 'gitlab' ? e.by : (e.byLogin ?? e.forgeUser)
+        const name = e.by
+        const id = (login ?? name).toLowerCase()
+        if (seen.has(id)) continue
+        seen.add(id)
+        lines.push(`Approved-by: ${name}${login && login !== name ? ` (@${login})` : ''}${e.signed === 'verified' ? ' [signed]' : ''}`)
+    }
+    return lines.length ? `\n\n${lines.join('\n')}` : ''
 }
 
 export async function adoptOrMerge(dir: string, input: MergeInput): Promise<SyncState> {
@@ -154,12 +239,16 @@ export async function adoptOrMerge(dir: string, input: MergeInput): Promise<Sync
 async function mergeIntoMain(dir: string, input: MergeInput, main: string): Promise<SyncState> {
     const rules = await getRules(dir)
     const events = await listReviews(dir, true)
-    const status = reviewStatus(events, input.from, await g.branchOid(dir, input.from), rules)
+    const tip = await g.branchOid(dir, input.from)
+    const status = reviewStatus(events, input.from, tip, rules)
     if (!status.canMerge) throw new Error(status.reason)
+    input = { ...input, message: input.message + approvalTrailers(status, tip) }
 
     const forge = await forgeOf(dir)
     const pr = prOf(status.request)
     if (!forge || !pr || (status.request?.forge ?? 'github') !== forge.kind) return g.mergeBranch(dir, input)
+    const local = rules.requireSignedApproval || (await signingSettings()).commit.localMerge
+    if (local && (await signOpts(dir, 'commit')).signingKey) return g.mergeBranch(dir, input)
 
     await g.requireClean(dir, t().errors.git.actions.merge)
     const preview = await g.previewMerge(dir, input.from, main)
@@ -271,6 +360,7 @@ export async function deliver(dir: string, input: DeliverInput, outDir: string, 
         to: input.to,
         memo: input.memo,
         items: input.items,
+        signed: input.sign || undefined,
         files: files.map((f) => f.name),
         folder,
         at: now.toISOString(),
@@ -289,6 +379,7 @@ export async function deliver(dir: string, input: DeliverInput, outDir: string, 
                 object: input.oid,
                 message: t().notify.delivery.tagMessage(title, input.to),
                 tagger: await author(dir),
+                ...(await signOpts(dir, 'tag')),
             })
             await g.pushRef(dir, `refs/tags/${tag}`)
             const body = [

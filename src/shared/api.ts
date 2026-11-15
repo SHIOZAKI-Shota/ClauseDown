@@ -7,6 +7,7 @@ import type { ForgeKind, GitLabHost } from './forge'
 import type { AiConfig, AiProvider } from './ai-providers'
 import type { HouritsuConversion } from './houritsu'
 import type { DueEvent, DueEventInput, EventKind, Occurrence, Period, RepoSchedule, ScheduleItem } from './schedule'
+import type { CertInfo, SigInfo, SigningSettings } from './signing'
 
 export type { RepoRules, ReviewAction, ReviewEvent, AppPrefs, DocStyle }
 
@@ -34,6 +35,7 @@ export interface AppSettings {
     ai?: AiConfig
     experiments?: Partial<Record<ExperimentId, boolean>>
     clauseLibrary?: string
+    signing?: SigningSettings
 }
 
 export interface McpConfig {
@@ -202,6 +204,8 @@ export interface DeliverInput {
     memo: string
     items: DeliveryItem[]
     publishRelease: boolean
+    sign?: boolean
+    pin?: string
 }
 
 export interface DeliveryRecord {
@@ -215,6 +219,7 @@ export interface DeliveryRecord {
     to: string
     memo: string
     items: DeliveryItem[]
+    signed?: boolean
     files: string[]
     folder: string
     at: string
@@ -271,8 +276,13 @@ export interface DocBase {
     docPath: string
 }
 
+export interface ExportSign {
+    sign?: boolean
+    pin?: string
+}
+
 export type ExportRequest =
-    | ({ kind: 'doc'; format: 'pdf' | 'docx' | 'html' | 'md'; source: string; name: string; style?: DocStyle } & Partial<DocBase>)
+    | ({ kind: 'doc'; format: 'pdf' | 'docx' | 'html' | 'md'; source: string; name: string; style?: DocStyle } & Partial<DocBase> & ExportSign)
     | ({
           kind: 'compare'
           format: 'pdf' | 'docx'
@@ -283,7 +293,8 @@ export type ExportRequest =
           omitUnchanged: boolean
           compareStyle?: 'table' | 'inline'
           style?: DocStyle
-      } & Partial<DocBase>)
+      } & Partial<DocBase> &
+          ExportSign)
 
 export interface IssueLink {
     oid: string
@@ -413,6 +424,25 @@ export interface Api {
     deleteBranch(dir: string, name: string): Promise<void>
 
     exportFile(req: ExportRequest): Promise<string | null>
+    signingStatus(dir?: string): Promise<SigningStatus>
+    setSigningPrefs(patch: DeepPartial<SigningSettings>): Promise<SigningSettings>
+    generateSigningKey(): Promise<SigningStatus>
+    deleteSigningKey(): Promise<SigningStatus>
+    registerSigningKey(base: string): Promise<KeyRegistration>
+    testExternalSigning(dir?: string): Promise<ExternalSigningConfig>
+    importPdfCert(data: Uint8Array, password: string): Promise<CertInfo>
+    createSelfSignedCert(opts: { name: string; email?: string; org?: string; years?: number }): Promise<CertInfo>
+    removePdfCert(): Promise<void>
+    exportPdfCert(): Promise<string | null>
+    setTsaPassword(password: string): Promise<void>
+    testTimestamp(): Promise<{ ok: true }>
+    mynaStatus(): Promise<MynaStatus>
+    verifyCommits(dir: string, oids: string[]): Promise<Record<string, SigInfo>>
+    publishSigningKey(dir: string): Promise<void>
+    listSeals(): Promise<SealMeta[]>
+    saveSeal(meta: { kind: SealMeta['kind']; label: string }, png: Uint8Array): Promise<SealMeta>
+    readSeal(id: string): Promise<Uint8Array>
+    deleteSeal(id: string): Promise<void>
     previewPdf(source: string, style: DocStyle, base?: DocBase): Promise<Uint8Array>
     saveImage(dir: string, docPath: string, data: Uint8Array, ext: string): Promise<SavedImage>
     proofread(text: string, ctx?: ProofreadContext): Promise<ProofreadIssue[]>
@@ -497,4 +527,43 @@ export interface Api {
     checkUpdate(): Promise<UpdateState>
     downloadUpdate(): Promise<UpdateState>
     installUpdate(): Promise<void>
+}
+
+export type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] }
+
+export interface ExternalSigningConfig {
+    format: 'ssh' | 'openpgp' | 'x509'
+    key: string
+    program: string
+}
+
+export interface SigningStatus {
+    signing: SigningSettings
+    hasKey: boolean
+    external: ExternalSigningConfig | null
+    myna: boolean
+    hasTsaPassword: boolean
+}
+
+export interface MynaStatus {
+    available: boolean
+    reader: string | null
+    card: boolean
+    signCert: boolean
+    retries: number | null
+    error?: string
+}
+
+export interface KeyRegistration {
+    ok: boolean
+    manualUrl?: string
+}
+
+export type { CertInfo, SigInfo }
+
+export interface SealMeta {
+    id: string
+    kind: 'seal' | 'sign' | 'image'
+    label: string
+    createdAt: string
 }

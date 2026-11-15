@@ -135,6 +135,9 @@ watch(
             <SettingRow :label="t.repo.settings.requireApproval" :description="t.repo.settings.requireApprovalDesc">
                 <USwitch v-model="rules.requireApproval" />
             </SettingRow>
+            <SettingRow :label="t.signing.repo.requireSigned" :description="t.signing.repo.requireSignedDesc">
+                <USwitch v-model="rules.requireSignedApproval" :disabled="!rules.requireApproval" />
+            </SettingRow>
             <SettingRow :label="t.repo.settings.approvers" :description="t.repo.settings.approversDesc" stacked>
                 <UInputTags v-model="rules.approvers" :placeholder="t.repo.settings.approversPlaceholder" class="cd-full" />
                 <p v-if="app.identity?.login" class="muted">{{ t.repo.settings.youAre(app.identity.login) }}</p>

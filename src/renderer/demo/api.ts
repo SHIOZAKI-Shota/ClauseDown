@@ -17,6 +17,7 @@ import { issueRefs } from '@shared/issue-refs'
 import { autoMerge } from '@shared/merge3'
 import { DELIVERY_KIND, effectivePeriods, expand, fromEffective, kindMap, type Occurrence, type ScheduleItem } from '@shared/schedule'
 import { t } from '@shared/i18n'
+import { DEFAULT_SIGNING } from '@shared/signing'
 import { proofreadInBrowser } from './proofread'
 import { seed, STATE_VERSION } from './seed'
 import {
@@ -300,6 +301,9 @@ const impl: Partial<Api> = {
     getLicenses: async () => null,
     forgeKind: async () => null,
     getRules: async () => ({ requireApproval: false, approvers: [] }),
+    signingStatus: async () => ({ signing: structuredClone(DEFAULT_SIGNING), hasKey: false, external: null, myna: false, hasTsaPassword: false }),
+    mynaStatus: async () => ({ available: false, reader: null, card: false, signCert: false, retries: null }),
+    verifyCommits: async (_dir, oids) => Object.fromEntries(oids.map((o) => [o, { state: 'none' as const }])),
     listFolderStyles: async () => ({}),
     saveFolderStyle: async () => true,
 

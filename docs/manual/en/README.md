@@ -88,6 +88,12 @@ This manual is also available in Japanese: [日本語版](../README.md)
     - [Dark mode](#dark-mode)
     - [Updating the app](#updating-the-app)
   - [18. Keyboard shortcuts](#18-keyboard-shortcuts)
+  - [19. Digital signatures](#19-digital-signatures)
+    - [Signing versions](#signing-versions)
+    - [Signing approvals](#signing-approvals)
+    - [Adding a digital signature to PDFs](#adding-a-digital-signature-to-pdfs)
+    - [Signing with a My Number Card](#signing-with-a-my-number-card)
+    - [Inserting seals and signature images](#inserting-seals-and-signature-images)
 
 ---
 
@@ -1186,3 +1192,111 @@ How updating works depends on how you installed the app.
 | Any key or click (at startup) | Skip the logo animation |
 
 On macOS, use ⌘ (Command) instead of Ctrl and ⌥ (Option) instead of Alt. Redo is ⇧+⌘+Z.
+
+---
+
+## 19. Digital signatures
+
+The **Digital signatures** section of Settings turns on four features. All of them are off at first, and nothing changes until you set them up.
+
+- **Version signing**: lets anyone check later who saved a version.
+- **Approval signing**: lets anyone tell who approved a draft, even if the record is edited afterwards.
+- **PDF signatures**: lets PDF viewers confirm that an exported PDF has not been changed and who signed it.
+- **Seal and signature images**: places a seal or handwritten signature image in the signature block. This is only a picture, not a cryptographic signature.
+
+### Signing versions
+
+Under **Sign versions**, choose the key used for signing.
+
+| Option | What it does |
+|---|---|
+| Off | Versions are not signed |
+| App key | Signs with a key the app creates. The key stays on this PC only, in the operating system's secure storage. Nothing is signed until you click **Create key** |
+| This PC's Git settings | Uses Git's `user.signingkey` and `gpg.format` and signs with `ssh-keygen` or `gpg`. For people who already sign with Git |
+
+Signed items are saved versions, effective-date records, delivery records and merges into the current version.
+
+**Registering the key on GitHub or GitLab**: once you have an app key, a **Register** button appears for each signed-in account. After registering, the site shows your versions as **Verified**.
+
+- The version's email address must be verified on that account. Versions saved with an address that the site doesn't know show as **Unverified** even when the signature is valid.
+- If GitHub won't register the key automatically, copy the public key and paste it as a **Signing Key** on the page that opens. Sign in again once to grant ClauseDown the extra permission, and registration will work automatically after that.
+
+**In the revision history**: a shield appears to the right of the author's name.
+
+| Mark | Meaning |
+|---|---|
+| Green shield | The signature was verified. Hover to see whose key it is (you, a GitHub/GitLab account, or the signer list) |
+| Shield with "?" | The signature is valid, but the key is not recognized |
+| Red shield | The signature is broken or the version was changed |
+
+**Merge into the current version on this PC**: GitHub and GitLab drafts are normally merged on the site, so the merge commit carries no ClauseDown signature. Turn this on to create and sign the merge commit on this PC before sending it. Turn it off if the current-version branch is protected and the push is rejected.
+
+### Signing approvals
+
+With **Sign approvals and change requests** on, review requests, approvals and change requests are signed with your app key. The records use the in-toto format (DSSE) and are kept on the records branch. For GitHub and GitLab drafts, a signed copy of each approval sent to the site is kept as well.
+
+- The review window shows **Signed** or **Unsigned** next to approvals and change requests.
+- Editing the approved version, the approver or the action afterwards makes the record show as **Unsigned**.
+- The merge commit lists approvers in `Approved-by:` lines. Signed approvals are marked `[signed]`.
+
+**Do not count unsigned approvals**: available under **Rules** in repository settings when approval is required. Only signed approvals then count toward merging, and the merge commit is also created and signed on this PC.
+
+**Signer list**: in repositories that aren't connected to GitHub or GitLab, click **Add to this repository's signer list** so others can check your key. The list trusts whichever key was added first, so it is a weaker check than keys registered on GitHub or GitLab.
+
+### Adding a digital signature to PDFs
+
+Under **Sign with**, choose a certificate. Signatures use the PAdES format (ETSI.CAdES.detached) and don't change how the PDF looks.
+
+| Option | What it does |
+|---|---|
+| Certificate file | Imports a certificate issued by a certificate authority (.p12/.pfx). The password is kept in the operating system's secure storage. This gives the strongest legal effect |
+| Self-signed | The app creates a certificate. Tampering is detected, but Acrobat and similar viewers show the signer as unknown. Use **Export certificate** to send the .cer file to the recipient; once they trust it, the signature shows as valid |
+| My Number Card | See the next section |
+
+With **Sign when exporting** on, PDFs are signed when you export them. With **Sign when delivering** on, **Sign digitally** is ticked by default in the delivery window. Word and HTML files are not signed.
+
+**Timestamps**: when on, a timestamp authority certifies when you signed (PAdES B-T), so you can show the signature was valid at signing time even after the certificate expires.
+
+- Choose free DigiCert or FreeTSA, or a timestamp authority certified by Japan's Minister of Internal Affairs (Seiko Solutions, Amano, DiaStamp, GMO GlobalSign). Certified authorities are paid services; enter the URL, ID and password from your contract.
+- For Japan's Electronic Books Maintenance Act, choose a certified authority.
+- If the authority does not respond, you're asked whether to sign without a timestamp.
+
+**Long-term validation data**: when on, certificate revocation data is embedded too (PAdES B-LT). Only useful with certificates from a certificate authority.
+
+### Signing with a My Number Card
+
+You can sign PDFs with the digital signature certificate on a Japanese My Number Card. You need a smart card reader. You don't need to install the JPKI client software.
+
+1. Under **Sign with**, choose **My Number Card** and put the card on the reader. **Card status** shows the reader and the remaining signing password attempts.
+2. When you export or deliver a PDF, you're asked for the signing password (6 to 16 letters and digits). The password is never saved.
+3. With one attempt left, you're asked to confirm again. Five wrong attempts in a row lock the card, which can only be unlocked at your municipal office.
+
+- **Your four personal details are shared**: the certificate contains your name, address, date of birth and sex. Anyone you send the signed PDF to can see them.
+- **No long-term validation data**: revocation data for My Number Card certificates is only provided to signature verifiers designated by law, so signatures go up to B-T (timestamp).
+- **How Acrobat shows it**: J-LIS certificates aren't in Acrobat's built-in trust list, so the signer may show as unknown.
+- This feature uses [myna-card](https://github.com/soltia48/myna-card) to read the card.
+
+### Inserting seals and signature images
+
+Choose **Insert** > **Seal or signature** to place a seal or handwritten signature image in the signature block.
+
+- **Make a seal**: enter a name to create a round red seal. Kanji names take 1 to 4 characters; 2 or 3 are stacked vertically, and 4 are placed in two columns read from the right. Choose Latin to create a stamp with the name around the circle.
+- **Draw**: sign with your mouse or pen. Pen pressure sets the line width.
+- **Import image**: import a scanned seal or similar. **Make near-white areas transparent** removes the white of the paper.
+- **From saved**: choose one you kept with **Save for later**. You can also create them under **Seals and signatures** in the Digital signatures settings.
+
+The image is saved in `images/<document name>/` next to the document, and a line like this is added:
+
+```md
+Acme Corp. by Jane Smith, CEO ![Seal](images/Agreement/20261115-101010.png){seal}
+```
+
+| Syntax | Effect |
+|---|---|
+| `{seal}` | A 15 mm seal, slightly overlapping the name |
+| `{seal=12mm}` | Sets the seal height |
+| `{sign}` | A 12 mm signature |
+| `{sign=20mm}` | Sets the signature height |
+
+If the cursor is outside the signature block (`## {closing}`), you're asked whether to insert into the signature block; one is added at the end of the document if there is none. Seal and signature images appear in the preview, PDFs and Word files. In Word they sit after the name instead of overlapping it.
+

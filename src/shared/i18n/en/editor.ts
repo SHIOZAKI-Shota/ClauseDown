@@ -49,6 +49,7 @@ export const editor: Messages['editor'] = {
         preamble: 'Preamble (before the first chapter)',
         supplement: 'Supplementary provisions',
         closing: 'Closing / signature block',
+        seal: 'Seal or signature',
         appendix: 'Appendix',
         table: 'Table',
         mergeRight: 'Merge with right cell (>)',

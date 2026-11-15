@@ -8,6 +8,7 @@ import { useApp } from '~/stores/app'
 import { toPlain } from '~/utils/ipc'
 import { usePane } from '~/composables/usePane'
 import { useT } from '~/composables/useT'
+import { usePdfSign } from '~/composables/usePdfSign'
 
 const app = useApp()
 const t = useT()
@@ -86,7 +87,10 @@ const html = computed(() =>
 
 const title = computed(() => t.value.compare.title(app.currentDoc?.title ?? '', style.value === 'inline'))
 
+const pdfSign = usePdfSign()
 async function exportAs(format: 'pdf' | 'docx') {
+    const signing = format === 'pdf' ? await pdfSign.plan('export', `${title.value}.pdf`) : { sign: false }
+    if (!signing) return
     const out = await app.run(() =>
         window.api.exportFile({
             kind: 'compare',
@@ -100,6 +104,7 @@ async function exportAs(format: 'pdf' | 'docx') {
             style: toPlain(app.style),
             dir: app.repoDir!,
             docPath: app.currentPath!,
+            ...signing,
         }),
     )
     if (out) app.notifyExported(t.value.compare.exported, out)

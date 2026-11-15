@@ -47,6 +47,7 @@ export const editor = {
         preamble: '前文（最初の章の前）',
         supplement: '附則',
         closing: '後文・署名欄',
+        seal: '印影・署名',
         appendix: '別表',
         table: '表',
         mergeRight: '右隣のセルと結合（>）',

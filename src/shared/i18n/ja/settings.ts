@@ -12,6 +12,7 @@ export const settings = {
         sync: '同期',
         due: '期日・有効期間',
         export: '書き出し',
+        signature: '電子署名',
         print: '印刷・PDF・Word の書式',
         remote: 'GitHub/GitLab',
         ai: 'AI',

@@ -130,9 +130,21 @@ export function rewriteImages(html: string, fn: (src: string) => string | null):
     })
 }
 
-const IMAGE_LINE_RE = /^\s*!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)\s*$/
+const IMAGE_LINE_RE = /^\s*!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)(?:\{([^{}]*)\})?\s*$/
 
-export function imageLine(line: string): { alt: string; src: string } | null {
+export function imageLine(line: string): { alt: string; src: string; attrs?: string } | null {
     const m = IMAGE_LINE_RE.exec(line)
-    return m ? { alt: m[1], src: m[2] } : null
+    return m ? { alt: m[1], src: m[2], ...(m[3] !== undefined ? { attrs: m[3] } : {}) } : null
+}
+
+const INLINE_IMAGE_RE = /!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)(?:\{([^{}]*)\})?/g
+
+export function inlineImages(text: string): { index: number; length: number; alt: string; src: string; attrs?: string }[] {
+    return [...text.matchAll(INLINE_IMAGE_RE)].map((m) => ({
+        index: m.index!,
+        length: m[0].length,
+        alt: m[1],
+        src: m[2],
+        ...(m[3] !== undefined ? { attrs: m[3] } : {}),
+    }))
 }

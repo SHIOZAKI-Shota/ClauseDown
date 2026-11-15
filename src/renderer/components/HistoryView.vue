@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CommitInfo } from '@shared/api'
+import type { CommitInfo, SigInfo } from '@shared/api'
 import { useApp } from '~/stores/app'
 import { usePane } from '~/composables/usePane'
 import { useT } from '~/composables/useT'
@@ -18,6 +18,7 @@ const showEffective = ref(false)
 const showLink = ref(false)
 const loading = ref(true)
 
+const sigs = ref<Record<string, SigInfo>>({})
 let seq = 0
 async function load() {
     const n = ++seq
@@ -26,6 +27,12 @@ async function load() {
     if (n !== seq) return
     commits.value = list
     loading.value = false
+    const missing = list.map((c) => c.oid).filter((oid) => !sigs.value[oid])
+    if (missing.length && !isDemo())
+        void window.api
+            .verifyCommits(app.repoDir!, missing)
+            .then((got) => n === seq && (sigs.value = { ...sigs.value, ...got }))
+            .catch(() => {})
     if (app.historySelect && commits.value.some((c) => c.oid === app.historySelect)) selected.value = app.historySelect
     app.historySelect = null
     if (!commits.value.some((c) => c.oid === selected.value)) selected.value = commits.value[0]?.oid ?? null
@@ -100,6 +107,7 @@ async function onEffectiveAdded() {
                 :selected="selected"
                 :pending="!!app.currentDoc?.changed"
                 :current-label="app.currentBranch?.label"
+                :sigs="sigs"
                 @select="selected = $event"
             />
             <div v-if="commits.length" class="legend">

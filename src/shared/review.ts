@@ -1,5 +1,6 @@
 import { t } from './i18n'
 import { liveRecord } from './i18n/live'
+import type { DsseEnvelope } from './attestation'
 
 export type ReviewAction = 'request' | 'approve' | 'changes' | 'comment' | 'withdraw'
 
@@ -17,6 +18,10 @@ export interface ReviewEvent {
     pr?: number
     forge?: 'github' | 'gitlab'
     forgeUser?: string
+    attestation?: DsseEnvelope
+    publicKey?: string
+    mirror?: { forge: 'github' | 'gitlab'; pr: number }
+    signed?: 'verified' | 'unverified'
 }
 
 export const isPrNumber = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v > 0
@@ -29,6 +34,7 @@ export function prOf(e: ReviewEvent | undefined): number | undefined {
 export interface RepoRules {
     requireApproval: boolean
     approvers: string[]
+    requireSignedApproval?: boolean
 }
 
 export interface Reviewer {
@@ -93,9 +99,10 @@ const timeOf = (e: ReviewEvent) => {
 const byTime = (a: ReviewEvent, b: ReviewEvent) => timeOf(a) - timeOf(b) || Number(b.action === 'request') - Number(a.action === 'request')
 
 export function reviewStatus(all: ReviewEvent[], branch: string, tipOid: string, rules: RepoRules): ReviewStatus {
-    const events = all.filter((e) => e.branch === branch).sort(byTime)
+    const events = all.filter((e) => e.branch === branch && !e.mirror).sort(byTime)
     let request: ReviewEvent | undefined
     let decision: ReviewEvent | undefined
+    let unsigned = false
     for (const e of events) {
         if (e.action === 'request') {
             request = e
@@ -105,6 +112,10 @@ export function reviewStatus(all: ReviewEvent[], branch: string, tipOid: string,
             decision = undefined
         } else if (request && (e.action === 'approve' || e.action === 'changes')) {
             if (e.action === 'approve' && !canApprove(reviewerOf(e), request, rules, e.source)) continue
+            if (e.action === 'approve' && rules.requireSignedApproval && e.signed !== 'verified') {
+                unsigned = true
+                continue
+            }
             decision = e
         }
     }
@@ -118,7 +129,16 @@ export function reviewStatus(all: ReviewEvent[], branch: string, tipOid: string,
     if (rules.requireApproval && state !== 'approved') {
         status.canMerge = false
         const blocked = t().labels.reviewBlocked
-        status.reason = state === 'none' ? blocked.none : state === 'outdated' ? blocked.outdated : state === 'changes' ? blocked.changes : blocked.requested
+        status.reason =
+            state === 'none'
+                ? blocked.none
+                : state === 'outdated'
+                  ? blocked.outdated
+                  : state === 'changes'
+                    ? blocked.changes
+                    : unsigned
+                      ? blocked.unsigned
+                      : blocked.requested
     }
     return status
 }

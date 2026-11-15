@@ -1,0 +1,7 @@
+{
+    "name": "clausedown-myna",
+    "private": true,
+    "napi": {
+        "binaryName": "clausedown-myna"
+    }
+}

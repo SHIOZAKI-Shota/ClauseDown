@@ -128,6 +128,66 @@ describe('画面', () => {
         await seen('期日をデスクトップに通知する')
     })
 
+    it('電子署名：設定で鍵と自己署名の証明書を作ると、版と書き出した PDF に署名が入る', async () => {
+        await store(`s.openSettings('setup', 'signature')`)
+        await seen('版に署名する')
+        await win.getByRole('button', { name: '鍵を作成' }).click()
+        await win
+            .getByText(/^SHA256:/)
+            .first()
+            .waitFor({ timeout: 15000 })
+        await win.getByRole('radio', { name: '自己署名' }).click()
+        await win.getByRole('button', { name: '自己署名の証明書を作成' }).click()
+        await win.getByRole('button', { name: '証明書を書き出し' }).waitFor({ timeout: 30000 })
+        if (process.env.CLAUSEDOWN_SHOTS) await win.screenshot({ path: join(process.env.CLAUSEDOWN_SHOTS, 'signing-settings.png'), fullPage: true })
+        const mynaBuilt = fs
+            .readdirSync(join(ROOT, 'native/myna'))
+            .some((f) => f.startsWith(`clausedown-myna.${process.platform}-${process.arch}`) && f.endsWith('.node'))
+        if (mynaBuilt) {
+            await win.getByRole('radio', { name: 'マイナンバーカード' }).click()
+            await seen('カードの状態')
+            await win
+                .getByText(/カードリーダーが見つかりません|カードが未設置です|リーダー：/)
+                .first()
+                .waitFor()
+            if (process.env.CLAUSEDOWN_SHOTS) await win.screenshot({ path: join(process.env.CLAUSEDOWN_SHOTS, 'signing-myna.png') })
+            await win.getByRole('radio', { name: '自己署名' }).click()
+            await win.getByRole('button', { name: '証明書を書き出し' }).waitFor()
+        }
+
+        await win.evaluate(`window.api.writeDoc(${JSON.stringify(dir)}, ${JSON.stringify(DOC)}, '# 就業規則\\n\\n### 目的\\n- 署名のテスト\\n')`)
+        await win.evaluate(`window.api.saveVersion(${JSON.stringify(dir)}, { message: '署名つきの版' })`)
+        const { execFileSync } = await import('node:child_process')
+        expect(execFileSync('git', ['cat-file', 'commit', 'HEAD'], { cwd: dir }).toString()).toContain('gpgsig -----BEGIN SSH SIGNATURE-----')
+
+        const out = join(tmp, 'signed.pdf')
+        await app.evaluate(({ dialog }, path) => {
+            dialog.showSaveDialog = (async () => ({ canceled: false, filePath: path })) as typeof dialog.showSaveDialog
+        }, out)
+        const req = { kind: 'doc', format: 'pdf', source: '# 就業規則\n\n### 目的\n- 本文\n', name: 'x', dir, docPath: DOC, sign: true }
+        await win.evaluate(`window.api.exportFile(${JSON.stringify(req)})`)
+        const pdf = fs.readFileSync(out).toString('latin1')
+        expect(pdf).toContain('/ETSI.CAdES.detached')
+        expect(pdf).toMatch(/\/ByteRange\s*\[/)
+    })
+
+    it('電子署名：挿入メニューから丸印を作って署名欄に入れると、プレビューに印影が出る', async () => {
+        await store(`s.view = 'docs'`)
+        await store(`s.openDoc(${JSON.stringify(DOC)})`)
+        await win.locator('.cm-editor').first().waitFor()
+        await win.getByRole('button', { name: '挿入' }).first().click()
+        await win.getByRole('menuitem', { name: '印影・署名' }).click()
+        await win.getByRole('textbox').filter({ visible: true }).first().fill('山田')
+        win.once('dialog', (d) => void d.accept())
+        await win.getByRole('button', { name: '挿入' }).click()
+        await expect.poll(() => win.locator('.cm-content').first().textContent(), { timeout: 10000 }).toMatch(/!\[山田\]\(images\/.+\.png\)\{seal\}/)
+        await expect.poll(() => win.locator('.cm-content').first().textContent(), { timeout: 10000 }).toContain('{closing}')
+        const body = (await win.locator('.cm-content').first().textContent()) ?? ''
+        expect(body.indexOf('{closing}')).toBeGreaterThan(body.indexOf('目的'))
+        await win.locator('img.cd-seal').first().waitFor({ state: 'attached', timeout: 10000 })
+        await win.screenshot({ path: join(tmp, '..', 'clausedown-seal-e2e.png') })
+    })
+
     it('ここまでの画面でエラーが出ていない', () => {
         expect(errors).toEqual([])
     })
