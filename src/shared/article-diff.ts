@@ -1,4 +1,4 @@
-import { diffArrays, diffChars } from 'diff'
+import { diffArrays, diffChars, diffWordsWithSpace } from 'diff'
 import { articleLines, chapterHeading, introLines, parseLegal, type LegalDoc } from './legal-parser'
 import { appendixLines } from './blocks'
 
@@ -35,11 +35,11 @@ export function units(doc: LegalDoc): Unit[] {
     for (const ch of doc.chapters) {
         if (ch.kind === 'closing') continue
         if (ch.kind === 'appendix') {
-            const text = [chapterHeading(ch), ...appendixLines(ch.raw)].join('\n')
+            const text = [chapterHeading(ch, doc), ...appendixLines(ch.raw)].join('\n')
             out.push({ key: `ap:${ch.title}`, kind: 'chapter', label: '', title: ch.title, text, line: ch.line, body: text })
             continue
         }
-        const heading = chapterHeading(ch)
+        const heading = chapterHeading(ch, doc)
         const intro = introLines(ch, doc)
         if (heading || intro.length) {
             const text = [heading, ...intro].filter(Boolean).join('\n')
@@ -58,6 +58,7 @@ const LONG_LINE = 2000
 const DIFF_TIMEOUT = 100
 const DIFF_BUDGET = 1500
 let deadline = 0
+let byWord = false
 
 function push(parts: Part[], text: string, changed: boolean) {
     if (!text) return
@@ -75,7 +76,8 @@ function pushInline(parts: InlinePart[], text: string, op: InlinePart['op']) {
 
 function diffLine(o: string, n: string, oldParts: Part[], newParts: Part[], inline: InlinePart[]) {
     const timeout = Math.min(DIFF_TIMEOUT, deadline - performance.now())
-    const chars = timeout <= 0 || o.length > LONG_LINE || n.length > LONG_LINE ? undefined : diffChars(o, n, { timeout })
+    const chars =
+        timeout <= 0 || o.length > LONG_LINE || n.length > LONG_LINE ? undefined : byWord ? diffWordsWithSpace(o, n, { timeout }) : diffChars(o, n, { timeout })
     if (!chars) {
         push(oldParts, o, true)
         push(newParts, n, true)
@@ -196,6 +198,7 @@ export function compareDocs(oldDoc: LegalDoc, newDoc: LegalDoc): CompareRow[] {
     const a = units(oldDoc)
     const b = units(newDoc)
     deadline = performance.now() + DIFF_BUDGET
+    byWord = !!newDoc.styleId && newDoc.styleId !== 'ja'
     return alignUnits(a, b).map((p) => (p.old && p.new ? pairRow(p.old, p.new) : p.old ? removed(p.old) : added(p.new!)))
 }
 

@@ -1,38 +1,83 @@
-import { parseLegal, type Item, type LegalDoc, type Paragraph } from './legal-parser'
+import { docStyle, parseLegal, REF_RE, type Article, type Item, type LegalDoc, type Paragraph } from './legal-parser'
 import { mermaidSvg, parseFence } from './blocks'
 import { checkDefinitions } from './definitions'
 import { formatNumber, type NumeralStyle } from './numerals'
+import type { RefTarget } from './legal-styles'
 
 const branchSuffix = (path: number[] | undefined, style: NumeralStyle) => (path ?? []).map((b) => `の${formatNumber(b, style)}`).join('')
 
-export function lineLabels(doc: LegalDoc): Map<number, string> {
-    const out = new Map<number, string>()
+interface LineInfo {
+    label: string
+    article?: Article
+}
+
+function lineInfo(doc: LegalDoc): Map<number, LineInfo> {
+    return doc.styleId && doc.styleId !== 'ja' ? latinLineInfo(doc) : jaLineInfo(doc)
+}
+
+function jaLineInfo(doc: LegalDoc): Map<number, LineInfo> {
+    const out = new Map<number, LineInfo>()
     const style = doc.config.article.numeral as NumeralStyle
     const itemStyle: NumeralStyle = doc.config.item.style === 'kanji' ? 'kanji' : style
-    const items = (list: Item[], prefix: string) => {
+    const items = (list: Item[], prefix: string, article?: Article) => {
         for (const it of list) {
             const own = it.level === 1 ? `第${formatNumber(it.number, itemStyle)}号${branchSuffix(it.branchPath, itemStyle)}` : it.label
             const label = `${prefix}${own}`
-            if (it.line >= 0) out.set(it.line, label)
-            items(it.children, label)
+            if (it.line >= 0) out.set(it.line, { label, article })
+            items(it.children, label, article)
         }
     }
-    const paras = (list: Paragraph[], article: string) => {
+    const paras = (list: Paragraph[], prefix: string, article?: Article) => {
         for (const p of list) {
-            const label = `${article}第${formatNumber(p.number, style)}項${branchSuffix(p.branchPath, style)}`
-            if (p.line >= 0) out.set(p.line, label)
-            items(p.items, label)
+            const label = `${prefix}第${formatNumber(p.number, style)}項${branchSuffix(p.branchPath, style)}`
+            if (p.line >= 0) out.set(p.line, { label, article })
+            items(p.items, label, article)
         }
     }
     for (const ch of doc.chapters) {
-        if (ch.line >= 0) out.set(ch.line, ch.label ? `${ch.label}${ch.title ? ` ${ch.title}` : ''}` : ch.title || '')
+        if (ch.line >= 0) out.set(ch.line, { label: ch.label ? `${ch.label}${ch.title ? ` ${ch.title}` : ''}` : ch.title || '' })
         paras(ch.intro, ch.label)
         for (const a of ch.articles) {
-            out.set(a.line, a.deleted ? `${a.refLabel} 削除` : a.refLabel)
-            paras(a.paragraphs, a.refLabel)
+            out.set(a.line, { label: a.deleted ? `${a.refLabel} 削除` : a.refLabel, article: a })
+            paras(a.paragraphs, a.refLabel, a)
         }
     }
     return out
+}
+
+function latinLineInfo(doc: LegalDoc): Map<number, LineInfo> {
+    const out = new Map<number, LineInfo>()
+    const style = docStyle(doc)
+    const items = (list: Item[], base: Omit<RefTarget, 'items'>, chain: RefTarget['items'], article?: Article) => {
+        for (const it of list) {
+            const next = [...chain, { number: it.number, level: it.level, label: it.label }]
+            const label = base.articleRef ? style.ref({ ...base, items: next }, doc.config) : next.map((x) => x.label).join('')
+            if (it.line >= 0) out.set(it.line, { label, article })
+            items(it.children, base, next, article)
+        }
+    }
+    for (const ch of doc.chapters) {
+        const head = ch.label ? `${ch.label}${ch.title ? ` ${ch.title}` : ''}` : ch.title || ''
+        if (ch.line >= 0) out.set(ch.line, { label: head })
+        ch.intro.forEach((p) => {
+            const label = [ch.label, p.label].filter(Boolean).join(' ')
+            if (p.line >= 0) out.set(p.line, { label })
+            items(p.items, { article: { number: 0, branch: 0 }, articleRef: '' }, [], undefined)
+        })
+        for (const a of ch.articles) {
+            out.set(a.line, { label: a.deleted ? style.deletedLine(a.refLabel) : a.refLabel, article: a })
+            a.paragraphs.forEach((p, index) => {
+                const base = { article: a, articleRef: a.refLabel, paragraph: { number: p.number, label: p.label, index, count: a.paragraphs.length } }
+                if (p.line >= 0) out.set(p.line, { label: style.ref({ ...base, items: [] }, doc.config), article: a })
+                items(p.items, base, [], a)
+            })
+        }
+    }
+    return out
+}
+
+export function lineLabels(doc: LegalDoc): Map<number, string> {
+    return new Map([...lineInfo(doc)].map(([line, info]) => [line, info.label]))
 }
 
 export function numberedText(input: string): string {
@@ -55,8 +100,6 @@ export interface DocIssue {
     message: string
 }
 
-const REF_RE = /\[\[([^\]:]+)(?::\d+)?(?::\d+)?\]\]/g
-
 export interface BackRef {
     line: number
     label: string
@@ -64,8 +107,7 @@ export interface BackRef {
 }
 
 export function backRefs(input: string, doc: LegalDoc): Map<number, BackRef[]> {
-    const labels = [...lineLabels(doc)].sort((a, b) => a[0] - b[0])
-    const articles = doc.chapters.flatMap((ch) => ch.articles).filter((a) => a.line >= 0)
+    const labels = [...lineInfo(doc)].sort((a, b) => a[0] - b[0])
     const before = <T>(list: T[], line: number, at: (x: T) => number): T | undefined => {
         let hit: T | undefined
         for (const x of list) {
@@ -82,9 +124,9 @@ export function backRefs(input: string, doc: LegalDoc): Map<number, BackRef[]> {
             for (const r of text.matchAll(REF_RE)) {
                 const target = doc.refs[r[1].trim()]
                 if (!target || target.line < 0) continue
-                const label = before(labels, line, (l) => l[0])?.[1] || '前文'
-                const found = before(articles, line, (a) => a.line)
-                const own = found && label.startsWith(found.refLabel) ? found : undefined
+                const info = before(labels, line, (l) => l[0])?.[1]
+                const label = info?.label || '前文'
+                const own = info?.article
                 if (own === target) continue
                 const list = out.get(target.line) ?? []
                 if (!list.some((b) => b.line === line)) list.push({ line, label, article: own?.refLabel ?? label })

@@ -498,6 +498,9 @@ async function addSamples() {
                 </template>
                 <USwitch :model-value="app.prefs.numberHints" @update:model-value="(v: boolean) => setPref('numberHints', v)" />
             </SettingRow>
+            <SettingRow label="英文のつづりを確かめる" description="海外の書式の文書で、つづりの誤りに赤い下線を引きます。日本の書式の文書では使いません。">
+                <USwitch :model-value="app.prefs.spellcheck !== false" @update:model-value="(v: boolean) => setPref('spellcheck', v)" />
+            </SettingRow>
             <SettingRow
                 label="校閲（黄色の波線）を表示する"
                 description="下の規則に当てはまる書き方に、黄色の波線を引きます。規則ごとに切り替えられます。定義語の誤り（赤い波線）は、この設定に関係なく表示します。"

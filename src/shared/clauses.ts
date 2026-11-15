@@ -23,7 +23,7 @@ export interface ClauseInsert {
     lineEdits: { line: number; text: string }[]
 }
 
-const REF_RE = /\[\[([^\]:]+)((?::\d+){0,2})\]\]/g
+const REF_RE = /\[\[([^\]:]+)((?::\d+)*)\]\]/g
 const ATTR_RE = /\s\{([^{}]*)\}\s*$/
 
 const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -119,7 +119,7 @@ export function applyClause(clause: Clause, target: LegalDoc, targetLines: strin
             renames.set(ref.id, id)
         } else if (c.kind === 'text') {
             const words = ref.title ? `${ref.title}の条` : 'ほかの条'
-            block = block.replace(new RegExp(`\\[\\[${esc(ref.id)}((?::\\d+){0,2})\\]\\]`, 'g'), words)
+            block = block.replace(new RegExp(`\\[\\[${esc(ref.id)}((?::\\d+)*)\\]\\]`, 'g'), words)
         }
     }
 

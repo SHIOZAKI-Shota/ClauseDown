@@ -26,6 +26,7 @@ import { listFonts } from './fonts'
 import { saveImage } from './images'
 import * as issues from './issues'
 import { proofread, stopProofread } from './proofread'
+import { SPELL_LANGS } from '../shared/legal-styles'
 import { imageExt, imageMime } from '../shared/images'
 import { setAppMenu } from './menu'
 import { cspFor } from './csp'
@@ -446,6 +447,13 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
     },
     saveImage,
     proofread,
+    setSpellLanguages: (langs: unknown) => {
+        if (process.platform === 'darwin' || !win || !Array.isArray(langs)) return
+        const session = win.webContents.session
+        const wanted = langs.filter((l): l is string => typeof l === 'string' && (SPELL_LANGS as readonly string[]).includes(l))
+        const usable = wanted.filter((l) => session.availableSpellCheckerLanguages.includes(l))
+        if (usable.length && usable.join() !== session.getSpellCheckerLanguages().join()) session.setSpellCheckerLanguages(usable)
+    },
     updateState,
     checkUpdate,
     downloadUpdate,

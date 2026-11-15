@@ -414,6 +414,7 @@ export interface Api {
     previewPdf(source: string, style: DocStyle, base?: DocBase): Promise<Uint8Array>
     saveImage(dir: string, docPath: string, data: Uint8Array, ext: string): Promise<SavedImage>
     proofread(text: string, ctx?: ProofreadContext): Promise<ProofreadIssue[]>
+    setSpellLanguages(langs: string[]): Promise<void>
     listIssues(dir: string): Promise<Issue[]>
     issueDetail(dir: string, n: number): Promise<IssueDetail>
     createIssue(dir: string, input: { title: string; body: string }): Promise<Issue>

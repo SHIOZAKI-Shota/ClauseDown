@@ -1,6 +1,10 @@
 import YAML from 'yaml'
 
 export interface DocConfig {
+    doc: {
+        style: 'auto' | 'ja' | 'contract' | 'us-law' | 'uk-law' | 'eu' | 'de' | 'fr' | 'decimal'
+        contractType: 'section' | 'plain' | 'article'
+    }
     chapter: { numeral: 'kanji' | 'arabic' | 'fullwidth' | 'none' }
     article: {
         numeral: 'kanji' | 'arabic' | 'fullwidth'
@@ -13,6 +17,7 @@ export interface DocConfig {
 }
 
 export const DEFAULT_CONFIG: DocConfig = {
+    doc: { style: 'auto', contractType: 'section' },
     chapter: { numeral: 'kanji' },
     article: { numeral: 'arabic', title: 'above', numbering: 'continuous' },
     paragraph: { firstNumbered: false, numeral: 'fullwidth', indent: 'nested' },
@@ -21,6 +26,21 @@ export const DEFAULT_CONFIG: DocConfig = {
 }
 
 export const CONFIG_CHOICES = {
+    'doc.style': {
+        label: '書式の系統',
+        options: {
+            auto: '自動',
+            ja: '日本',
+            contract: '英米の契約書',
+            'us-law': '米国の法令',
+            'uk-law': '英国の法令',
+            eu: 'EU の規則',
+            de: 'ドイツ',
+            fr: 'フランス',
+            decimal: '社内規程・規格（1.1）',
+        },
+    },
+    'doc.contractType': { label: '契約書の型', options: { section: 'Section 1', plain: '1.', article: 'Article 1' } },
     'chapter.numeral': { label: '章番号', options: { kanji: '第一章', arabic: '第1章', fullwidth: '第１章', none: '番号なし' } },
     'article.numeral': { label: '条番号', options: { kanji: '第二条', arabic: '第2条', fullwidth: '第２条' } },
     'article.title': { label: '条見出しの位置', options: { above: '前の行（法令式）', inline: '条番号の右（契約書式）', none: '表示しない' } },
@@ -33,6 +53,17 @@ export const CONFIG_CHOICES = {
 } as const
 
 export type ConfigKey = keyof typeof CONFIG_CHOICES
+
+export const JA_ONLY_KEYS: ConfigKey[] = [
+    'chapter.numeral',
+    'article.numeral',
+    'article.numbering',
+    'paragraph.firstNumbered',
+    'paragraph.numeral',
+    'paragraph.indent',
+    'item.style',
+    'subitem.style',
+]
 
 const BLOCK_RE = /<!--\s*clausedown\b([\s\S]*?)-->/
 const FRONTMATTER_RE = /^\uFEFF?---\r?\n[\s\S]*?\r?\n---[ \t]*(?=\r?\n|$)/

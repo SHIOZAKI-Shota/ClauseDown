@@ -2,6 +2,8 @@
 import type { CommitInfo, EffectiveVersion } from '@shared/api'
 import { compareSources } from '@shared/article-diff'
 import { renderCompareTable, renderInlineDiff } from '@shared/legal-renderer'
+import { docLang } from '@shared/legal-parser'
+import { compareWords } from '@shared/legal-styles'
 import { useApp } from '~/stores/app'
 import { toPlain } from '~/utils/ipc'
 import { usePane } from '~/composables/usePane'
@@ -63,13 +65,18 @@ const STYLES = [
     { value: 'table', label: '新旧対照表 形式', icon: 'i-lucide-columns-2' },
     { value: 'inline', label: 'Diff 形式', icon: 'i-lucide-file-diff' },
 ]
+const lang = computed(() => docLang(newText.value || oldText.value))
+const latin = computed(() => lang.value !== 'ja')
+const words = computed(() => compareWords(lang.value))
 const style = computed({
-    get: () => app.prefs.compareStyle ?? 'table',
-    set: (v: 'table' | 'inline') => app.setPrefsLive({ compareStyle: v }),
+    get: () => (latin.value ? (app.prefs.compareStyleLatin ?? 'inline') : (app.prefs.compareStyle ?? 'table')),
+    set: (v: 'table' | 'inline') => app.setPrefsLive(latin.value ? { compareStyleLatin: v } : { compareStyle: v }),
 })
 const html = computed(() =>
     withImages(
-        style.value === 'inline' ? renderInlineDiff(rows.value, { omitUnchanged: omit.value }) : renderCompareTable(rows.value, { omitUnchanged: omit.value }),
+        style.value === 'inline'
+            ? renderInlineDiff(rows.value, { omitUnchanged: omit.value, lang: lang.value })
+            : renderCompareTable(rows.value, { omitUnchanged: omit.value, lang: lang.value }),
         app.repoDir,
         app.currentPath,
     ),
@@ -153,8 +160,8 @@ async function exportAs(format: 'pdf' | 'docx') {
                 <div class="paper cd-paper">
                     <p class="title">{{ title }}</p>
                     <p v-if="style === 'inline'" class="legend">
-                        <del class="cd-del">削除文字</del>
-                        <ins class="cd-ins">追加文字</ins>
+                        <del class="cd-del">{{ words.deletedText }}</del>
+                        <ins class="cd-ins">{{ words.addedText }}</ins>
                     </p>
                     <div v-html="html" />
                 </div>

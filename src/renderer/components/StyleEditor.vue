@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { parseLegal } from '@shared/legal-parser'
 import { renderDoc } from '@shared/legal-renderer'
-import { BODY_FONTS, cssFont, type DocStyle } from '@shared/prefs'
+import { BODY_FONTS, cssFont, isLatinFont, type DocStyle } from '@shared/prefs'
 import { sourceLabel, type StyleOverride, type StyleSource } from '@shared/folder-style'
 import { newDocText } from '@shared/doc-preset'
 
@@ -75,6 +75,7 @@ const SAMPLE = {
 const sampleHtml = computed(() => renderDoc(parseLegal(SAMPLE[effective.value.newDocPreset])))
 const sampleStyle = computed(() => ({
     '--cd-font': cssFont(effective.value.font),
+    ...(isLatinFont(effective.value.font) ? { '--cd-latin-font': cssFont(effective.value.font) } : {}),
     '--cd-size': `${effective.value.fontSize}pt`,
     '--cd-line': String(effective.value.lineHeight),
     padding: `${effective.value.margin / 2}mm`,

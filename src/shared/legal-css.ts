@@ -54,6 +54,31 @@ export const LEGAL_CSS = `
 .cd-indent-nested .cd-article .cd-attach.cd-lv3 { padding-left: 4em; }
 .cd-indent-nested .cd-article .cd-attach.cd-lv4 { padding-left: 5em; }
 .cd-closing { margin-top: 2em; }
+
+/* 海外の書式。欧文書体・両端揃え・番号の幅に合わせたぶら下げ */
+.cd-latin { font-family: var(--cd-latin-font, "Times New Roman", Times, var(--cd-font, "Yu Mincho", serif)); line-height: var(--cd-line, 1.5); text-align: justify; hyphens: auto; }
+.cd-latin .cd-title { letter-spacing: 0; font-weight: bold; }
+.cd-latin .cd-chapter-title, .cd-latin .cd-supplement > .cd-chapter-title { letter-spacing: 0; font-weight: bold; margin: 1.6em 0 0.8em; }
+.cd-latin .cd-article + .cd-article { margin-top: 0.9em; }
+.cd-latin .cd-para, .cd-latin .cd-item { padding-left: 0; text-indent: 0; margin-top: 0.35em; }
+.cd-latin .cd-num { display: inline-block; min-width: 2.25em; text-indent: 0; }
+.cd-latin .cd-art-label { display: inline; min-width: 0; font-weight: bold; }
+.cd-latin .cd-art-name { font-weight: bold; }
+.cd-latin .cd-art-head { font-weight: normal; }
+.cd-latin .cd-para:has(> .cd-num:first-child:not(.cd-art-label)) { padding-left: 2.5em; text-indent: -2.5em; }
+.cd-latin .cd-item.cd-lv1 { padding-left: 5em; text-indent: -2.5em; }
+.cd-latin .cd-item.cd-lv2 { padding-left: 7.5em; text-indent: -2.5em; }
+.cd-latin .cd-item.cd-lv3 { padding-left: 10em; text-indent: -2.5em; }
+.cd-latin .cd-item.cd-lv4 { padding-left: 12.5em; text-indent: -2.5em; }
+.cd-latin .cd-attach.cd-lv1 { padding-left: 2.5em; }
+.cd-latin .cd-attach.cd-lv2 { padding-left: 5em; }
+.cd-latin .cd-attach.cd-lv3 { padding-left: 7.5em; }
+.cd-latin .cd-attach.cd-lv4 { padding-left: 10em; }
+.cd-latin .cd-stacked, .cd-latin .cd-art-title { text-align: center; padding-left: 0; }
+.cd-latin .cd-stacked .cd-art-label { font-weight: normal; font-style: italic; }
+.cd-style-fr .cd-stacked .cd-art-label { font-style: normal; font-weight: bold; }
+.cd-style-us-law .cd-art-name, .cd-style-us-law .cd-chapter-title { text-transform: uppercase; }
+.cd-style-uk-law .cd-chapter-title, .cd-style-eu .cd-chapter-title { text-transform: uppercase; }
 .cd-missing { color: var(--cd-missing); background: var(--cd-missing-bg); }
 
 /* 項・号の下の表と図。字下げを本文にそろえる */

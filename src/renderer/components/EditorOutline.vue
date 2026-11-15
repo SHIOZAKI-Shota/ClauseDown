@@ -20,7 +20,7 @@ const entries = computed<Entry[]>(() => {
     let n = 0
     props.legal.chapters.forEach((ch, ci) => {
         if (ch.kind === 'closing') return
-        const head = chapterHeading(ch)
+        const head = chapterHeading(ch, props.legal)
         if (head && ch.line >= 0) out.push({ key: `c${ci}`, line: ch.line, label: ch.label || head, title: ch.label ? ch.title : '', kind: 'chapter' })
         for (const a of ch.articles)
             out.push({ key: `a${n++}`, line: a.line, label: a.label, title: articleTitle(a, props.legal), kind: 'article', deleted: a.deleted })

@@ -41,6 +41,8 @@ export interface AppPrefs {
     previewZoom: number
     zoomLinked: boolean
     compareStyle: 'table' | 'inline'
+    compareStyleLatin: 'table' | 'inline'
+    spellcheck: boolean
     previewKind: 'normal' | 'print'
     lastDoc?: { dir: string; path: string }
     recentDocs?: RecentDoc[]
@@ -75,6 +77,8 @@ export const DEFAULT_PREFS: AppPrefs = {
     previewZoom: 100,
     zoomLinked: false,
     compareStyle: 'table',
+    compareStyleLatin: 'inline',
+    spellcheck: true,
     previewKind: 'normal',
 }
 
@@ -90,7 +94,14 @@ export const BODY_FONTS = [
     'メイリオ',
     'ＭＳ ゴシック',
     'ヒラギノ角ゴシック',
+    'Times New Roman',
+    'Georgia',
+    'Arial',
+    'Calibri',
 ]
+export const LATIN_FONTS = ['Times New Roman', 'Georgia', 'Arial', 'Calibri', 'Cambria', 'Garamond', 'Helvetica', 'Book Antiqua', 'Palatino Linotype']
+export const LATIN_FALLBACK = 'Times New Roman'
+export const isLatinFont = (name: string) => LATIN_FONTS.some((f) => f.toLowerCase() === name.trim().toLowerCase())
 export const EDITOR_FONTS = [
     'BIZ UDゴシック',
     'ＭＳ ゴシック',
@@ -132,7 +143,8 @@ export function cssFont(name: string, kind: 'serif' | 'mono' = 'serif'): string 
 }
 
 export function styleVars(s: DocStyle): string {
-    return `--cd-font: ${cssFont(s.font)}; --cd-size: ${s.fontSize}pt; --cd-line: ${s.lineHeight};`
+    const latin = isLatinFont(s.font) ? ` --cd-latin-font: ${cssFont(s.font)};` : ''
+    return `--cd-font: ${cssFont(s.font)}; --cd-size: ${s.fontSize}pt; --cd-line: ${s.lineHeight};${latin}`
 }
 
 export function withDefaults<T extends object>(defaults: T, value: Partial<T> | null | undefined): T {
