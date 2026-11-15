@@ -40,7 +40,7 @@ export async function aiRun(dir: string, input: AiRunInput, send: (e: AiEvent) =
 
     const ac = new AbortController()
     running.set(session, ac)
-    const ctx: ToolContext = { by: 'ai', changed }
+    const ctx: ToolContext = { by: 'ai', changed, repoDir: dir }
     try {
         if (r.kind === 'anthropic') await runAnthropic(r.key!, r.model, session, userText, send, ctx, ac.signal)
         else await runOpenAi(r, session, userText, send, ctx, ac.signal)

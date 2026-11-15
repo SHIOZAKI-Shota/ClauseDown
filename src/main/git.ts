@@ -57,18 +57,34 @@ async function treeOf(dir: string, oid: string): Promise<Map<string, TreeEntry>>
     return remember(m, oid, new Map(tree.map((e) => [e.path, e])), 20_000)
 }
 
+const isDotGit = (part: string) => {
+    const n = part
+        .replace(/[\u200C-\u200F\u202A-\u202E\u206A-\u206F\uFEFF]/g, '')
+        .split(':')[0]
+        .toLowerCase()
+        .replace(/[. ]+$/, '')
+    return n === '.git' || /^\.?git~[1-9]$/.test(n)
+}
+
 export function safeJoin(dir: string, path: string): string {
     const full = resolve(dir, path)
     const root = resolve(dir)
     if (full !== root && !full.startsWith(root + sep)) throw new Error(`不正なパスです: ${path}`)
     let cur = root
     for (const part of full.slice(root.length).split(sep).filter(Boolean)) {
+        if (isDotGit(part)) throw new Error(`版管理のフォルダ（.git）は読み書きできません: ${path}`)
         cur = join(cur, part)
         const st = fs.lstatSync(cur, { throwIfNoEntry: false })
         if (!st) break
         if (st.isSymbolicLink()) throw new Error(`リンクになっている場所には書き込めません: ${path}`)
     }
     return full
+}
+
+export function assertDocPath(path: unknown): asserts path is string {
+    if (typeof path !== 'string' || !/\.md$/i.test(path) || path.split(/[\\/]/).some((p) => !p || p === '..' || p.startsWith('.'))) {
+        throw new Error(`扱えるのはリポジトリ内の .md の文書だけです: ${String(path)}`)
+    }
 }
 
 const toPosix = (p: string) => p.split(sep).join('/')

@@ -6,7 +6,7 @@ import { fmtDate } from '~/utils/format'
 import { MOD_KEY } from '~/utils/platform'
 
 const app = useApp()
-const md = new MarkdownIt({ html: false, linkify: true, breaks: true })
+const md = new MarkdownIt({ html: false, linkify: true, breaks: true }).disable('image')
 md.renderer.rules.link_open = (tokens, idx, options, _env, self) => {
     tokens[idx].attrSet('target', '_blank')
     tokens[idx].attrSet('rel', 'noopener')

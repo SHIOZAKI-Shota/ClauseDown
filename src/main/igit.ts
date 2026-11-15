@@ -21,6 +21,7 @@ const git = new Proxy(iso.default, {
         const v = Reflect.get(target, key, recv)
         if (typeof v !== 'function') return v
         return (arg: unknown, ...rest: unknown[]) => {
+            if (arg && typeof arg === 'object' && 'http' in arg) arg = { ...arg, corsProxy: '' }
             if (arg && typeof arg === 'object' && 'dir' in arg && !('cache' in arg)) {
                 const dir = (arg as { dir: string }).dir
                 arg = { ...arg, cache: cacheFor(dir) }

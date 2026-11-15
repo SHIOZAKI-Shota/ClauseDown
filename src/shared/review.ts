@@ -16,7 +16,12 @@ export interface ReviewEvent {
     forgeUser?: string
 }
 
-export const prOf = (e: ReviewEvent | undefined) => e?.pr ?? e?.githubPr
+export const isPrNumber = (v: unknown): v is number => typeof v === 'number' && Number.isSafeInteger(v) && v > 0
+
+export function prOf(e: ReviewEvent | undefined): number | undefined {
+    const v: unknown = e?.pr ?? e?.githubPr
+    return isPrNumber(v) ? v : undefined
+}
 
 export interface RepoRules {
     requireApproval: boolean

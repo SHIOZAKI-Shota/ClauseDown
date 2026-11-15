@@ -3,7 +3,7 @@ import { addDays, type ScheduleItem } from './schedule'
 const esc = (s: string) =>
     s
         .replace(/\\/g, '\\\\')
-        .replace(/\r?\n/g, '\\n')
+        .replace(/\r\n?|\n/g, '\\n')
         .replace(/[;,]/g, (c) => `\\${c}`)
 const ymd = (d: string) => d.replace(/-/g, '')
 const enc = new TextEncoder()

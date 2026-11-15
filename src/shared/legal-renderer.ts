@@ -4,8 +4,9 @@ import { collapseUnchanged, type CompareRow, type InlinePart, type Part } from '
 import { renderBlock, renderRich, renderRichParts } from './blocks'
 import { inlinePropsHtml, propsAttrs, type CdProps } from './cd-prop'
 import { useMath } from './math'
+import { useLocalImages } from './images'
 
-const md = useMath(new MarkdownIt({ html: false, linkify: false, breaks: true }))
+const md = useLocalImages(useMath(new MarkdownIt({ html: false, linkify: false, breaks: true })))
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
 

@@ -29,6 +29,7 @@ export async function duplicateRepo(src: string, parent: string, rawName: string
         await disconnectRemote(dest)
         if ((await git.listRemotes({ fs, dir: dest })).some((r) => r.remote === 'upstream')) await git.deleteRemote({ fs, dir: dest, remote: 'upstream' })
         await fsp.rm(join(dest, '.git', 'clausedown-pending-untags'), { force: true })
+        await fsp.rm(join(dest, '.git', 'clausedown-delivery-folders.json'), { force: true })
     } catch (e) {
         await fsp.rm(dest, { recursive: true, force: true })
         throw e
