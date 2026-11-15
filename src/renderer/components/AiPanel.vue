@@ -19,7 +19,7 @@ const emit = defineEmits<{
 }>()
 
 const app = useApp()
-const md = new MarkdownIt({ html: false, linkify: false, breaks: true })
+const md = new MarkdownIt({ html: false, linkify: false, breaks: true }).disable('image')
 
 interface Turn {
     role: 'user' | 'ai'

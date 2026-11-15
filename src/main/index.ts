@@ -26,8 +26,9 @@ import { listFonts } from './fonts'
 import { saveImage } from './images'
 import * as issues from './issues'
 import { proofread, stopProofread } from './proofread'
-import { imageExt } from '../shared/images'
+import { imageExt, imageMime } from '../shared/images'
 import { setAppMenu } from './menu'
+import { cspFor } from './csp'
 import { aiReset, aiRun, aiStop, testAi } from './ai-agent'
 import { keyName, resolveAi } from './ai/provider'
 import { listAiModels } from './ai/models'
@@ -48,26 +49,21 @@ const DEV_ICON = resolve(import.meta.dirname, '../../build/icon.png')
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'app', privileges: { standard: true, secure: true, supportFetchAPI: true } }])
 
-const CSP = [
-    "default-src 'self'",
-    "script-src 'self' 'unsafe-inline'",
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
-    "font-src 'self' data:",
-    "connect-src 'self'",
-    "worker-src 'self'",
-].join('; ')
-
 async function serveRepoImage(pathname: string): Promise<Response> {
     const [encDir, ...rest] = pathname.slice('/__repo/'.length).split('/')
     try {
         const dir = decodeURIComponent(encDir)
         const path = rest.map((s) => decodeURIComponent(s)).join('/')
-        if (!imageExt(path)) return new Response('Forbidden', { status: 403 })
+        const ext = imageExt(path)
+        if (!ext) return new Response('Forbidden', { status: 403 })
         await assertAllowedDir(dir)
         const full = git.safeJoin(dir, path)
         if (!statSync(full, { throwIfNoEntry: false })?.isFile()) return new Response('Not Found', { status: 404 })
-        return await net.fetch(pathToFileURL(full).toString())
+        const res = await net.fetch(pathToFileURL(full).toString())
+        return new Response(res.body, {
+            status: res.status,
+            headers: { 'Content-Type': imageMime(ext), 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; sandbox" },
+        })
     } catch {
         return new Response('Forbidden', { status: 403 })
     }
@@ -83,9 +79,15 @@ function serveRenderer() {
         if (!existsSync(file) || statSync(file).isDirectory()) {
             file = existsSync(join(root, '200.html')) ? join(root, '200.html') : join(root, 'index.html')
         }
+        if (file.endsWith('.html')) {
+            const html = await readFile(file, 'utf8')
+            return new Response(html, {
+                headers: { 'Content-Type': 'text/html; charset=utf-8', 'Content-Security-Policy': cspFor(html), 'X-Content-Type-Options': 'nosniff' },
+            })
+        }
         const res = await net.fetch(pathToFileURL(file).toString())
         const headers = new Headers(res.headers)
-        headers.set('Content-Security-Policy', CSP)
+        headers.set('X-Content-Type-Options', 'nosniff')
         return new Response(res.body, { status: res.status, headers })
     })
 }
@@ -145,17 +147,21 @@ async function createWindow() {
 }
 
 const pickedRoots = new Set<string>()
-const norm = (p: string) => resolve(p).toLowerCase()
+const CASE_FOLD = process.platform === 'win32' || process.platform === 'darwin'
+const norm = (p: string) => (CASE_FOLD ? resolve(p).toLowerCase() : resolve(p))
 const under = (p: string, root: string) => p === root || p.startsWith(root.endsWith(sep) ? root : root + sep)
 
-async function assertAllowedDir(dir: unknown): Promise<void> {
+async function assertAllowedDir(dir: unknown, allowPicked = false): Promise<void> {
     if (typeof dir !== 'string' || !dir) throw new Error('リポジトリが指定されていません')
     const d = norm(dir)
     const { repos } = await loadSettings()
     if (repos.some((r) => norm(r.dir) === d)) return
-    if ([...pickedRoots].some((root) => under(d, root))) return
+    if (allowPicked && [...pickedRoots].some((root) => under(d, root))) return
     throw new Error('このフォルダはリポジトリとして登録されていません')
 }
+
+const PICKED_OK = new Set(['openRepo', 'initRepo'])
+const DOC_PATH = new Set(['readDoc', 'writeDoc', 'createDoc', 'discardChanges'])
 
 function assertPicked(dir: unknown) {
     if (typeof dir !== 'string' || ![...pickedRoots].some((root) => under(norm(dir), root)))
@@ -300,11 +306,23 @@ function exportedPath(p: unknown): string {
     return full
 }
 
+const BUNDLE_RE =
+    /\.(app|bundle|framework|plugin|kext|prefpane|workflow|action|saver|scptd|pkg|mpkg|qlgenerator|mdimporter|component|wdgt|xpc|appex|service|command|tool|terminal|scpt)$/i
+const madeFolders = new Set<string>()
+
+function isBundle(full: string): boolean {
+    if (full.split(sep).some((part) => BUNDLE_RE.test(part))) return true
+    return existsSync(join(full, 'Contents', 'Info.plist')) || existsSync(join(full, 'Info.plist'))
+}
+
 async function openFolder(p: unknown): Promise<void> {
     if (typeof p !== 'string' || !(process.platform === 'win32' ? /^[A-Za-z]:[\\/]/.test(p) : isAbsolute(p))) throw new Error('この場所は開けません')
     const full = resolve(p)
     if (!statSync(full, { throwIfNoEntry: false })?.isDirectory()) throw new Error('フォルダが見つかりません')
-    await shell.openPath(full)
+    if (isBundle(full)) throw new Error('この場所は開けません')
+    const { repos } = await loadSettings()
+    if (madeFolders.has(norm(full)) || repos.some((r) => norm(r.dir) === norm(full))) await shell.openPath(full)
+    else shell.showItemInFolder(full)
 }
 
 const handlers: Record<string, (...args: any[]) => unknown> = {
@@ -316,7 +334,7 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
     platform: async () => process.platform,
     listFonts,
     saveSettings: async (next: AppSettings) => {
-        for (const r of next.repos ?? []) await assertAllowedDir(r.dir)
+        for (const r of next.repos ?? []) await assertAllowedDir(r.dir, true)
         const kept = new Set((next.repos ?? []).map((r) => norm(r.dir)))
         await updateSettings((cur) => {
             for (const r of cur.repos ?? []) if (!kept.has(norm(r.dir))) git.forgetRepo(r.dir)
@@ -361,7 +379,7 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
         return r.filePaths
     },
     cloneRepo: async (url: string, dir: string) => {
-        await assertAllowedDir(dir)
+        await assertAllowedDir(dir, true)
         await git.cloneRepo(url, dir)
     },
     openRepo: git.openRepo,
@@ -465,8 +483,16 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
     setEventDone: schedule.setEventDone,
     getEventKinds: schedule.getEventKinds,
     saveEventKinds: schedule.saveEventKinds,
-    listDeliveries: wf.listDeliveries,
-    deliver: (dir, input) => deliverWithDialog(win, dir, input),
+    listDeliveries: async (dir: string, docPath?: string) => {
+        const list = await wf.listDeliveries(dir, docPath)
+        for (const d of list) if (d.folder) madeFolders.add(norm(d.folder))
+        return list
+    },
+    deliver: async (dir, input) => {
+        const rec = await deliverWithDialog(win, dir, input)
+        if (rec?.folder) madeFolders.add(norm(rec.folder))
+        return rec
+    },
     openPath: openFolder,
     openExported: async (p: unknown) => {
         const err = await shell.openPath(exportedPath(p))
@@ -532,7 +558,8 @@ for (const [name, fn] of Object.entries(handlers)) {
         const from = e.senderFrame?.url ?? ''
         const dev = process.env.ELECTRON_RENDERER_URL
         if (!from.startsWith('app://bundle/') && !(dev && from.startsWith(dev))) throw new Error('不正な呼び出しです')
-        if (DIR_FIRST.has(name)) await assertAllowedDir(args[0])
+        if (DIR_FIRST.has(name)) await assertAllowedDir(args[0], PICKED_OK.has(name))
+        if (DOC_PATH.has(name)) git.assertDocPath(args[1])
         return LOCKED.has(name) ? withRepoLock(args[0], async () => fn(...args)) : fn(...args)
     })
 }

@@ -14,7 +14,7 @@ const OPEN_RE = /^\s*:{3,}\s*(?:\{([^{}]*)\}|([\w.-]+(?:[ \t]+[\w.=,%-]+)*))\s*:
 const CLOSE_RE = /^\s*:{3,}\s*$/
 const ATTR_LINE_RE = /^\s*\{([^{}]*)\}\s*$/
 const INLINE_RE = /\[([^[\]]*)\]\{([^{}]*)\}/g
-const INLINE_HTML_RE = /\[([^[\]]*)\]\{([^{}<>]*)\}/g
+const INLINE_HTML_RE = /\[([^[\]]*)\]\{([^{}<>\uE000\uE001]*)\}/g
 
 const SIZE_RE = /^\d+(?:\.\d+)?(?:pt|px|mm|em|%)?$/
 const COL_RE = /^\d+(?:\.\d+)?(?:%|mm|em|pt)?$/
@@ -40,7 +40,7 @@ export function parseProps(attrs: string): CdProps {
             }
             case 'font-family':
             case 'font': {
-                const v = value.replace(/[;{}<>"'\\]/g, '').trim()
+                const v = value.replace(/[;{}<>"'\\():/=]/g, '').trim()
                 if (v) out.fontFamily = v
                 break
             }
@@ -166,14 +166,20 @@ export function stripInlineProps(text: string): string {
     return text.includes(']{') ? text.replace(INLINE_RE, (whole, body: string, attrs: string) => (hasProps(parseProps(attrs)) ? body : whole)) : text
 }
 
+const TAG_RE = /<[^>]*>/g
+const MARK_RE = /\uE000(\d+)\uE001/g
+
 export function inlinePropsHtml(html: string): string {
     if (!html.includes(']{')) return html
-    return html.replace(INLINE_HTML_RE, (whole, body: string, attrs: string) => {
+    const tags: string[] = []
+    const masked = html.replace(/[\uE000\uE001]/g, '').replace(TAG_RE, (t) => `\uE000${tags.push(t) - 1}\uE001`)
+    const out = masked.replace(INLINE_HTML_RE, (whole, body: string, attrs: string) => {
         const p = parseProps(attrs.replace(/&quot;/g, '"').replace(/&#39;/g, "'"))
         if (!hasProps(p)) return whole
         const style = propsStyle(p)
         return style ? `<span style="${style.replace(/"/g, '&quot;')}">${body}</span>` : body
     })
+    return out.replace(MARK_RE, (_, i: string) => tags[Number(i)])
 }
 
 export interface InlineRun {

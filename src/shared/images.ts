@@ -1,3 +1,5 @@
+import type { MarkdownIt as Md } from 'markdown-it'
+
 export type ImageExt = 'png' | 'jpg' | 'jpeg' | 'gif' | 'webp'
 
 const MIME: Record<ImageExt, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp' }
@@ -73,6 +75,16 @@ export function imageSize(bytes: Uint8Array): { width: number; height: number } 
 }
 
 export const isLocalSrc = (src: string): boolean => !/^[a-z][a-z0-9+.-]*:/i.test(src) && !/^[\\/#]/.test(src)
+
+export function useLocalImages(md: Md): Md {
+    const base = md.renderer.rules.image!
+    md.renderer.rules.image = (tokens, idx, options, env, self) => {
+        const src = String(tokens[idx].attrGet('src') ?? '')
+        if (isLocalSrc(src)) return base(tokens, idx, options, env, self)
+        return md.utils.escapeHtml(String(self.renderInlineAsText(tokens[idx].children ?? [], options, env)))
+    }
+    return md
+}
 
 const folderOf = (docPath: string) => docPath.split('/').slice(0, -1)
 

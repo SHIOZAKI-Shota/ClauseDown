@@ -11,6 +11,7 @@ import type { RepoEntry } from '../shared/api'
 export interface ToolContext {
     by: 'ai' | 'mcp'
     changed(dir: string, path: string): void
+    repoDir?: string
 }
 
 export interface AiTool<S extends z.ZodObject = z.ZodObject> {
@@ -34,13 +35,6 @@ async function findRepo(name: string): Promise<RepoEntry> {
     if (!hit) throw new Error(`リポジトリ「${name}」は登録されていません。登録済み：${repos.map((r) => r.name).join('、') || 'なし'}`)
     if (!fs.existsSync(hit.dir)) throw new Error(`リポジトリ「${name}」のフォルダが見つかりません`)
     return hit
-}
-
-function assertDocPath(path: string) {
-    const parts = path.split(/[\\/]/)
-    if (!/\.md$/i.test(path) || parts.some((p) => !p || p === '..' || p.startsWith('.'))) {
-        throw new Error(`書き換えられるのはリポジトリ内の .md の文書だけです: ${path}`)
-    }
 }
 
 const currentBranchLabel = (dir: string) => g.currentLabel(dir)
@@ -72,8 +66,9 @@ export const TOOLS: AiTool[] = [
         schema: z.object({}),
         readOnly: true,
         label: () => 'リポジトリの一覧を見ています',
-        async run() {
-            const { repos, current } = await loadSettings()
+        async run(_input, ctx) {
+            const { repos: all, current } = await loadSettings()
+            const repos = ctx.repoDir ? all.filter((r) => r.dir === ctx.repoDir) : all
             if (!repos.length) return 'リポジトリが登録されていません'
             const rows = await Promise.all(
                 repos.map(async (r) => {
@@ -139,7 +134,7 @@ export const TOOLS: AiTool[] = [
         readOnly: false,
         label: (i) => `${i.path} を書き換えています`,
         async run({ repo, path, old_text, new_text }, ctx) {
-            assertDocPath(path)
+            g.assertDocPath(path)
             const r = await findRepo(repo)
             const src = await g.readDoc(r.dir, path)
             const crlf = src.includes('\r\n')
@@ -166,7 +161,7 @@ export const TOOLS: AiTool[] = [
         readOnly: false,
         label: (i) => `${i.path} を書いています`,
         async run({ repo, path, content }, ctx) {
-            assertDocPath(path)
+            g.assertDocPath(path)
             const r = await findRepo(repo)
             await g.writeDoc(r.dir, path, content)
             ctx.changed(r.dir, path)
@@ -243,6 +238,11 @@ export async function runTool(name: string, input: unknown, ctx: ToolContext): P
     if (!t) throw new Error(`道具「${name}」はありません`)
     const parsed = t.schema.safeParse(input)
     if (!parsed.success) throw new Error(`入力が正しくありません：${parsed.error.issues.map((i) => `${i.path.join('.')} ${i.message}`).join('、')}`)
+    const data = parsed.data as { repo?: unknown; path?: unknown }
+    if (data.path !== undefined) g.assertDocPath(data.path)
+    if (ctx.repoDir && typeof data.repo === 'string' && (await findRepo(data.repo)).dir !== ctx.repoDir) {
+        throw new Error('この会話では、画面で開いているリポジトリの文書だけを扱えます')
+    }
     return t.run(parsed.data, ctx)
 }
 

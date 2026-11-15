@@ -4,6 +4,7 @@ import type { MarkdownIt as Md, Token } from 'markdown-it'
 import { render as renderMermaid } from 'pele'
 import { tableSpans, visibleCells } from './table-span'
 import { mathError, renderMath, useMath } from './math'
+import { useLocalImages } from './images'
 
 interface CellTokens {
     open: number
@@ -44,7 +45,7 @@ export function useTableSpans(m: Md): Md {
     return m
 }
 
-const md = useMath(useTableSpans(new MarkdownIt({ html: false, linkify: false, breaks: true })))
+const md = useLocalImages(useMath(useTableSpans(new MarkdownIt({ html: false, linkify: false, breaks: true }))))
 const plainMd = new MarkdownIt({ html: false, linkify: false, breaks: true })
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)

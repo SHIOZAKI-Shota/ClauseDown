@@ -54,8 +54,15 @@ export const MATH_CSS =
     TEMML_CSS +
     '\nmath { font-family: "STIX Two Math", "Cambria Math", math; }\nmtd { padding-top: 0.3em; padding-bottom: 0.3em; }\n.cd-math-display { display: block; margin: 0.4em 0; text-indent: 0; }\n'
 
+const escText = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
+
 export function renderMath(tex: string, display: boolean): string {
-    const html = temml.renderToString(tex, { ...OPTIONS, displayMode: display, throwOnError: false })
+    let html: string
+    try {
+        html = temml.renderToString(tex, { ...OPTIONS, displayMode: display, throwOnError: false })
+    } catch {
+        html = `<span class="cd-math-error">${escText(tex)}</span>`
+    }
     return display ? `<span class="cd-math-display">${html}</span>` : `<span class="cd-math">${html}</span>`
 }
 

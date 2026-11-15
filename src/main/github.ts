@@ -1,3 +1,4 @@
+import { isPrNumber } from '../shared/review'
 import { getToken } from './settings'
 
 export interface GitHubRepo {
@@ -9,6 +10,11 @@ export function parseGitHub(url: string | null | undefined): GitHubRepo | null {
     if (!url) return null
     const m = /^(?:https?:\/\/(?:[^@/]+@)?github\.com\/|git@github\.com:)([^/]+)\/([^/]+?)(?:\.git)?\/?$/i.exec(url.trim())
     return m ? { owner: m[1], repo: m[2] } : null
+}
+
+function num(v: unknown): number {
+    if (!isPrNumber(v)) throw new Error('プルリクエスト・課題の番号が正しくありません')
+    return v
 }
 
 const apiBase = () => process.env.CLAUSEDOWN_GITHUB_API ?? 'https://api.github.com'
@@ -92,23 +98,23 @@ export function createPull(r: GitHubRepo, head: string, base: string, title: str
 }
 
 export function getPull(r: GitHubRepo, n: number) {
-    return call<PullRequest>('GET', `${repoPath(r)}/pulls/${n}`)
+    return call<PullRequest>('GET', `${repoPath(r)}/pulls/${num(n)}`)
 }
 
 export function closePull(r: GitHubRepo, n: number) {
-    return call<PullRequest>('PATCH', `${repoPath(r)}/pulls/${n}`, { state: 'closed' })
+    return call<PullRequest>('PATCH', `${repoPath(r)}/pulls/${num(n)}`, { state: 'closed' })
 }
 
 export function listReviews(r: GitHubRepo, n: number) {
-    return call<Review[]>('GET', `${repoPath(r)}/pulls/${n}/reviews?per_page=100`)
+    return call<Review[]>('GET', `${repoPath(r)}/pulls/${num(n)}/reviews?per_page=100`)
 }
 
 export function createReview(r: GitHubRepo, n: number, event: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT', body: string, commitId?: string) {
-    return call<Review>('POST', `${repoPath(r)}/pulls/${n}/reviews`, { event, body, commit_id: commitId })
+    return call<Review>('POST', `${repoPath(r)}/pulls/${num(n)}/reviews`, { event, body, commit_id: commitId })
 }
 
 export function mergePull(r: GitHubRepo, n: number, title: string, sha?: string) {
-    return call<{ merged: boolean; sha: string }>('PUT', `${repoPath(r)}/pulls/${n}/merge`, {
+    return call<{ merged: boolean; sha: string }>('PUT', `${repoPath(r)}/pulls/${num(n)}/merge`, {
         merge_method: 'merge',
         commit_title: title,
         sha,
@@ -172,17 +178,17 @@ export function createIssue(r: GitHubRepo, title: string, body: string) {
 }
 
 export function updateIssue(r: GitHubRepo, n: number, patch: { title?: string; body?: string; state?: 'open' | 'closed' }) {
-    return call<GitHubIssue>('PATCH', `${repoPath(r)}/issues/${n}`, patch)
+    return call<GitHubIssue>('PATCH', `${repoPath(r)}/issues/${num(n)}`, patch)
 }
 
 export function commentIssue(r: GitHubRepo, n: number, body: string) {
-    return call<unknown>('POST', `${repoPath(r)}/issues/${n}/comments`, { body })
+    return call<unknown>('POST', `${repoPath(r)}/issues/${num(n)}/comments`, { body })
 }
 
 export async function issueComments(r: GitHubRepo, n: number): Promise<{ id: number; body: string; user?: { login: string }; created_at: string }[]> {
     const out: { id: number; body: string; user?: { login: string }; created_at: string }[] = []
     for (let page = 1; page <= 20; page++) {
-        const list = await call<typeof out>('GET', `${repoPath(r)}/issues/${n}/comments?per_page=100&page=${page}`)
+        const list = await call<typeof out>('GET', `${repoPath(r)}/issues/${num(n)}/comments?per_page=100&page=${page}`)
         out.push(...list)
         if (list.length < 100) break
     }

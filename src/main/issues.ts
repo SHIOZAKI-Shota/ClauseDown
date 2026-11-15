@@ -82,7 +82,17 @@ function toIssue(i: LocalIssue): Issue {
 }
 
 async function localAll(dir: string): Promise<LocalIssue[]> {
-    const list = (await readRecords<LocalIssue>(dir, RECORD.issues)).filter((i) => typeof i.n === 'number' && typeof i.id === 'string')
+    const list = (await readRecords<LocalIssue>(dir, RECORD.issues)).filter(
+        (i) =>
+            i &&
+            Number.isSafeInteger(i.n) &&
+            i.n > 0 &&
+            typeof i.id === 'string' &&
+            /^[\w-]{1,64}$/.test(i.id) &&
+            typeof i.createdAt === 'string' &&
+            typeof i.title === 'string' &&
+            typeof i.body === 'string',
+    )
     const sorted = [...list].sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id))
     const used = new Set<number>()
     let max = Math.max(0, ...list.map((i) => i.n))

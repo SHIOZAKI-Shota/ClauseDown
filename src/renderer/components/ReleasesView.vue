@@ -357,6 +357,7 @@ const itemsOf = (d: DeliveryRecord) => d.items.map((x) => ITEM_LABEL[x] ?? x)
                             <span class="cd-muted msg">{{ fmtDate(selDelivery.at, 'ymdhm') }}・{{ selDelivery.by }}</span>
                         </div>
                         <UButton
+                            v-if="selDelivery.folder"
                             label="フォルダを開く"
                             icon="i-lucide-folder-open"
                             size="sm"

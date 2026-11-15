@@ -3,7 +3,7 @@ import MarkdownIt from 'markdown-it'
 import { useApp } from '~/stores/app'
 
 const app = useApp()
-const md = new MarkdownIt({ html: false, linkify: false, breaks: true })
+const md = new MarkdownIt({ html: false, linkify: false, breaks: true }).disable('image')
 const text = ref('')
 const draft = ref('')
 const editing = ref(false)

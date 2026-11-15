@@ -23,8 +23,8 @@ export function tokenBaseFor(url: string, settings: { gitlabHosts?: GitLabHost[]
     }
     const bases = knownBases(settings)
     if (u.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(u.hostname)) {
-        const base = process.env.CLAUSEDOWN_LOOPBACK_BASE ?? GITHUB_BASE
-        return bases.find((b) => b.base === base) ?? null
+        const base = process.env.CLAUSEDOWN_LOOPBACK_BASE
+        return base ? (bases.find((b) => b.base === base) ?? null) : null
     }
     if (u.protocol !== 'https:') return null
     const clean = `https://${u.host.toLowerCase()}${u.pathname}`

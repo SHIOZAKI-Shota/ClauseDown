@@ -13,7 +13,11 @@ import { repoKey } from './repo-lock'
 import { afterMain, newOnMain, reviewBodyLines } from './issues'
 
 export async function getRules(dir: string): Promise<RepoRules> {
-    return { ...DEFAULT_RULES, ...(await readRecord<RepoRules>(dir, RECORD.rules)) }
+    const r = (await readRecord<RepoRules>(dir, RECORD.rules)) as Partial<RepoRules> | null
+    return {
+        requireApproval: typeof r?.requireApproval === 'boolean' ? r.requireApproval : DEFAULT_RULES.requireApproval,
+        approvers: Array.isArray(r?.approvers) ? r.approvers.filter((a): a is string => typeof a === 'string') : DEFAULT_RULES.approvers,
+    }
 }
 
 export async function saveRules(dir: string, rules: RepoRules): Promise<void> {
@@ -206,9 +210,30 @@ function safeName(s: string): string {
     return /^(con|prn|aux|nul|com\d|lpt\d)(\..*)?$/i.test(n) ? `${n}_` : n || '_'
 }
 
+const folderFile = (dir: string) => join(dir, '.git', 'clausedown-delivery-folders.json')
+
+async function deliveryFolders(dir: string): Promise<Record<string, string>> {
+    try {
+        const j: unknown = JSON.parse(await fsp.readFile(folderFile(dir), 'utf8'))
+        return j && typeof j === 'object' && !Array.isArray(j) ? Object.fromEntries(Object.entries(j).filter(([, v]) => typeof v === 'string')) : {}
+    } catch {
+        return {}
+    }
+}
+
+async function rememberFolder(dir: string, id: string, folder: string) {
+    const all = await deliveryFolders(dir)
+    all[id] = folder
+    await fsp.writeFile(folderFile(dir), JSON.stringify(all, null, 2), 'utf8')
+}
+
 export async function listDeliveries(dir: string, docPath?: string): Promise<DeliveryRecord[]> {
     const list = (await readRecords<DeliveryRecord>(dir, RECORD.deliveries)).filter((d) => d && isStr(d.docPath) && isStr(d.at) && Array.isArray(d.items))
-    return list.filter((d) => !docPath || d.docPath === docPath).sort((a, b) => b.at.localeCompare(a.at))
+    const folders = await deliveryFolders(dir)
+    return list
+        .filter((d) => !docPath || d.docPath === docPath)
+        .sort((a, b) => b.at.localeCompare(a.at))
+        .map((d) => ({ ...d, folder: (isStr(d.id) && Object.hasOwn(folders, d.id) && folders[d.id]) || '' }))
 }
 
 export async function deliver(dir: string, input: DeliverInput, outDir: string, build: Builders): Promise<DeliveryRecord> {
@@ -276,6 +301,7 @@ export async function deliver(dir: string, input: DeliverInput, outDir: string, 
             record.releaseError = (e as Error).message
         }
     }
-    await writeRecord(dir, `${RECORD.deliveries}${record.id}.json`, record)
+    await writeRecord(dir, `${RECORD.deliveries}${record.id}.json`, { ...record, folder: '' })
+    await rememberFolder(dir, record.id, folder)
     return record
 }
