@@ -2,11 +2,21 @@ import { tagPath } from '@shared/tag-path'
 import type { AppSettings, DeliveryRecord, Issue, IssueComment } from '@shared/api'
 import type { ReviewEvent } from '@shared/review'
 import type { DueEvent, EventKind } from '@shared/schedule'
-import { t } from '@shared/i18n'
+import { resolveLocale, t, type Locale } from '@shared/i18n'
 
 export const MAIN = 'main'
 export const DRAFT_PREFIX = '案/'
-export const USER = 'デモの利用者'
+
+// 公式サイトは iframe の URL に ?lang=ja / ?lang=en を付けて、ページの言語を伝える
+const param = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('lang')
+export const LANG_PARAM: Locale | null = param === 'ja' || param === 'en' ? param : null
+
+// 見本のデータの言語。画面の言語の設定を後で変えても、見本はこの言語のまま（ブラウザの外＝テストでは日本語）
+export const DEMO_LANG: Locale =
+    typeof location === 'undefined' ? 'ja' : resolveLocale('system', LANG_PARAM ? [LANG_PARAM] : typeof navigator === 'undefined' ? [] : navigator.languages)
+
+export const userFor = (lang: Locale) => (lang === 'en' ? 'Demo user' : 'デモの利用者')
+export const USER = userFor(DEMO_LANG)
 
 export interface DemoCommit {
     oid: string

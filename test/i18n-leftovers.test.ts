@@ -14,6 +14,8 @@ const WHOLE_FILES = [
     'src/main/houritsu.ts',
     'src/main/ai-tools.ts',
     'src/renderer/demo/seed.ts',
+    'src/renderer/demo/seed-kit.ts',
+    'src/renderer/demo/seed-en.ts',
     'src/renderer/demo/shims/assert.cjs',
     'src/renderer/components/StyleEditor.vue',
 ]
@@ -27,7 +29,7 @@ const ALLOWED_LINES = [
     /\.test\(|\/\^|RegExp/, // 日本語の文書を読み取る正規表現
     /第\$\{|\$\{label\} 削除/, // 文書の言語で決まる番号
     /cd-hint|この法律は、〇〇/, // 設定の見本（文書の中身）
-    /USER = /, // デモの利用者の名前
+    /USER = |userFor = /, // デモの利用者の名前
 ]
 
 function files(dir: string): string[] {
