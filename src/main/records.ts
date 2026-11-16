@@ -4,6 +4,7 @@ import git from './igit'
 import http from 'isomorphic-git/http/node'
 import { withRepoLock } from './repo-lock'
 import { author, hasRemote, onAuth, RECORDS_BRANCH, tryResolve } from './git-base'
+import { signOpts } from './signing'
 
 const LOCAL = `refs/heads/${RECORDS_BRANCH}`
 const REMOTE = `refs/remotes/origin/${RECORDS_BRANCH}`
@@ -17,6 +18,8 @@ export const RECORD = {
     issues: 'issues/',
     issueLinks: 'issue-links/',
     issueComments: 'issue-comments/',
+    signers: 'signers/',
+    policy: 'policy/',
 } as const
 
 async function filesOf(dir: string, oid: string | null, into = new Map<string, string>(), prefix = '') {
@@ -80,7 +83,18 @@ async function commitFiles(dir: string, files: Map<string, string>, parents: str
     const tree = await writeTreeOf(dir, [...files.entries()])
     const who = await author(dir)
     const sig = { ...who, timestamp: Math.floor(Date.now() / 1000), timezoneOffset: new Date().getTimezoneOffset() }
-    const oid = await git.writeCommit({ fs, dir, commit: { message, tree, parent: parents, author: sig, committer: sig } })
+    const oid = await git.commit({
+        fs,
+        dir,
+        ref: LOCAL,
+        message,
+        tree,
+        parent: parents,
+        author: sig,
+        committer: sig,
+        noUpdateBranch: true,
+        ...(await signOpts(dir, 'record')),
+    })
     await git.writeRef({ fs, dir, ref: LOCAL, value: oid, force: true })
     return oid
 }
@@ -104,6 +118,17 @@ export async function readRecords<T = unknown>(dir: string, prefix = ''): Promis
     const oids = [...files].filter(([path]) => path.startsWith(prefix) && path.endsWith('.json')).map(([, oid]) => oid)
     const all = await Promise.all(oids.map((oid) => readJson(dir, oid)))
     return all.filter((v) => v !== null && typeof v === 'object') as T[]
+}
+
+export async function readRecordEntries<T = unknown>(dir: string, prefix: string): Promise<[string, T][]> {
+    const { files } = await mergedFiles(dir)
+    const hits = [...files].filter(([path]) => path.startsWith(prefix) && path.endsWith('.json'))
+    const out: [string, T][] = []
+    for (const [path, oid] of hits) {
+        const v = await readJson(dir, oid)
+        if (v !== null && typeof v === 'object') out.push([path, v as T])
+    }
+    return out
 }
 
 export async function readRecord<T>(dir: string, name: string): Promise<T | null> {

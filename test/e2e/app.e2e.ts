@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { _electron, type ElectronApplication, type Page } from 'playwright-core'
 import electronPath from 'electron'
 import { addDays } from '../../src/shared/schedule'
+import { listSignatures } from '../../src/main/pdf-sign'
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url))
 const repos: { name: string; dir: string }[] = []
@@ -126,6 +127,131 @@ describe('画面', () => {
         await seen('Show desktop notifications for due dates')
         await store(`s.setPrefs({ language: 'ja' })`)
         await seen('期日をデスクトップに通知する')
+    })
+
+    it('電子署名：設定で鍵と自己署名の証明書を作ると、版と書き出した PDF に署名が入る', async () => {
+        await store(`s.openSettings('setup', 'signature')`)
+        await seen('版に署名する')
+        const chipBuilt = fs
+            .readdirSync(join(ROOT, 'native/keychip'))
+            .some((f) => f.startsWith(`clausedown-keychip.${process.platform}-${process.arch}`) && f.endsWith('.node'))
+        if (chipBuilt) {
+            await seen('鍵の保管場所')
+            await win.getByRole('radio', { name: 'safeStorage に保管', exact: true }).click()
+        }
+        await win.getByRole('button', { name: '鍵を作成' }).click()
+        await win
+            .getByText(/^SHA256:/)
+            .first()
+            .waitFor({ timeout: 15000 })
+        await win.getByRole('button', { name: '証明書を追加' }).click()
+        await win.getByRole('menuitem', { name: '自己署名の証明書を作成' }).click()
+        await win.getByLabel('名前').filter({ visible: true }).first().fill('個人')
+        await win.getByRole('button', { name: '自己署名の証明書を作成' }).click()
+        await win.getByRole('button', { name: '証明書を書き出し' }).waitFor({ timeout: 30000 })
+        await seen('既定')
+        if (process.env.CLAUSEDOWN_SHOTS) await win.screenshot({ path: join(process.env.CLAUSEDOWN_SHOTS, 'signing-settings.png'), fullPage: true })
+        const mynaBuilt = fs
+            .readdirSync(join(ROOT, 'native/myna'))
+            .some((f) => f.startsWith(`clausedown-myna.${process.platform}-${process.arch}`) && f.endsWith('.node'))
+        if (mynaBuilt) {
+            await win.getByRole('button', { name: '証明書を追加' }).click()
+            await win.getByRole('menuitem', { name: 'マイナンバーカードを追加' }).click()
+            await win
+                .getByText(/カードリーダーが見つかりません|カードが未設置です|リーダー：/)
+                .first()
+                .waitFor()
+            if (process.env.CLAUSEDOWN_SHOTS) await win.screenshot({ path: join(process.env.CLAUSEDOWN_SHOTS, 'signing-myna.png') })
+        }
+
+        await win.evaluate(`window.api.writeDoc(${JSON.stringify(dir)}, ${JSON.stringify(DOC)}, '# 就業規則\\n\\n### 目的\\n- 署名のテスト\\n')`)
+        await win.evaluate(`window.api.saveVersion(${JSON.stringify(dir)}, { message: '署名つきの版' })`)
+        const { execFileSync } = await import('node:child_process')
+        expect(execFileSync('git', ['cat-file', 'commit', 'HEAD'], { cwd: dir }).toString()).toContain('gpgsig -----BEGIN SSH SIGNATURE-----')
+
+        const out = join(tmp, 'signed.pdf')
+        await app.evaluate(({ dialog }, path) => {
+            dialog.showSaveDialog = (async () => ({ canceled: false, filePath: path })) as typeof dialog.showSaveDialog
+        }, out)
+        const req = { kind: 'doc', format: 'pdf', source: '# 就業規則\n\n### 目的\n- 本文\n', name: 'x', dir, docPath: DOC, sign: true }
+        await win.evaluate(`window.api.exportFile(${JSON.stringify(req)})`)
+        const pdf = fs.readFileSync(out).toString('latin1')
+        expect(pdf).toContain('/ETSI.CAdES.detached')
+        expect(pdf).toMatch(/\/ByteRange\s*\[/)
+        expect(listSignatures(new Uint8Array(fs.readFileSync(out))).map((x) => x.signer)).toEqual(['テスト'])
+
+        const corp = (await win.evaluate(`window.api.createSelfSignedCert({ name: '見本株式会社 代表取締役', label: '法人' })`)) as { id: string }
+        await win.evaluate(`window.api.exportFile(${JSON.stringify({ ...req, certId: corp.id })})`)
+        expect(listSignatures(new Uint8Array(fs.readFileSync(out))).map((x) => x.signer)).toEqual(['見本株式会社 代表取締役'])
+        await win.evaluate(`window.api.setRepoPdfCert(${JSON.stringify(dir)}, ${JSON.stringify(corp.id)})`)
+        await win.evaluate(`window.api.exportFile(${JSON.stringify(req)})`)
+        expect(listSignatures(new Uint8Array(fs.readFileSync(out))).map((x) => x.signer)).toEqual(['見本株式会社 代表取締役'])
+        await win.evaluate(`window.api.setRepoPdfCert(${JSON.stringify(dir)}, null)`)
+    })
+
+    it('電子署名：挿入メニューから丸印を作って署名欄に入れると、プレビューに印影が出る', async () => {
+        await store(`s.view = 'docs'`)
+        await store(`s.openDoc(${JSON.stringify(DOC)})`)
+        await win.locator('.cm-editor').first().waitFor()
+        await win.getByRole('button', { name: '挿入' }).first().click()
+        await win.getByRole('menuitem', { name: '印影・署名' }).click()
+        await win.getByRole('textbox').filter({ visible: true }).first().fill('山田')
+        win.once('dialog', (d) => void d.accept())
+        await win.getByRole('button', { name: '挿入' }).click()
+        await expect.poll(() => win.locator('.cm-content').first().textContent(), { timeout: 10000 }).toMatch(/!\[山田\]\(images\/.+\.png\)\{seal\}/)
+        await expect.poll(() => win.locator('.cm-content').first().textContent(), { timeout: 10000 }).toContain('{closing}')
+        const body = (await win.locator('.cm-content').first().textContent()) ?? ''
+        expect(body.indexOf('{closing}')).toBeGreaterThan(body.indexOf('目的'))
+        await win.locator('img.cd-seal').first().waitFor({ state: 'attached', timeout: 10000 })
+        await win.screenshot({ path: join(tmp, '..', 'clausedown-seal-e2e.png') })
+    })
+
+    it('規則の署名：署名なしの規則に署名し、承認者を足す変更を提案すると第 2 版になる', async () => {
+        await store(`s.openSettings('repo', 'rules')`)
+        await seen('署名なしの規則')
+        await win.getByRole('button', { name: '規則に署名' }).click()
+        await seen('署名済みの規則（第 1 版）')
+        const names = win.getByPlaceholder('名前', { exact: true }).filter({ visible: true })
+        const rows = await names.count()
+        await win.getByRole('button', { name: '追加', exact: true }).filter({ visible: true }).first().click()
+        await expect.poll(() => names.count()).toBe(rows + 1)
+        await names.first().fill('山田')
+        await win.getByRole('button', { name: '変更を提案' }).click()
+        await seen('署名済みの規則（第 2 版）')
+        if (process.env.CLAUSEDOWN_SHOTS) await win.screenshot({ path: join(process.env.CLAUSEDOWN_SHOTS, 'policy.png') })
+    })
+
+    it('受領：返送された署名済み PDF を、変更せずに納品フォルダへ保存し、納品の記録に残す', async () => {
+        const certCount = await win.evaluate('window.api.signingStatus().then((s) => s.signing.pdf.certs.length)')
+        expect(certCount).toBeGreaterThan(0)
+        const outDir = join(tmp, 'delivered')
+        fs.mkdirSync(outDir)
+        await app.evaluate(({ dialog }, path) => {
+            dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [path] })) as typeof dialog.showOpenDialog
+        }, outDir)
+        const oid = await win.evaluate(`window.api.log(${JSON.stringify(dir)}, ${JSON.stringify(DOC)}).then((l) => l[0].oid)`)
+        const input = { docPath: DOC, oid, to: '相手方', memo: '', items: ['docPdf'], publishRelease: false, sign: true }
+        const rec = (await win.evaluate(`window.api.deliver(${JSON.stringify(dir)}, ${JSON.stringify(input)})`)) as {
+            id: string
+            folder: string
+            files: string[]
+        }
+        const returned = join(rec.folder, rec.files[0])
+        await app.evaluate(({ dialog }, path) => {
+            dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [path] })) as typeof dialog.showOpenDialog
+        }, returned)
+        const picked = (await win.evaluate('window.api.pickReceivedPdf()')) as { path: string; signatures: { signer: string }[] }
+        expect(picked.signatures).toHaveLength(1)
+        const out = (await win.evaluate(`window.api.saveReceivedPdf(${JSON.stringify({ path: picked.path, dir, deliveryId: rec.id })})`)) as string
+        expect(out).toBe(join(rec.folder, rec.files[0].replace(/\.pdf$/, '_受領.pdf')))
+        expect(fs.readFileSync(out).equals(fs.readFileSync(returned))).toBe(true)
+        const list = (await win.evaluate(`window.api.listDeliveries(${JSON.stringify(dir)}, ${JSON.stringify(DOC)})`)) as {
+            id: string
+            received?: { file: string; signers: string[] }[]
+        }[]
+        const got = list.find((d) => d.id === rec.id)?.received
+        expect(got?.map((x) => x.file)).toEqual([out.split(/[\\/]/).pop()])
+        expect(got?.[0].signers).toHaveLength(1)
     })
 
     it('ここまでの画面でエラーが出ていない', () => {

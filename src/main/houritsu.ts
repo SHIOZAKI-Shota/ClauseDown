@@ -4,6 +4,7 @@ import { author } from './git-base'
 import { t } from '../shared/i18n'
 import { safeJoin, walkMd } from './git'
 import { fromHouritsu, isHouritsu, type HouritsuConversion } from '../shared/houritsu'
+import { signOpts } from './signing'
 
 const HEAD_BYTES = 16 * 1024
 
@@ -66,7 +67,7 @@ export async function convertHouritsu(dir: string, paths: string[]): Promise<Hou
         }
         if (done.length) {
             await git.add({ fs, dir, filepath: done })
-            await git.commit({ fs, dir, message: t().notify.commits.houritsuConverted(done.length), author: who })
+            await git.commit({ fs, dir, message: t().notify.commits.houritsuConverted(done.length), author: who, ...(await signOpts(dir, 'commit')) })
         }
     } catch (e) {
         for (const path of done) {

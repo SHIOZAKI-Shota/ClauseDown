@@ -63,7 +63,7 @@ describe('施行版・確認依頼・納品', () => {
     it('決まり（承認必須）は記録用ブランチで共有され、改定案の一覧には出ない', async () => {
         await wf.saveRules(pcA(), { requireApproval: true, approvers: [' 山田 ', '山田'] })
         await git.cloneRepo(url, pcB())
-        expect(await wf.getRules(pcB())).toEqual({ requireApproval: true, approvers: ['山田'] })
+        expect(await wf.getRules(pcB())).toEqual({ requireApproval: true, approvers: ['山田'], requireSignedApproval: false })
         expect((await git.listBranches(pcB())).map((b) => b.label)).toEqual(['現行版'])
     })
 
@@ -150,7 +150,7 @@ describe('施行版・確認依頼・納品', () => {
         await git.push(pcB())
         await git.sync(pcA())
         expect((await wf.listDeliveries(pcA(), DOC)).length).toBe(2)
-        expect(await wf.getRules(pcA())).toEqual({ requireApproval: false, approvers: [] })
+        expect(await wf.getRules(pcA())).toEqual({ requireApproval: false, approvers: [], requireSignedApproval: false })
     })
 
     it('期日：足す・直す・済み・消すが、もう一方の PC に届く。消したものは戻らない', async () => {

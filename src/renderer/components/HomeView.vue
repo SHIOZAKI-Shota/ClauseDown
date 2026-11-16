@@ -244,8 +244,21 @@ function addRepo() {
                         <p v-if="(upcoming?.length ?? 0) > SHOW" class="cd-muted empty">{{ t.common.moreCount(upcoming!.length - SHOW) }}</p>
                     </div>
 
-                    <div v-if="app.toReview.length" class="cd-list-group">
-                        <SectionHead :label="t.home.toReview" icon="i-lucide-message-square-check" :count="app.toReview.length" pinned />
+                    <div v-if="app.reviewCount" class="cd-list-group">
+                        <SectionHead :label="t.home.toReview" icon="i-lucide-message-square-check" :count="app.reviewCount" pinned />
+                        <ListRow
+                            v-for="x in app.policyToSign"
+                            :key="x.file"
+                            icon="i-lucide-shield-check"
+                            class="draft"
+                            @click="app.openSettings('repo', 'rules')"
+                        >
+                            {{ t.signing.policy.toSign(x.version) }}
+                            <template #sub>{{ app.repo?.name }}{{ t.common.sep }}{{ t.home.requestedBy(x.createdBy) }}</template>
+                            <template #trail>
+                                <UBadge :label="t.signing.policy.cosign" color="primary" variant="subtle" size="sm" />
+                            </template>
+                        </ListRow>
                         <ListRow
                             v-for="b in app.toReview"
                             :key="b.name"

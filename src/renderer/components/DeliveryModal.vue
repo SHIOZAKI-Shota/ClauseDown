@@ -3,6 +3,7 @@ import type { DeliveryItem, EffectiveVersion } from '@shared/api'
 import { useApp } from '~/stores/app'
 import { folderOf } from '~/utils/folders'
 import { useT } from '~/composables/useT'
+import { usePdfSign } from '~/composables/usePdfSign'
 
 const props = defineProps<{ path: string; oid: string; baseOid?: string; effectiveDate?: string }>()
 const emit = defineEmits<{ close: []; done: [] }>()
@@ -15,6 +16,16 @@ const items = ref<DeliveryItem[]>(['docPdf', 'docDocx', ...(props.baseOid ? (['c
 const NONE = 'none'
 const base = ref(props.baseOid ?? NONE)
 const publish = ref(!!app.forge)
+const pdfSign = usePdfSign()
+const sign = ref(false)
+const certId = ref<string | undefined>()
+const certItems = computed(() => pdfSign.certs.value.map((c) => ({ value: c.id, label: c.label || t.value.signing.pdf.kinds[c.kind] })))
+onMounted(async () => {
+    const st = await pdfSign.load()
+    sign.value = !!st && st.signing.pdf.certs.length > 0 && st.signing.pdf.onDeliver
+    certId.value = pdfSign.defaultFor(app.repoDir ?? undefined)
+})
+const hasPdf = computed(() => items.value.some((i) => i === 'docPdf' || i === 'cmpPdf'))
 const versions = ref<EffectiveVersion[]>([])
 
 onMounted(async () => {
@@ -36,6 +47,10 @@ watch(base, (b) => {
 })
 
 async function go() {
+    const signing = hasPdf.value
+        ? await pdfSign.plan('deliver', props.path, sign.value, { dir: app.repoDir ?? undefined, certId: certId.value })
+        : { sign: false }
+    if (!signing) return
     const rec = await app.run(() =>
         window.api.deliver(app.repoDir!, {
             docPath: props.path,
@@ -46,6 +61,7 @@ async function go() {
             memo: memo.value.trim(),
             items: [...items.value],
             publishRelease: publish.value && !!app.forge,
+            ...signing,
         }),
     )
     if (!rec) return
@@ -76,6 +92,20 @@ async function go() {
                 <UFormField :label="t.releases.delivery.items">
                     <UCheckboxGroup v-model="items" :items="itemOptions" />
                 </UFormField>
+                <UFormField :help="pdfSign.ready.value ? undefined : t.signing.export.noCert">
+                    <div class="sign-row">
+                        <UCheckbox v-model="sign" :label="t.signing.export.sign" :disabled="!pdfSign.ready.value || !hasPdf" />
+                        <USelect
+                            v-if="certItems.length > 1"
+                            v-model="certId"
+                            :items="certItems"
+                            :disabled="!sign || !hasPdf"
+                            :aria-label="t.signing.pdf.pickLabel"
+                            size="sm"
+                            class="cert-select"
+                        />
+                    </div>
+                </UFormField>
                 <UFormField :label="t.releases.delivery.memo">
                     <UTextarea v-model="memo" :rows="2" class="cd-full" />
                 </UFormField>
@@ -95,3 +125,15 @@ async function go() {
         </template>
     </UModal>
 </template>
+
+<style scoped>
+.sign-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.cert-select {
+    min-width: 220px;
+}
+</style>

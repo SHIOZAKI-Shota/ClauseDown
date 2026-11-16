@@ -8,6 +8,7 @@ import { sameJson, toPlain } from '~/utils/ipc'
 import { useSavedFlash } from '~/composables/useSavedFlash'
 import { useDebounced } from '~/composables/useDebounced'
 import { useT } from '~/composables/useT'
+import { usePdfSign } from '~/composables/usePdfSign'
 
 const app = useApp()
 const t = useT()
@@ -80,6 +81,29 @@ function onStyle(v: StyleOverride) {
     saveStyle()
 }
 
+const pdfSign = usePdfSign()
+const FOLLOW = '__default'
+const repoCert = ref(FOLLOW)
+const certOptions = computed(() => [
+    { value: FOLLOW, label: t.value.signing.pdf.followDefault },
+    ...pdfSign.certs.value.map((c) => ({ value: c.id, label: c.label || t.value.signing.pdf.kinds[c.kind] })),
+])
+onMounted(async () => {
+    if (isDemo()) return
+    const st = await pdfSign.load()
+    repoCert.value = (app.repoDir && st?.signing.pdf.repoCerts[app.repoDir]) || FOLLOW
+})
+async function setRepoCert(v: string) {
+    if (!app.repoDir) return
+    repoCert.value = v
+    if (await app.run(() => window.api.setRepoPdfCert(app.repoDir!, v === FOLLOW ? null : v))) flash()
+}
+
+const policySigned = ref(false)
+async function exportSigners() {
+    const out = await app.run(() => window.api.exportAllowedSigners(app.repoDir!))
+    if (out) app.notifyExported(t.value.signing.policy.exported, out)
+}
 const rules = reactive<RepoRules>({ ...app.rules, approvers: [...app.rules.approvers] })
 watch(
     () => app.rules,
@@ -89,7 +113,7 @@ watch(
     rules,
     useDebounced(async () => {
         const next = toPlain<RepoRules>(rules)
-        if (sameJson(next, app.rules)) return
+        if (policySigned.value || sameJson(next, app.rules)) return
         await app.run(() => window.api.saveRules(app.repoDir!, next))
         await app.refreshDocs()
         flash()
@@ -115,6 +139,9 @@ watch(
             <SettingRow :label="t.repo.settings.folder" :description="app.repoDir ?? ''">
                 <UButton :label="t.repo.settings.openFolder" icon="i-lucide-folder-open" size="sm" color="neutral" variant="outline" @click="openFolder" />
             </SettingRow>
+            <SettingRow v-if="pdfSign.certs.value.length > 1" :label="t.signing.pdf.repoCert" :description="t.signing.pdf.repoCertDesc">
+                <USelect :model-value="repoCert" :items="certOptions" class="cd-w-input" @update:model-value="(v: string) => setRepoCert(v)" />
+            </SettingRow>
             <SettingRow :label="t.repo.removeFromList" :description="t.repo.settings.removeDesc">
                 <UButton :label="t.repo.removeFromList" size="sm" color="error" variant="outline" @click="removeRepo" />
             </SettingRow>
@@ -132,14 +159,23 @@ watch(
         </SettingsSection>
 
         <SettingsSection id="rules" :title="t.repo.settings.sections.rules">
-            <SettingRow :label="t.repo.settings.requireApproval" :description="t.repo.settings.requireApprovalDesc">
-                <USwitch v-model="rules.requireApproval" />
+            <PolicyRules v-if="!isDemo()" @status="(st) => (policySigned = !!st?.signed)" />
+            <SettingRow v-if="!isDemo()" :label="t.signing.policy.exportSigners" :description="t.signing.policy.exportSignersDesc">
+                <UButton :label="t.signing.policy.exportButton" size="sm" color="neutral" variant="outline" icon="i-lucide-download" @click="exportSigners" />
             </SettingRow>
-            <SettingRow :label="t.repo.settings.approvers" :description="t.repo.settings.approversDesc" stacked>
-                <UInputTags v-model="rules.approvers" :placeholder="t.repo.settings.approversPlaceholder" class="cd-full" />
-                <p v-if="app.identity?.login" class="muted">{{ t.repo.settings.youAre(app.identity.login) }}</p>
-            </SettingRow>
-            <p v-if="app.forge" class="muted">{{ t.repo.settings.forgeReviewNote(app.forgeLabel) }}</p>
+            <template v-if="!policySigned">
+                <SettingRow :label="t.repo.settings.requireApproval" :description="t.repo.settings.requireApprovalDesc">
+                    <USwitch v-model="rules.requireApproval" />
+                </SettingRow>
+                <SettingRow :label="t.signing.repo.requireSigned" :description="t.signing.repo.requireSignedDesc">
+                    <USwitch v-model="rules.requireSignedApproval" :disabled="!rules.requireApproval" />
+                </SettingRow>
+                <SettingRow :label="t.repo.settings.approvers" :description="t.repo.settings.approversDesc" stacked>
+                    <UInputTags v-model="rules.approvers" :placeholder="t.repo.settings.approversPlaceholder" class="cd-full" />
+                    <p v-if="app.identity?.login" class="muted">{{ t.repo.settings.youAre(app.identity.login) }}</p>
+                </SettingRow>
+                <p v-if="app.forge" class="muted">{{ t.repo.settings.forgeReviewNote(app.forgeLabel) }}</p>
+            </template>
         </SettingsSection>
 
         <SettingsSection id="kinds" :title="t.repo.settings.sections.kinds">

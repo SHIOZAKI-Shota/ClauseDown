@@ -25,6 +25,7 @@ import { proofread } from './proofread'
 import { styles } from './styles'
 import { checks } from './checks'
 import { labels } from './labels'
+import { signing } from './signing'
 
 export const en: Messages = {
     common,
@@ -53,4 +54,5 @@ export const en: Messages = {
     styles,
     checks,
     labels,
+    signing,
 }

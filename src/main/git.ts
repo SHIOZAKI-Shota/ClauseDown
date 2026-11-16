@@ -15,6 +15,7 @@ import { newDocText } from '../shared/doc-preset'
 import { loadSettings } from './settings'
 import { repoKey, withRepoLock } from './repo-lock'
 import { writeAtomic } from './atomic'
+import { signOpts } from './signing'
 
 interface ObjMemo {
     commits: Map<string, CommitObject>
@@ -380,7 +381,7 @@ export async function createBranch(dir: string, label: string, from?: string): P
     const name = draftRef(label)
     if (!(await hasHead(dir))) {
         const tree = await git.writeTree({ fs, dir, tree: [] })
-        await git.commit({ fs, dir, message: t().notify.commits.createRepo, author: await author(dir), tree, parent: [] })
+        await git.commit({ fs, dir, message: t().notify.commits.createRepo, author: await author(dir), tree, parent: [], ...(await signOpts(dir, 'commit')) })
     }
     const exists = (await tryResolve(dir, `refs/heads/${name}`)) || (await tryResolve(dir, `refs/remotes/origin/${name}`))
     if (exists) throw new Error(t().errors.git.draftExists(branchLabel(name, '')))
@@ -653,7 +654,7 @@ async function commitTree(dir: string, base: string | null, changes: TreeChanges
     const baseTree = base ? (await readCommitCached(dir, base)).tree : null
     const tree = (await patchTree(dir, baseTree, changes)) ?? (await git.writeTree({ fs, dir, tree: [] }))
     if (tree === baseTree && parent.length < 2) return null
-    return git.commit({ fs, dir, message, author: who, tree, parent })
+    return git.commit({ fs, dir, message, author: who, tree, parent, ...(await signOpts(dir, 'commit')) })
 }
 
 async function stagePaths(dir: string, paths: string[]) {
@@ -717,7 +718,16 @@ export async function tagEffective(dir: string, docPaths: string[], date: string
     const who = await author(dir)
     for (const p of docPaths) {
         const ref = effectiveTag(p, date)
-        await git.annotatedTag({ fs, dir, ref, object: oid, message: t().notify.commits.effectiveTag(p, date), tagger: who, force: true })
+        await git.annotatedTag({
+            fs,
+            dir,
+            ref,
+            object: oid,
+            message: t().notify.commits.effectiveTag(p, date),
+            tagger: who,
+            force: true,
+            ...(await signOpts(dir, 'tag')),
+        })
         await addPendingTag(dir, ref)
     }
     const untags = await pendingUntags(dir)
@@ -780,7 +790,7 @@ export async function saveVersion(dir: string, input: SaveVersionInput): Promise
     if (gone.length) await git.remove({ fs, dir, filepath: gone })
     if (kept.length) await git.add({ fs, dir, filepath: kept })
     const message = input.effectiveDate ? `${input.message}\n\n施行日: ${input.effectiveDate}` : input.message
-    const oid = await git.commit({ fs, dir, message, author: await author(dir) })
+    const oid = await git.commit({ fs, dir, message, author: await author(dir), ...(await signOpts(dir, 'commit')) })
     if (input.effectiveDate) await tagEffective(dir, [input.docPath ?? 'all'], input.effectiveDate, oid)
     return oid
 }

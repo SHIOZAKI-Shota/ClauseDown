@@ -14,6 +14,7 @@ export const settings: Messages['settings'] = {
         sync: 'Sync',
         due: 'Due dates',
         export: 'Export',
+        signature: 'Digital signatures',
         print: 'Print, PDF and Word formatting',
         remote: 'GitHub/GitLab',
         ai: 'AI',

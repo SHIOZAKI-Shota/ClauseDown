@@ -10,6 +10,12 @@ import * as git from './git'
 import * as docOps from './doc-ops'
 import * as repoHome from './repo-home'
 import { deliverWithDialog, exportFile, exportScheduleIcs, previewPdf } from './export'
+import * as sign from './sign-service'
+import * as signing from './signing'
+import * as verify from './verify'
+import { mynaStatus } from './myna'
+import * as seals from './seals'
+import * as policy from './policy'
 import { checkUpdate, downloadUpdate, initUpdater, installUpdate, updateState } from './updater'
 import * as wf from './workflow'
 import * as schedule from './schedule'
@@ -171,6 +177,15 @@ function assertPicked(dir: unknown) {
 }
 
 const DIR_FIRST = new Set([
+    'exportAllowedSigners',
+    'verifyCommits',
+    'publishSigningKey',
+    'policyStatus',
+    'signLegacyRules',
+    'proposePolicy',
+    'cosignPolicy',
+    'acceptGenesisChange',
+    'forgePublicKeys',
     'openRepo',
     'initRepo',
     'listDocs',
@@ -341,7 +356,7 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
         const kept = new Set((next.repos ?? []).map((r) => norm(r.dir)))
         await updateSettings((cur) => {
             for (const r of cur.repos ?? []) if (!kept.has(norm(r.dir))) git.forgetRepo(r.dir)
-            return { ...next, mcp: cur.mcp, ai: cur.ai }
+            return { ...next, mcp: cur.mcp, ai: cur.ai, signing: cur.signing, policyPins: cur.policyPins }
         })
         applyLocale(await loadSettings())
     },
@@ -443,6 +458,80 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
     exportFile: async (req) => {
         if (req?.dir) await assertAllowedDir(req.dir)
         return keepExported(await exportFile(win, req))
+    },
+    signingStatus: async (dir) => {
+        if (dir) await assertAllowedDir(dir)
+        return sign.signingStatus(dir)
+    },
+    setSigningPrefs: (patch) => sign.setSigningPrefs(patch),
+    generateSigningKey: async (storage) => {
+        await signing.generateSigningKey(storage === 'chip' ? 'chip' : 'app')
+        return sign.signingStatus()
+    },
+    deleteSigningKey: async () => {
+        await signing.deleteSigningKey()
+        return sign.signingStatus()
+    },
+    registerSigningKey: (base) => verify.registerSigningKey(String(base)),
+    testExternalSigning: async (dir) => {
+        if (dir) await assertAllowedDir(dir)
+        return signing.testExternalSigning(dir)
+    },
+    importPdfCert: (data, password, label) => sign.importPdfCert(data, password, label),
+    createSelfSignedCert: (opts) => sign.createSelfSignedCert(opts),
+    addMynaCert: (label) => sign.addMynaCert(label),
+    updatePdfCert: (id, patch) => sign.updatePdfCert(String(id), patch),
+    removePdfCert: (id) => sign.removePdfCert(String(id)),
+    setDefaultPdfCert: (id) => sign.setDefaultPdfCert(String(id)),
+    setRepoPdfCert: async (dir, id) => {
+        await assertAllowedDir(dir)
+        return sign.setRepoPdfCert(dir, id ? String(id) : null)
+    },
+    exportPdfCert: (id) => sign.exportPdfCert(win, String(id)),
+    setTsaPassword: (password) => sign.setTsaPassword(password),
+    testTimestamp: () => sign.testTimestamp(),
+    mynaStatus: () => mynaStatus(),
+    publishSigningKey: async (dir) => {
+        await assertAllowedDir(dir)
+        return wf.publishSigningKey(dir)
+    },
+    listSeals: () => seals.listSeals(),
+    saveSeal: (meta, png) => seals.saveSeal(meta, png),
+    readSeal: (id) => seals.readSeal(id),
+    deleteSeal: (id) => seals.deleteSeal(id),
+    policyStatus: async (dir) => {
+        await assertAllowedDir(dir)
+        return policy.policyStatus(dir)
+    },
+    signLegacyRules: async (dir) => {
+        await assertAllowedDir(dir)
+        return policy.signLegacyRules(dir)
+    },
+    proposePolicy: async (dir, draft) => {
+        await assertAllowedDir(dir)
+        return policy.proposePolicy(dir, draft)
+    },
+    cosignPolicy: async (dir, file) => {
+        await assertAllowedDir(dir)
+        return policy.cosignPolicy(dir, String(file))
+    },
+    acceptGenesisChange: async (dir) => {
+        await assertAllowedDir(dir)
+        return policy.acceptGenesisChange(dir)
+    },
+    forgePublicKeys: async (dir, login) => {
+        await assertAllowedDir(dir)
+        return verify.forgePublicKeys(dir, String(login))
+    },
+    pickReceivedPdf: () => sign.pickReceivedPdf(win),
+    saveReceivedPdf: async (input) => {
+        await assertAllowedDir(input?.dir)
+        return sign.saveReceivedPdf(win, input)
+    },
+    exportAllowedSigners: (dir) => verify.exportAllowedSigners(win, dir),
+    verifyCommits: async (dir, oids) => {
+        await assertAllowedDir(dir)
+        return verify.verifyCommits(dir, Array.isArray(oids) ? oids.map(String) : [])
     },
     previewPdf: async (source, style, base) => {
         if (base?.dir) await assertAllowedDir(base.dir)

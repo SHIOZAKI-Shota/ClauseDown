@@ -7,7 +7,7 @@ import { mermaidSvg, parseFence } from '../shared/blocks'
 import { compareSources } from '../shared/article-diff'
 import { compareToDocx, docToDocx, inlineToDocx, type Figures, type Images } from '../shared/docx-export'
 import { compareWords } from '../shared/legal-styles'
-import { imageLine, imagePathOf, rewriteImages } from '../shared/images'
+import { imagePathOf, inlineImages as findImages, rewriteImages } from '../shared/images'
 import { dataUrl, readImage } from './images'
 import { toHouritsu } from '../shared/houritsu'
 import { LEGAL_CSS } from '../shared/legal-css'
@@ -21,6 +21,7 @@ import { deliver, type Builders } from './workflow'
 import { listFolderStyles } from './folder-style'
 import { resolveStyle } from '../shared/folder-style'
 import { scheduleIcs } from './schedule'
+import { openSignSession, type SignSession } from './sign-service'
 
 const HIDDEN_CSP = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:">`
 function hiddenWindow(width?: number, height?: number) {
@@ -166,9 +167,8 @@ async function inlineImages(html: string, base: DocBase | undefined): Promise<st
 async function loadImages(source: string, base: DocBase | undefined): Promise<Images | undefined> {
     if (!base) return undefined
     const images: Images = new Map()
-    for (const line of source.split('\n')) {
-        const im = imageLine(line)
-        if (!im || images.has(im.src)) continue
+    for (const im of findImages(source)) {
+        if (images.has(im.src)) continue
         const img = await readImage(base.dir, base.docPath, im.src)
         if (img && img.width && img.height && img.ext !== 'webp')
             images.set(im.src, { data: img.data, type: img.ext === 'jpeg' ? 'jpg' : img.ext, width: img.width, height: img.height })
@@ -176,31 +176,34 @@ async function loadImages(source: string, base: DocBase | undefined): Promise<Im
     return images
 }
 
-export function makeBuilders(style: DocStyle, css = '', base?: DocBase): Builders {
+export function makeBuilders(style: DocStyle, css = '', base?: DocBase, signer?: SignSession): Builders {
+    const sign = (bytes: Uint8Array) => (signer ? signer.sign(bytes) : bytes)
     return {
         docPdf: async (src) => {
             const doc = parseLegal(src)
-            return toPdf(await inlineImages(page(renderDoc(doc), doc.title, style, false, css, doc.lang), base), false, style)
+            return sign(await toPdf(await inlineImages(page(renderDoc(doc), doc.title, style, false, css, doc.lang), base), false, style))
         },
         docDocx: async (src) => {
             const doc = parseLegal(src)
             return docToDocx(doc, await rasterizeFigures(doc), style, await loadImages(src, base))
         },
         cmpPdf: async (o, n, title) =>
-            toPdf(
-                await inlineImages(
-                    page(
-                        renderCompareTable(compareSources(o, n), { title, omitUnchanged: true, lang: docLang(n || o) }),
-                        title,
-                        style,
-                        true,
-                        css,
-                        docLang(n || o),
+            sign(
+                await toPdf(
+                    await inlineImages(
+                        page(
+                            renderCompareTable(compareSources(o, n), { title, omitUnchanged: true, lang: docLang(n || o) }),
+                            title,
+                            style,
+                            true,
+                            css,
+                            docLang(n || o),
+                        ),
+                        base,
                     ),
-                    base,
+                    true,
+                    style,
                 ),
-                true,
-                style,
             ),
         cmpDocx: (o, n, title) => compareToDocx(compareSources(o, n), { title, omitUnchanged: true, style, lang: docLang(n || o) }),
     }
@@ -225,10 +228,11 @@ export async function previewPdf(source: string, style: DocStyle, base?: DocBase
     return toPdf(await inlineImages(html, baseOf(base ?? {})), false, s)
 }
 
-async function build(req: ExportRequest): Promise<Uint8Array> {
+async function build(req: ExportRequest, signer?: SignSession): Promise<Uint8Array> {
     const style = cleanStyle(req.style ?? DEFAULT_STYLE)
     const { prefs } = await loadSettings()
-    const b = makeBuilders(style, prefs.typesetCss, baseOf(req))
+    const b = makeBuilders(style, prefs.typesetCss, baseOf(req), signer)
+    const sign = (bytes: Uint8Array) => (signer ? signer.sign(bytes) : bytes)
     if (req.kind === 'doc' && req.format === 'md') return new TextEncoder().encode(toHouritsu(req.source))
     if (req.kind === 'doc' && req.format === 'html') return new TextEncoder().encode(await docHtml(req.source, style, prefs.typesetCss, baseOf(req)))
     if (req.kind === 'doc') return req.format === 'docx' ? b.docDocx(req.source) : b.docPdf(req.source)
@@ -239,10 +243,16 @@ async function build(req: ExportRequest): Promise<Uint8Array> {
     if (req.compareStyle === 'inline') {
         if (req.format === 'docx') return inlineToDocx(rows, { ...opts, style })
         const head = `<p class="cd-title">${req.title.replace(/[<>&]/g, '')}</p><p style="text-align: center; margin-bottom: 1em"><del class="cd-del">${words.deletedText}</del>${lang === 'ja' ? '　' : '&nbsp;&nbsp;'}<ins class="cd-ins">${words.addedText}</ins></p>`
-        return toPdf(await inlineImages(page(head + renderInlineDiff(rows, opts), req.title, style, false, prefs.typesetCss, lang), baseOf(req)), false, style)
+        return sign(
+            await toPdf(
+                await inlineImages(page(head + renderInlineDiff(rows, opts), req.title, style, false, prefs.typesetCss, lang), baseOf(req)),
+                false,
+                style,
+            ),
+        )
     }
     if (req.format === 'docx') return compareToDocx(rows, { ...opts, style })
-    return toPdf(await inlineImages(page(renderCompareTable(rows, opts), req.title, style, true, prefs.typesetCss, lang), baseOf(req)), true, style)
+    return sign(await toPdf(await inlineImages(page(renderCompareTable(rows, opts), req.title, style, true, prefs.typesetCss, lang), baseOf(req)), true, style))
 }
 
 const today = () => {
@@ -259,7 +269,12 @@ export async function exportFile(parent: BrowserWindow | null, req: ExportReques
     const opts = { defaultPath: prefs.exportDir ? join(prefs.exportDir, `${name}.${ext}`) : `${name}.${ext}`, filters }
     const result = parent ? await dialog.showSaveDialog(parent, opts) : await dialog.showSaveDialog(opts)
     if (result.canceled || !result.filePath) return null
-    await fsp.writeFile(result.filePath, await build(req))
+    const signer = req.sign && req.format === 'pdf' ? await openSignSession(parent, { certId: req.certId, pin: req.pin, dir: req.dir }) : undefined
+    try {
+        await fsp.writeFile(result.filePath, await build(req, signer))
+    } finally {
+        await signer?.close()
+    }
     return result.filePath
 }
 
@@ -273,7 +288,13 @@ export async function deliverWithDialog(parent: BrowserWindow | null, dir: strin
     const r = parent ? await dialog.showOpenDialog(parent, opts) : await dialog.showOpenDialog(opts)
     if (r.canceled || !r.filePaths[0]) return null
     const { style } = resolveStyle(prefs.docStyle, await listFolderStyles(dir), input.docPath)
-    return deliver(dir, input, r.filePaths[0], makeBuilders(style, prefs.typesetCss, { dir, docPath: input.docPath }))
+    const pdfs = input.items.some((i) => i === 'docPdf' || i === 'cmpPdf')
+    const signer = input.sign && pdfs ? await openSignSession(parent, { certId: input.certId, pin: input.pin, dir }) : undefined
+    try {
+        return await deliver(dir, { ...input, pin: undefined }, r.filePaths[0], makeBuilders(style, prefs.typesetCss, { dir, docPath: input.docPath }, signer))
+    } finally {
+        await signer?.close()
+    }
 }
 
 export async function exportScheduleIcs(parent: BrowserWindow | null, dir: string, today: string): Promise<{ path: string; count: number } | null> {

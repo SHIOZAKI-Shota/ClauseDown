@@ -24,6 +24,7 @@ import { proofread } from './proofread'
 import { styles } from './styles'
 import { checks } from './checks'
 import { labels } from './labels'
+import { signing } from './signing'
 
 export const ja = {
     common,
@@ -52,4 +53,5 @@ export const ja = {
     styles,
     checks,
     labels,
+    signing,
 }

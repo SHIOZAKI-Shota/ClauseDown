@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { DeliveryRecord, EffectiveVersion } from '@shared/api'
+import type { DeliveryRecord, EffectiveVersion, ReceivedPdf } from '@shared/api'
 import { addDays, effectivePeriods, inForceAt, KIND_COLORS, type DueEventInput, type Occurrence } from '@shared/schedule'
 import { FORGE_LABEL } from '@shared/forge'
 import { useApp } from '~/stores/app'
@@ -87,6 +87,11 @@ const previousOf = (v: EffectiveVersion) => versions.value[versions.value.indexO
 
 const selVersion = computed(() => (sel.value?.kind === 'v' ? versions.value.find((v) => v.tag === sel.value!.id) : undefined))
 const selDelivery = computed(() => (sel.value?.kind === 'd' ? deliveries.value.find((d) => d.id === sel.value!.id) : undefined))
+const demo = isDemo()
+const received = ref<ReceivedPdf | null>(null)
+async function pickReceived() {
+    received.value = (await app.run(() => window.api.pickReceivedPdf())) ?? null
+}
 const selOid = computed(() => selVersion.value?.oid ?? selDelivery.value?.oid)
 
 const content = ref<string | null | undefined>(undefined)
@@ -376,6 +381,15 @@ const versionLabel = (oid: string, date?: string) => (date ? t.value.releases.ef
                             @click="openFolder(selDelivery.folder)"
                         />
                         <UButton
+                            v-if="!demo"
+                            :label="t.signing.received.fromDelivery"
+                            icon="i-lucide-file-check"
+                            size="sm"
+                            color="neutral"
+                            variant="outline"
+                            @click="pickReceived"
+                        />
+                        <UButton
                             v-if="selDelivery.releaseUrl"
                             :label="t.releases.viewOn(forgeOf(selDelivery))"
                             :icon="selDelivery.releaseForge === 'gitlab' ? 'i-lucide-gitlab' : 'i-lucide-github'"
@@ -395,6 +409,16 @@ const versionLabel = (oid: string, date?: string) => (date ? t.value.releases.ef
                         <template v-if="selDelivery.memo">
                             <dt>{{ t.schedule.f.memo }}</dt>
                             <dd class="memo">{{ selDelivery.memo }}</dd>
+                        </template>
+                        <template v-if="selDelivery.received?.length">
+                            <dt>{{ t.signing.received.record }}</dt>
+                            <dd>
+                                <div v-for="(x, i) in selDelivery.received" :key="i">
+                                    {{ t.signing.received.recordRow(x.file, x.by)
+                                    }}<span class="cd-muted">{{ t.common.sep }}{{ fmtDate(x.at, 'ymdhm') }}</span>
+                                    <div v-if="x.signers.length" class="cd-muted">{{ t.signing.received.signers(x.signers.join(t.common.sep)) }}</div>
+                                </div>
+                            </dd>
                         </template>
                         <template v-if="selDelivery.releaseError">
                             <dt>{{ forgeOf(selDelivery) }}</dt>
@@ -458,6 +482,7 @@ const versionLabel = (oid: string, date?: string) => (date ? t.value.releases.ef
                 @close="delivering = null"
                 @done="delivered"
             />
+            <ReceivedPdfModal v-if="received && selDelivery" :pdf="received" :delivery-id="selDelivery.id" @close="received = null" @done="load" />
             <ConfirmModal
                 :open="!!removing"
                 :title="t.releases.removeEffective"

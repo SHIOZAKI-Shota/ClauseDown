@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CommitInfo } from '@shared/api'
+import type { CommitInfo, SigInfo } from '@shared/api'
 import { layoutGraph } from '~/utils/graph'
 import { firstLine, relTime } from '~/utils/format'
 import { useApp } from '~/stores/app'
@@ -8,7 +8,24 @@ import { useT } from '~/composables/useT'
 const app = useApp()
 const t = useT()
 
-const props = defineProps<{ commits: CommitInfo[]; selected: string | null; pending?: boolean; currentLabel?: string; pickWork?: boolean }>()
+const props = defineProps<{
+    commits: CommitInfo[]
+    selected: string | null
+    pending?: boolean
+    currentLabel?: string
+    pickWork?: boolean
+    sigs?: Record<string, SigInfo>
+}>()
+
+const SIG_ICON = { verified: 'i-lucide-shield-check', 'unknown-key': 'i-lucide-shield-question', bad: 'i-lucide-shield-alert', pgp: 'i-lucide-shield' } as const
+function sigOf(oid: string) {
+    const s = props.sigs?.[oid]
+    if (!s || s.state === 'none') return null
+    const h = t.value.signing.history
+    const who = s.signer ? (s.signer.source === 'own' ? h.own : (s.signer.login ?? s.signer.name ?? h.repo)) : ''
+    const title = s.state === 'verified' ? h.verified(who) : s.state === 'unknown-key' ? h.unknownKey : s.state === 'bad' ? h.bad : h.pgp
+    return { icon: SIG_ICON[s.state], cls: `sig ${s.state}`, title }
+}
 const emit = defineEmits<{ select: [string] }>()
 
 const ROW = 58
@@ -137,7 +154,15 @@ function chipsOf(c: CommitInfo): Chip[] {
             <div class="meta">
                 <template v-if="c.work">{{ currentLabel ? t.history.graph.editingIn(currentLabel) : t.history.graph.editing }}</template>
                 <template v-else>
-                    <span class="avatar">{{ initial(c.author) }}</span>{{ c.author }}{{ t.history.graph.sep }}{{ relTime(c.timestamp) }}
+                    <span class="avatar">{{ initial(c.author) }}</span>{{ c.author }}
+                    <UIcon
+                        v-if="sigOf(c.oid)"
+                        :name="sigOf(c.oid)!.icon"
+                        :class="sigOf(c.oid)!.cls"
+                        :title="sigOf(c.oid)!.title"
+                        :aria-label="sigOf(c.oid)!.title"
+                    />
+                    {{ t.history.graph.sep }}{{ relTime(c.timestamp) }}
                 </template>
                 <span v-for="(ch, k) in chipsOf(c)" :key="k" :class="ch.cls" :title="ch.title">{{ ch.label }}</span>
             </div>
@@ -146,6 +171,19 @@ function chipsOf(c: CommitInfo): Chip[] {
 </template>
 
 <style scoped>
+.sig {
+    width: 13px;
+    height: 13px;
+    margin: 0 2px;
+    vertical-align: -2px;
+    color: var(--ui-text-muted);
+}
+.sig.verified {
+    color: var(--ui-success);
+}
+.sig.bad {
+    color: var(--ui-error);
+}
 .graph {
     position: relative;
 }

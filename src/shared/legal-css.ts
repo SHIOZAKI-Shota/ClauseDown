@@ -95,6 +95,8 @@ export const LEGAL_CSS = `
 .cd-figure { margin: 0.4em 0; text-indent: 0; }
 .cd-figure svg { max-width: 100%; height: auto; }
 .cd-doc img, .cd-compare img, .cd-inline img { max-width: 100%; height: auto; vertical-align: middle; }
+.cd-doc img.cd-seal, .cd-compare img.cd-seal, .cd-inline img.cd-seal { display: inline-block; width: auto; max-width: none; margin-left: -2mm; vertical-align: middle; mix-blend-mode: multiply; }
+.cd-doc img.cd-sign, .cd-compare img.cd-sign, .cd-inline img.cd-sign { display: inline-block; width: auto; max-width: none; vertical-align: bottom; }
 .cd-figure-error { color: var(--cd-missing); font-size: 9pt; }
 .cd-figure-error pre { white-space: pre-wrap; color: var(--cd-ink-soft); margin: 0.3em 0 0; }
 .cd-appendix { margin-top: 2em; break-before: page; }

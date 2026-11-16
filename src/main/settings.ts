@@ -7,6 +7,7 @@ import { cleanGitLabHosts, GITHUB_BASE, type ForgeKind } from '../shared/forge'
 import { cleanAiConfig } from '../shared/ai-providers'
 import { isEnabled } from '../shared/experiments'
 import { cleanStyle, DEFAULT_PREFS } from '../shared/prefs'
+import { cleanSigning } from '../shared/signing'
 import { writeAtomic } from './atomic'
 
 const settingsPath = () => join(app.getPath('userData'), 'settings.json')
@@ -22,6 +23,7 @@ function normalize(saved: Partial<AppSettings>): AppSettings {
         gitlabHosts: cleanGitLabHosts(saved.gitlabHosts),
         ai: cleanAiConfig(saved.ai, { lan: isEnabled(saved, 'lanAi') }),
         prefs: { ...prefs, docStyle: cleanStyle(prefs.docStyle) },
+        signing: cleanSigning(saved.signing),
     } as AppSettings
 }
 
@@ -203,10 +205,23 @@ export function credentialFromResponse(
     }
 }
 
-export type SecretName = 'ai-key' | 'mcp-token' | `ai-key-${string}`
+export type SecretName =
+    | 'ai-key'
+    | 'mcp-token'
+    | `ai-key-${string}`
+    | 'sign-ssh-key'
+    | 'sign-ssh-chip'
+    | 'sign-pdf-p12'
+    | 'sign-pdf-pass'
+    | 'sign-pdf-key'
+    | `sign-pdf-${'p12' | 'pass' | 'key'}-${string}`
+    | 'sign-tsa-pass'
 
 const secretPath = (name: SecretName) => {
-    if (!/^(ai-key|mcp-token|ai-key-[a-z0-9-]{1,80})$/.test(name)) throw new Error(t().errors.settings.badName)
+    if (
+        !/^(ai-key|mcp-token|ai-key-[a-z0-9-]{1,80}|sign-(ssh-key|ssh-chip|pdf-p12|pdf-pass|pdf-key|tsa-pass)|sign-pdf-(p12|pass|key)-[a-z0-9]{12})$/.test(name)
+    )
+        throw new Error(t().errors.settings.badName)
     return join(app.getPath('userData'), `${name}.bin`)
 }
 
@@ -220,12 +235,13 @@ export async function saveSecret(name: SecretName, value: string): Promise<void>
     await fs.writeFile(secretPath(name), safeStorage.encryptString(value))
 }
 
-const OWN_FILE = /^(settings\.json(\.bak|\.broken-\d+)?|notified\.json|token\.bin|(ai-key|mcp-token)(-[a-z0-9-]+)?\.bin)$/
+const OWN_FILE = /^(settings\.json(\.bak|\.broken-\d+)?|notified\.json|token\.bin|(ai-key|mcp-token)(-[a-z0-9-]+)?\.bin|sign-[a-z0-9-]+\.bin)$/
 
 export async function resetAllData(): Promise<void> {
     const dir = app.getPath('userData')
     const names = await fs.readdir(dir).catch(() => [] as string[])
     await Promise.all(names.filter((n) => OWN_FILE.test(n)).map((n) => fs.rm(join(dir, n), { force: true })))
+    await fs.rm(join(dir, 'seals'), { recursive: true, force: true })
 }
 
 export async function loadSecret(name: SecretName): Promise<string | null> {

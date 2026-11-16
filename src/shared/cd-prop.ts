@@ -169,7 +169,42 @@ export function stripInlineProps(text: string): string {
 const TAG_RE = /<[^>]*>/g
 const MARK_RE = /\uE000(\d+)\uE001/g
 
+export type ImageMark = 'seal' | 'sign'
+
+export interface ImageProps {
+    kind: ImageMark
+    height: string
+}
+
+const IMAGE_SIZE: Record<ImageMark, number> = { seal: 15, sign: 12 }
+const MM_PER: Record<string, number> = { mm: 1, cm: 10, pt: 25.4 / 72 }
+
+export function parseImageProps(attrs: string): ImageProps | null {
+    const m = /^\s*(seal|sign)(?:\s*=\s*(\d+(?:\.\d+)?)\s*(mm|cm|pt)?)?\s*$/.exec(attrs)
+    if (!m) return null
+    const kind = m[1] as ImageMark
+    const mm = m[2] ? Number(m[2]) * MM_PER[m[3] ?? 'mm'] : IMAGE_SIZE[kind]
+    return { kind, height: `${Math.round(Math.min(60, Math.max(3, mm)) * 10) / 10}mm` }
+}
+
+export const IMAGE_MARK_RE = /(!\[[^\]]*\]\([^)\s]+(?:\s+"[^"]*")?\))\{((?:seal|sign)[^{}]*)\}/g
+
+export function stripImageMarks(text: string): string {
+    return text.includes('){') ? text.replace(IMAGE_MARK_RE, (whole, img: string, attrs: string) => (parseImageProps(attrs) ? img : whole)) : text
+}
+
+const IMG_MARK_HTML_RE = /(<img\b[^>]*?)\s*\/?>\{((?:seal|sign)[^{}<]*)\}/g
+
+export function imageMarksHtml(html: string): string {
+    if (!html.includes('>{')) return html
+    return html.replace(IMG_MARK_HTML_RE, (whole, img: string, attrs: string) => {
+        const p = parseImageProps(attrs)
+        return p ? `${img} class="cd-${p.kind}" style="height:${p.height}">` : whole
+    })
+}
+
 export function inlinePropsHtml(html: string): string {
+    html = imageMarksHtml(html)
     if (!html.includes(']{')) return html
     const tags: string[] = []
     const masked = html.replace(/[\uE000\uE001]/g, '').replace(TAG_RE, (t) => `\uE000${tags.push(t) - 1}\uE001`)

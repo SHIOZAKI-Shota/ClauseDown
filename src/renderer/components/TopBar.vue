@@ -91,8 +91,8 @@ const savedMessage = computed(() => (lastSaved.value ? firstLine(lastSaved.value
                 data-guide="docs"
                 @click="app.goRepoHome()"
             >
-                <template v-if="app.toReview.length" #trailing>
-                    <UBadge :label="t.shell.topBar.toReview(app.toReview.length)" color="warning" variant="subtle" size="sm" />
+                <template v-if="app.reviewCount" #trailing>
+                    <UBadge :label="t.shell.topBar.toReview(app.reviewCount)" color="warning" variant="subtle" size="sm" />
                 </template>
             </UButton>
         </template>

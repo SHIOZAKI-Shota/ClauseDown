@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref, shallowRef, watch } from 'vue'
 import type {
     AppSettings,
+    PolicyPending,
     Identity,
     BranchInfo,
     DocChangedEvent,
@@ -123,6 +124,8 @@ export const useApp = defineStore('app', () => {
 
     const statusOf = (b: BranchInfo): ReviewStatus => reviewStatus(reviews.value, b.name, b.oid, rules.value)
     const currentStatus = computed(() => (currentBranch.value && onDraft.value ? statusOf(currentBranch.value) : null))
+    const policyToSign = ref<PolicyPending[]>([])
+    const reviewCount = computed(() => toReview.value.length + policyToSign.value.length)
     const toReview = computed(() =>
         branches.value.filter((b) => {
             if (b.isMain) return false
@@ -315,19 +318,21 @@ export const useApp = defineStore('app', () => {
             reviews.value = []
             return
         }
-        const [d, b, r, rl, gh, st] = await Promise.all([
+        const [d, b, r, rl, gh, st, ps] = await Promise.all([
             window.api.listDocs(dir),
             window.api.listBranches(dir).catch(() => []),
             window.api.listReviews(dir).catch(() => []),
             window.api.getRules(dir).catch(() => ({ ...DEFAULT_RULES })),
             window.api.forgeKind(dir).catch(() => null),
             window.api.listFolderStyles(dir).catch(() => ({}) as StyleLayers),
+            isDemo() ? Promise.resolve(null) : window.api.policyStatus(dir).catch(() => null),
         ])
         if (dir !== repoDir.value) return
         docs.value = d
         branches.value = b
         reviews.value = r
         rules.value = rl
+        policyToSign.value = ps?.me.isAdmin ? ps.pending.filter((p) => !p.signedByMe) : []
         forge.value = gh
         styleLayers.value = st
     }
@@ -615,6 +620,8 @@ export const useApp = defineStore('app', () => {
         statusOf,
         currentStatus,
         toReview,
+        policyToSign,
+        reviewCount,
         repoDir,
         repo,
         repoStates,

@@ -245,3 +245,14 @@ export async function issueComments(
     }
     return out
 }
+
+export async function addSigningKey(base: string, title: string, key: string): Promise<void> {
+    await call({ base, path: '' }, 'POST', '/user/keys', { title, key, usage_type: 'signing' })
+}
+
+export async function signingKeysOf(base: string, username: string): Promise<string[]> {
+    const users = await call<{ id: number }[]>({ base, path: '' }, 'GET', `/users?username=${encodeURIComponent(username)}`)
+    if (!users?.[0]) return []
+    const keys = await call<{ key: string; usage_type?: string }[]>({ base, path: '' }, 'GET', `/users/${users[0].id}/keys`)
+    return keys.filter((k) => k.usage_type !== 'auth').map((k) => k.key)
+}

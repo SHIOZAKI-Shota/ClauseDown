@@ -22,6 +22,8 @@ import CodeEditor from '~/components/CodeEditor.vue'
 import type { EditorIssue } from '~/components/IssuePane.vue'
 import type PdfPagesView from '~/components/PdfPages.vue'
 import type { SaveRequest } from '~/components/SaveVersionModal.vue'
+import type { SealInsert } from '~/components/SealModal.vue'
+import { usePdfSign } from '~/composables/usePdfSign'
 
 const app = useApp()
 const t = useT()
@@ -278,6 +280,43 @@ function addAppendix() {
     const { appendix, table } = tpl()
     editor.value?.insertAfterLine(`\n## ${appendix} {appendix}\n${table.join('\n')}\n`, 4)
 }
+const pdfSign = usePdfSign()
+const sealOpen = ref(false)
+const CLOSING_RE = /^##\s.*\{[^}]*\bclosing\b[^}]*\}/
+function inClosing(): boolean {
+    const lines = text.value.split('\n').slice(0, (editor.value?.cursorLineIndex() ?? 0) + 1)
+    for (let i = lines.length - 1; i >= 0; i--) {
+        if (/^##\s/.test(lines[i])) return CLOSING_RE.test(lines[i])
+    }
+    return false
+}
+function closingEnd(): number | null {
+    const lines = text.value.split('\n')
+    const start = lines.findIndex((l) => CLOSING_RE.test(l))
+    if (start < 0) return null
+    let end = lines.findIndex((l, i) => i > start && /^##\s/.test(l))
+    if (end < 0) end = lines.length
+    while (end - 1 > start && !lines[end - 1].trim()) end--
+    return end - 1
+}
+async function insertSeal(s: SealInsert) {
+    if (!app.repoDir) return
+    const saved = await app.run(() => window.api.saveImage(app.repoDir!, path, s.png, 'png'))
+    if (!saved) return
+    const size = s.size && s.size !== (s.mark === 'sign' ? 12 : 15) ? `=${s.size}mm` : ''
+    const mark = `![${s.label.replace(/[[\]]/g, '')}](${saved.src}){${s.mark ?? 'seal'}${size}}`
+    if (!inClosing() && confirm(t.value.signing.sealModal.outsideClosing)) {
+        const end = closingEnd()
+        if (end === null) {
+            editor.value?.goToLine(text.value.split('\n').length - 1)
+            addClosing()
+        } else editor.value?.goToLine(end)
+        editor.value?.insertBlock(mark)
+        return
+    }
+    const line = editor.value?.currentLine() ?? ''
+    editor.value?.insertAtCursor(line.trim() ? ` ${mark}` : mark)
+}
 function addPageBreak() {
     editor.value?.insertBeforeLines('{break}')
 }
@@ -424,6 +463,7 @@ const insertMenu = computed<DropdownMenuItem[][]>(() => {
             { label: m.preamble, icon: 'i-lucide-pilcrow', onSelect: addPreamble },
             { label: m.supplement, icon: 'i-lucide-book-plus', onSelect: addSupplement },
             { label: m.closing, icon: 'i-lucide-pen-line', onSelect: addClosing },
+            { label: m.seal, icon: 'i-lucide-stamp', onSelect: () => (sealOpen.value = true) },
             { label: m.appendix, icon: 'i-lucide-sheet', onSelect: addAppendix },
         ],
         [
@@ -646,8 +686,10 @@ async function discard() {
 async function exportAs(format: 'pdf' | 'docx' | 'html' | 'md') {
     await writeNow()
     const name = doc.value.title || path.replace(/\.md$/, '')
+    const signing = format === 'pdf' ? await pdfSign.plan('export', `${name}.pdf`, undefined, { dir: app.repoDir ?? undefined }) : { sign: false }
+    if (!signing) return
     const out = await app.run(() =>
-        window.api.exportFile({ kind: 'doc', format, source: text.value, name, style: toPlain(app.style), dir: app.repoDir!, docPath: path }),
+        window.api.exportFile({ kind: 'doc', format, source: text.value, name, style: toPlain(app.style), dir: app.repoDir!, docPath: path, ...signing }),
     )
     if (out) app.notifyExported(t.value.editor.exported, out)
 }
@@ -1035,6 +1077,7 @@ const viewModes = computed(() => [
                 {{ saveState }}
             </span>
         </footer>
+        <SealModal v-model:open="sealOpen" @insert="insertSeal" />
         <PropModal v-if="propFor" :sample="propFor.sample" :inline="propFor.inline" :can-inline="propFor.inline" @close="propFor = null" @apply="applyProp" />
         <ClauseLibraryModal
             v-if="showClauses && clauseLibrary"

@@ -192,3 +192,12 @@ export async function issueComments(r: GitHubRepo, n: number): Promise<{ id: num
     }
     return out
 }
+
+export async function addSigningKey(title: string, key: string): Promise<void> {
+    await call('POST', '/user/ssh_signing_keys', { title, key })
+}
+
+export async function signingKeysOf(login: string): Promise<string[]> {
+    const keys = await call<{ key: string }[]>('GET', `/users/${encodeURIComponent(login)}/ssh_signing_keys`)
+    return keys.map((k) => k.key)
+}
