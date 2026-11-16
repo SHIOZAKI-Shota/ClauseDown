@@ -64,4 +64,9 @@ defineProps<{ label?: string; description?: string; stacked?: boolean }>()
 .stacked .control {
     flex-shrink: 1;
 }
+
+.row:not(.stacked) .control :deep(.seg-wrap) {
+    align-items: flex-end;
+    text-align: right;
+}
 </style>

@@ -1,4 +1,6 @@
+import { execFileSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { RECORD_DIR } from './license-plugin.mjs'
@@ -71,6 +73,102 @@ for (const dir of dirs) {
     })
 }
 
+const NATIVE_TARGETS = ['aarch64-apple-darwin', 'x86_64-pc-windows-msvc']
+
+function cargoBin() {
+    const candidates = [process.env.CARGO, 'cargo', join(homedir(), '.cargo/bin/cargo')].filter(Boolean)
+    for (const c of candidates) {
+        try {
+            execFileSync(c, ['--version'], { stdio: 'ignore' })
+            return c
+        } catch {}
+    }
+    return null
+}
+
+const mitText = (authors) => `MIT License
+
+Copyright (c) ${(authors ?? []).map((a) => a.replace(/\s*<[^>]*>/, '')).join(', ') || 'the authors'}
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.`
+
+function cratesOf(cargo, manifest, target) {
+    const out = execFileSync(cargo, ['metadata', '--format-version', '1', '--locked', '--manifest-path', manifest, '--filter-platform', target], {
+        encoding: 'utf8',
+        maxBuffer: 64 * 1024 * 1024,
+        stdio: ['ignore', 'pipe', 'ignore'],
+    })
+    const meta = JSON.parse(out)
+    const pkgs = new Map(meta.packages.map((p) => [p.id, p]))
+    const nodes = new Map(meta.resolve.nodes.map((n) => [n.id, n]))
+    const used = new Set()
+    const stack = [meta.resolve.root]
+    while (stack.length) {
+        const id = stack.pop()
+        if (used.has(id)) continue
+        used.add(id)
+        for (const d of nodes.get(id)?.deps ?? []) {
+            if (!d.dep_kinds.some((k) => k.kind === null)) continue
+            const p = pkgs.get(d.pkg)
+            if (p?.targets.every((t) => t.kind.includes('proc-macro'))) continue
+            stack.push(d.pkg)
+        }
+    }
+    used.delete(meta.resolve.root)
+    return [...used].map((id) => pkgs.get(id)).filter((p) => p && p.source)
+}
+
+const nativeDirs = existsSync(join(root, 'native'))
+    ? readdirSync(join(root, 'native'))
+          .map((d) => join(root, 'native', d, 'Cargo.toml'))
+          .filter((f) => existsSync(f))
+    : []
+let crates = 0
+if (nativeDirs.length) {
+    const cargo = cargoBin()
+    const built = nativeDirs.some((m) => readdirSync(dirname(m)).some((f) => f.endsWith('.node')))
+    if (!cargo && built) throw new Error('cargo が見つからないため、ネイティブモジュールの Rust の部品のライセンスを集められません')
+    for (const manifest of cargo ? nativeDirs : []) {
+        for (const target of NATIVE_TARGETS) {
+            for (const p of cratesOf(cargo, manifest, target)) {
+                const id = `crate:${p.name}@${p.version}`
+                if (seen.has(id)) continue
+                const dir = dirname(p.manifest_path)
+                const texts = readdirSync(dir)
+                    .filter((f) => LICENSE_FILE.test(f))
+                    .sort()
+                    .map((f) => readFileSync(join(dir, f), 'utf8').replace(/\r\n/g, '\n').trim())
+                const repo = p.repository?.startsWith('https://') ? p.repository.replace(/\.git$/, '') : undefined
+                seen.set(id, {
+                    name: p.name,
+                    version: p.version,
+                    license: p.license ?? (p.license_file ? 'LICENSE' : '不明'),
+                    author: p.authors?.length ? p.authors.join(', ') : undefined,
+                    url: repo ?? `https://crates.io/crates/${p.name}`,
+                    text: texts.join('\n\n---\n\n') || (/\bMIT\b/.test(p.license ?? '') ? mitText(p.authors) : undefined),
+                })
+                crates++
+            }
+        }
+    }
+}
+
 const BUNDLED_DATA = [
     {
         from: 'kuromoji',
@@ -97,4 +195,4 @@ const app = {
     text: readFileSync(join(root, 'LICENSE'), 'utf8').replace(/\r\n/g, '\n').trim(),
 }
 writeFileSync(join(root, 'out/licenses.json'), JSON.stringify({ app, partial: recorded === 0, packages: list }))
-console.log(`licenses: ${list.length} packages${recorded === 0 ? '（バンドルの記録なし。npm run build で全部そろう）' : ''}`)
+console.log(`licenses: ${list.length} packages（Rust ${crates}）${recorded === 0 ? '（バンドルの記録なし。npm run build で全部そろう）' : ''}`)
