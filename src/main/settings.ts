@@ -210,6 +210,7 @@ export type SecretName =
     | 'mcp-token'
     | `ai-key-${string}`
     | 'sign-ssh-key'
+    | 'sign-ssh-chip'
     | 'sign-pdf-p12'
     | 'sign-pdf-pass'
     | 'sign-pdf-key'
@@ -217,7 +218,9 @@ export type SecretName =
     | 'sign-tsa-pass'
 
 const secretPath = (name: SecretName) => {
-    if (!/^(ai-key|mcp-token|ai-key-[a-z0-9-]{1,80}|sign-(ssh-key|pdf-p12|pdf-pass|pdf-key|tsa-pass)|sign-pdf-(p12|pass|key)-[a-z0-9]{12})$/.test(name))
+    if (
+        !/^(ai-key|mcp-token|ai-key-[a-z0-9-]{1,80}|sign-(ssh-key|ssh-chip|pdf-p12|pdf-pass|pdf-key|tsa-pass)|sign-pdf-(p12|pass|key)-[a-z0-9]{12})$/.test(name)
+    )
         throw new Error(t().errors.settings.badName)
     return join(app.getPath('userData'), `${name}.bin`)
 }

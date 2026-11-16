@@ -19,6 +19,9 @@ export const signing: Messages['signing'] = {
         mynaMissing: 'My Number Card signing is not included in this build of the app',
         tooManyCerts: (n) => `You can register up to ${n} certificates`,
         mynaExists: 'My Number Card is already registered',
+        chipMissing: 'Security chip keys are not available on this PC',
+        chipCancelled: 'Signing was stopped because verification was cancelled',
+        chip: (why: string) => `Could not sign with the security chip (${why})`,
         mynaPinFormat: 'The signing password is 6 to 16 capital letters and digits',
         myna: (why) => `Could not sign with the My Number Card (${why})`,
         sealImage: 'Seal and signature images must be PNG files of 5 MB or less',
@@ -33,6 +36,23 @@ export const signing: Messages['signing'] = {
         modes: { off: 'Off', app: 'App key', external: "This PC's Git settings" },
         key: 'Signing key',
         keyDesc: 'An Ed25519 key kept securely on this PC only. Nothing is signed until you create one',
+        keyDescChip:
+            "A key generated inside this PC's security chip. It cannot be extracted, and you are asked to verify yourself for each signature. If the PC breaks or is lost, create a new key",
+        storage: 'Key storage',
+        storageDesc: 'Chosen when you create the key',
+        storageChange: 'The new storage takes effect when you recreate the key',
+        storages: { chip: 'Security chip', app: 'safeStorage' },
+        storageOptions: {
+            chip: {
+                label: "Store in this PC's security chip (recommended)",
+                description:
+                    'The key cannot be extracted, and Touch ID or Windows Hello checks you for each signature. If you lose the PC, you lose the key too',
+            },
+            app: {
+                label: 'Store in safeStorage',
+                description: 'You can move the key to another PC or back it up. It is at greater risk than a key kept in the security chip',
+            },
+        },
         noKey: 'No key yet',
         create: 'Create key',
         recreate: 'Recreate',
@@ -139,6 +159,9 @@ export const signing: Messages['signing'] = {
         longTerm: 'Include long-term validation data (B-LT)',
         longTermDesc:
             'Embeds certificate revocation data so the signature can be checked long after signing. Only useful with certificates from a certificate authority',
+    },
+    chip: {
+        reason: 'sign a version or approval',
     },
     myna: {
         status: 'Card status',

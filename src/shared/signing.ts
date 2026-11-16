@@ -16,10 +16,13 @@ export const MAX_PDF_CERTS = 10
 export const CERT_ID_RE = /^[a-z0-9]{12}$/
 export const LEGACY_CERT_ID: Record<PdfCertKind, string> = { p12: 'legacyp12000', self: 'legacyself00', myna: 'legacymyna00' }
 
+export type KeyStorage = 'app' | 'chip'
+
 export interface SshKeyInfo {
     fingerprint: string
     publicKey: string
     createdAt: string
+    storage?: KeyStorage
 }
 
 export interface CertInfo {
@@ -150,7 +153,15 @@ export function cleanSigning(v: unknown): SigningSettings {
     return {
         commit: {
             mode: c.mode === 'off' || c.mode === 'external' ? c.mode : 'app',
-            key: c.key && typeof c.key.fingerprint === 'string' && typeof c.key.publicKey === 'string' ? c.key : undefined,
+            key:
+                c.key && typeof c.key.fingerprint === 'string' && typeof c.key.publicKey === 'string'
+                    ? {
+                          fingerprint: c.key.fingerprint,
+                          publicKey: c.key.publicKey,
+                          createdAt: text(c.key.createdAt, 40),
+                          storage: c.key.storage === 'chip' ? 'chip' : 'app',
+                      }
+                    : undefined,
             registered: c.registered && typeof c.registered === 'object' ? c.registered : {},
             previousKeys: Array.isArray(c.previousKeys) ? c.previousKeys.filter((k): k is string => typeof k === 'string').slice(-10) : [],
             localMerge: bool(c.localMerge, false),

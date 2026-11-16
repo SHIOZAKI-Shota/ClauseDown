@@ -1,18 +1,17 @@
-import { sign, verify } from 'node:crypto'
 import { IN_TOTO_TYPE, pae, statementMatches, type DsseEnvelope, type ReviewStatement } from '../shared/attestation'
 import type { ReviewEvent } from '../shared/review'
-import { blobOfPublicKey, fingerprintOf, keyFromBlob, sshPublicKeyString, publicBlob, type SshKeyPair } from './ssh-sig'
+import { blobOfPublicKey, fingerprintOf, keyFromBlob, publicKeyLine, verifyRaw, type KeySigner } from './ssh-sig'
 
-export function dsseSign(statement: object, key: SshKeyPair): { envelope: DsseEnvelope; publicKey: string } {
+export async function dsseSign(statement: object, key: KeySigner): Promise<{ envelope: DsseEnvelope; publicKey: string }> {
     const body = Buffer.from(JSON.stringify(statement))
-    const sig = sign(null, pae(IN_TOTO_TYPE, body), key.privateKey)
+    const sig = await key.sign(pae(IN_TOTO_TYPE, body))
     return {
         envelope: {
             payload: body.toString('base64'),
             payloadType: IN_TOTO_TYPE,
-            signatures: [{ keyid: fingerprintOf(publicBlob(key.publicKey)), sig: sig.toString('base64') }],
+            signatures: [{ keyid: fingerprintOf(key.blob), sig: sig.toString('base64') }],
         },
-        publicKey: sshPublicKeyString(key.publicKey),
+        publicKey: publicKeyLine(key.blob),
     }
 }
 
@@ -29,11 +28,10 @@ export function dsseVerify(envelope: DsseEnvelope | undefined, publicKey: string
     const fingerprint = fingerprintOf(blob)
     try {
         const { key, type } = keyFromBlob(blob)
-        if (type !== 'ssh-ed25519') return { ok: false, fingerprint }
         const body = Buffer.from(envelope.payload, 'base64')
         const s = envelope.signatures.find((x) => x.keyid === fingerprint)
         if (!s) return { ok: false, fingerprint }
-        const ok = verify(null, pae(IN_TOTO_TYPE, body), key, Buffer.from(s.sig, 'base64'))
+        const ok = verifyRaw(type, key, pae(IN_TOTO_TYPE, body), Buffer.from(s.sig, 'base64'))
         return { ok, fingerprint, statement: ok ? (JSON.parse(body.toString()) as ReviewStatement) : undefined }
     } catch {
         return { ok: false, fingerprint }

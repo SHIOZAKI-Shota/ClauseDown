@@ -1225,6 +1225,22 @@ async function signingSetup() {
     signingReady = true
 }
 
+shot('signature-storage.png', async () => {
+    await win.evaluate(`window.api.deleteSigningKey()`)
+    await repoHome(dirs.rules)
+    await store(`s.openSettings('setup', 'signature')`)
+    await win.getByText('Key storage').first().waitFor()
+    await wait(1200)
+    const rows = win.locator('.row').filter({ has: win.getByText(/^(Key storage|Signing key)$/) })
+    const boxes = (await Promise.all((await rows.all()).map((r) => r.boundingBox()))).filter((b) => !!b)
+    const top = Math.min(...boxes.map((b) => b.y))
+    const left = Math.min(...boxes.map((b) => b.x))
+    const right = Math.max(...boxes.map((b) => b.x + b.width))
+    const bottom = Math.max(...boxes.map((b) => b.y + b.height))
+    await save('signature-storage.png', { clip: { x: left - 8, y: top - 8, width: right - left + 16, height: bottom - top + 16 }, hi: true })
+    if (signingReady) await win.evaluate(`window.api.generateSigningKey()`)
+})
+
 shot(['setup-signature.png', 'setup-signature-pdf.png'], async () => {
     await signingSetup()
     await repoHome(dirs.rules)

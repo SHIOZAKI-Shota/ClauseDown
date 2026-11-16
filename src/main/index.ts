@@ -464,8 +464,8 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
         return sign.signingStatus(dir)
     },
     setSigningPrefs: (patch) => sign.setSigningPrefs(patch),
-    generateSigningKey: async () => {
-        await signing.generateSigningKey()
+    generateSigningKey: async (storage) => {
+        await signing.generateSigningKey(storage === 'chip' ? 'chip' : 'app')
         return sign.signingStatus()
     },
     deleteSigningKey: async () => {

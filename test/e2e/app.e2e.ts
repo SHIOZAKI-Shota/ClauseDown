@@ -132,6 +132,13 @@ describe('画面', () => {
     it('電子署名：設定で鍵と自己署名の証明書を作ると、版と書き出した PDF に署名が入る', async () => {
         await store(`s.openSettings('setup', 'signature')`)
         await seen('版に署名する')
+        const chipBuilt = fs
+            .readdirSync(join(ROOT, 'native/keychip'))
+            .some((f) => f.startsWith(`clausedown-keychip.${process.platform}-${process.arch}`) && f.endsWith('.node'))
+        if (chipBuilt) {
+            await seen('鍵の保管場所')
+            await win.getByRole('radio', { name: 'safeStorage に保管', exact: true }).click()
+        }
         await win.getByRole('button', { name: '鍵を作成' }).click()
         await win
             .getByText(/^SHA256:/)

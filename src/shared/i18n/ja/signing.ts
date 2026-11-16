@@ -21,6 +21,9 @@ export const signing = {
         noSshKey: '署名用の鍵が未作成です。設定の「電子署名」で鍵を作成してください',
         tooManyCerts: (n: number) => `証明書は ${n} 件まで登録可能です`,
         mynaExists: 'マイナンバーカードは登録済みです',
+        chipMissing: 'この PC ではセキュリティチップの鍵が使用できません',
+        chipCancelled: '本人確認が取り消されたため、署名を中止しました',
+        chip: (why: string) => `セキュリティチップで署名できませんでした（${why}）`,
     },
     certFile: '証明書',
     section: '電子署名',
@@ -31,6 +34,22 @@ export const signing = {
         modes: { off: 'しない', app: 'アプリの鍵', external: 'この PC の Git の設定' },
         key: '署名の鍵',
         keyDesc: 'この PC 内にのみ安全に保管する Ed25519 の鍵です。鍵の作成までは署名しません',
+        keyDescChip:
+            'この PC のセキュリティチップ内で生成した鍵です。鍵は取り出せず、署名のたびに本人確認を求めます。PC の故障・紛失時は鍵を再作成してください',
+        storage: '鍵の保管場所',
+        storageDesc: '鍵の作成時に選択します',
+        storageChange: '保管場所の変更は、鍵の再作成時に反映します',
+        storages: { chip: 'セキュリティチップ', app: 'safeStorage' },
+        storageOptions: {
+            chip: {
+                label: 'この PC のセキュリティチップに保管（推奨）',
+                description: '鍵は取り出せず、署名のたびに Touch ID や Windows Hello で照合します。PC を失った場合は鍵も喪失します',
+            },
+            app: {
+                label: 'safeStorage に保管',
+                description: '他の PC へ移したりバックアップしたりできます。保管の危険性がセキュリティチップ保存より高まります',
+            },
+        },
         noKey: '鍵は未作成です',
         create: '鍵を作成',
         recreate: '再作成',
@@ -135,6 +154,9 @@ export const signing = {
         tsaOk: 'タイムスタンプを取得しました',
         longTerm: '長期検証用の情報も付与する（B-LT）',
         longTermDesc: '証明書の失効情報を PDF に格納し、長期間経過後も検証可能にします。認証局発行の証明書でのみ有効です',
+    },
+    chip: {
+        reason: '版・承認に署名',
     },
     myna: {
         status: 'カードの状態',

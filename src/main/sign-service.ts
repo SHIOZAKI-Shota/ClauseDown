@@ -21,6 +21,7 @@ import { certSummary, checkTsaUrl, createSelfSigned, keySigner, listSignatures, 
 import { listDeliveries, recordReceived } from './workflow'
 import { author, identity } from './git-base'
 import { appKey, externalConfig, signingSettings } from './signing'
+import { chipAvailable } from './keychip'
 import { mynaAvailable, openMynaSigner } from './myna'
 
 function merge<T>(base: T, patch: DeepPartial<T> | undefined): T {
@@ -49,6 +50,7 @@ export async function signingStatus(dir?: string): Promise<SigningStatus> {
         hasKey: !!signing.commit.key && !!(await appKey().catch(() => null)),
         external: await externalConfig(dir).catch(() => null),
         myna: await mynaAvailable(),
+        chip: await chipAvailable(),
         hasTsaPassword: !!(await loadSecret('sign-tsa-pass')),
     }
 }

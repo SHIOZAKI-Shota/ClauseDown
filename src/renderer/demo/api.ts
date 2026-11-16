@@ -301,7 +301,7 @@ const impl: Partial<Api> = {
     getLicenses: async () => null,
     forgeKind: async () => null,
     getRules: async () => ({ requireApproval: false, approvers: [] }),
-    signingStatus: async () => ({ signing: structuredClone(DEFAULT_SIGNING), hasKey: false, external: null, myna: false, hasTsaPassword: false }),
+    signingStatus: async () => ({ signing: structuredClone(DEFAULT_SIGNING), hasKey: false, external: null, myna: false, chip: false, hasTsaPassword: false }),
     mynaStatus: async () => ({ available: false, reader: null, card: false, signCert: false, retries: null }),
     verifyCommits: async (_dir, oids) => Object.fromEntries(oids.map((o) => [o, { state: 'none' as const }])),
     listFolderStyles: async () => ({}),

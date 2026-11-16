@@ -151,7 +151,7 @@ export async function addReview(dir: string, input: ReviewInput): Promise<void> 
         if (!(await signingSettings()).approvals.sign) return e
         const key = await appKey().catch(() => null)
         if (!key) return e
-        const { envelope, publicKey } = dsseSign(reviewStatement(e, await repoRoot(dir)), key)
+        const { envelope, publicKey } = await dsseSign(reviewStatement(e, await repoRoot(dir)), key)
         return { ...e, attestation: envelope, publicKey }
     }
 
@@ -195,7 +195,7 @@ export async function publishSigningKey(dir: string): Promise<void> {
     const who = (await identity(dir)) ?? { name: (await author(dir)).name, login: undefined }
     const blob = blobOfPublicKey(info.publicKey)!
     const entry = { name: who.name, login: who.login, publicKey: info.publicKey, at: new Date().toISOString() }
-    const { envelope } = dsseSign({ _type: 'https://clausedown.app/signer/v1', ...entry }, key)
+    const { envelope } = await dsseSign({ _type: 'https://clausedown.app/signer/v1', ...entry }, key)
     await writeRecord(dir, `${RECORD.signers}${fingerprintOf(blob).replace(/[^A-Za-z0-9]/g, '')}.json`, { ...entry, attestation: envelope })
 }
 

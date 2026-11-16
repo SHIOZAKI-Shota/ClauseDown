@@ -3,9 +3,10 @@ import { promises as fs } from 'node:fs'
 import os from 'node:os'
 import { delimiter, join } from 'node:path'
 import { t } from '../shared/i18n'
-import { DEFAULT_SIGNING, type SigningSettings, type SshKeyInfo } from '../shared/signing'
+import { DEFAULT_SIGNING, type KeyStorage, type SigningSettings, type SshKeyInfo } from '../shared/signing'
 import { loadSecret, loadSettings, saveSecret, updateSettings } from './settings'
-import { generateSshKey, loadSshKey, NS_GIT, sshSign, type SshKeyPair } from './ssh-sig'
+import { chipSigner, createChipKey, parseChipKey, removeChipKey } from './keychip'
+import { fingerprintOf, generateSshKey, loadSshKey, NS_GIT, publicKeyLine, sshSign, type KeySigner } from './ssh-sig'
 
 export type SignPurpose = 'commit' | 'tag' | 'record'
 
@@ -21,24 +22,48 @@ const EXTRA_PATH =
 
 const toolEnv = () => ({ ...process.env, PATH: [process.env.PATH ?? '', ...EXTRA_PATH].filter(Boolean).join(delimiter) })
 
-let keyCache: { pem: string; pair: SshKeyPair } | null = null
+let keyCache: { raw: string; signer: KeySigner } | null = null
 
 export async function signingSettings(): Promise<SigningSettings> {
     return (await loadSettings()).signing ?? DEFAULT_SIGNING
 }
 
-export async function appKey(): Promise<SshKeyPair | null> {
-    const pem = await loadSecret('sign-ssh-key')
-    if (!pem) return null
-    if (keyCache?.pem !== pem) keyCache = { pem, pair: loadSshKey(pem) }
-    return keyCache.pair
+export async function appKey(): Promise<KeySigner | null> {
+    const info = (await signingSettings()).commit.key
+    if (!info) return null
+    const raw = info.storage === 'chip' ? await loadSecret('sign-ssh-chip') : await loadSecret('sign-ssh-key')
+    if (!raw) return null
+    if (keyCache?.raw !== raw) {
+        const chip = info.storage === 'chip' ? parseChipKey(raw) : null
+        const signer = info.storage === 'chip' ? chip && chipSigner(chip, info.publicKey) : loadSshKey(raw)
+        if (!signer) return null
+        keyCache = { raw, signer }
+    }
+    return keyCache.signer
 }
 
-export async function generateSigningKey(): Promise<SshKeyInfo> {
-    const k = generateSshKey()
-    await saveSecret('sign-ssh-key', k.pem)
+async function dropKeys(): Promise<void> {
+    const chip = parseChipKey(await loadSecret('sign-ssh-chip'))
+    if (chip) await removeChipKey(chip)
+    await saveSecret('sign-ssh-chip', '')
+    await saveSecret('sign-ssh-key', '')
     keyCache = null
-    const info: SshKeyInfo = { fingerprint: k.fingerprint, publicKey: k.publicKey, createdAt: new Date().toISOString() }
+}
+
+export async function generateSigningKey(storage: KeyStorage = 'app'): Promise<SshKeyInfo> {
+    let info: SshKeyInfo
+    let store: () => Promise<void>
+    if (storage === 'chip') {
+        const { key, blob } = await createChipKey()
+        info = { fingerprint: fingerprintOf(blob), publicKey: publicKeyLine(blob), createdAt: new Date().toISOString(), storage: 'chip' }
+        store = () => saveSecret('sign-ssh-chip', JSON.stringify(key))
+    } else {
+        const k = generateSshKey()
+        info = { fingerprint: k.fingerprint, publicKey: k.publicKey, createdAt: new Date().toISOString(), storage: 'app' }
+        store = () => saveSecret('sign-ssh-key', k.pem)
+    }
+    await dropKeys()
+    await store()
     await updateSettings((s) => {
         const signing = s.signing ?? structuredClone(DEFAULT_SIGNING)
         const old = signing.commit.key?.publicKey
@@ -50,8 +75,7 @@ export async function generateSigningKey(): Promise<SshKeyInfo> {
 }
 
 export async function deleteSigningKey(): Promise<void> {
-    await saveSecret('sign-ssh-key', '')
-    keyCache = null
+    await dropKeys()
     await updateSettings((s) => {
         const signing = s.signing ?? structuredClone(DEFAULT_SIGNING)
         signing.commit = { ...signing.commit, key: undefined, registered: {} }
@@ -144,10 +168,10 @@ export async function signOpts(dir: string, purpose: SignPurpose): Promise<SignO
     const s = await signingSettings()
     if (s.commit.mode === 'off') return {}
     if (s.commit.mode === 'app') {
-        if (!s.commit.key) return {}
+        if (!s.commit.key || (purpose === 'record' && s.commit.key.storage === 'chip')) return {}
         const key = await appKey()
         if (!key) return {}
-        return { signingKey: 'clausedown', onSign: async ({ payload }) => ({ signature: sshSign(payload, key, NS_GIT) }) }
+        return { signingKey: 'clausedown', onSign: async ({ payload }) => ({ signature: await sshSign(payload, key, NS_GIT) }) }
     }
     if (purpose === 'record') return {}
     const cfg = await externalConfig(dir)

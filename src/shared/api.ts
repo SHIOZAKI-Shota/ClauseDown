@@ -7,7 +7,7 @@ import type { ForgeKind, GitLabHost } from './forge'
 import type { AiConfig, AiProvider } from './ai-providers'
 import type { HouritsuConversion } from './houritsu'
 import type { DueEvent, DueEventInput, EventKind, Occurrence, Period, RepoSchedule, ScheduleItem } from './schedule'
-import type { CertInfo, PdfCertEntry, SigInfo, SigningSettings } from './signing'
+import type { CertInfo, KeyStorage, PdfCertEntry, SigInfo, SigningSettings } from './signing'
 import type { PolicyDoc, PolicyDraft } from './policy'
 
 export type { RepoRules, ReviewAction, ReviewEvent, AppPrefs, DocStyle }
@@ -431,7 +431,7 @@ export interface Api {
     exportFile(req: ExportRequest): Promise<string | null>
     signingStatus(dir?: string): Promise<SigningStatus>
     setSigningPrefs(patch: DeepPartial<SigningSettings>): Promise<SigningSettings>
-    generateSigningKey(): Promise<SigningStatus>
+    generateSigningKey(storage?: KeyStorage): Promise<SigningStatus>
     deleteSigningKey(): Promise<SigningStatus>
     registerSigningKey(base: string): Promise<KeyRegistration>
     testExternalSigning(dir?: string): Promise<ExternalSigningConfig>
@@ -560,6 +560,7 @@ export interface SigningStatus {
     hasKey: boolean
     external: ExternalSigningConfig | null
     myna: boolean
+    chip: boolean
     hasTsaPassword: boolean
 }
 

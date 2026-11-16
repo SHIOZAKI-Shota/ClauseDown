@@ -1,4 +1,4 @@
-import { createHash, sign, verify } from 'node:crypto'
+import { createHash } from 'node:crypto'
 import { t } from '../shared/i18n'
 import { pae, type DsseEnvelope } from '../shared/attestation'
 import {
@@ -21,7 +21,7 @@ import { repoRoot } from './repo-id'
 import { repoKey } from './repo-lock'
 import { loadSettings, updateSettings } from './settings'
 import { appKey } from './signing'
-import { blobOfPublicKey, fingerprintOf, keyFromBlob, publicBlob, sshPublicKeyString } from './ssh-sig'
+import { blobOfPublicKey, fingerprintOf, keyFromBlob, publicKeyLine, verifyRaw } from './ssh-sig'
 
 export const POLICY_PAYLOAD = 'application/vnd.clausedown.policy+json'
 
@@ -58,7 +58,7 @@ function verifiedSigners(file: PolicyFile, payload: Buffer): Set<string> {
         if (!publicKey) continue
         try {
             const { key, type } = keyFromBlob(blobOfPublicKey(publicKey)!)
-            if (type === 'ssh-ed25519' && verify(null, message, key, Buffer.from(s.sig, 'base64'))) out.add(s.keyid)
+            if (verifyRaw(type, key, message, Buffer.from(s.sig, 'base64'))) out.add(s.keyid)
         } catch {}
     }
     return out
@@ -187,7 +187,7 @@ export async function loadPolicy(dir: string): Promise<LoadedPolicy> {
 async function signer() {
     const key = await appKey().catch(() => null)
     if (!key) throw new Error(t().signing.errors.noSshKey)
-    return { key, publicKey: sshPublicKeyString(key.publicKey), fingerprint: fingerprintOf(publicBlob(key.publicKey)) }
+    return { key, publicKey: publicKeyLine(key.blob), fingerprint: fingerprintOf(key.blob) }
 }
 
 async function who(dir: string): Promise<{ name: string; login?: string }> {
@@ -196,8 +196,8 @@ async function who(dir: string): Promise<{ name: string; login?: string }> {
     return { name: (await author(dir)).name }
 }
 
-function signPayload(payload: Buffer, key: Awaited<ReturnType<typeof signer>>) {
-    return { keyid: key.fingerprint, sig: sign(null, pae(POLICY_PAYLOAD, payload), key.key.privateKey).toString('base64') }
+async function signPayload(payload: Buffer, key: Awaited<ReturnType<typeof signer>>) {
+    return { keyid: key.fingerprint, sig: (await key.key.sign(pae(POLICY_PAYLOAD, payload))).toString('base64') }
 }
 
 async function writeCandidate(dir: string, doc: PolicyDoc, key: Awaited<ReturnType<typeof signer>>): Promise<string> {
@@ -205,7 +205,7 @@ async function writeCandidate(dir: string, doc: PolicyDoc, key: Awaited<ReturnTy
     const hash = createHash('sha256').update(payload).digest('hex')
     const file = `${RECORD.policy}${String(doc.version).padStart(6, '0')}-${hash.slice(0, 8)}.json`
     const body: PolicyFile = {
-        envelope: { payload: payload.toString('base64'), payloadType: POLICY_PAYLOAD, signatures: [signPayload(payload, key)] },
+        envelope: { payload: payload.toString('base64'), payloadType: POLICY_PAYLOAD, signatures: [await signPayload(payload, key)] },
         publicKeys: [key.publicKey],
     }
     await writeRecord(dir, file, body)
@@ -274,7 +274,7 @@ export async function cosignPolicy(dir: string, file: string): Promise<PolicySta
     const key = await signer()
     if (c.signers.has(key.fingerprint)) return policyStatus(dir)
     const next: PolicyFile = {
-        envelope: { ...raw.envelope, signatures: [...raw.envelope.signatures, signPayload(c.payload, key)] },
+        envelope: { ...raw.envelope, signatures: [...raw.envelope.signatures, await signPayload(c.payload, key)] },
         publicKeys: [...new Set([...raw.publicKeys, key.publicKey])],
     }
     await writeRecord(dir, file, next)
@@ -300,7 +300,7 @@ const short = (hash: string) =>
 export async function policyStatus(dir: string): Promise<PolicyStatus> {
     const loaded = await loadPolicy(dir)
     const key = await appKey().catch(() => null)
-    const mine = key ? sshPublicKeyString(key.publicKey) : null
+    const mine = key ? publicKeyLine(key.blob) : null
     const myFp = mine ? fpOf(mine) : null
     const me = await who(dir)
     const holds = (people: PolicyPerson[]) => !!mine && people.some((p) => p.keys.some((k) => k.publicKey === mine && keyValidAt(k, Date.now())))

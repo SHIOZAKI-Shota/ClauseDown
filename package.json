@@ -33,12 +33,12 @@
         "test": "vitest run",
         "test:e2e": "npm run build && vitest run -c vitest.e2e.config.ts",
         "manual:shots": "npm run build && vitest run -c vitest.e2e.config.ts scripts/manual-shots.e2e.ts",
-        "dist": "npm run build && npm run build:myna && electron-builder --mac --win --publish never",
-        "dist:win": "npm run build && npm run build:myna && electron-builder --win --publish never",
-        "dist:mac": "npm run build && npm run build:myna && electron-builder --mac --publish never",
-        "release": "npm run build && npm run build:myna && electron-builder --mac --win --publish always",
-        "release:win": "npm run build && npm run build:myna && electron-builder --win --publish always",
-        "release:mac": "npm run build && npm run build:myna && electron-builder --mac --publish always",
+        "dist": "npm run build && npm run build:native && electron-builder --mac --win --publish never",
+        "dist:win": "npm run build && npm run build:native && electron-builder --win --publish never",
+        "dist:mac": "npm run build && npm run build:native && electron-builder --mac --publish never",
+        "release": "npm run build && npm run build:native && electron-builder --mac --win --publish always",
+        "release:win": "npm run build && npm run build:native && electron-builder --win --publish always",
+        "release:mac": "npm run build && npm run build:native && electron-builder --mac --publish always",
         "ship": "node scripts/ship.mjs",
         "postinstall": "node node_modules/electron/install.js && nuxt prepare",
         "testdata": "node scripts/make-testdata.mjs",
@@ -47,7 +47,9 @@
         "format:check": "oxfmt --check",
         "build:demo": "CLAUSEDOWN_DEMO=1 nuxt generate",
         "site": "node scripts/site.mjs",
-        "build:myna": "napi build --release --platform --cwd native/myna --output-dir . && napi build --release --platform --target x86_64-pc-windows-msvc -x --cwd native/myna --output-dir ."
+        "build:myna": "napi build --release --platform --cwd native/myna --output-dir . && napi build --release --platform --target x86_64-pc-windows-msvc -x --cwd native/myna --output-dir .",
+        "build:keychip": "napi build --release --platform --cwd native/keychip --output-dir . && napi build --release --platform --target x86_64-pc-windows-msvc -x --cwd native/keychip --output-dir .",
+        "build:native": "npm run build:myna && npm run build:keychip"
     },
     "dependencies": {
         "@textlint/kernel": "^15.8.0",
@@ -147,6 +149,13 @@
                     "filter": [
                         "clausedown-myna.win32-*.node"
                     ]
+                },
+                {
+                    "from": "native/keychip",
+                    "to": "native/keychip",
+                    "filter": [
+                        "clausedown-keychip.win32-*.node"
+                    ]
                 }
             ],
             "target": [
@@ -168,6 +177,13 @@
                     "to": "native/myna",
                     "filter": [
                         "clausedown-myna.darwin-*.node"
+                    ]
+                },
+                {
+                    "from": "native/keychip",
+                    "to": "native/keychip",
+                    "filter": [
+                        "clausedown-keychip.darwin-*.node"
                     ]
                 }
             ],

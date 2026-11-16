@@ -1227,6 +1227,20 @@ Under **Sign versions**, choose the key used for signing.
 
 Signed items are saved versions, effective-date records, delivery records and merges into the current version.
 
+**Key storage**: on a PC with a security chip (a Mac with Apple silicon or a T2 chip, or a Windows PC with a TPM), you can choose where the app key is kept when you create it.
+
+![Choosing where the key is kept](images/signature-storage.png)
+
+| Storage | What it does |
+|---|---|
+| Store in this PC's security chip (recommended) | The key is generated inside the Mac's Secure Enclave or Windows Hello (TPM). It cannot be extracted, and Touch ID or Windows Hello is required for each signature. On a Mac, one confirmation covers the next 5 minutes. The key type is ECDSA (P-256) on a Mac and RSA on Windows |
+| Store in safeStorage | The key (Ed25519) is encrypted and kept in the operating system's secure storage (Electron's safeStorage). You can move it to another PC or back it up, but it is at greater risk than a key in the security chip. No confirmation is asked when signing |
+
+- A security chip key cannot be taken off the PC, even by code running on it. That makes a signed approval evidence that the person at that PC confirmed it.
+- If the PC breaks or is lost, the key is lost with it. Create a key on the new PC, then register it on GitHub or GitLab and add it to the approval rules again. Versions and approvals signed with the old key stay valid as long as they fall within the period registered in the approval rules.
+- With a security chip key, commits on the records branch are not signed, so you aren't asked to confirm over and over. The approval records themselves are still signed.
+- To change the storage, pick the other option and recreate the key.
+
 **Registering the key on GitHub or GitLab**: once you have an app key, a **Register** button appears for each signed-in account. After registering, the site shows your versions as **Verified**.
 
 - The version's email address must be verified on that account. Versions saved with an address that the site doesn't know show as **Unverified** even when the signature is valid.

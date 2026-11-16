@@ -1,10 +1,22 @@
 import { execFileSync } from 'node:child_process'
+import { generateKeyPairSync } from 'node:crypto'
 import fs from 'node:fs'
 import os from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { dsseSign, dsseVerify, verifyReviewEvent } from '../src/main/attest'
-import { commitPayload, generateSshKey, loadSshKey, NS_GIT, sshSign, sshVerify, stripTagSignature, tagPayload } from '../src/main/ssh-sig'
+import {
+    commitPayload,
+    generateSshKey,
+    loadSshKey,
+    NS_GIT,
+    publicKeyLine,
+    softSigner,
+    sshSign,
+    sshVerify,
+    stripTagSignature,
+    tagPayload,
+} from '../src/main/ssh-sig'
 import { pae, reviewStatement } from '../src/shared/attestation'
 import type { ReviewEvent } from '../src/shared/review'
 
@@ -19,12 +31,18 @@ const has = (cmd: string, args: string[]) => {
 const HAS_SSH = has('ssh-keygen', ['-?']) || fs.existsSync('/usr/bin/ssh-keygen')
 
 describe('SSH の署名（SSHSIG）', () => {
-    it('署名して検証でき、名前空間の違いや改ざんでは失敗する', () => {
+    const chipLike = () =>
+        [
+            ['p256', softSigner(generateKeyPairSync('ec', { namedCurve: 'P-256' }).privateKey, 'chip')],
+            ['rsa2048', softSigner(generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey, 'chip')],
+        ] as const
+
+    it('署名して検証でき、名前空間の違いや改ざんでは失敗する', async () => {
         const k = generateSshKey()
         expect(k.publicKey).toMatch(/^ssh-ed25519 AAAAC3NzaC1lZDI1NTE5/)
         expect(k.fingerprint).toMatch(/^SHA256:[A-Za-z0-9+/]{43}$/)
         const key = loadSshKey(k.pem)
-        const sig = sshSign('tree abc\n\nmessage\n', key, NS_GIT)
+        const sig = await sshSign('tree abc\n\nmessage\n', key, NS_GIT)
         expect(sig).toMatch(/^-----BEGIN SSH SIGNATURE-----\n[\s\S]+\n-----END SSH SIGNATURE-----$/)
         expect(sshVerify(sig, 'tree abc\n\nmessage\n', NS_GIT)).toEqual({ ok: true, fingerprint: k.fingerprint, publicKey: k.publicKey })
         expect(sshVerify(sig, 'tree abd\n\nmessage\n', NS_GIT).ok).toBe(false)
@@ -32,12 +50,39 @@ describe('SSH の署名（SSHSIG）', () => {
         expect(sshVerify('garbage', 'x', NS_GIT).ok).toBe(false)
     })
 
-    it.skipIf(!HAS_SSH)('ssh-keygen -Y verify が Good と答える', () => {
+    it('セキュリティチップと同じ P-256・RSA の鍵の署名も検証できる', async () => {
+        for (const [name, key] of chipLike()) {
+            const sig = await sshSign('tree abc\n\nmessage\n', key, NS_GIT)
+            const r = sshVerify(sig, 'tree abc\n\nmessage\n', NS_GIT)
+            expect(r.ok, name).toBe(true)
+            expect(r.publicKey).toBe(publicKeyLine(key.blob))
+            expect(sshVerify(sig, 'tree abd\n\nmessage\n', NS_GIT).ok).toBe(false)
+        }
+    })
+
+    it.skipIf(!HAS_SSH)('P-256・RSA の鍵の署名も ssh-keygen -Y verify が Good と答える', async () => {
+        const dir = fs.mkdtempSync(join(os.tmpdir(), 'clausedown-chipsig-'))
+        const msg = 'tree 1\n\nchip\n'
+        for (const [name, key] of chipLike()) {
+            fs.writeFileSync(join(dir, `${name}.sig`), (await sshSign(msg, key, NS_GIT)) + '\n')
+            fs.writeFileSync(join(dir, 'allowed'), `me@example.com ${publicKeyLine(key.blob)}\n`)
+            const out = execFileSync(
+                'ssh-keygen',
+                ['-Y', 'verify', '-f', join(dir, 'allowed'), '-I', 'me@example.com', '-n', 'git', '-s', join(dir, `${name}.sig`)],
+                {
+                    input: msg,
+                },
+            ).toString()
+            expect(out, name).toContain('Good "git" signature')
+        }
+    })
+
+    it.skipIf(!HAS_SSH)('ssh-keygen -Y verify が Good と答える', async () => {
         const dir = fs.mkdtempSync(join(os.tmpdir(), 'clausedown-sshsig-'))
         const k = generateSshKey()
         const msg = 'hello clause\n'
         fs.writeFileSync(join(dir, 'msg'), msg)
-        fs.writeFileSync(join(dir, 'msg.sig'), sshSign(msg, loadSshKey(k.pem), NS_GIT) + '\n')
+        fs.writeFileSync(join(dir, 'msg.sig'), (await sshSign(msg, loadSshKey(k.pem), NS_GIT)) + '\n')
         fs.writeFileSync(join(dir, 'allowed'), `me@example.com ${k.publicKey}\n`)
         const out = execFileSync('ssh-keygen', ['-Y', 'verify', '-f', join(dir, 'allowed'), '-I', 'me@example.com', '-n', 'git', '-s', join(dir, 'msg.sig')], {
             input: msg,
@@ -101,9 +146,21 @@ describe('承認の証明（in-toto ＋ DSSE）', () => {
         text: '確認しました',
     }
 
-    it('署名した承認は検証でき、版・ブランチ・操作を変えると通らない', () => {
+    it('P-256・RSA の鍵で署名した承認も検証できる', async () => {
+        for (const [name, key] of [
+            ['p256', softSigner(generateKeyPairSync('ec', { namedCurve: 'P-256' }).privateKey, 'chip')],
+            ['rsa2048', softSigner(generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey, 'chip')],
+        ] as const) {
+            const { envelope, publicKey } = await dsseSign(reviewStatement(event, 'root'), key)
+            const signed = { ...event, attestation: envelope, publicKey }
+            expect(verifyReviewEvent(signed, 'root').ok, name).toBe(true)
+            expect(verifyReviewEvent({ ...signed, oid: 'b'.repeat(40) }, 'root').ok).toBe(false)
+        }
+    })
+
+    it('署名した承認は検証でき、版・ブランチ・操作を変えると通らない', async () => {
         const key = loadSshKey(generateSshKey().pem)
-        const { envelope, publicKey } = dsseSign(reviewStatement(event, 'root'), key)
+        const { envelope, publicKey } = await dsseSign(reviewStatement(event, 'root'), key)
         const signed = { ...event, attestation: envelope, publicKey }
         expect(verifyReviewEvent(signed, 'root').ok).toBe(true)
         expect(verifyReviewEvent({ ...signed, oid: 'b'.repeat(40) }, 'root').ok).toBe(false)

@@ -1,9 +1,7 @@
-import { createRequire } from 'node:module'
-import { existsSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
 import type { Signer } from '@libpdf/core'
 import { t } from '../shared/i18n'
 import type { MynaStatus } from '../shared/api'
+import { loadNative } from './native'
 
 export interface MynaSession {
     certificate: Uint8Array
@@ -19,36 +17,8 @@ export interface MynaNative {
 
 let native: MynaNative | null | undefined
 
-const target = () => `${process.platform}-${process.arch}`
-
-function candidates(): string[] {
-    const dirs = [join(__dirname, '../../native/myna')]
-    if (process.resourcesPath) dirs.unshift(join(process.resourcesPath, 'native', 'myna'))
-    const prefix = `clausedown-myna.${target()}`
-    return dirs.flatMap((d) => {
-        try {
-            return readdirSync(d)
-                .filter((f) => f.startsWith(prefix) && f.endsWith('.node'))
-                .map((f) => join(d, f))
-        } catch {
-            return []
-        }
-    })
-}
-
 function load(): MynaNative | null {
-    if (native !== undefined) return native
-    native = null
-    const req = createRequire(__filename)
-    for (const path of candidates()) {
-        if (!existsSync(path)) continue
-        try {
-            native = req(path) as MynaNative
-            break
-        } catch (e) {
-            console.error('[myna] ネイティブモジュールを読み込めませんでした', e)
-        }
-    }
+    if (native === undefined) native = loadNative<MynaNative>('myna')
     return native
 }
 

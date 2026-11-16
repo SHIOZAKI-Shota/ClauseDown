@@ -1,9 +1,11 @@
 import { execFileSync } from 'node:child_process'
+import { generateKeyPairSync, sign } from 'node:crypto'
 import fs from 'node:fs'
 import os from 'node:os'
 import { join } from 'node:path'
-import { beforeAll, describe, expect, it, vi } from 'vitest'
-import { generateSshKey } from '../src/main/ssh-sig'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { createChipKey, setKeychipNative, type KeychipNative } from '../src/main/keychip'
+import { fingerprintOf, generateSshKey, publicKeyLine } from '../src/main/ssh-sig'
 import { DEFAULT_SIGNING, type SigningSettings } from '../src/shared/signing'
 
 const key = generateSshKey()
@@ -130,5 +132,76 @@ describe.skipIf(!HAS_GIT)('版の署名（この PC の Git の設定）', () =>
         await git.initRepo(dir)
         execFileSync('git', ['config', 'user.signingkey', ''], { cwd: dir })
         await expect(signing.testExternalSigning(dir)).rejects.toThrow()
+    })
+})
+
+describe('版の署名（セキュリティチップの鍵）', () => {
+    const chipKey = generateKeyPairSync('ec', { namedCurve: 'P-256' })
+    const point = Buffer.from(chipKey.publicKey.export({ format: 'der', type: 'spki' })).subarray(-65)
+    const calls: string[] = []
+    const fake: KeychipNative = {
+        available: async () => true,
+        create: async () => ({ algorithm: 'p256', handle: Buffer.from('h1'), publicKey: point }),
+        sign: async (handle, data, reason) => {
+            calls.push(`${handle.toString()}:${reason}`)
+            return sign('sha256', data, chipKey.privateKey)
+        },
+        remove: async () => {},
+        forget: () => {},
+    }
+    let dir: string
+    let chipLine: string
+    let saved: typeof state
+
+    beforeAll(async () => {
+        saved = structuredClone(state)
+        setKeychipNative(fake)
+        const made = await createChipKey()
+        chipLine = publicKeyLine(made.blob)
+        state.signing = {
+            ...structuredClone(DEFAULT_SIGNING),
+            commit: {
+                ...DEFAULT_SIGNING.commit,
+                mode: 'app',
+                key: { fingerprint: fingerprintOf(made.blob), publicKey: chipLine, createdAt: '', storage: 'chip' },
+            },
+        }
+        state.secret = JSON.stringify(made.key)
+        dir = fs.mkdtempSync(join(os.tmpdir(), 'clausedown-chip-'))
+        await git.initRepo(dir)
+        await git.createDoc(dir, '規程.md', '規程')
+        await git.saveVersion(dir, { message: '初版', docPath: '規程.md' })
+        await records.writeRecord(dir, 'reviews/r1.json', { id: 'r1' })
+    })
+    afterAll(() => {
+        setKeychipNative(null)
+        Object.assign(state, saved)
+    })
+
+    it('公開鍵は ecdsa-sha2-nistp256 で、署名はチップに頼む', async () => {
+        expect(chipLine).toMatch(/^ecdsa-sha2-nistp256 /)
+        expect((await signing.appKey())?.storage).toBe('chip')
+        expect(calls.length).toBeGreaterThan(0)
+        expect(calls.every((c) => c.startsWith('h1:'))).toBe(true)
+    })
+
+    it.skipIf(!HAS_GIT)('本物の git が版の署名を確かめられ、記録のブランチには署名しない', () => {
+        const allowed = join(dir, '.git', 'allowed_signers')
+        fs.writeFileSync(allowed, `t@example.com ${chipLine}\n`)
+        const run = (args: string[]) =>
+            execFileSync('git', ['-c', 'gpg.format=ssh', '-c', `gpg.ssh.allowedSignersFile=${allowed}`, ...args], {
+                cwd: dir,
+                stdio: ['ignore', 'pipe', 'pipe'],
+            }).toString()
+        expect(() => run(['verify-commit', 'HEAD'])).not.toThrow()
+        expect(run(['log', '--format=%G?', 'refs/heads/clausedown-records']).trim().split('\n')[0]).toBe('N')
+    })
+
+    it('本人確認を取り消すと、分かるエラーで止まる', async () => {
+        fake.sign = async () => {
+            throw new Error('cancelled')
+        }
+        const key = await signing.appKey()
+        await expect(key!.sign(Buffer.from('x'))).rejects.toThrow('本人確認が取り消された')
     })
 })

@@ -1,3 +1,4 @@
+import type { KeyStorage } from '../shared/signing'
 import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, sign, verify, type KeyObject } from 'node:crypto'
 
 export const NS_GIT = 'git'
@@ -47,9 +48,21 @@ const unsigned = (b: Buffer) => {
 }
 const b64url = (b: Buffer) => b.toString('base64url')
 
-export interface SshKeyPair {
-    privateKey: KeyObject
-    publicKey: KeyObject
+const CURVES: Record<string, { crv: string; size: number; hash: string }> = {
+    nistp256: { crv: 'P-256', size: 32, hash: 'sha256' },
+    nistp384: { crv: 'P-384', size: 48, hash: 'sha384' },
+    nistp521: { crv: 'P-521', size: 66, hash: 'sha512' },
+}
+
+export interface KeySigner {
+    blob: Buffer
+    storage: KeyStorage
+    sign(data: Uint8Array): Promise<Buffer>
+}
+
+const mpint = (b: Buffer) => {
+    const u = unsigned(b)
+    return u[0] & 0x80 ? Buffer.concat([Buffer.alloc(1), u]) : u
 }
 
 export function generateSshKey(): { pem: string; publicKey: string; fingerprint: string } {
@@ -57,27 +70,47 @@ export function generateSshKey(): { pem: string; publicKey: string; fingerprint:
     const blob = publicBlob(publicKey)
     return {
         pem: privateKey.export({ format: 'pem', type: 'pkcs8' }).toString(),
-        publicKey: `ssh-ed25519 ${blob.toString('base64')}`,
+        publicKey: publicKeyLine(blob),
         fingerprint: fingerprintOf(blob),
     }
 }
 
-export function loadSshKey(pem: string): SshKeyPair {
+export function softSigner(privateKey: KeyObject, storage: KeyStorage = 'app'): KeySigner {
+    const blob = publicBlob(createPublicKey(privateKey))
+    const type = keyTypeOf(blob)
+    const alg = type === 'ssh-ed25519' ? null : type === 'ssh-rsa' ? 'sha256' : CURVES[type.slice('ecdsa-sha2-'.length)].hash
+    return { blob, storage, sign: async (data) => sign(alg, data, privateKey) }
+}
+
+export function loadSshKey(pem: string): KeySigner {
     const privateKey = createPrivateKey(pem)
     if (privateKey.asymmetricKeyType !== 'ed25519') throw new Error('ed25519 key expected')
-    return { privateKey, publicKey: createPublicKey(privateKey) }
+    return softSigner(privateKey)
 }
 
 export function publicBlob(pub: KeyObject): Buffer {
-    const x = Buffer.from(pub.export({ format: 'jwk' }).x as string, 'base64url')
-    return Buffer.concat([str('ssh-ed25519'), str(x)])
+    const jwk = pub.export({ format: 'jwk' })
+    if (pub.asymmetricKeyType === 'ed25519') return Buffer.concat([str('ssh-ed25519'), str(Buffer.from(jwk.x as string, 'base64url'))])
+    if (pub.asymmetricKeyType === 'rsa')
+        return Buffer.concat([str('ssh-rsa'), str(mpint(Buffer.from(jwk.e as string, 'base64url'))), str(mpint(Buffer.from(jwk.n as string, 'base64url')))])
+    const curve = Object.entries(CURVES).find(([, c]) => c.crv === jwk.crv)?.[0]
+    if (pub.asymmetricKeyType === 'ec' && curve) {
+        const point = Buffer.concat([Buffer.from([4]), Buffer.from(jwk.x as string, 'base64url'), Buffer.from(jwk.y as string, 'base64url')])
+        return Buffer.concat([str(`ecdsa-sha2-${curve}`), str(curve), str(point)])
+    }
+    throw new Error(`unsupported key ${pub.asymmetricKeyType}`)
 }
+
+export function p256Blob(point: Buffer): Buffer {
+    if (point.length !== 65 || point[0] !== 4) throw new Error('bad point')
+    return Buffer.concat([str('ecdsa-sha2-nistp256'), str('nistp256'), str(point)])
+}
+
+export const keyTypeOf = (blob: Buffer) => new Reader(blob).text()
 
 export const fingerprintOf = (blob: Buffer) => `SHA256:${createHash('sha256').update(blob).digest('base64').replace(/=+$/, '')}`
 
-export function sshPublicKeyString(pub: KeyObject): string {
-    return `ssh-ed25519 ${publicBlob(pub).toString('base64')}`
-}
+export const publicKeyLine = (blob: Buffer) => `${keyTypeOf(blob)} ${blob.toString('base64')}`
 
 export function blobOfPublicKey(line: string): Buffer | null {
     const m = /^\s*(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(?:256|384|521))\s+([A-Za-z0-9+/=]+)/.exec(line)
@@ -89,12 +122,6 @@ export function blobOfPublicKey(line: string): Buffer | null {
         return null
     }
     return blob
-}
-
-const CURVES: Record<string, { crv: string; size: number; hash: string }> = {
-    nistp256: { crv: 'P-256', size: 32, hash: 'sha256' },
-    nistp384: { crv: 'P-384', size: 48, hash: 'sha384' },
-    nistp521: { crv: 'P-521', size: 66, hash: 'sha512' },
 }
 
 export function keyFromBlob(blob: Buffer): { key: KeyObject; type: string } {
@@ -134,18 +161,38 @@ const armor = (blob: Buffer) =>
         .match(/.{1,70}/g)!
         .join('\n')}\n${END}`
 
-export function sshSign(message: Buffer | string, key: SshKeyPair, namespace: string): string {
+function derToRs(der: Buffer): [Buffer, Buffer] {
+    const r = new Reader(der)
+    const tag = (want: number) => {
+        if (r.bytes(1)[0] !== want) throw new Error('bad der')
+        let len = r.bytes(1)[0]
+        if (len & 0x80) len = r.bytes(len & 0x7f).reduce((a, b) => a * 256 + b, 0)
+        return len
+    }
+    tag(0x30)
+    const a = r.bytes(tag(0x02))
+    const b = r.bytes(tag(0x02))
+    return [a, b]
+}
+
+export function sshSignatureBlob(type: string, raw: Buffer): Buffer {
+    if (type === 'ssh-ed25519') return Buffer.concat([str(type), str(raw)])
+    if (type === 'ssh-rsa') return Buffer.concat([str('rsa-sha2-256'), str(raw)])
+    const [r, s] = derToRs(raw)
+    return Buffer.concat([str(type), str(Buffer.concat([str(mpint(r)), str(mpint(s))]))])
+}
+
+export function verifyRaw(type: string, key: KeyObject, data: Uint8Array, sig: Buffer): boolean {
+    if (type === 'ssh-ed25519') return verify(null, data, key, sig)
+    if (type === 'ssh-rsa') return verify('sha256', data, key, sig)
+    const c = CURVES[type.slice('ecdsa-sha2-'.length)]
+    return !!c && verify(c.hash, data, key, sig)
+}
+
+export async function sshSign(message: Buffer | string, signer: KeySigner, namespace: string): Promise<string> {
     const msg = typeof message === 'string' ? Buffer.from(message) : message
-    const sig = sign(null, signedData(namespace, 'sha512', msg), key.privateKey)
-    const blob = Buffer.concat([
-        MAGIC,
-        u32(1),
-        str(publicBlob(key.publicKey)),
-        str(namespace),
-        str(''),
-        str('sha512'),
-        str(Buffer.concat([str('ssh-ed25519'), str(sig)])),
-    ])
+    const raw = await signer.sign(signedData(namespace, 'sha512', msg))
+    const blob = Buffer.concat([MAGIC, u32(1), str(signer.blob), str(namespace), str(''), str('sha512'), str(sshSignatureBlob(keyTypeOf(signer.blob), raw))])
     return armor(blob)
 }
 

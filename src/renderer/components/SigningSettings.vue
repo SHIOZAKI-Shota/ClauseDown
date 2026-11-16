@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { SegmentItem } from '~/components/SegmentSwitch.vue'
 import type { CertInfo, DeepPartial, MynaStatus, SealMeta, SigningStatus } from '@shared/api'
-import { TSA_PRESETS, type CommitSignMode, type PdfCertEntry, type SigningSettings } from '@shared/signing'
+import { TSA_PRESETS, type CommitSignMode, type KeyStorage, type PdfCertEntry, type SigningSettings } from '@shared/signing'
 import { FORGE_LABEL } from '@shared/forge'
 import { useApp } from '~/stores/app'
 import { useT } from '~/composables/useT'
@@ -31,10 +31,22 @@ const modeItems = computed<SegmentItem<CommitSignMode>[]>(() =>
     (['off', 'app', 'external'] as const).map((value) => ({ value, label: s.value.commit.modes[value] })),
 )
 
+const keyStorage = computed<KeyStorage>(() => cfg.value?.commit.key?.storage ?? 'app')
+const storage = ref<KeyStorage>('app')
+watch(
+    () => [status.value?.chip, cfg.value?.commit.key?.storage] as const,
+    ([chip, current]) => (storage.value = current ?? (chip ? 'chip' : 'app')),
+    { immediate: true },
+)
+const storageItems = computed<SegmentItem<KeyStorage>[]>(() => [
+    { value: 'chip', ...s.value.commit.storageOptions.chip },
+    { value: 'app', ...s.value.commit.storageOptions.app },
+])
+
 async function createKey() {
     if (cfg.value?.commit.key && !confirm(s.value.commit.confirmRecreate)) return
     busy.value = true
-    const next = await app.run(() => window.api.generateSigningKey())
+    const next = await app.run(() => window.api.generateSigningKey(status.value?.chip ? storage.value : 'app'))
     busy.value = false
     if (next) status.value = next
 }
@@ -216,7 +228,15 @@ async function refreshMyna() {
             <SegmentSwitch :model-value="cfg.commit.mode" :items="modeItems" @update:model-value="(v) => v && patch({ commit: { mode: v } })" />
         </SettingRow>
         <template v-if="cfg.commit.mode === 'app'">
-            <SettingRow :label="s.commit.key" :description="s.commit.keyDesc">
+            <SettingRow
+                v-if="status?.chip"
+                :label="s.commit.storage"
+                :description="cfg.commit.key && storage !== keyStorage ? s.commit.storageChange : s.commit.storageDesc"
+            >
+                <SegmentSwitch v-model="storage" :items="storageItems" />
+            </SettingRow>
+            <SettingRow :label="s.commit.key" :description="keyStorage === 'chip' ? s.commit.keyDescChip : s.commit.keyDesc">
+                <UBadge v-if="cfg.commit.key" :label="s.commit.storages[keyStorage]" color="neutral" variant="subtle" />
                 <code v-if="cfg.commit.key" class="fp">{{ cfg.commit.key.fingerprint }}</code>
                 <span v-else class="cd-muted">{{ s.commit.noKey }}</span>
                 <UButton
