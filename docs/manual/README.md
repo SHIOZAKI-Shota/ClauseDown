@@ -122,13 +122,13 @@ ClauseDown は内部で Git という版管理の仕組みを使っています�
 
 ### インストール
 
-[公式サイト](https://shiozaki-shota.github.io/ClauseDown/#get) からダウンロードして入れるか、次のコマンドで入れます。
+[公式サイト](https://clausedown.app/#get) からダウンロードして入れるか、次のコマンドで入れます。
 
 | OS | 方法 | コマンド |
 |---|---|---|
-| Windows | PowerShell | `irm https://shiozaki-shota.github.io/ClauseDown/install.ps1 \| iex` |
+| Windows | PowerShell | `irm https://clausedown.app/install.ps1 \| iex` |
 | Windows | winget | `winget install ShiozakiShota.ClauseDown` |
-| macOS（Apple シリコン） | ターミナル | `curl -fsSL https://shiozaki-shota.github.io/ClauseDown/install.sh \| sh` |
+| macOS（Apple シリコン） | ターミナル | `curl -fsSL https://clausedown.app/install.sh \| sh` |
 | macOS（Apple シリコン） | Homebrew | `brew install --cask shiozaki-shota/tap/clausedown` |
 
 - Windows の Git Bash でも、macOS と同じ curl のコマンドで入れられます。

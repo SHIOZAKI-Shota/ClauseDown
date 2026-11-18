@@ -1,1 +1,1 @@
-Sitemap: https://shiozaki-shota.github.io/ClauseDown/sitemap.xml
+Sitemap: https://clausedown.app/sitemap.xml

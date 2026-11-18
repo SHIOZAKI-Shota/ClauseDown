@@ -127,13 +127,13 @@ When you start the app, a logo animation plays and then Home opens. Click anywhe
 
 ### Installing
 
-Download the app from the [official website](https://shiozaki-shota.github.io/ClauseDown/#get), or install it with one of these commands.
+Download the app from the [official website](https://clausedown.app/#get), or install it with one of these commands.
 
 | OS | Method | Command |
 |---|---|---|
-| Windows | PowerShell | `irm https://shiozaki-shota.github.io/ClauseDown/install.ps1 \| iex` |
+| Windows | PowerShell | `irm https://clausedown.app/install.ps1 \| iex` |
 | Windows | winget | `winget install ShiozakiShota.ClauseDown` |
-| macOS (Apple silicon) | Terminal | `curl -fsSL https://shiozaki-shota.github.io/ClauseDown/install.sh \| sh` |
+| macOS (Apple silicon) | Terminal | `curl -fsSL https://clausedown.app/install.sh \| sh` |
 | macOS (Apple silicon) | Homebrew | `brew install --cask shiozaki-shota/tap/clausedown` |
 
 - On Windows, you can also use the same curl command as macOS in Git Bash.
