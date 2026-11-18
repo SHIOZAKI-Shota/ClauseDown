@@ -1,29 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
     <url>
-        <loc>https://shiozaki-shota.github.io/ClauseDown/</loc>
+        <loc>https://clausedown.app/</loc>
         <lastmod>2026-11-15</lastmod>
-        <xhtml:link rel="alternate" hreflang="ja" href="https://shiozaki-shota.github.io/ClauseDown/" />
-        <xhtml:link rel="alternate" hreflang="en" href="https://shiozaki-shota.github.io/ClauseDown/?lang=en" />
-        <xhtml:link rel="alternate" hreflang="x-default" href="https://shiozaki-shota.github.io/ClauseDown/" />
+        <xhtml:link rel="alternate" hreflang="ja" href="https://clausedown.app/" />
+        <xhtml:link rel="alternate" hreflang="en" href="https://clausedown.app/?lang=en" />
+        <xhtml:link rel="alternate" hreflang="x-default" href="https://clausedown.app/" />
     </url>
     <url>
-        <loc>https://shiozaki-shota.github.io/ClauseDown/?lang=en</loc>
+        <loc>https://clausedown.app/?lang=en</loc>
         <lastmod>2026-11-15</lastmod>
-        <xhtml:link rel="alternate" hreflang="ja" href="https://shiozaki-shota.github.io/ClauseDown/" />
-        <xhtml:link rel="alternate" hreflang="en" href="https://shiozaki-shota.github.io/ClauseDown/?lang=en" />
-        <xhtml:link rel="alternate" hreflang="x-default" href="https://shiozaki-shota.github.io/ClauseDown/" />
+        <xhtml:link rel="alternate" hreflang="ja" href="https://clausedown.app/" />
+        <xhtml:link rel="alternate" hreflang="en" href="https://clausedown.app/?lang=en" />
+        <xhtml:link rel="alternate" hreflang="x-default" href="https://clausedown.app/" />
     </url>
     <url>
-        <loc>https://shiozaki-shota.github.io/ClauseDown/docs/manual/</loc>
-        <lastmod>2026-11-15</lastmod>
-    </url>
-    <url>
-        <loc>https://shiozaki-shota.github.io/ClauseDown/docs/manual/en/</loc>
+        <loc>https://clausedown.app/docs/manual/</loc>
         <lastmod>2026-11-15</lastmod>
     </url>
     <url>
-        <loc>https://shiozaki-shota.github.io/ClauseDown/demo/</loc>
+        <loc>https://clausedown.app/docs/manual/en/</loc>
+        <lastmod>2026-11-15</lastmod>
+    </url>
+    <url>
+        <loc>https://clausedown.app/demo/</loc>
         <lastmod>2026-11-15</lastmod>
     </url>
 </urlset>

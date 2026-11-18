@@ -6,7 +6,7 @@ cask "clausedown" do
       verified: "github.com/SHIOZAKI-Shota/ClauseDown/"
   name "ClauseDown"
   desc "Editor for legal documents written in Markdown and managed with Git"
-  homepage "https://shiozaki-shota.github.io/ClauseDown/"
+  homepage "https://clausedown.app/"
 
   livecheck do
     url :url

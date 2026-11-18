@@ -1,4 +1,24 @@
-# [ClauseDown](https://github.com/SHIOZAKI-Shota/ClauseDown)
+<h1 align="center">
+  <a href="https://clausedown.app/"><img src="clausedown_logo.svg" width="480" alt="ClauseDown"></a>
+</h1>
+
+<p align="center"><b>条文を書き、版を管理するデスクトップアプリ（Windows・macOS）</b></p>
+
+<h3 align="center">
+  🌐 <a href="https://clausedown.app/">公式サイト clausedown.app</a>
+</h3>
+
+<p align="center">
+  <a href="https://clausedown.app/#get"><b>⬇ ダウンロード</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://clausedown.app/demo/"><b>▶ ブラウザーで試す（デモ）</b></a>
+  &nbsp;·&nbsp;
+  <a href="docs/manual/README.md"><b>📖 操作マニュアル</b></a>
+  &nbsp;·&nbsp;
+  <a href="docs/manual/en/README.md">English</a>
+</p>
+
+---
 
 ClauseDown は法律案・条例・契約書・規約・規程など、「第○条」と条文を並べる文書を書き、版を管理する Windows・macOS 用のデスクトップアプリです。
 士業（弁護士・司法書士・行政書士・社労士など）、企業の法務・人事、議員や法制の担当者など、条文を書く人に向けて作っています。
@@ -58,13 +78,15 @@ ClauseDown は法律案・条例・契約書・規約・規程など、「第○
 
 ## インストール
 
-[公式サイト](https://shiozaki-shota.github.io/ClauseDown/#get) か [Releases](https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest) からダウンロードするか、次のコマンドで入れます。コマンドで入れたときは、署名がないことによる OS の警告は出ません。
+> **[公式サイト clausedown.app からダウンロード](https://clausedown.app/#get)**　OS を選んでそのまま入れられます。
+
+[公式サイト](https://clausedown.app/#get) か [Releases](https://github.com/SHIOZAKI-Shota/ClauseDown/releases/latest) からダウンロードするか、次のコマンドで入れます。コマンドで入れたときは、署名がないことによる OS の警告は出ません。
 
 | OS | 方法 | コマンド |
 |---|---|---|
-| Windows | PowerShell | `irm https://shiozaki-shota.github.io/ClauseDown/install.ps1 \| iex` |
+| Windows | PowerShell | `irm https://clausedown.app/install.ps1 \| iex` |
 | Windows | winget | `winget install ShiozakiShota.ClauseDown` |
-| macOS（Apple シリコン） | ターミナル | `curl -fsSL https://shiozaki-shota.github.io/ClauseDown/install.sh \| sh` |
+| macOS（Apple シリコン） | ターミナル | `curl -fsSL https://clausedown.app/install.sh \| sh` |
 | macOS（Apple シリコン） | Homebrew | `brew install --cask shiozaki-shota/tap/clausedown` |
 
 Windows の Git Bash でも、macOS と同じ curl のコマンドで入れられます。新しい版は、アプリの「このソフトについて」から入れられます（[アプリを更新する](docs/manual/README.md#アプリを更新する)）。`winget upgrade ShiozakiShota.ClauseDown`・`brew upgrade --cask shiozaki-shota/tap/clausedown`、またはインストールのコマンドの再実行でも更新できます。
