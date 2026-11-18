@@ -348,13 +348,17 @@ The examples below use the Japanese format, where articles are numbered 第1条,
 
 When you add or delete an article, the app renumbers the articles that follow. To refer to another article in the text, use a cross-reference (next section); it follows the article even when its number changes.
 
+**Bracket pair guides**: to the right of the line numbers, vertical bars show the extent of each chapter and article. The left column is the chapter and the right column is the article; the bars for the chapter and article with the cursor are darker. Lines inside `:::` blocks and indented items and sub-items get vertical lines to the left of the text. When the cursor is on a `:::` line, its matching `:::` is highlighted too. Under **Editor** > **Bracket pair guides** in the settings, you can turn each kind on or off: chapters, articles, `:::` blocks, and item and sub-item indentation. All except chapters are on by default. Turning off `:::` blocks also removes the indentation inside them.
+
+![Bracket pair guides](images/editor-guides.png)
+
 To give an article a fixed number, write `{n=10}` after its heading to make it Article 10, or `{n=10 b=2}` to make it Article 10-2 (第10条の2). For items, write `{n=3}` or `{b=2}` (a branch number of the previous item, such as 一の二) at the start of the line. Use this in documents whose numbers do not run consecutively from 1, such as imported statutes.
 
 ### Adding articles, paragraphs and items with buttons
 
 Click **+ Article**, **+ Para.**, **+ Item** or **+ Sub-item** on the toolbar to add a line of that kind after the cursor. Press Tab to demote a paragraph to an item or an item to a sub-item, and Shift+Tab to promote it.
 
-**Insert** lets you add everything described in this manual: chapters, articles (branch-numbered, deleted, or with a set number), paragraphs and items (sub-items, set numbers, branch numbers), a preamble, supplementary provisions, a closing and signature block, seals and signatures ([chapter 19](#inserting-seals-and-signature-images)), an appendix, tables (with merged cells), diagrams (such as flowcharts), math, images, cross-references, page breaks and formatting.
+**Insert** lets you add everything described in this manual: chapters, articles (branch-numbered, deleted, or with a set number), paragraphs and items (sub-items, set numbers, branch numbers), a cover page, a table of contents, a preamble, supplementary provisions, a closing and signature block, seals and signatures ([chapter 19](#inserting-seals-and-signature-images)), an appendix, tables (with merged cells), diagrams (such as flowcharts), math, images, cross-references, page breaks and formatting.
 
 You can also add an image by copying it (for example, a screenshot) and pasting it into the editor, or by dropping an image file onto the editor. The image is saved in `images/<document name>/` in the same folder as the document, and a line such as `![図](images/<document name>/<date and time>.png)` is inserted. When you save a version, the image is recorded with it and is included in PDF and Word exports. PNG, JPEG, GIF and WebP files up to 20 MB are supported.
 
@@ -526,6 +530,57 @@ The following example makes the table text smaller than the body text and sets t
 
 These settings are reflected in the preview, PDF and Word.
 The comparison table ignores them when comparing, so a version that changes only these settings does not show as a change in the comparison table.
+
+### Cover page and table of contents
+
+You can put a cover page and a table of contents between the title (the `# ` line) and the first chapter. You can also add them with **Cover page** and **Table of contents** in the **Insert** menu.
+
+```md
+# Employee Handbook
+
+::: cover
+{right}
+Confidential
+
+{center size=26pt}
+Employee Handbook
+
+::: {center}
+Policy No. 12
+
+Effective April 1, 2026
+
+Acme Corp. Human Resources
+:::
+:::
+
+[[_TOC_]]
+
+## General Provisions
+```
+
+![Print preview of a document with a cover page and a table of contents](images/cover-toc.png)
+
+**Cover page**: everything from the `::: cover` line to its matching `:::` line is the cover page.
+
+- Write it the same way as the body. There are no fixed fields or layout. You can use attributes such as `{right}` and `{center size=26pt}`, `::: {center}` blocks and images such as a logo.
+- In PDF, the cover is the first page, centered vertically. It has no page number, and the body's page numbers start at 1 on the next page.
+- In Word, the cover is a separate section, centered vertically.
+- **Insert > Cover page** adds a template (confidentiality notice, title, subtitle, date and organization) right after the title. If the document already has a cover page, it moves to that line instead.
+
+**Table of contents**: a line with only `[[_TOC_]]` shows the table of contents. This is the same syntax as GitLab, so GitLab also shows it as a table of contents. You can also write `[TOC]`.
+
+- It lists chapters, articles, supplementary provisions and schedules. It leaves out the closing and signature block, and deleted articles.
+- In PDF, each entry has its page number on the right, and clicking an entry jumps to that chapter or article. The table of contents gets its own page, followed by a page break.
+- In Word, the page numbers are Word fields. When Word asks whether to update the fields that may refer to other files, choose **Yes** to fill in the page numbers. Ctrl-click (Command-click on a Mac) an entry to jump to that chapter or article.
+- In the preview and in HTML exports, entries have no page numbers; clicking one jumps to that chapter or article.
+- If you write it right after the cover page (before any preamble text), it comes on a page before the title. If you write it in the middle of the preamble, it appears at that point.
+- **Insert > Table of contents** puts it after the cover page if there is one, or right after the title otherwise.
+
+**Notes**
+
+- A document can have one cover page and one table of contents. A second one, or one after the first chapter, produces a warning and is not treated as a cover page or table of contents.
+- The comparison table does not show the cover page or the table of contents, and the houritsu export leaves them out.
 
 ### Merging table cells
 
@@ -1102,7 +1157,7 @@ Open these with **Settings** at the bottom of the left pane. They are saved only
 |---|---|
 | Profile | How the name recorded on versions and review requests is chosen, and the name and email (git: user.name, user.email) |
 | Appearance | Display language, light or dark mode, zoom, and whether to reopen the last document on startup |
-| Editor | Editor font, font size, line numbers, line wrapping, number display, spelling and proofreading |
+| Editor | Editor font, font size, line numbers, line wrapping, bracket pair guides, number display, spelling and proofreading |
 | Sync | Sync on startup, push when saving a version |
 | Due dates | Desktop notifications |
 | Export | Default folder for exported files, whether to add the date to file names |

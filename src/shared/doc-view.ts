@@ -154,6 +154,7 @@ export function checkDoc(input: string): DocIssue[] {
         return lo + 1
     }
     for (const r of source.matchAll(REF_RE)) {
+        if (r[0] === '[[_TOC_]]' && doc.toc && lineOf(r.index!) === doc.toc.line + 1) continue
         if (!doc.refs[r[1].trim()]) out.push({ line: lineOf(r.index!), severity: 'error', message: t().checks.missingRef(r[0], r[1].trim()) })
     }
     for (const f of source.matchAll(/^[ \t]*(`{3,}|~{3,})\s*mermaid[^\n]*\n([\s\S]*?)\n[ \t]*\1[ \t]*$/gm)) {

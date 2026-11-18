@@ -15,4 +15,9 @@ export const checks: Messages['checks'] = {
     unusedDefinition: (term) => `"${term}" is defined but never used`,
     usedBeforeDefinition: (term, line) => `"${term}" is defined on line ${line} but used before its definition`,
     missingTarget: 'Referenced article not found',
+    coverTwice: 'Only one cover (::: cover) is allowed',
+    coverOutside: 'Put the cover (::: cover) between the title and the first chapter',
+    coverUnclosed: 'The cover (::: cover) has no closing :::',
+    tocTwice: 'Only one table of contents ([[_TOC_]]) is allowed',
+    tocOutside: 'Put the table of contents ([[_TOC_]]) between the title and the first chapter',
 }

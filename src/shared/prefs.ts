@@ -27,6 +27,10 @@ export interface AppPrefs {
     lineNumbers: boolean
     lineWrap: boolean
     numberHints: boolean
+    guideChapter: boolean
+    guideArticle: boolean
+    guideBlock: boolean
+    guideIndent: boolean
     proofread: boolean
     proofreadRules: Partial<Record<string, boolean>>
     proofreadJoshiAllow: string[]
@@ -64,6 +68,10 @@ export const DEFAULT_PREFS: AppPrefs = {
     lineNumbers: true,
     lineWrap: true,
     numberHints: true,
+    guideChapter: false,
+    guideArticle: true,
+    guideBlock: true,
+    guideIndent: true,
     proofread: true,
     proofreadRules: {},
     proofreadJoshiAllow: DEFAULT_JOSHI_ALLOW,

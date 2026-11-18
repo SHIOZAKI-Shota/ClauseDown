@@ -99,6 +99,19 @@ export const LEGAL_CSS = `
 .cd-doc img.cd-sign, .cd-compare img.cd-sign, .cd-inline img.cd-sign { display: inline-block; width: auto; max-width: none; vertical-align: bottom; }
 .cd-figure-error { color: var(--cd-missing); font-size: 9pt; }
 .cd-figure-error pre { white-space: pre-wrap; color: var(--cd-ink-soft); margin: 0.3em 0 0; }
+.cd-cover { text-indent: 0; }
+.cd-cover p { margin: 0.4em 0; }
+.cd-cover img { max-width: 100%; }
+.cd-toc { text-indent: 0; margin: 0 0 1em; }
+.cd-toc-title { text-align: center; letter-spacing: 0.5em; margin: 0 0 1em !important; }
+.cd-latin .cd-toc-title { letter-spacing: normal; font-weight: bold; }
+.cd-toc ol { list-style: none; margin: 0; padding: 0; }
+.cd-toc li { margin: 0.15em 0; }
+.cd-toc li.cd-toc-chapter { margin-top: 0.6em; }
+.cd-toc li.cd-toc-article { padding-left: 1em; }
+.cd-toc a { display: flex; align-items: baseline; color: inherit; text-decoration: none; }
+.cd-toc-leader { flex: 1; min-width: 2em; margin: 0 0.4em; border-bottom: 1px dotted var(--cd-ink-soft); transform: translateY(-0.3em); }
+.cd-toc-page { min-width: 2em; text-align: right; font-variant-numeric: tabular-nums; }
 .cd-appendix { margin-top: 2em; break-before: page; }
 .cd-appendix-title { font-size: 1em; font-weight: normal; margin: 0 0 0.6em; }
 .cd-appendix p { margin: 0.3em 0; }
@@ -124,11 +137,16 @@ td[rowspan], th[rowspan] { vertical-align: middle; }
 @media screen {
   .cd-doc .cd-break { position: relative; margin-top: 2.6em; }
   .cd-doc .cd-break::before { content: ''; position: absolute; left: 0; right: 0; top: -1.3em; border-top: 1px dashed var(--cd-ink-soft); }
+  .cd-doc .cd-cover, .cd-doc .cd-toc { padding-bottom: 1.6em; margin-bottom: 2em; border-bottom: 1px dashed var(--cd-ink-soft); }
+  .cd-doc .cd-cover { padding-top: 1em; }
   .cd-doc .cd-break::after { content: var(--cd-break-label, '改ページ'); position: absolute; left: 50%; top: -1.3em; transform: translate(-50%, -50%); padding: 0 8px; background: var(--cd-paper); font-size: 10px; line-height: 1; color: var(--cd-ink-soft); text-indent: 0; }
 }
 
 @media print {
   .cd-article { break-inside: avoid; }
   .cd-compare tr { break-inside: avoid; }
+  .cd-cover { display: flex; flex-direction: column; justify-content: center; min-height: 100vh; break-after: page; }
+  .cd-toc { break-after: page; }
+  .cd-toc li { break-inside: avoid; }
 }
 `

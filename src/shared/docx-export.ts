@@ -1,17 +1,25 @@
 import {
     AlignmentType,
+    Bookmark,
     BorderStyle,
     Document,
+    Footer,
     ImageRun,
+    InternalHyperlink,
+    LeaderType,
     LineRuleType,
     Packer,
+    PageNumber,
+    PageReference,
     Paragraph as DocxParagraph,
     Tab,
+    TabStopType,
     Table,
     TableCell,
     TableRow,
     TextRun,
     VerticalAlign,
+    VerticalAlignSection,
     WidthType,
     type ISectionOptions,
 } from 'docx'
@@ -25,6 +33,7 @@ import { inlineRuns, mergeProps, parseImageProps, stripImageMarks, type CdProps 
 import { tableSpans } from './table-span'
 import { imageLine, inlineImages } from './images'
 import { displayLine, mathKey, useMath } from './math'
+import { tocEntries, tocName } from './toc'
 
 export type Figures = Map<string, { png: Uint8Array; width: number; height: number }>
 export type Images = Map<string, { data: Uint8Array; type: 'png' | 'jpg' | 'gif'; width: number; height: number }>
@@ -424,18 +433,37 @@ function runFont(font: string, latin: boolean) {
     return { ascii: western, hAnsi: western, cs: western, eastAsia: isLatinFont(font) ? FONT : font }
 }
 
-function build(children: (DocxParagraph | Table)[], landscape = false, style?: DocStyle, latin = false): Promise<Buffer> {
+interface BuildOptions {
+    cover?: Block[]
+    pageNumbers?: boolean
+    updateFields?: boolean
+}
+
+const pageFooter = () =>
+    new Footer({
+        children: [
+            new DocxParagraph({
+                alignment: AlignmentType.CENTER,
+                children: [new TextRun({ children: [PageNumber.CURRENT, ' / ', PageNumber.TOTAL_PAGES_IN_SECTION] })],
+            }),
+        ],
+    })
+
+function build(children: (DocxParagraph | Table)[], landscape = false, style?: DocStyle, latin = false, opts: BuildOptions = {}): Promise<Buffer> {
     const m = marginTwip(style)
-    const section: ISectionOptions = {
-        properties: {
-            page: {
-                size: landscape ? { width: A4_LONG, height: A4_SHORT, orientation: 'landscape' as any } : { width: A4_SHORT, height: A4_LONG },
-                margin: { top: m, bottom: m, left: m, right: m },
-            },
-        },
-        children,
+    const page = {
+        size: landscape ? { width: A4_LONG, height: A4_SHORT, orientation: 'landscape' as any } : { width: A4_SHORT, height: A4_LONG },
+        margin: { top: m, bottom: m, left: m, right: m },
     }
+    const sections: ISectionOptions[] = []
+    if (opts.cover) sections.push({ properties: { page, verticalAlign: VerticalAlignSection.CENTER }, children: opts.cover })
+    sections.push({
+        properties: { page: opts.cover ? { ...page, pageNumbers: { start: 1 } } : page },
+        footers: opts.pageNumbers ? { default: pageFooter() } : undefined,
+        children,
+    })
     const document = new Document({
+        features: opts.updateFields ? { updateFields: true } : undefined,
         styles: {
             default: {
                 document: {
@@ -444,18 +472,62 @@ function build(children: (DocxParagraph | Table)[], landscape = false, style?: D
                 },
             },
         },
-        sections: [section],
+        sections,
     })
     return Packer.toBuffer(document)
+}
+
+const bookmarkName = (key: string) => `toc_${key}`
+
+const bookmarkPara = (key: string) =>
+    new DocxParagraph({
+        keepNext: true,
+        spacing: { before: 0, after: 0, line: 20, lineRule: LineRuleType.EXACT },
+        children: [new Bookmark({ id: bookmarkName(key), children: [new TextRun('')] })],
+    })
+
+function tocBlocks(doc: LegalDoc, ctx: Ctx): Block[] {
+    const out: Block[] = [para(tocName(doc.lang), 0, 0, { center: true }), new DocxParagraph({})]
+    for (const e of tocEntries(doc)) {
+        if (e.deleted) continue
+        out.push(
+            new DocxParagraph({
+                indent: e.kind === 'article' ? { left: EM } : undefined,
+                spacing: e.kind === 'chapter' ? { before: 120 } : undefined,
+                tabStops: [{ type: TabStopType.RIGHT, position: ctx.width, leader: LeaderType.DOT }],
+                children: [
+                    new InternalHyperlink({
+                        anchor: bookmarkName(e.key),
+                        children: [new TextRun(e.text), new TextRun({ children: [new Tab()] }), new PageReference(bookmarkName(e.key))],
+                    }),
+                ],
+            }),
+        )
+    }
+    out.push(new DocxParagraph({ pageBreakBefore: true, children: [] }))
+    return out
 }
 
 export function docToDocx(doc: LegalDoc, figures?: Figures, style?: DocStyle, images?: Images): Promise<Buffer> {
     const out: Block[] = []
     basePt = style?.fontSize ?? SIZE / 2
     const ctx: Ctx = { doc, figures, images, width: A4_SHORT - 2 * marginTwip(style) }
+    const parts = doc.preambleParts ?? []
+    const tocFirst = parts[0]?.toc === true
+    const keys = new Map<unknown, string>()
+    if (doc.toc) for (const e of tocEntries(doc)) keys.set(e.article ?? doc.chapters[Number(e.key.slice(1))], e.key)
+    const mark = (target: unknown) => {
+        const key = keys.get(target)
+        if (key) out.push(bookmarkPara(key))
+    }
+    if (tocFirst) out.push(...tocBlocks(doc, ctx))
     if (doc.title) out.push(para(doc.title, 0, 0, { center: true }))
     out.push(new DocxParagraph({}))
-    if (doc.preambleParts) partsBlocks(doc.preambleParts, out, ctx)
+    if (doc.preambleParts)
+        for (const part of tocFirst ? parts.slice(1) : parts) {
+            if (part.toc) out.push(...tocBlocks(doc, ctx))
+            else partsBlocks([part], out, ctx)
+        }
     else for (const block of doc.preamble.split(/\n[ \t]*\n/)) if (block.trim()) out.push(para(plain(block, doc), 0, 0))
     for (const ch of doc.chapters) {
         const own = ch.props
@@ -467,21 +539,30 @@ export function docToDocx(doc: LegalDoc, figures?: Figures, style?: DocStyle, im
         }
         if (ch.kind === 'appendix') {
             out.push(new DocxParagraph({ pageBreakBefore: own?.break || undefined }))
+            mark(ch)
             out.push(para(chapterHeading(ch, doc), 0, 0, { bold: true, props: inherited(own) }))
             if (ch.parts) partsBlocks(ch.parts, out, ctx, inherited(own))
             else richBlocks(ch.raw, out, ctx)
             continue
         }
         const heading = chapterHeading(ch, doc)
-        if (heading) out.push(para(heading, 0, 0, { center: true, props: own }))
-        else if (own?.break) out.push(new DocxParagraph({ pageBreakBefore: true, children: [] }))
+        if (heading) {
+            mark(ch)
+            out.push(para(heading, 0, 0, { center: true, props: own }))
+        } else if (own?.break) out.push(new DocxParagraph({ pageBreakBefore: true, children: [] }))
         paragraphs(ch.intro, out, ctx, undefined, inherited(own))
         ch.articles.forEach((a, i) => {
             if (i) out.push(articleGap())
+            mark(a)
             article(a, out, ctx, inherited(own))
         })
     }
-    return build(out, false, style, !!doc.styleId && doc.styleId !== 'ja')
+    let cover: Block[] | undefined
+    if (doc.cover) {
+        cover = []
+        partsBlocks(doc.cover.parts, cover, ctx)
+    }
+    return build(out, false, style, !!doc.styleId && doc.styleId !== 'ja', { cover, pageNumbers: style?.pageNumbers, updateFields: !!doc.toc })
 }
 
 function cellParas(parts: Part[], fallback?: string): DocxParagraph[] {

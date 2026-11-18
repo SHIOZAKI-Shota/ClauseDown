@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { LegalDoc } from '@shared/legal-parser'
-import { articleTitle, chapterHeading } from '@shared/legal-parser'
+import { tocEntries } from '@shared/toc'
 import { lastAtOrBefore } from '~/utils/legal-editor'
 import { useT } from '~/composables/useT'
 const t = useT()
@@ -17,18 +17,9 @@ interface Entry {
     deleted?: boolean
 }
 
-const entries = computed<Entry[]>(() => {
-    const out: Entry[] = []
-    let n = 0
-    props.legal.chapters.forEach((ch, ci) => {
-        if (ch.kind === 'closing') return
-        const head = chapterHeading(ch, props.legal)
-        if (head && ch.line >= 0) out.push({ key: `c${ci}`, line: ch.line, label: ch.label || head, title: ch.label ? ch.title : '', kind: 'chapter' })
-        for (const a of ch.articles)
-            out.push({ key: `a${n++}`, line: a.line, label: a.label, title: articleTitle(a, props.legal), kind: 'article', deleted: a.deleted })
-    })
-    return out
-})
+const entries = computed<Entry[]>(() =>
+    tocEntries(props.legal).map((e) => ({ key: e.key, line: e.line, label: e.label, title: e.title, kind: e.kind, deleted: e.deleted })),
+)
 const articleLines = computed(() => entries.value.filter((e) => e.kind === 'article').map((e) => e.line))
 
 const filtered = computed(() => {

@@ -752,7 +752,16 @@ shot('editor-insert.png', async () => {
     await win.getByRole('menuitem', { name: 'Math' }).first().hover()
     await wait(800)
     const menu = (await win.locator('[role="menu"]').first().boundingBox())!
-    await save('editor-insert.png', { clip: { x: menu.x - 4, y: menu.y - 4, width: 470, height: 490 }, hi: true })
+    await save('editor-insert.png', { clip: { x: menu.x - 4, y: menu.y - 4, width: 470, height: Math.max(490, menu.height + 8) }, hi: true })
+})
+
+shot('editor-guides.png', async () => {
+    await openDoc(dirs.rules, HANDBOOK)
+    await cursorAt('Proof of address')
+    await wait(800)
+    const box = (await win.locator('.cm-editor').first().boundingBox())!
+    const line = (await win.locator('.cm-line', { hasText: 'Hiring and Transfers' }).first().boundingBox())!
+    await save('editor-guides.png', { clip: { x: box.x, y: line.y - 8, width: Math.min(box.width, 760), height: 330 }, hi: true })
 })
 
 shot('editor-export.png', async () => {
@@ -1210,6 +1219,66 @@ shot('editor-print.png', async () => {
         .or(win.getByRole('radio', { name: 'Normal' }))
         .first()
         .click()
+})
+
+const COVER_DOC = 'handbook-with-cover.md'
+const COVER_SRC = [
+    '# Employee Handbook',
+    '',
+    '::: cover',
+    '{right}',
+    'Confidential',
+    '',
+    '{center size=26pt}',
+    'Employee Handbook',
+    '',
+    '::: {center}',
+    'Policy No. 12',
+    '',
+    'Effective April 1, 2026',
+    '',
+    'Acme Corp. Human Resources',
+    ':::',
+    ':::',
+    '',
+    '[[_TOC_]]',
+    '',
+    '## General Provisions',
+    '',
+    '### Purpose',
+    '- This Handbook sets out the terms and conditions of employment and the rules of conduct that apply to all employees of Acme Corp.',
+    '',
+    '### Definitions',
+    '- In this Handbook, "employee" means any person employed by Acme Corp. under a contract of employment, whether full-time or part-time.',
+    '',
+    '## Working Hours',
+    '',
+    '### Working Hours',
+    '- Normal working hours are 9:00 a.m. to 6:00 p.m., Monday to Friday, with a one-hour lunch break.',
+    '',
+    '### Overtime',
+    '- Employees may be asked to work overtime when business needs require it, within the limits set by law and the applicable labor agreement.',
+    '',
+].join('\n')
+
+shot('cover-toc.png', async () => {
+    fs.writeFileSync(join(dirs.rules, COVER_DOC), COVER_SRC, 'utf8')
+    await openDoc(dirs.rules, COVER_DOC)
+    await win
+        .getByRole('button', { name: 'Print' })
+        .or(win.getByRole('radio', { name: 'Print' }))
+        .first()
+        .click()
+    await store(`s.prefs.zoomLinked = false; s.prefs.previewZoom = 45`)
+    await wait(5000)
+    await save('cover-toc.png')
+    await store(`s.prefs.previewZoom = 100; s.prefs.zoomLinked = true`)
+    await win
+        .getByRole('button', { name: 'Normal' })
+        .or(win.getByRole('radio', { name: 'Normal' }))
+        .first()
+        .click()
+    fs.rmSync(join(dirs.rules, COVER_DOC), { force: true })
 })
 
 let signingReady = false

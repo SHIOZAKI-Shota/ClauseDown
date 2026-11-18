@@ -44,6 +44,8 @@ export const editor = {
         subitem: '号の細分',
         itemNumber: '号の番号を指定（{n=3}）',
         itemBranch: '号の枝番号（{b=2}）',
+        cover: '表紙',
+        toc: '目次',
         preamble: '前文（最初の章の前）',
         supplement: '附則',
         closing: '後文・署名欄',

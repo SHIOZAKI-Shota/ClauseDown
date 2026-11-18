@@ -14,4 +14,9 @@ export const checks = {
     unusedDefinition: (term: string) => `「${term}」を定義していますが、使っていません`,
     usedBeforeDefinition: (term: string, line: number) => `「${term}」は${line}行目で定義しています。定義より前で使っています`,
     missingTarget: '参照先の条が見つかりません',
+    coverTwice: '表紙（::: cover）は 1 つしか書けません',
+    coverOutside: '表紙（::: cover）は題名と最初の章の間に書いてください',
+    coverUnclosed: '表紙（::: cover）を閉じる ::: がありません',
+    tocTwice: '目次（[[_TOC_]]）は 1 つしか書けません',
+    tocOutside: '目次（[[_TOC_]]）は題名と最初の章の間に書いてください',
 }

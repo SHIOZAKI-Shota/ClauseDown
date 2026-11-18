@@ -7,7 +7,8 @@ import { markdown } from '@codemirror/lang-markdown'
 import { startCompletion } from '@codemirror/autocomplete'
 import { redo as cmRedo, redoDepth, undo as cmUndo, undoDepth } from '@codemirror/commands'
 import type { LegalDoc } from '@shared/legal-parser'
-import { legalExtensions, proofreadLinter, setLegalDoc } from '~/utils/legal-editor'
+import { legalExtensions, legalScopeGuides, proofreadLinter, setLegalDoc } from '~/utils/legal-editor'
+import { ALL_GUIDES, type GuideOptions } from '~/utils/scope-guides'
 import { diffHighlight, setDiffBase } from '~/utils/diff-highlight'
 import { searchPanel } from '~/utils/search-panel'
 import type { EditorIssue } from '~/components/IssuePane.vue'
@@ -21,9 +22,11 @@ const props = withDefaults(
         readonly?: boolean
         diffBase?: string | null
         spellLang?: string | null
+        guides?: GuideOptions
     }>(),
-    { wrap: true, readonly: false, diffBase: null, proofread: true, spellLang: null },
+    { wrap: true, readonly: false, diffBase: null, proofread: true, spellLang: null, guides: () => ALL_GUIDES },
 )
+const guiding = new Compartment()
 const wrapping = new Compartment()
 const proofreading = new Compartment()
 const proofreadExt = proofreadLinter((text) => window.api.proofread(text))
@@ -62,6 +65,7 @@ onMounted(() => {
                 spelling.of(spellExt(props.spellLang)),
                 EditorState.tabSize.of(2),
                 ...legalExtensions(),
+                guiding.of(legalScopeGuides(props.guides)),
                 diffHighlight(),
                 searchPanel(),
                 Prec.highest(keymap.of([{ key: 'Mod-Shift-m', run: () => (emit('openIssues'), true) }])),
@@ -140,6 +144,10 @@ watch(
 watch(
     () => props.wrap,
     (w) => view?.dispatch({ effects: wrapping.reconfigure(w ? EditorView.lineWrapping : []) }),
+)
+watch(
+    () => JSON.stringify(props.guides),
+    () => view?.dispatch({ effects: guiding.reconfigure(legalScopeGuides(props.guides)) }),
 )
 watch(
     () => props.proofread,
@@ -285,6 +293,16 @@ function insertPreamble() {
     view.focus()
 }
 
+function insertBelow(line: number, text: string, cursorOffset = text.length) {
+    if (!view) return
+    const doc = view.state.doc
+    const at = line < 0 ? 0 : doc.line(Math.min(line + 1, doc.lines)).to
+    const insert = line < 0 ? `${text}\n` : `\n\n${text}`
+    const start = line < 0 ? 0 : at + 2
+    view.dispatch({ changes: { from: at, insert }, selection: { anchor: start + cursorOffset }, scrollIntoView: true })
+    view.focus()
+}
+
 function insertAtCursor(text: string, cursorOffset = text.length) {
     if (!view) return
     const { from, to } = view.state.selection.main
@@ -415,6 +433,7 @@ defineExpose({
     insertClause,
     insertAfterBullet,
     insertPreamble,
+    insertBelow,
     wrapLines,
     wrapInline,
     insertBeforeLines,
