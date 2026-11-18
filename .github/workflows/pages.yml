@@ -54,6 +54,11 @@ jobs:
                   sudo cp site/sitemap.xml site/robots.txt _site/
                   sudo cp -r site/images _site/images
 
+            - name: ドキュメント（マニュアルを章ごとのページにする）を足す
+              run: |
+                  node scripts/docs.mjs out/docs-site
+                  sudo cp -r out/docs-site/docs/. _site/docs/
+
             - uses: actions/upload-pages-artifact@v3
 
     deploy:

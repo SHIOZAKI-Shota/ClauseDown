@@ -1,1 +1,2 @@
 Sitemap: https://clausedown.app/sitemap.xml
+Sitemap: https://clausedown.app/docs/sitemap.xml
