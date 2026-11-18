@@ -12,6 +12,7 @@ import { findMath, mathError } from '@shared/math'
 import type { ProofreadIssue } from '@shared/api'
 import { backRefs, lineLabels, type BackRef } from '@shared/doc-view'
 import { t as i18n } from '@shared/i18n'
+import { scopeGuides, scopeTheme, type GuideOptions } from './scope-guides'
 
 export const legalTheme = EditorView.theme({
     '&': { height: '100%', fontSize: 'var(--cd-ed-size, 14px)', backgroundColor: 'var(--cd-ed-bg)', color: 'var(--cd-ed-text)' },
@@ -242,6 +243,10 @@ function buildDecorations(view: EditorView): DecorationSet {
                     marks.push({ from: line.from + r.index! + 1, to: line.from + r.index! + r[0].length, deco: Decoration.mark({ class: 'cd-prop' }) })
             for (const m of findMath(line.text)) marks.push({ from: line.from + m.from, to: line.from + m.to, deco: Decoration.mark({ class: 'cd-math-src' }) })
             for (const r of line.text.matchAll(REF_RE)) {
+                if (ld?.toc?.line === line.number - 1) {
+                    marks.push({ from: line.from + r.index!, to: line.from + r.index! + r[0].length, deco: Decoration.mark({ class: 'cd-prop' }) })
+                    continue
+                }
                 const ok = !!ld?.refs[r[1].trim()]
                 marks.push({
                     from: line.from + r.index!,
@@ -334,6 +339,7 @@ const legalLinter = linter(
         const text = view.state.doc.toString()
         const msg = i18n().editor.lint
         for (const r of text.matchAll(REF_RE)) {
+            if (ld.toc && view.state.doc.lineAt(r.index!).number - 1 === ld.toc.line) continue
             if (!ld.refs[r[1].trim()]) {
                 out.push({ from: r.index!, to: r.index! + r[0].length, severity: 'error', message: msg.noArticle(r[1]) })
             }
@@ -407,6 +413,13 @@ function shiftList(dir: 1 | -1) {
     }
 }
 
+export const legalScopeGuides = (opts: GuideOptions): Extension =>
+    scopeGuides(
+        (state) => state.field(legalDocField, false)?.ld ?? null,
+        (tr) => tr.effects.some((e) => e.is(setLegalDoc)),
+        opts,
+    )
+
 export function legalExtensions(): Extension[] {
     return [
         legalTheme,
@@ -414,6 +427,7 @@ export function legalExtensions(): Extension[] {
         indentUnit.of('  '),
         legalDocField,
         legalDecorations,
+        scopeTheme,
         autocompletion({ override: [refCompletions], activateOnTyping: true, icons: false }),
         legalLinter,
         keymap.of([

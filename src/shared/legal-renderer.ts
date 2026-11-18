@@ -7,6 +7,7 @@ import { inlinePropsHtml, propsAttrs, stripInlineProps, type CdProps } from './c
 import { useMath } from './math'
 import { useLocalImages } from './images'
 import { t } from './i18n'
+import { tocEntries, tocName, type TocEntry } from './toc'
 
 const md = useLocalImages(useMath(new MarkdownIt({ html: false, linkify: false, breaks: true })))
 
@@ -17,6 +18,12 @@ function inline(text: string, doc: LegalDoc): string {
     return inlinePropsHtml(
         md.renderInline(resolved).replace(/\[\[([^\]]+)\]\]/g, (_, id) => `<span class="cd-missing" title="${esc(t().checks.missingTarget)}">[[${id}]]</span>`),
     )
+}
+
+let anchors: Map<Article, string> | null = null
+const idOf = (a: Article) => {
+    const v = a.id ? `art-${a.id}` : anchors?.get(a)
+    return v ? ` id="${esc(v)}"` : ''
 }
 
 const isLatin = (doc: LegalDoc) => !!doc.styleId && doc.styleId !== 'ja'
@@ -52,7 +59,7 @@ function renderParagraphs(paras: Paragraph[], doc: LegalDoc, head?: string, head
 
 function renderLatinArticle(a: Article, doc: LegalDoc): string {
     const style = docStyle(doc)
-    const id = a.id ? ` id="art-${esc(a.id)}"` : ''
+    const id = idOf(a)
     const html = `<div${propsAttrs(a.props, 'cd-article')}${id} data-line="${a.line}">`
     if (a.deleted) {
         return `${html}<p class="cd-para cd-first"><span class="cd-num cd-art-label">${esc(style.headLabel(a.label))}</span> ${esc(style.deletedWord)}</p></div>`
@@ -75,7 +82,7 @@ function renderLatinArticle(a: Article, doc: LegalDoc): string {
 function renderArticle(a: Article, doc: LegalDoc): string {
     if (isLatin(doc)) return renderLatinArticle(a, doc)
     const style = doc.config.article.title
-    const id = a.id ? ` id="art-${esc(a.id)}"` : ''
+    const id = idOf(a)
     let html = `<div${propsAttrs(a.props, 'cd-article')}${id} data-line="${a.line}">`
     if (a.deleted) {
         return `${html}<p class="cd-para cd-first"><span class="cd-num">${esc(a.label)}</span>　削除</p></div>`
@@ -92,30 +99,72 @@ function renderArticle(a: Article, doc: LegalDoc): string {
     return html + '</div>'
 }
 
-export function renderDoc(doc: LegalDoc): string {
+export interface RenderOptions {
+    tocPages?: Map<string, number> | 'placeholder'
+    part?: 'all' | 'cover' | 'body'
+}
+
+export const TOC_PLACEHOLDER = '000'
+
+function renderToc(doc: LegalDoc, entries: TocEntry[], pages: RenderOptions['tocPages']): string {
+    const items = entries
+        .filter((e) => !e.deleted)
+        .map((e) => {
+            const page = pages === 'placeholder' ? TOC_PLACEHOLDER : (pages?.get(e.key)?.toString() ?? '')
+            return `<li class="cd-toc-${e.kind}"><a href="#${esc(e.anchor)}"><span class="cd-toc-text">${esc(e.text)}</span><span class="cd-toc-leader"></span><span class="cd-toc-page">${page}</span></a></li>`
+        })
+        .join('')
+    return `<nav class="cd-toc" data-line="${doc.toc!.line}"><p class="cd-toc-title">${esc(tocName(doc.lang))}</p><ol>${items}</ol></nav>`
+}
+
+export function renderCover(doc: LegalDoc): string {
+    return doc.cover ? `<section class="cd-cover" data-line="${doc.cover.line}">${renderRichParts(doc.cover.parts)}</section>` : ''
+}
+
+export function renderDoc(doc: LegalDoc, opts: RenderOptions = {}): string {
+    const part = opts.part ?? 'all'
     let html = isLatin(doc)
         ? `<article class="cd-doc cd-latin cd-style-${doc.styleId} cd-lang-${doc.lang}" lang="${doc.lang}">`
         : `<article class="cd-doc cd-indent-${doc.config.paragraph.indent}">`
+    if (part !== 'body') html += renderCover(doc)
+    if (part === 'cover') return html + `</article>`
+    const entries = doc.toc ? tocEntries(doc) : []
+    anchors = doc.toc ? new Map(entries.filter((e) => e.article).map((e) => [e.article!, e.anchor])) : null
+    try {
+        return renderBody(doc, html, entries, opts)
+    } finally {
+        anchors = null
+    }
+}
+
+function renderBody(doc: LegalDoc, start: string, entries: TocEntry[], opts: RenderOptions): string {
+    let html = start
+    const parts = doc.preambleParts ?? []
+    const tocFirst = parts[0]?.toc === true
+    if (tocFirst) html += renderToc(doc, entries, opts.tocPages)
     if (doc.title) html += `<h1 class="cd-title">${esc(doc.title)}</h1>`
-    if (doc.preamble)
-        html += `<section class="cd-preamble">${doc.preambleParts ? renderRichParts(doc.preambleParts) : inlinePropsHtml(md.render(doc.preamble))}</section>`
-    for (const ch of doc.chapters) {
+    const rest = tocFirst ? parts.slice(1) : parts
+    if (rest.length)
+        html += `<section class="cd-preamble">${rest.map((p) => (p.toc ? renderToc(doc, entries, opts.tocPages) : renderRich(p.md, p.props))).join('')}</section>`
+    else if (!doc.preambleParts && doc.preamble) html += `<section class="cd-preamble">${inlinePropsHtml(md.render(doc.preamble))}</section>`
+    doc.chapters.forEach((ch, ci) => {
+        const chId = doc.toc ? ` id="toc-c${ci}"` : ''
         const body = () => (ch.parts ? renderRichParts(ch.parts) : renderRich(ch.raw))
         if (ch.kind === 'appendix') {
-            html += `<section${propsAttrs(ch.props, 'cd-appendix')} data-line="${ch.line}"><h2 class="cd-appendix-title">${esc(chapterHeading(ch, doc))}</h2>${body()}</section>`
-            continue
+            html += `<section${propsAttrs(ch.props, 'cd-appendix')} data-line="${ch.line}"><h2 class="cd-appendix-title"${chId}>${esc(chapterHeading(ch, doc))}</h2>${body()}</section>`
+            return
         }
         if (ch.kind === 'closing') {
             html += `<section${propsAttrs(ch.props, 'cd-closing')} data-line="${ch.line}">${body()}</section>`
-            continue
+            return
         }
         html += `<section${propsAttrs(ch.props, `cd-chapter cd-${ch.kind}`)}>`
         const heading = chapterHeading(ch, doc)
-        if (heading) html += `<h2 class="cd-chapter-title" data-line="${ch.line}">${esc(heading)}</h2>`
+        if (heading) html += `<h2 class="cd-chapter-title"${chId} data-line="${ch.line}">${esc(heading)}</h2>`
         html += renderParagraphs(ch.intro, doc)
         html += ch.articles.map((a) => renderArticle(a, doc)).join('')
         html += `</section>`
-    }
+    })
     return html + `</article>`
 }
 

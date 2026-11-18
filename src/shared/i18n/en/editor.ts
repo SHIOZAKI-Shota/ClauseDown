@@ -46,6 +46,8 @@ export const editor: Messages['editor'] = {
         subitem: 'Sub-item',
         itemNumber: 'Set item number ({n=3})',
         itemBranch: 'Item branch number ({b=2})',
+        cover: 'Cover page',
+        toc: 'Table of contents',
         preamble: 'Preamble (before the first chapter)',
         supplement: 'Supplementary provisions',
         closing: 'Closing / signature block',

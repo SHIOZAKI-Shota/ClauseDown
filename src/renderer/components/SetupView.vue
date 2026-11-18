@@ -370,6 +370,12 @@ async function addSamples() {
     const h = made.find((m) => m.name.startsWith('SAMPLE_houritsu'))
     if (h) await checkHouritsu(h.dir)
 }
+const GUIDE_KEYS = [
+    { key: 'guideChapter', name: 'chapter' },
+    { key: 'guideArticle', name: 'article' },
+    { key: 'guideBlock', name: 'block' },
+    { key: 'guideIndent', name: 'indent' },
+] as const
 </script>
 
 <template>
@@ -490,6 +496,17 @@ async function addSamples() {
             </SettingRow>
             <SettingRow :label="t.settings.editor.lineWrap">
                 <USwitch :model-value="app.prefs.lineWrap" @update:model-value="(v: boolean) => setPref('lineWrap', v)" />
+            </SettingRow>
+            <SettingRow :label="t.settings.editor.guides.label" :description="t.settings.editor.guides.desc">
+                <div class="guide-list">
+                    <UCheckbox
+                        v-for="g in GUIDE_KEYS"
+                        :key="g.key"
+                        :label="t.settings.editor.guides[g.name]"
+                        :model-value="app.prefs[g.key]"
+                        @update:model-value="(v: boolean | 'indeterminate') => setPref(g.key, v === true)"
+                    />
+                </div>
             </SettingRow>
             <SettingRow :label="t.settings.editor.numberHints">
                 <template #description>
@@ -916,6 +933,13 @@ async function addSamples() {
 </template>
 
 <style scoped>
+.guide-list {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+}
+
 .sub-row {
     padding-left: 20px;
 }

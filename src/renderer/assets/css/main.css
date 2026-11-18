@@ -32,6 +32,11 @@
     --cd-syn-ref-bad: #c02626;
     --cd-syn-code: #8a4b08;
     --cd-syn-hint: #8b93a7;
+    --cd-guide: #c8cdd8;
+    --cd-guide-active: #a3abbe;
+    --cd-band-ch: color-mix(in oklab, var(--cd-syn-chapter) 70%, transparent);
+    --cd-band-ar: color-mix(in oklab, var(--cd-syn-article) 70%, transparent);
+    --cd-block-match: rgba(105, 130, 205, 0.2);
 }
 
 /* 条文の CSS（:root）があとから読み込まれても上書きされないように、:root.dark にする */
@@ -54,6 +59,11 @@
     --cd-ed-active: rgba(93, 104, 130, 0.1);
     --cd-ed-selection: #2e3a6b;
     --cd-ed-cursor: #8ea2ff;
+    --cd-guide: #3b3f4c;
+    --cd-guide-active: #5a6178;
+    --cd-band-ch: color-mix(in oklab, var(--cd-syn-chapter) 70%, transparent);
+    --cd-band-ar: color-mix(in oklab, var(--cd-syn-article) 70%, transparent);
+    --cd-block-match: rgba(142, 162, 255, 0.22);
     --cd-syn-title: #b4c2ff;
     --cd-syn-chapter: #d2a8ff;
     --cd-syn-article: #8ea2ff;

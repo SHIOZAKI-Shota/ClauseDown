@@ -63,6 +63,7 @@ export interface Chapter {
 export interface RawPart {
     md: string
     props?: CdProps
+    toc?: true
 }
 
 export interface LegalDoc {
@@ -71,6 +72,8 @@ export interface LegalDoc {
     warnings: string[]
     preamble: string
     preambleParts?: RawPart[]
+    cover?: { line: number; end: number; parts: RawPart[] }
+    toc?: { line: number }
     chapters: Chapter[]
     refs: Record<string, Article>
     styleId: StyleId
@@ -143,9 +146,94 @@ export function parseLegal(input: string): LegalDoc {
     return doc
 }
 
+const TOC_LINE_RE = /^\s*(?:\[\[_TOC_\]\]|\[TOC\])\s*$/
+const COVER_OPEN_RE = /^\s*:{3,}\s*cover\s*:*\s*$/
+const BLOCK_OPEN_RE = /^\s*:{3,}\s*\S/
+const BLOCK_CLOSE_RE = /^\s*:{3,}\s*$/
+
+interface FrontParts {
+    source: string
+    cover?: { line: number; end: number; md: string }
+    toc?: number
+    warnings: string[]
+}
+
+function takeFrontParts(source: string): FrontParts {
+    if (!source.includes('cover') && !source.includes('TOC')) return { source, warnings: [] }
+    const lines = source.split(/\r?\n/)
+    const warnings: string[] = []
+    const out: FrontParts = { source, warnings }
+    let fence = ''
+    let zone: 'before' | 'front' | 'body' = 'before'
+    const at = (i: number, m: string) => warnings.push(tr().checks.atLine(i + 1, m))
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i]
+        const f = /^\s*(`{3,}|~{3,})/.exec(line)
+        if (fence) {
+            if (f && f[1][0] === fence[0] && f[1].length >= fence.length) fence = ''
+            continue
+        }
+        if (f) {
+            fence = f[1]
+            continue
+        }
+        if (/^#\s/.test(line) && zone === 'before') zone = 'front'
+        else if (/^##\s/.test(line)) zone = 'body'
+        if (TOC_LINE_RE.test(line)) {
+            if (zone !== 'front') at(i, tr().checks.tocOutside)
+            else if (out.toc !== undefined) at(i, tr().checks.tocTwice)
+            else {
+                out.toc = i
+                lines[i] = ''
+            }
+            continue
+        }
+        if (!COVER_OPEN_RE.test(line)) continue
+        if (zone !== 'front') {
+            at(i, tr().checks.coverOutside)
+            continue
+        }
+        let depth = 1
+        let end = -1
+        for (let j = i + 1; j < lines.length && !/^##?\s/.test(lines[j]); j++) {
+            if (BLOCK_CLOSE_RE.test(lines[j])) depth--
+            else if (BLOCK_OPEN_RE.test(lines[j])) depth++
+            if (depth === 0) {
+                end = j
+                break
+            }
+        }
+        if (end < 0) {
+            at(i, tr().checks.coverUnclosed)
+            lines[i] = ''
+            continue
+        }
+        if (out.cover) at(i, tr().checks.coverTwice)
+        else out.cover = { line: i, end, md: lines.slice(i + 1, end).join('\n') }
+        for (let j = i; j <= end; j++) lines[j] = ''
+        i = end
+    }
+    const eol = source.includes('\r\n') ? '\r\n' : '\n'
+    out.source = lines.join(eol)
+    return out
+}
+
+export function richParts(source: string): RawPart[] {
+    const { source: src, at } = extractProps(source)
+    const lines = src.split(/\r?\n/)
+    const parts: RawPart[] = []
+    for (const t of md.parse(src, {})) {
+        if (t.level !== 0 || !t.map || t.nesting === -1) continue
+        parts.push({ md: lines.slice(t.map[0], t.map[1]).join('\n'), props: at[t.map[0]] })
+    }
+    return parts
+}
+
 function parseUncached(input: string): LegalDoc {
-    const { source, at } = extractProps(blankFrontmatter(input))
+    const front = takeFrontParts(blankFrontmatter(input))
+    const { source, at } = extractProps(front.source)
     const { config, warnings } = readConfig(source)
+    warnings.push(...front.warnings)
     const lines = source.split(/\r?\n/)
     const tokens = md.parse(source, {})
 
@@ -309,7 +397,14 @@ function parseUncached(input: string): LegalDoc {
     }
 
     doc.preamble = preambleRanges.map(([a, b]) => lines.slice(a, b).join('\n')).join('\n\n')
-    if (preambleRanges.some(([a]) => at[a])) doc.preambleParts = preambleRanges.map(([a, b]) => ({ md: lines.slice(a, b).join('\n'), props: at[a] }))
+    if (preambleRanges.some(([a]) => at[a]) || front.toc !== undefined)
+        doc.preambleParts = preambleRanges.map(([a, b]) => ({ md: lines.slice(a, b).join('\n'), props: at[a] }))
+    if (front.toc !== undefined) {
+        doc.toc = { line: front.toc }
+        const before = preambleRanges.filter(([a]) => a < front.toc!).length
+        doc.preambleParts!.splice(before, 0, { md: '', toc: true })
+    }
+    if (front.cover) doc.cover = { line: front.cover.line, end: front.cover.end, parts: richParts(front.cover.md) }
     number(doc)
     return doc
 }

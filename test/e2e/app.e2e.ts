@@ -189,6 +189,61 @@ describe('画面', () => {
         await win.evaluate(`window.api.setRepoPdfCert(${JSON.stringify(dir)}, null)`)
     })
 
+    it('表紙と目次：PDF の 1 ページ目が表紙で、目次の番号がその条のあるページと合う', async () => {
+        const out = join(tmp, 'cover-toc.pdf')
+        await app.evaluate(({ dialog }, path) => {
+            dialog.showSaveDialog = (async () => ({ canceled: false, filePath: path })) as typeof dialog.showSaveDialog
+        }, out)
+        const source = [
+            '# 就業規則',
+            '',
+            '::: cover',
+            '{center size=26pt}',
+            '表紙の題名',
+            ':::',
+            '',
+            '[[_TOC_]]',
+            '',
+            '## 総則',
+            '',
+            '### 目的',
+            '- 本文',
+            '',
+            '{break}',
+            '## 服務',
+            '',
+            '### 規律',
+            '- 本文',
+            '',
+        ].join('\n')
+        const req = { kind: 'doc', format: 'pdf', source, name: 'x', dir, docPath: DOC, sign: true, style: { pageNumbers: true } }
+        await win.evaluate(`window.api.exportFile(${JSON.stringify(req)})`)
+        const bytes = new Uint8Array(fs.readFileSync(out))
+        expect(listSignatures(bytes).length).toBe(1)
+        const { PDF } = await import('@libpdf/core')
+        const pages = (await PDF.load(bytes)).extractText().map((p) => p.text.normalize('NFKC').replace(/\s+/g, ''))
+        expect(pages.length).toBe(4)
+        expect(pages[0]).toContain('表紙の題名')
+        expect(pages[0]).not.toContain('/')
+        expect(pages[1]).toContain('目次')
+        expect(pages[1]).toMatch(/第1条\(目的\)2/)
+        expect(pages[1]).toMatch(/第2条\(規律\)3/)
+        expect(pages[1]).toContain('1/3')
+        expect(pages[2]).toContain('目的')
+        expect(pages[3]).toContain('規律')
+        expect(pages[3]).toContain('3/3')
+        const doc = await PDF.load(bytes)
+        const refs = doc.getPages().map((p) => p.ref.toString())
+        const targets = doc
+            .getPage(1)!
+            .getLinkAnnotations()
+            .map((l) => {
+                const a = l.getAction()
+                return a?.type === 'goto' ? refs.indexOf(String(a.destination.page)) : -1
+            })
+        expect(targets).toEqual([2, 2, 3, 3])
+    })
+
     it('電子署名：挿入メニューから丸印を作って署名欄に入れると、プレビューに印影が出る', async () => {
         await store(`s.view = 'docs'`)
         await store(`s.openDoc(${JSON.stringify(DOC)})`)

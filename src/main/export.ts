@@ -1,4 +1,5 @@
 import { BrowserWindow, dialog } from 'electron'
+import { PDF } from '@libpdf/core'
 import { t } from '../shared/i18n'
 import { promises as fsp } from 'node:fs'
 import { join } from 'node:path'
@@ -11,10 +12,11 @@ import { imagePathOf, inlineImages as findImages, rewriteImages } from '../share
 import { dataUrl, readImage } from './images'
 import { toHouritsu } from '../shared/houritsu'
 import { LEGAL_CSS } from '../shared/legal-css'
-import { withLineMarks } from '../shared/line-marks'
+import { MARK_RE, withLineMarks } from '../shared/line-marks'
 import { displayLine, MATH_CSS, mathKey, renderMath } from '../shared/math'
 import { docLang, parseLegal, type Item, type LegalDoc, type Paragraph } from '../shared/legal-parser'
-import { renderCompareTable, renderDoc, renderInlineDiff } from '../shared/legal-renderer'
+import { renderCompareTable, renderDoc, renderInlineDiff, type RenderOptions } from '../shared/legal-renderer'
+import { tocEntries, tocPagesFrom, type TocSpot } from '../shared/toc'
 import { cleanStyle, DEFAULT_STYLE, styleVars, type DocStyle } from '../shared/prefs'
 import { loadSettings } from './settings'
 import { deliver, type Builders } from './workflow'
@@ -57,6 +59,66 @@ async function toPdf(html: string, landscape: boolean, style: DocStyle): Promise
         })
     } finally {
         win.destroy()
+    }
+}
+
+async function markSpots(bytes: Uint8Array): Promise<Map<number, TocSpot>> {
+    const pdf = await PDF.load(bytes)
+    const out = new Map<number, TocSpot>()
+    pdf.extractText().forEach((p, page) => {
+        for (const l of p.lines)
+            for (const m of l.text.matchAll(MARK_RE)) {
+                const line = Number(m[2])
+                if (m[1] === 's' && !out.has(line)) out.set(line, { page, y: l.bbox.y + l.bbox.height })
+            }
+    })
+    return out
+}
+
+async function linkToc(bytes: Uint8Array, doc: LegalDoc, spots: Map<number, TocSpot>, offset: number): Promise<Uint8Array> {
+    const pdf = await PDF.load(bytes)
+    const pages = pdf.getPages()
+    const targets = tocEntries(doc)
+        .filter((e) => !e.deleted)
+        .map((e) => spots.get(e.line))
+    const links = pages.flatMap((p) => p.getLinkAnnotations().flatMap((l) => (l.getAction()?.type === 'uri' ? [] : [{ p, l }])))
+    if (links.length !== targets.length || targets.some((t) => !t || !pages[t.page + offset])) return bytes
+    links.forEach(({ p, l }, i) => {
+        const t = targets[i]!
+        const rect = l.rect
+        p.removeAnnotation(l)
+        p.addLinkAnnotation({ rect, destination: { page: pages[t.page + offset], type: 'XYZ', left: 0, top: t.y + 12, zoom: null } })
+    })
+    return pdf.save()
+}
+
+async function docToPdf(doc: LegalDoc, style: DocStyle, css: string, base: DocBase | undefined, marks = false): Promise<Uint8Array> {
+    const render = async (opts: RenderOptions, s: DocStyle, withMarks: boolean) => {
+        const body = renderDoc(doc, opts)
+        return toPdf(await inlineImages(page(withMarks ? withLineMarks(body) : body, doc.title, s, false, css, doc.lang), base), false, s)
+    }
+    const part = doc.cover ? 'body' : 'all'
+    let spots: Map<number, TocSpot> | undefined
+    if (doc.toc) {
+        try {
+            spots = await markSpots(await render({ part, tocPages: 'placeholder' }, style, true))
+        } catch {
+            spots = undefined
+        }
+    }
+    const body = await render({ part, tocPages: spots && tocPagesFrom(tocEntries(doc), spots) }, style, marks)
+    let out: Uint8Array = body
+    let offset = 0
+    if (doc.cover) {
+        const cover = await render({ part: 'cover' }, { ...style, pageNumbers: false }, marks)
+        offset = (await PDF.load(cover)).getPageCount()
+        out = await (await PDF.merge([cover, body])).save()
+    }
+    if (!spots) return out
+    try {
+        return await linkToc(out, doc, spots, offset)
+    } catch {
+        return out
     }
 }
 
@@ -181,7 +243,7 @@ export function makeBuilders(style: DocStyle, css = '', base?: DocBase, signer?:
     return {
         docPdf: async (src) => {
             const doc = parseLegal(src)
-            return sign(await toPdf(await inlineImages(page(renderDoc(doc), doc.title, style, false, css, doc.lang), base), false, style))
+            return sign(await docToPdf(doc, style, css, base))
         },
         docDocx: async (src) => {
             const doc = parseLegal(src)
@@ -223,9 +285,7 @@ const baseOf = (req: { dir?: string; docPath?: string }): DocBase | undefined =>
 export async function previewPdf(source: string, style: DocStyle, base?: DocBase): Promise<Uint8Array> {
     const { prefs } = await loadSettings()
     const s = cleanStyle(style ?? DEFAULT_STYLE)
-    const doc = parseLegal(String(source))
-    const html = page(withLineMarks(renderDoc(doc)), doc.title, s, false, prefs.typesetCss, doc.lang)
-    return toPdf(await inlineImages(html, baseOf(base ?? {})), false, s)
+    return docToPdf(parseLegal(String(source)), s, prefs.typesetCss, baseOf(base ?? {}), true)
 }
 
 async function build(req: ExportRequest, signer?: SignSession): Promise<Uint8Array> {

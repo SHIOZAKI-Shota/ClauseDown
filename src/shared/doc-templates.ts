@@ -17,6 +17,8 @@ const JA = {
     flow: ['  A[申請] --> B[承認]', '  B --> C[実施]'],
     figure: '図',
     appendix: '別表第一',
+    cover: (title: string) =>
+        `::: cover\n{right}\n社外秘\n\n{center size=26pt}\n${title}\n\n::: {center}\n社内規程 第　号\n\n　年　月　日 制定\n\n（組織名）\n:::\n:::\n`,
 }
 
 const EN: typeof JA = {
@@ -30,6 +32,8 @@ const EN: typeof JA = {
     flow: ['  A[Application] --> B[Approval]', '  B --> C[Implementation]'],
     figure: 'Figure',
     appendix: 'Schedule 1',
+    cover: (title: string) =>
+        `::: cover\n{right}\nConfidential\n\n{center size=26pt}\n${title}\n\n::: {center}\n[Subtitle]\n\n[Date]\n\n[Organization]\n:::\n:::\n`,
 }
 
 export const docTemplates = (lang: DocLang | undefined) => (lang && lang !== 'ja' ? EN : JA)

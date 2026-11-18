@@ -10,6 +10,7 @@ import { backRefs } from '@shared/doc-view'
 import { isEnabled } from '@shared/experiments'
 import { spellLang } from '@shared/legal-styles'
 import { docTemplates } from '@shared/doc-templates'
+import { titleEndLine } from '@shared/toc'
 import { useApp } from '~/stores/app'
 import { lastAtOrBefore, positionLabel } from '~/utils/legal-editor'
 import { toPlain } from '~/utils/ipc'
@@ -218,7 +219,23 @@ function addItemBranch() {
 function addPreamble() {
     editor.value?.insertPreamble()
 }
+const guides = computed(() => ({
+    chapter: app.prefs.guideChapter,
+    article: app.prefs.guideArticle,
+    block: app.prefs.guideBlock,
+    indent: app.prefs.guideIndent,
+}))
 const tpl = () => docTemplates(doc.value.lang)
+function addCover() {
+    if (doc.value.cover) return editor.value?.goToLine(doc.value.cover.line)
+    const body = tpl().cover(doc.value.title || '')
+    editor.value?.insertBelow(titleEndLine(text.value), body, body.indexOf('\n') + 1)
+}
+function addToc() {
+    if (doc.value.toc) return editor.value?.goToLine(doc.value.toc.line)
+    const after = doc.value.cover ? doc.value.cover.end : titleEndLine(text.value)
+    editor.value?.insertBelow(after, '[[_TOC_]]')
+}
 function addSupplement() {
     const { body, cursor } = tpl().supplement
     editor.value?.insertAfterLine(body, body.indexOf(cursor))
@@ -460,6 +477,8 @@ const insertMenu = computed<DropdownMenuItem[][]>(() => {
             },
         ],
         [
+            { label: m.cover, icon: 'i-lucide-book-open', onSelect: addCover },
+            { label: m.toc, icon: 'i-lucide-list-tree', onSelect: addToc },
             { label: m.preamble, icon: 'i-lucide-pilcrow', onSelect: addPreamble },
             { label: m.supplement, icon: 'i-lucide-book-plus', onSelect: addSupplement },
             { label: m.closing, icon: 'i-lucide-pen-line', onSelect: addClosing },
@@ -899,6 +918,7 @@ const viewModes = computed(() => [
                             v-model="text"
                             :legal="doc"
                             :wrap="app.prefs.lineWrap"
+                            :guides="guides"
                             :proofread="app.prefs.proofread"
                             :readonly="aiRunning"
                             :diff-base="savedText"
