@@ -235,6 +235,42 @@
                 color: var(--ink);
                 text-decoration: underline;
             }
+            nav.links a {
+                position: relative;
+            }
+            nav.links a[aria-current='true'] {
+                color: var(--ink);
+                font-weight: 500;
+            }
+            nav.links a[aria-current='true']::after {
+                content: '';
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: -19px;
+                height: 2px;
+                background: var(--brand);
+            }
+            .ext {
+                display: flex;
+                gap: 8px;
+            }
+            .ext a {
+                display: inline-flex;
+                align-items: center;
+                height: 32px;
+                padding: 0 12px;
+                border: 1px solid var(--line);
+                border-radius: var(--radius);
+                background: var(--sheet);
+                color: var(--ink);
+                font-size: 14px;
+                text-decoration: none;
+                white-space: nowrap;
+            }
+            .ext a:hover {
+                border-color: var(--ai);
+            }
             .theme {
                 display: grid;
                 place-items: center;
@@ -2029,8 +2065,38 @@
                 color: var(--ink-3);
             }
             footer .body {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 24px;
                 padding: 24px 56px;
                 background: var(--paper-2);
+            }
+            .foot-docs {
+                display: flex;
+                flex-direction: column;
+                min-width: 260px;
+                padding: 16px 24px;
+                border: 1px solid var(--line);
+                border-radius: var(--radius);
+                background: var(--sheet);
+                text-decoration: none;
+                transition: border-color 0.2s;
+            }
+            .foot-docs:hover {
+                border-color: var(--ai);
+            }
+            .foot-docs span {
+                color: var(--ink-3);
+                font-size: 13px;
+            }
+            .foot-docs b {
+                color: var(--ink);
+                font: 700 24px/1.5 var(--serif);
+            }
+            .foot-docs b::after {
+                content: ' →';
+                color: var(--brand);
             }
             footer .h {
                 padding: 24px 40px;
@@ -2145,6 +2211,14 @@
                 footer .h,
                 footer .body {
                     padding: 32px 24px;
+                }
+                footer .body {
+                    flex-direction: column;
+                    align-items: stretch;
+                    padding-bottom: 88px;
+                }
+                .foot-docs {
+                    min-width: 0;
                 }
                 header.top {
                     display: flex;
@@ -2286,7 +2360,8 @@
                     --peek: 180px;
                     padding: 0 16px;
                 }
-                nav.links {
+                nav.links,
+                .ext {
                     display: none;
                 }
                 header.top .l {
@@ -2363,9 +2438,11 @@
                     <a class="wide" href="#features" data-i18n="nav.features">機能の一覧</a>
                     <a href="#get" data-i18n="nav.get">ダウンロード</a>
                     <a class="wide" href="#faq" data-i18n="nav.faq">よくある質問</a>
+                </nav>
+                <div class="ext">
                     <a href="docs/" data-i18n="nav.manual">ドキュメント</a>
                     <a href="https://github.com/SHIOZAKI-Shota/ClauseDown" target="_blank" rel="noreferrer noopener">GitHub</a>
-                </nav>
+                </div>
                 <div class="ctl">
                 <div class="lang" id="lang">
                     <button class="lang-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="lang-menu" aria-label="Language / 言語" title="Language / 言語">
@@ -3160,13 +3237,16 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
             <footer>
                     <div class="h" data-i18n="footer.h">附則</div>
                     <div class="body">
-                        <p>© 2026 SHIOZAKI Shota.</p>
-                        <p>
-                            <a href="https://github.com/SHIOZAKI-Shota/ClauseDown" target="_blank" rel="noreferrer noopener">GitHub</a>　<a href="docs/" data-i18n="footer.manual">操作マニュアル</a>　<a
-                                href="https://github.com/SHIOZAKI-Shota/ClauseDown/blob/master/LICENSE"
-                                 target="_blank" rel="noreferrer noopener" data-i18n="footer.license">ライセンス</a
-                            >
-                        </p>
+                        <div class="meta">
+                            <p>© 2026 SHIOZAKI Shota.</p>
+                            <p>
+                                <a href="https://github.com/SHIOZAKI-Shota/ClauseDown" target="_blank" rel="noreferrer noopener">GitHub</a>　<a
+                                    href="https://github.com/SHIOZAKI-Shota/ClauseDown/blob/master/LICENSE"
+                                    target="_blank" rel="noreferrer noopener" data-i18n="footer.license">ライセンス</a
+                                >
+                            </p>
+                        </div>
+                        <a class="foot-docs" href="docs/"><span data-i18n="footer.manualLead">使い方を調べる</span><b data-i18n="footer.manual">ドキュメント</b></a>
                     </div>
             </footer>
             </section>
@@ -3678,7 +3758,8 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                 'faq.a6': 'At the moment only a build for Macs with Apple silicon is available.',
 
                 'footer.h': 'Supplementary Provisions',
-                'footer.manual': 'User manual',
+                'footer.manual': 'Docs',
+                'footer.manualLead': 'Learn how to use it',
                 'footer.license': 'License',
                 'pager.label': 'Page sections',
                 'pager.cover': 'Top',
@@ -5025,7 +5106,12 @@ Closes #2</span><span class="caret" id="issue-caret"></span></pre>
                 pagerPages.forEach((sec, i) => sec.getBoundingClientRect().top <= mid && (at = i))
                 pagerDots.forEach((a, i) => a.setAttribute('aria-current', String(i === at)))
                 pager.classList.toggle('away', at === 0)
+                let nav = -1
+                navPages.forEach((sec, i) => sec && sec.getBoundingClientRect().top <= mid && (nav = i))
+                navLinks.forEach((a, i) => a.setAttribute('aria-current', String(i === nav && at > 0)))
             }
+            const navLinks = [...document.querySelectorAll('nav.links a[href^="#"]')]
+            const navPages = navLinks.map((a) => document.getElementById(a.hash.slice(1)))
             addEventListener('scroll', pagerAt, { passive: true })
             addEventListener('resize', pagerAt)
             pagerAt()
