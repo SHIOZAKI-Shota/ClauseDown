@@ -6,7 +6,7 @@ export const AUTHOR = {
 
 export const PROJECT = {
     repo: 'https://github.com/SHIOZAKI-Shota/ClauseDown',
-    manual: 'https://clausedown.app/docs/manual/',
+    manual: 'https://clausedown.app/docs/',
 } as const
 
 /** 画面の言語に合ったマニュアルの URL。英語版は manual/en/ にある */
