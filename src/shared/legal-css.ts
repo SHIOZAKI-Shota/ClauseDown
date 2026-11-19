@@ -53,6 +53,19 @@ export const LEGAL_CSS = `
 .cd-indent-nested .cd-article .cd-attach.cd-lv2 { padding-left: 3em; }
 .cd-indent-nested .cd-article .cd-attach.cd-lv3 { padding-left: 4em; }
 .cd-indent-nested .cd-article .cd-attach.cd-lv4 { padding-left: 5em; }
+.cd-hang-text .cd-para, .cd-hang-text .cd-item { display: flex; text-indent: 0; }
+.cd-hang-text .cd-para { padding-left: 0; }
+.cd-hang-text .cd-item.cd-lv1 { padding-left: 1em; }
+.cd-hang-text .cd-item.cd-lv2 { padding-left: 2em; }
+.cd-hang-text .cd-item.cd-lv3 { padding-left: 3em; }
+.cd-hang-text .cd-item.cd-lv4 { padding-left: 4em; }
+.cd-hang-text.cd-indent-nested .cd-article .cd-para:not(.cd-first) { padding-left: 1em; }
+.cd-hang-text.cd-indent-nested .cd-article .cd-item.cd-lv1 { padding-left: 2em; }
+.cd-hang-text.cd-indent-nested .cd-article .cd-item.cd-lv2 { padding-left: 3em; }
+.cd-hang-text.cd-indent-nested .cd-article .cd-item.cd-lv3 { padding-left: 4em; }
+.cd-hang-text.cd-indent-nested .cd-article .cd-item.cd-lv4 { padding-left: 5em; }
+.cd-hang-text .cd-lbl { flex: none; white-space: pre; }
+.cd-hang-text .cd-txt { flex: 1; min-width: 0; }
 .cd-closing { margin-top: 2em; }
 
 /* 海外の書式。欧文書体・両端揃え・番号の幅に合わせたぶら下げ */

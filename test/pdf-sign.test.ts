@@ -6,7 +6,7 @@ import * as asn1js from 'asn1js'
 import * as pkijs from 'pkijs'
 import { describe, expect, it } from 'vitest'
 import { setLocale } from '../src/shared/i18n'
-import { assertValid, certSummary, createSelfSigned, keySigner, listSignatures, p12Signer, signPdf, TsaError } from '../src/main/pdf-sign'
+import { assertValid, certSummary, createSelfSigned, derSlice, keySigner, listSignatures, p12Signer, signPdf, TsaError } from '../src/main/pdf-sign'
 
 setLocale('ja')
 
@@ -25,11 +25,7 @@ function lastSignature(pdf: Uint8Array) {
     const ranges = [...text.matchAll(/\/ByteRange\s*\[\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s*\]/g)].at(-1)!
     const [a, b, c, d] = ranges.slice(1).map(Number)
     const signed = Buffer.concat([Buffer.from(pdf.subarray(a, a + b)), Buffer.from(pdf.subarray(c, c + d))])
-    const hexContents = text
-        .slice(a + b, c)
-        .replace(/[<>\s]/g, '')
-        .replace(/(00)+$/, '')
-    const cms = Buffer.from(hexContents, 'hex')
+    const cms = derSlice(Buffer.from(text.slice(a + b, c).replace(/[<>\s]/g, ''), 'hex'))
     const dict = text.slice(Math.max(0, a + b - 4000), a + b)
     return { signed, cms, dict }
 }
@@ -223,5 +219,16 @@ describe('PDF の電子署名', () => {
         const { key, cert } = await createSelfSigned({ name: 'A' })
         const fetch = (async () => new Response('busy', { status: 503 })) as typeof globalThis.fetch
         await expect(signPdf(PRINTED, { signer: await keySigner(key, cert), tsa: { url: 'https://tsa.example.com', fetch } })).rejects.toBeInstanceOf(TsaError)
+    })
+})
+
+describe('署名データの切り出し', () => {
+    it('末尾が 00 の署名データも、長さ欄のとおりに切り出す', () => {
+        const der = Buffer.from([0x30, 0x03, 0x02, 0x01, 0x00])
+        const padded = Buffer.concat([der, Buffer.alloc(16)])
+        expect(derSlice(padded)).toEqual(der)
+        const long = Buffer.concat([Buffer.from([0x30, 0x82, 0x01, 0x00]), Buffer.alloc(0x100), Buffer.alloc(32)])
+        expect(derSlice(long).length).toBe(4 + 0x100)
+        expect(derSlice(Buffer.from([0x04, 0x00]))).toEqual(Buffer.from([0x04, 0x00]))
     })
 })

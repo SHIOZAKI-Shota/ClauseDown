@@ -26,6 +26,8 @@ export const config: Messages['config'] = {
     paragraphNumeral: 'Paragraph numbers',
     paragraphIndent: 'Paragraph position',
     paragraphIndentOptions: { nested: 'Indented under the article', flush: 'Flush with the article (legislative)' },
+    paragraphHang: 'Line wrapping',
+    paragraphHangOptions: { char: 'Indent by one character (legislative)', text: 'Align with the text' },
     itemStyle: 'Items',
     subitemStyle: 'Sub-items',
     invalidYaml: (message) => `Invalid settings syntax: ${message}`,

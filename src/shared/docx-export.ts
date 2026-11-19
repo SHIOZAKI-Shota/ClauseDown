@@ -280,12 +280,23 @@ function attachBlocks(blocks: string[], indent: number, out: Block[], ctx: Ctx, 
 }
 
 const step = (doc: LegalDoc) => (doc.config.paragraph.indent === 'nested' ? 1 : 0)
+const emWidth = (s: string) => {
+    let w = 0
+    for (let i = 0; i < s.length; i++) {
+        const c = s.charCodeAt(i)
+        w += (c >= 0x20 && c <= 0x24f) || (c >= 0xff61 && c <= 0xff9f) ? 0.5 : 1
+    }
+    return w
+}
+const hangOf = (doc: LegalDoc, head: string, left: number) =>
+    doc.config.paragraph.hang === 'text' && head ? { left: left - 1 + emWidth(head), hanging: emWidth(head) } : { left, hanging: 1 }
 
 function items(list: Item[], out: Block[], ctx: Ctx, inherit?: CdProps) {
     const { doc } = ctx
     for (const it of list) {
         const props = mergeProps(inherit, it.props)
-        textParas(`${it.label}　`, it.text, it.level + 1 + step(doc), 1, out, ctx, { props })
+        const h = hangOf(doc, `${it.label}　`, it.level + 1 + step(doc))
+        textParas(`${it.label}　`, it.text, h.left, h.hanging, out, ctx, { props })
         attachBlocks(it.blocks, it.level + 1 + step(doc), out, ctx, it.blockProps, inherited(props))
         items(it.children, out, ctx, inherited(props))
     }
@@ -298,7 +309,8 @@ function paragraphs(list: Paragraph[], out: Block[], ctx: Ctx, head?: string, in
         const label = p.label ? `${p.label}　` : ''
         const left = lead ? 1 : 1 + step(doc)
         const props = mergeProps(inherit, idx === 0 ? first : undefined, p.props)
-        textParas(`${lead}${label}`, p.text, left, 1, out, ctx, { props })
+        const h = hangOf(doc, `${lead}${label}`, left)
+        textParas(`${lead}${label}`, p.text, h.left, h.hanging, out, ctx, { props })
         attachBlocks(p.blocks, 1 + step(doc), out, ctx, p.blockProps, inherited(props))
         items(p.items, out, ctx, inherited(props))
     })

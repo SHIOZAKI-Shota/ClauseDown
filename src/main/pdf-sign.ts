@@ -206,21 +206,29 @@ function pdfDate(raw: string | undefined): string | undefined {
     return `${y}-${mo}-${d}T${h}:${mi}:${s}`
 }
 
+export function derSlice(buf: Buffer): Buffer {
+    if (buf.length < 2 || buf[0] !== 0x30) return buf
+    const first = buf[1]
+    if (first < 0x80) return buf.subarray(0, Math.min(buf.length, 2 + first))
+    const n = first & 0x7f
+    if (n === 0 || n > 4 || buf.length < 2 + n) return buf
+    let len = 0
+    for (let i = 0; i < n; i++) len = len * 256 + buf[2 + i]
+    return buf.subarray(0, Math.min(buf.length, 2 + n + len))
+}
+
 export function listSignatures(bytes: Uint8Array): PdfSignatureInfo[] {
     const text = Buffer.from(bytes).toString('latin1')
     const out: PdfSignatureInfo[] = []
     for (const m of text.matchAll(/\/ByteRange\s*\[\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s*\]/g)) {
         const [a, b, c] = m.slice(1, 4).map(Number)
         if (!(a + b < c && c <= text.length)) continue
-        const hexContents = text
-            .slice(a + b, c)
-            .replace(/[<>\s]/g, '')
-            .replace(/(00)+$/, '')
+        const contents = derSlice(Buffer.from(text.slice(a + b, c).replace(/[<>\s]/g, ''), 'hex'))
         const around = text.slice(Math.max(0, m.index - 2000), Math.min(text.length, c + 2000))
         const signedAt = pdfDate(/\/M\s*\(([^)]*)\)/.exec(around)?.[1])
         let signer = ''
         try {
-            const info = new pkijs.ContentInfo({ schema: asn1js.fromBER(Buffer.from(hexContents, 'hex')).result })
+            const info = new pkijs.ContentInfo({ schema: asn1js.fromBER(contents).result })
             const sd = new pkijs.SignedData({ schema: info.content })
             const sid = sd.signerInfos[0]?.sid
             const certs = (sd.certificates ?? []).filter((x): x is pkijs.Certificate => x instanceof pkijs.Certificate)

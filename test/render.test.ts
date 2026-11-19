@@ -37,3 +37,41 @@ describe('docx', () => {
         expect(b.length).toBeGreaterThan(1000)
     })
 })
+
+describe('折り返しの位置', () => {
+    const contract = (hang: string) =>
+        [
+            '# 契約書',
+            '<!-- clausedown',
+            `paragraph: { numeral: arabic, hang: ${hang} }`,
+            'item: { style: paren }',
+            '-->',
+            '',
+            '### 目的',
+            '- 本文。',
+            '- 第2項。',
+            '  - 号。',
+            '',
+        ].join('\n')
+
+    it('本文の頭にそろえるときは、番号と本文を分けて描く', () => {
+        const html = renderDoc(parseLegal(contract('text')))
+        expect(html).toContain('cd-hang-text')
+        expect(html).toContain('<span class="cd-lbl"><span class="cd-num">2</span>　</span><span class="cd-txt">第2項。</span>')
+        expect(html).toContain('<span class="cd-lbl"><span class="cd-num">（1）</span>　</span><span class="cd-txt">号。</span>')
+    })
+
+    it('1 字下げ（既定）のときは今までどおり', () => {
+        const html = renderDoc(parseLegal(contract('char')))
+        expect(html).not.toContain('cd-hang-text')
+        expect(html).not.toContain('cd-lbl')
+        expect(parseLegal('# t\n### a\n- b\n').config.paragraph.hang).toBe('char')
+    })
+
+    it('Word でも番号の幅だけぶら下げる', async () => {
+        const { unzipSync, strFromU8 } = await import('fflate')
+        const xml = (hang: string) => docToDocx(parseLegal(contract(hang))).then((b) => strFromU8(unzipSync(new Uint8Array(b))['word/document.xml']))
+        expect(await xml('text')).toContain('w:hanging="315"')
+        expect(await xml('char')).not.toContain('w:hanging="315"')
+    })
+})

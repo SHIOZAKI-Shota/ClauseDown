@@ -12,16 +12,32 @@ export interface DocConfig {
         title: 'above' | 'inline' | 'none'
         numbering: 'continuous' | 'perChapter'
     }
-    paragraph: { firstNumbered: boolean; numeral: 'fullwidth' | 'arabic' | 'circled'; indent: 'nested' | 'flush' }
+    paragraph: { firstNumbered: boolean; numeral: 'fullwidth' | 'arabic' | 'circled'; indent: 'nested' | 'flush'; hang: 'char' | 'text' }
     item: { style: 'kanji' | 'paren' | 'circled' }
     subitem: { style: 'iroha' | 'paren' | 'roman' }
+}
+
+export const CONTRACT_PRESET: Omit<DocConfig, 'doc'> = {
+    chapter: { numeral: 'arabic' },
+    article: { numeral: 'arabic', title: 'inline', numbering: 'continuous' },
+    paragraph: { firstNumbered: false, numeral: 'arabic', indent: 'nested', hang: 'text' },
+    item: { style: 'paren' },
+    subitem: { style: 'iroha' },
+}
+
+export function presetOf(config: DocConfig): 'law' | 'contract' | null {
+    const same = (a: Omit<DocConfig, 'doc'>) =>
+        (['chapter', 'article', 'paragraph', 'item', 'subitem'] as const).every((k) => JSON.stringify(config[k]) === JSON.stringify(a[k]))
+    if (same(DEFAULT_CONFIG)) return 'law'
+    if (same(CONTRACT_PRESET)) return 'contract'
+    return null
 }
 
 export const DEFAULT_CONFIG: DocConfig = {
     doc: { style: 'auto', contractType: 'section' },
     chapter: { numeral: 'kanji' },
     article: { numeral: 'arabic', title: 'above', numbering: 'continuous' },
-    paragraph: { firstNumbered: false, numeral: 'fullwidth', indent: 'nested' },
+    paragraph: { firstNumbered: false, numeral: 'fullwidth', indent: 'nested', hang: 'char' },
     item: { style: 'kanji' },
     subitem: { style: 'iroha' },
 }
@@ -96,6 +112,14 @@ export const CONFIG_CHOICES = {
             return c().paragraphIndentOptions
         },
     },
+    'paragraph.hang': {
+        get label() {
+            return c().paragraphHang
+        },
+        get options() {
+            return c().paragraphHangOptions
+        },
+    },
     'item.style': {
         get label() {
             return c().itemStyle
@@ -119,6 +143,7 @@ export const JA_ONLY_KEYS: ConfigKey[] = [
     'paragraph.firstNumbered',
     'paragraph.numeral',
     'paragraph.indent',
+    'paragraph.hang',
     'item.style',
     'subitem.style',
 ]

@@ -29,12 +29,15 @@ const idOf = (a: Article) => {
 const isLatin = (doc: LegalDoc) => !!doc.styleId && doc.styleId !== 'ja'
 const sepOf = (doc: LegalDoc) => (isLatin(doc) ? ' ' : '　')
 const num = (label: string, doc: LegalDoc) => (label ? `<span class="cd-num">${esc(label)}</span>${sepOf(doc)}` : '')
+const hangText = (doc: LegalDoc) => !isLatin(doc) && doc.config.paragraph.hang === 'text'
+const line = (head: string, text: string, doc: LegalDoc) =>
+    head && hangText(doc) ? `<span class="cd-lbl">${head}</span><span class="cd-txt">${text}</span>` : `${head}${text}`
 
 function renderItems(items: Item[], doc: LegalDoc): string {
     return items
         .map(
             (it) =>
-                `<p${propsAttrs(it.props, `cd-item cd-lv${Math.min(it.level, 4)}`)} data-line="${it.line}">${num(it.label, doc)}${inline(it.text, doc)}</p>` +
+                `<p${propsAttrs(it.props, `cd-item cd-lv${Math.min(it.level, 4)}`)} data-line="${it.line}">${line(num(it.label, doc), inline(it.text, doc), doc)}</p>` +
                 blocks(it.blocks, it.level + 1, it.blockProps) +
                 renderItems(it.children, doc),
         )
@@ -51,7 +54,9 @@ function renderParagraphs(paras: Paragraph[], doc: LegalDoc, head?: string, head
             const lead = idx === 0 && headHtml ? headHtml : idx === 0 && head ? `<span class="cd-num">${esc(head)}</span>　` : ''
             const cls = lead ? 'cd-para cd-first' : 'cd-para'
             const body =
-                p.text || p.label || lead ? `<p${propsAttrs(p.props, cls)} data-line="${p.line}">${lead}${num(p.label, doc)}${inline(p.text, doc)}</p>` : ''
+                p.text || p.label || lead
+                    ? `<p${propsAttrs(p.props, cls)} data-line="${p.line}">${line(`${lead}${num(p.label, doc)}`, inline(p.text, doc), doc)}</p>`
+                    : ''
             return `${body}${blocks(p.blocks, 1, p.blockProps)}${renderItems(p.items, doc)}`
         })
         .join('')
@@ -125,7 +130,7 @@ export function renderDoc(doc: LegalDoc, opts: RenderOptions = {}): string {
     const part = opts.part ?? 'all'
     let html = isLatin(doc)
         ? `<article class="cd-doc cd-latin cd-style-${doc.styleId} cd-lang-${doc.lang}" lang="${doc.lang}">`
-        : `<article class="cd-doc cd-indent-${doc.config.paragraph.indent}">`
+        : `<article class="cd-doc cd-indent-${doc.config.paragraph.indent}${doc.config.paragraph.hang === 'text' ? ' cd-hang-text' : ''}">`
     if (part !== 'body') html += renderCover(doc)
     if (part === 'cover') return html + `</article>`
     const entries = doc.toc ? tocEntries(doc) : []

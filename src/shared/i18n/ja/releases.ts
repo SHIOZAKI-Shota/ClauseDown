@@ -11,6 +11,7 @@ export const releases = {
     allDocsDue: 'すべての文書の期日・有効期間',
     pane: '期日・有効期間・納品',
     hideTimeline: 'タイムラインを隠す',
+    resizeTimeline: 'ドラッグでタイムラインの高さを変更（ダブルクリックで元に戻す）',
     showTimeline: 'タイムラインを出す',
     due: '期日',
     addDueHere: 'この文書の期日の追加',

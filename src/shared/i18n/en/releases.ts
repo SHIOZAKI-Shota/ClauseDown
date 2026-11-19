@@ -12,6 +12,7 @@ export const releases: Messages['releases'] = {
     allDocsDue: 'Due dates & validity periods of all documents',
     pane: 'Due dates, validity & delivery',
     hideTimeline: 'Hide timeline',
+    resizeTimeline: 'Drag to resize the timeline (double-click to reset)',
     showTimeline: 'Show timeline',
     due: 'Due dates',
     addDueHere: 'Add a due date for this document',

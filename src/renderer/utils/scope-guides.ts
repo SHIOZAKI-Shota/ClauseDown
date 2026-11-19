@@ -158,7 +158,7 @@ export function scopeGuides(
         { decorations: (v) => v.decorations },
     )
 
-    return [field, opts.chapter || opts.article ? scopeGutter : [], opts.block || opts.indent ? decorations : []]
+    return [field, opts.chapter || opts.article ? scopeGutter : [], decorations]
 }
 
 interface BandPart {
@@ -203,6 +203,13 @@ class BandMarker extends GutterMarker {
 const BLOCK_STEP = 14
 const BASE_PAD = 6
 
+const HANG_RE = /^( *)(?:[-*+] +|\d+[.)] +)?/
+
+export function hangOf(text: string): number {
+    if (!text.trim()) return 0
+    return HANG_RE.exec(text)![0].length
+}
+
 function guideDecorations(view: EditorView, st: ScopeState, opts: GuideOptions): DecorationSet {
     const { scopes, line: cur } = st
     const active = opts.block ? innermostBlock(scopes.blocks, cur) : undefined
@@ -222,9 +229,10 @@ function guideDecorations(view: EditorView, st: ScopeState, opts: GuideOptions):
             }
             const pad = BASE_PAD + depth * BLOCK_STEP
             for (let j = 0; j < levels; j++) layers.push({ x: `calc(${pad}px + ${j * 2}ch)`, on: false })
-            if (layers.length || depth) {
+            const hang = hangOf(ln.text)
+            if (layers.length || depth || hang) {
                 const style = [
-                    depth ? `padding-left:${pad}px` : '',
+                    hang ? `padding-left:calc(${pad}px + ${hang}ch);text-indent:-${hang}ch` : depth ? `padding-left:${pad}px` : '',
                     layers.length
                         ? `background-image:${layers.map((l) => `linear-gradient(var(${l.on ? '--cd-guide-active' : '--cd-guide'}),var(${l.on ? '--cd-guide-active' : '--cd-guide'}))`).join(',')}`
                         : '',

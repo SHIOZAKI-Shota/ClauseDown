@@ -24,6 +24,8 @@ export const config = {
     paragraphNumeral: '項番号',
     paragraphIndent: '項の位置',
     paragraphIndentOptions: { nested: '条より下げる', flush: '条と同じ（法令式）' },
+    paragraphHang: '折り返し',
+    paragraphHangOptions: { char: '1 字下げ（法令式）', text: '本文の頭にそろえる' },
     itemStyle: '号',
     subitemStyle: '号の細分',
     invalidYaml: (message: string) => `設定の書き方に誤りがあります: ${message}`,

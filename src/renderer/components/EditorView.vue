@@ -3,7 +3,7 @@ import type { DropdownMenuItem } from '@nuxt/ui'
 import { parseLegal, articleTitle } from '@shared/legal-parser'
 import { renderDoc } from '@shared/legal-renderer'
 import { autoMerge } from '@shared/merge3'
-import { DEFAULT_CONFIG, readConfig, writeConfig, type DocConfig } from '@shared/config'
+import { CONTRACT_PRESET, DEFAULT_CONFIG, readConfig, writeConfig, type DocConfig } from '@shared/config'
 import { extOfMime } from '@shared/images'
 import { clauseInsertLine, type ClauseInsert } from '@shared/clauses'
 import { backRefs } from '@shared/doc-view'
@@ -527,14 +527,7 @@ function changeConfig(c: DocConfig) {
 function preset(kind: 'law' | 'contract') {
     const doc = { ...readConfig(text.value).config.doc }
     if (kind === 'law') return changeConfig({ ...structuredClone(DEFAULT_CONFIG), doc })
-    changeConfig({
-        doc,
-        chapter: { numeral: 'arabic' },
-        article: { numeral: 'arabic', title: 'inline', numbering: 'continuous' },
-        paragraph: { firstNumbered: false, numeral: 'arabic', indent: 'nested' },
-        item: { style: 'paren' },
-        subitem: { style: 'iroha' },
-    })
+    changeConfig({ doc, ...structuredClone(CONTRACT_PRESET) })
 }
 
 let lineNums: number[] = []
@@ -886,7 +879,6 @@ const viewModes = computed(() => [
             </UDropdownMenu>
             <UButton :label="t.editor.toolbar.saveVersion" icon="i-lucide-save" size="sm" :disabled="!changed" data-guide="save" @click="openSave" />
         </div>
-        <ConfigPanel v-if="showConfig" :config="doc.config" :warnings="doc.warnings" :style-id="doc.styleId" @change="changeConfig" @preset="preset" />
         <div ref="body" class="body">
             <PaneRail
                 v-if="outlinePane.state.value.collapsed"
@@ -1029,6 +1021,17 @@ const viewModes = computed(() => [
                     @close="layout.ai = false"
                 />
             </template>
+            <Transition name="sheet">
+                <ConfigPanel
+                    v-if="showConfig"
+                    :config="doc.config"
+                    :warnings="doc.warnings"
+                    :style-id="doc.styleId"
+                    @change="changeConfig"
+                    @preset="preset"
+                    @close="showConfig = false"
+                />
+            </Transition>
         </div>
         <footer class="cd-statusbar">
             <div class="issue-pills">
@@ -1224,6 +1227,7 @@ const viewModes = computed(() => [
 }
 
 .body {
+    position: relative;
     flex: 1;
     display: flex;
     min-height: 0;
@@ -1368,5 +1372,18 @@ const viewModes = computed(() => [
 
 .save.clean {
     color: var(--ui-color-success-500);
+}
+
+.sheet-enter-active,
+.sheet-leave-active {
+    transition:
+        transform 0.18s ease,
+        opacity 0.18s ease;
+}
+
+.sheet-enter-from,
+.sheet-leave-to {
+    transform: translateY(16px);
+    opacity: 0;
 }
 </style>

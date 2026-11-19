@@ -448,7 +448,7 @@ Turn off **Show proofreading (yellow squiggles)** under **Editor** in Settings t
 
 ### Formatting: changing how chapters and paragraphs are numbered
 
-Click **Formatting** to open the numbering options. You can choose the chapter numbering (第一章, 第1章 and so on), the position of article headings (on the line before the article, or after the article number), how paragraph numbers are written, the symbols for items and sub-items, and more. Click **Statute style** or **Contract style** to switch all of these at once. These settings apply only to this document.
+Click **Formatting** to open the numbering options. You can choose the chapter numbering (第一章, 第1章 and so on), the position of article headings (on the line before the article, or after the article number), how paragraph numbers are written, the symbols for items and sub-items, and more. Click **Statute style** or **Contract style** to switch all of these at once. These settings apply only to this document. Use **Line wrapping** to choose where the second and later lines of a paragraph or item start: **Indent by one character (legislative)** indents them one character from the number, and **Align with the text** lines them up with the text after the number. **Contract style** selects **Align with the text**.
 
 ![Formatting](images/editor-config.png)
 
@@ -775,7 +775,7 @@ The document's **Due dates & delivery** tab shows the document's due dates, effe
 
 ![The due dates and delivery tab](images/releases.png)
 
-- At the top is a timeline for this document only. Use **Add due date** to record a due date for this document. The validity period of each effective version is shown as a band below the row.
+- At the top is a timeline for this document only. Use **Add due date** to record a due date for this document. The validity period of each effective version is shown as a band at the top of the row. Drag the border between the timeline and the list below to change the timeline's height (double-click to reset).
 - The list on the left has three sections: **Due dates**, **Effective versions** and **Delivery records**. The version in force today is labeled **In force**. Effective versions that have a later version show the last day they are in force ("until …").
 - Choose an effective version to see its text on the right. There are buttons to open a comparison table against the previous effective version or the current document, and **Deliver** and **Remove effective date** buttons. **Remove effective date** removes only the effective date record; the version itself is kept.
 
@@ -919,7 +919,7 @@ Use **Type** on the toolbar to filter by type, and **Show done** to show or hide
 
 ### Validity periods and versions on a given date
 
-A version with an effective date is in force from that date until the day before the next version's effective date. This period is called the validity period and is shown as a band below the document's row on the timeline. The band for the last effective version extends to the right with no end.
+A version with an effective date is in force from that date until the day before the next version's effective date. This period is called the validity period and is shown as a band at the top of the document's row on the timeline. The band for the last effective version extends to the right with no end.
 
 Enter a date in the date field on the toolbar, or click the scale at the top, to see which versions were in force on that date.
 

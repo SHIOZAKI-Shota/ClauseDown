@@ -6,7 +6,7 @@ import * as pkijs from 'pkijs'
 import { afterEach, describe, expect, it } from 'vitest'
 import { setLocale } from '../src/shared/i18n'
 import { mynaStatus, openMynaSigner, setMynaNative, type MynaNative } from '../src/main/myna'
-import { createSelfSigned, signPdf } from '../src/main/pdf-sign'
+import { createSelfSigned, derSlice, signPdf } from '../src/main/pdf-sign'
 
 setLocale('ja')
 
@@ -48,13 +48,7 @@ describe('マイナンバーカードでの署名（カードの代わりの偽�
         const text = Buffer.from(out).toString('latin1')
         const [a, b, c, d] = [...text.matchAll(/\/ByteRange\s*\[\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s*\]/g)].at(-1)!.slice(1).map(Number)
         const data = Buffer.concat([Buffer.from(out.subarray(a, a + b)), Buffer.from(out.subarray(c, c + d))])
-        const cms = Buffer.from(
-            text
-                .slice(a + b, c)
-                .replace(/[<>\s]/g, '')
-                .replace(/(00)+$/, ''),
-            'hex',
-        )
+        const cms = derSlice(Buffer.from(text.slice(a + b, c).replace(/[<>\s]/g, ''), 'hex'))
         const sd = new pkijs.SignedData({ schema: new pkijs.ContentInfo({ schema: asn1js.fromBER(cms).result }).content })
         expect(await sd.verify({ signer: 0, data: new Uint8Array(data).buffer, checkChain: false })).toBe(true)
     })

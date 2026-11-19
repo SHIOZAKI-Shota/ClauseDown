@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseLegal } from '../src/shared/legal-parser'
-import { computeScopes, innermostBlock } from '../src/renderer/utils/scope-guides'
+import { computeScopes, hangOf, innermostBlock } from '../src/renderer/utils/scope-guides'
 
 const SRC = [
     '# 規則',
@@ -70,5 +70,15 @@ describe('範囲の線', () => {
         expect(none.chapters).toEqual([])
         expect(none.articles).toEqual([])
         expect(none.blocks.length).toBe(2)
+    })
+
+    it('折り返した行は、行頭の字下げと箇条書きの記号の後ろにそろえる', () => {
+        expect(hangOf('- 本文')).toBe(2)
+        expect(hangOf('  - 号')).toBe(4)
+        expect(hangOf('    - 細分')).toBe(6)
+        expect(hangOf('1. 番号付き')).toBe(3)
+        expect(hangOf('本文')).toBe(0)
+        expect(hangOf('  | 表 |')).toBe(2)
+        expect(hangOf('   ')).toBe(0)
     })
 })

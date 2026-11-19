@@ -430,7 +430,7 @@ const tipOf = (it: TimelineItem) =>
                                     }"
                                     :style="{
                                         left: `${xIn(pl) + shiftOf(pl)}px`,
-                                        top: `${pl.lane * LANE_H + 5}px`,
+                                        top: `${pl.lane * LANE_H + 5 + (bandRows.has(r.id) ? BAND_H : 0)}px`,
                                         width: pl.range ? `${pl.w}px` : undefined,
                                         paddingLeft: pl.range && xIn(pl) < 0 ? `${6 - xIn(pl)}px` : undefined,
                                         '--k': pl.color,
@@ -626,7 +626,7 @@ const tipOf = (it: TimelineItem) =>
 
 .band {
     position: absolute;
-    bottom: 4px;
+    top: 4px;
     height: 8px;
     border-radius: 2px;
     background: color-mix(in oklab, var(--ui-color-primary-500) 35%, var(--ui-bg));

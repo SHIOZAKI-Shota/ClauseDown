@@ -20,6 +20,31 @@ const loaded = ref(false)
 const delivering = ref<{ oid: string; baseOid?: string; date?: string } | null>(null)
 const removing = ref<EffectiveVersion | null>(null)
 const sel = ref<{ kind: 'v' | 'd' | 'e'; id: string } | null>(null)
+const STRIP_DEFAULT = 132
+const STRIP_MIN = 80
+const stripHeight = useStoredRef('clausedown.pane.releasesTimeline', STRIP_DEFAULT, { delay: 300 })
+const stripDragging = ref(false)
+let stripStartY = 0
+let stripStartH = 0
+function stripDown(e: PointerEvent) {
+    if (e.button !== 0) return
+    e.preventDefault()
+    stripStartY = e.clientY
+    stripStartH = stripHeight.value
+    stripDragging.value = true
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+    document.body.classList.add('cd-resizing-v')
+}
+function stripMove(e: PointerEvent) {
+    if (!stripDragging.value) return
+    const max = Math.max(STRIP_MIN, Math.round(window.innerHeight * 0.7))
+    stripHeight.value = Math.round(Math.min(max, Math.max(STRIP_MIN, stripStartH + (e.clientY - stripStartY))))
+}
+function stripUp() {
+    stripDragging.value = false
+    document.body.classList.remove('cd-resizing-v')
+}
+onBeforeUnmount(stripUp)
 
 const s = useSchedule()
 const showTimeline = useStoredRef('clausedown.releases.timeline', true)
@@ -136,6 +161,7 @@ const versionLabel = (oid: string, date?: string) => (date ? t.value.releases.ef
         <TimelineChart
             v-if="showTimeline"
             class="strip"
+            :style="{ height: `${stripHeight}px` }"
             :rows="[{ id: 'doc', label: '' }]"
             :items="timelineItems"
             :bands="bands"
@@ -162,6 +188,20 @@ const versionLabel = (oid: string, date?: string) => (date ? t.value.releases.ef
                 />
             </template>
         </TimelineChart>
+        <div
+            v-if="showTimeline"
+            class="strip-grip"
+            :class="{ dragging: stripDragging }"
+            role="separator"
+            aria-orientation="horizontal"
+            :aria-label="t.releases.resizeTimeline"
+            :title="t.releases.resizeTimeline"
+            @pointerdown="stripDown"
+            @pointermove="stripMove"
+            @pointerup="stripUp"
+            @pointercancel="stripUp"
+            @dblclick="stripHeight = STRIP_DEFAULT"
+        />
         <div class="releases">
             <SidePane :pane="listPane" side="left" :label="t.releases.pane" icon="i-lucide-calendar-check">
                 <template #bar>
@@ -414,8 +454,7 @@ const versionLabel = (oid: string, date?: string) => (date ? t.value.releases.ef
                             <dt>{{ t.signing.received.record }}</dt>
                             <dd>
                                 <div v-for="(x, i) in selDelivery.received" :key="i">
-                                    {{ t.signing.received.recordRow(x.file, x.by)
-                                    }}<span class="cd-muted">{{ t.common.sep }}{{ fmtDate(x.at, 'ymdhm') }}</span>
+                                    {{ t.signing.received.recordRow(x.file, x.by) }}<span class="cd-muted">{{ t.common.sep }}{{ fmtDate(x.at, 'ymdhm') }}</span>
                                     <div v-if="x.signers.length" class="cd-muted">{{ t.signing.received.signers(x.signers.join(t.common.sep)) }}</div>
                                 </div>
                             </dd>
@@ -506,8 +545,21 @@ const versionLabel = (oid: string, date?: string) => (date ? t.value.releases.ef
 
 .strip {
     flex: 0 0 auto;
-    height: 132px;
     border-bottom: 1px solid var(--ui-border);
+}
+
+.strip-grip {
+    position: relative;
+    z-index: 3;
+    flex: 0 0 auto;
+    height: 6px;
+    margin: -3px 0;
+    cursor: row-resize;
+}
+
+.strip-grip:hover,
+.strip-grip.dragging {
+    background: color-mix(in oklab, var(--ui-color-primary-500) 40%, transparent);
 }
 
 .releases {
