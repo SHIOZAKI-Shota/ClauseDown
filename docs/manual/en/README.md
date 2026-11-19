@@ -448,9 +448,21 @@ Turn off **Show proofreading (yellow squiggles)** under **Editor** in Settings t
 
 ### Formatting: changing how chapters and paragraphs are numbered
 
-Click **Formatting** to open the numbering options. You can choose the chapter numbering (第一章, 第1章 and so on), the position of article headings (on the line before the article, or after the article number), how paragraph numbers are written, the symbols for items and sub-items, and more. Click **Statute style** or **Contract style** to switch all of these at once. These settings apply only to this document. Use **Line wrapping** to choose where the second and later lines of a paragraph or item start: **Indent by one character (legislative)** indents them one character from the number, and **Align with the text** lines them up with the text after the number. **Contract style** selects **Align with the text**.
+Click **Formatting** to open the formatting sheet below the editor. These settings apply only to this document. To close the sheet, click **×** at the top right or click **Formatting** again.
+
+At the top of the sheet, **Format system** sets how articles are numbered and how cross-references are written (see [Overseas formats](#overseas-formats)). An English document is detected as **US/UK contract**, and the article numbers follow that system (Section 1, 1.1, (a)). With **US/UK contract**, use **Contract type** to choose whether articles are written as `Section 1`, `1.` or `Article 1`.
 
 ![Formatting](images/editor-config.png)
+
+For Japanese documents (the **Japan** format system), the sheet also has columns for choosing how chapters, articles, paragraphs and items are numbered. Choose each option by clicking a sample, such as `第一章`, `第1条` or `（1）`.
+
+- **Presets:** Click the **Statute style** or **Contract style** card to switch all options at once. The card that matches the current settings shows **In use**. If neither matches, the sheet shows **Customized**.
+- **Chapters:** Number (第一章, 第1章 and so on).
+- **Articles:** Number, heading position (on the line before the article, or after the article number) and numbering.
+- **Paragraphs:** First paragraph number, number, position and line wrapping.
+- **Items:** Item marker and sub-item marker.
+
+Use **Line wrapping** to choose where the second and later lines of a paragraph or item start: **Indent by one character (legislative)** indents them one character from the number, and **Align with the text** lines them up with the text after the number. **Contract style** selects **Align with the text**.
 
 #### Overseas formats
 
@@ -469,9 +481,9 @@ ClauseDown is not limited to Japanese documents. Use **Format system** at the to
 
 - The default is **Auto**. If at least 70% of the text is Latin letters and it is longer than 200 characters, the document is treated as **US/UK contract**; otherwise as **Japan**. The field shows the result, for example "Auto (US/UK contract)".
 - German and French documents are also detected as **US/UK contract** in **Auto**. Choose the system yourself.
-- With **US/UK contract**, use **Contract style** to choose whether articles are written as "Section 1", "1." or "Article 1".
+- With **US/UK contract**, use **Contract type** to choose whether articles are written as "Section 1", "1." or "Article 1".
 - Paragraphs are numbered, starting from the first paragraph, only in articles that have two or more paragraphs (the France and internal rules systems do not number paragraphs).
-- In systems other than Japan, the Japan-specific options, such as chapter numerals and item symbols, and the **Statute style** and **Contract style** presets are not used (they are grayed out).
+- In systems other than Japan, the Japan-specific options, such as chapter numerals and item symbols, and the **Statute style** and **Contract style** presets are not used (they are not shown on the sheet).
 - The Markdown syntax is the same for all systems. Cross-references can go to any depth, as in `[[name:2:1:3]]` (article, paragraph, item, sub-item).
 - In documents with an overseas format, the comparison table uses the document's language for its headings and placeholders (see [chapter 9](#9-creating-a-comparison-table)).
 - If you open a document with a chosen format system in ClauseDown 0.8 or earlier, a settings warning appears and the document is shown in the Japanese format. The text itself is not changed.
