@@ -63,6 +63,11 @@ export const labels = {
             label: 'Markdown（houritsu）に書き出す',
             description: '書き出しのメニューに、条番号・項番号を本文に書き込んだ houritsu の形式の Markdown に書き出す項目を出します。',
         },
+        cdsign: {
+            label: 'Markdown のまま署名をもらう（.cdsign）',
+            description:
+                'md-signature で文書に署名し、ClauseDown 署名依頼（.cdsign）を書き出します。相手は ClauseDown Sign で連署し、返されたファイルを取り込みます。署名検証のペインと、署名済みの文書の編集の制限も有効になります。',
+        },
     },
     aiProviders: {
         anthropic: {

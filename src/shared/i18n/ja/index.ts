@@ -25,6 +25,7 @@ import { styles } from './styles'
 import { checks } from './checks'
 import { labels } from './labels'
 import { signing } from './signing'
+import { mdsig } from './mdsig'
 
 export const ja = {
     common,
@@ -54,4 +55,5 @@ export const ja = {
     checks,
     labels,
     signing,
+    mdsig,
 }

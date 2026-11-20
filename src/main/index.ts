@@ -11,6 +11,7 @@ import * as docOps from './doc-ops'
 import * as repoHome from './repo-home'
 import { deliverWithDialog, exportFile, exportScheduleIcs, previewPdf } from './export'
 import * as sign from './sign-service'
+import * as mdsig from './mdsig'
 import * as signing from './signing'
 import * as verify from './verify'
 import { mynaStatus } from './myna'
@@ -177,6 +178,8 @@ function assertPicked(dir: unknown) {
 }
 
 const DIR_FIRST = new Set([
+    'verifyMd',
+    'pickCdsign',
     'exportAllowedSigners',
     'verifyCommits',
     'publishSigningKey',
@@ -529,6 +532,24 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
         return sign.saveReceivedPdf(win, input)
     },
     exportAllowedSigners: (dir) => verify.exportAllowedSigners(win, dir),
+    verifyMd: async (dir, path, text) => {
+        git.assertDocPath(path)
+        return mdsig.verifyDocText(dir, path, String(text))
+    },
+    trustMdKey: (signer, pubkey) => mdsig.trustMdKey(String(signer), String(pubkey)),
+    addMdKey: (input) => mdsig.addMdKey(input),
+    removeMdKey: (id) => mdsig.removeMdKey(String(id)),
+    setMdSigning: (patch) => mdsig.setMdSettings(patch),
+    exportCdsign: async (input) => {
+        await assertAllowedDir(input?.dir)
+        git.assertDocPath(input.path)
+        return mdsig.exportCdsign(win, input)
+    },
+    pickCdsign: (dir, deliveryId) => mdsig.pickCdsign(win, dir, String(deliveryId)),
+    saveCdsign: async (input) => {
+        await assertAllowedDir(input?.dir)
+        return mdsig.saveCdsign(win, input)
+    },
     verifyCommits: async (dir, oids) => {
         await assertAllowedDir(dir)
         return verify.verifyCommits(dir, Array.isArray(oids) ? oids.map(String) : [])

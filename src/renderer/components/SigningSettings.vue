@@ -3,8 +3,10 @@ import type { SegmentItem } from '~/components/SegmentSwitch.vue'
 import type { CertInfo, DeepPartial, MynaStatus, SealMeta, SigningStatus } from '@shared/api'
 import { TSA_PRESETS, type CommitSignMode, type KeyStorage, type PdfCertEntry, type SigningSettings } from '@shared/signing'
 import { FORGE_LABEL } from '@shared/forge'
+import { isEnabled } from '@shared/experiments'
 import { useApp } from '~/stores/app'
 import { useT } from '~/composables/useT'
+import { useStoredRef } from '~/composables/useStoredRef'
 
 const app = useApp()
 const t = useT()
@@ -22,6 +24,21 @@ async function refresh() {
 onMounted(refresh)
 
 const cfg = computed(() => status.value?.signing)
+type SignTab = 'versions' | 'pdf' | 'markdown' | 'seals'
+const cdsign = computed(() => isEnabled(app.settings, 'cdsign'))
+const mdCfg = computed(() => cfg.value?.md)
+const mdAppKey = computed(() => !!cfg.value?.commit.key && cfg.value.commit.key.storage !== 'chip')
+const storedTab = useStoredRef<SignTab>('clausedown.signing.tab', 'versions')
+const tab = computed<SignTab>({
+    get: () => (storedTab.value === 'markdown' && !cdsign.value ? 'versions' : storedTab.value),
+    set: (v) => (storedTab.value = v),
+})
+const tabItems = computed(() => [
+    { value: 'versions', label: s.value.tabs.versions },
+    { value: 'pdf', label: s.value.tabs.pdf },
+    ...(cdsign.value ? [{ value: 'markdown', label: s.value.tabs.markdown }] : []),
+    { value: 'seals', label: s.value.tabs.seals },
+])
 async function patch(p: DeepPartial<SigningSettings>) {
     const next = await app.run(() => window.api.setSigningPrefs(p))
     if (next && status.value) status.value = { ...status.value, signing: next }
@@ -223,259 +240,267 @@ async function refreshMyna() {
 
 <template>
     <div v-if="cfg" class="signing">
-        <h3 class="cd-subhead">{{ s.commit.heading }}</h3>
-        <SettingRow :label="s.commit.mode" :description="s.commit.modeDesc">
-            <SegmentSwitch :model-value="cfg.commit.mode" :items="modeItems" @update:model-value="(v) => v && patch({ commit: { mode: v } })" />
-        </SettingRow>
-        <template v-if="cfg.commit.mode === 'app'">
-            <SettingRow
-                v-if="status?.chip"
-                :label="s.commit.storage"
-                :description="cfg.commit.key && storage !== keyStorage ? s.commit.storageChange : s.commit.storageDesc"
-            >
-                <SegmentSwitch v-model="storage" :items="storageItems" />
+        <UTabs v-model="tab" :items="tabItems" :content="false" size="sm" variant="link" class="tabs" />
+        <template v-if="tab === 'versions'">
+            <h3 class="cd-subhead">{{ s.commit.heading }}</h3>
+            <SettingRow :label="s.commit.mode" :description="s.commit.modeDesc">
+                <SegmentSwitch :model-value="cfg.commit.mode" :items="modeItems" @update:model-value="(v) => v && patch({ commit: { mode: v } })" />
             </SettingRow>
-            <SettingRow :label="s.commit.key" :description="keyStorage === 'chip' ? s.commit.keyDescChip : s.commit.keyDesc">
-                <UBadge v-if="cfg.commit.key" :label="s.commit.storages[keyStorage]" color="neutral" variant="subtle" />
-                <code v-if="cfg.commit.key" class="fp">{{ cfg.commit.key.fingerprint }}</code>
-                <span v-else class="cd-muted">{{ s.commit.noKey }}</span>
-                <UButton
-                    v-if="cfg.commit.key"
-                    :label="s.commit.copyPublic"
-                    size="sm"
-                    color="neutral"
-                    variant="outline"
-                    icon="i-lucide-copy"
-                    @click="copyPublic"
-                />
-                <UButton
-                    :label="cfg.commit.key ? s.commit.recreate : s.commit.create"
-                    size="sm"
-                    :loading="busy"
-                    :variant="cfg.commit.key ? 'ghost' : 'solid'"
-                    :color="cfg.commit.key ? 'neutral' : 'primary'"
-                    @click="createKey"
-                />
-                <UButton v-if="cfg.commit.key" :label="s.commit.remove" size="sm" color="error" variant="ghost" @click="removeKey" />
-            </SettingRow>
-            <template v-if="cfg.commit.key">
+            <template v-if="cfg.commit.mode === 'app'">
                 <SettingRow
-                    v-for="acc in app.accounts.filter((a) => a.login)"
-                    :key="acc.base"
-                    :label="s.commit.register(FORGE_LABEL[acc.kind], acc.login ?? '')"
-                    :description="manual[acc.base] ? s.commit.manual : s.commit.registerDesc"
+                    v-if="status?.chip"
+                    :label="s.commit.storage"
+                    :description="cfg.commit.key && storage !== keyStorage ? s.commit.storageChange : s.commit.storageDesc"
                 >
-                    <span v-if="registeredAt(acc.base)" class="cd-muted">{{ s.commit.registered(registeredAt(acc.base)!) }}</span>
-                    <template v-if="manual[acc.base]">
-                        <UButton :label="s.commit.copyPublic" size="sm" color="neutral" variant="outline" icon="i-lucide-copy" @click="copyPublic" />
-                        <UButton
-                            :label="s.commit.openPage"
-                            size="sm"
-                            color="neutral"
-                            variant="outline"
-                            icon="i-lucide-external-link"
-                            @click="openManual(manual[acc.base])"
-                        />
-                    </template>
+                    <SegmentSwitch v-model="storage" :items="storageItems" />
+                </SettingRow>
+                <SettingRow :label="s.commit.key" :description="keyStorage === 'chip' ? s.commit.keyDescChip : s.commit.keyDesc">
+                    <UBadge v-if="cfg.commit.key" :label="s.commit.storages[keyStorage]" color="neutral" variant="subtle" />
+                    <code v-if="cfg.commit.key" class="fp">{{ cfg.commit.key.fingerprint }}</code>
+                    <span v-else class="cd-muted">{{ s.commit.noKey }}</span>
                     <UButton
-                        v-else-if="!registeredAt(acc.base)"
-                        :label="s.commit.registerButton"
+                        v-if="cfg.commit.key"
+                        :label="s.commit.copyPublic"
                         size="sm"
                         color="neutral"
                         variant="outline"
-                        @click="register(acc.base)"
+                        icon="i-lucide-copy"
+                        @click="copyPublic"
                     />
-                </SettingRow>
-            </template>
-        </template>
-        <SettingRow v-if="cfg.commit.mode === 'external'" :label="s.commit.external" :description="s.commit.externalDesc">
-            <code v-if="status?.external" class="fp">{{ status.external.format }} · {{ status.external.key }}</code>
-            <span v-else class="cd-muted">{{ s.commit.externalNone }}</span>
-            <UButton :label="s.commit.test" size="sm" color="neutral" variant="outline" @click="testExternal" />
-        </SettingRow>
-        <SettingRow v-if="cfg.commit.mode !== 'off'" :label="s.commit.localMerge" :description="s.commit.localMergeDesc">
-            <USwitch :model-value="cfg.commit.localMerge" @update:model-value="(v: boolean) => patch({ commit: { localMerge: v } })" />
-        </SettingRow>
-
-        <h3 class="cd-subhead">{{ s.approvals.heading }}</h3>
-        <SettingRow :label="s.approvals.sign" :description="cfg.commit.key ? s.approvals.signDesc : s.approvals.needKey">
-            <USwitch :model-value="cfg.approvals.sign" :disabled="!cfg.commit.key" @update:model-value="(v: boolean) => patch({ approvals: { sign: v } })" />
-        </SettingRow>
-        <SettingRow v-if="cfg.commit.key && app.repoDir" :label="s.approvals.publish" :description="s.approvals.publishDesc">
-            <UButton :label="s.approvals.publishButton" size="sm" color="neutral" variant="outline" @click="publishKey" />
-        </SettingRow>
-
-        <h3 class="cd-subhead">{{ s.pdf.heading }}</h3>
-        <p class="cd-muted note">{{ s.pdf.certsDesc }}</p>
-        <div v-for="c in certs" :key="c.id" class="cert">
-            <div class="cert-head">
-                <span class="cert-name">{{ c.label || s.pdf.kinds[c.kind] }}</span>
-                <span class="cd-chip">{{ s.pdf.kinds[c.kind] }}</span>
-                <UBadge v-if="cfg.pdf.defaultCert === c.id" :label="s.pdf.default" color="primary" variant="subtle" size="sm" />
-                <UBadge v-if="expiry(c)" :label="expiry(c)!.text" :color="expiry(c)!.level" variant="subtle" size="sm" />
-                <span class="grow" />
-                <UButton v-if="cfg.pdf.defaultCert !== c.id" :label="s.pdf.makeDefault" size="xs" color="neutral" variant="ghost" @click="makeDefault(c)" />
-                <UButton :label="s.pdf.edit" size="xs" color="neutral" variant="ghost" icon="i-lucide-pencil" @click="startEdit(c)" />
-                <UButton
-                    v-if="c.kind !== 'myna'"
-                    :label="s.pdf.exportCer"
-                    size="xs"
-                    color="neutral"
-                    variant="ghost"
-                    icon="i-lucide-download"
-                    @click="exportCer(c)"
-                />
-                <UButton :label="s.pdf.removeCert" size="xs" color="error" variant="ghost" @click="removeCert(c)" />
-            </div>
-            <dl v-if="c.cert">
-                <template v-for="[k, v] in certRows(c.cert)" :key="k">
-                    <dt>{{ k }}</dt>
-                    <dd>{{ v }}</dd>
-                </template>
-            </dl>
-            <template v-if="c.kind === 'myna'">
-                <div class="myna">
-                    <span class="cd-muted">{{ mynaLine }}</span>
-                    <UButton :label="s.myna.refresh" size="xs" color="neutral" variant="outline" icon="i-lucide-refresh-cw" @click="refreshMyna" />
-                </div>
-                <p class="cd-muted note">{{ s.myna.disclosure }}</p>
-            </template>
-            <p v-if="c.cert?.selfSigned" class="cd-muted note">{{ s.pdf.selfNote }}</p>
-            <div v-if="editing === c.id" class="edit">
-                <UFormField :label="s.pdf.label" :help="s.pdf.labelHint"><UInput v-model="draft.label" class="cd-w-input" /></UFormField>
-                <UFormField :label="s.pdf.reason" :help="s.pdf.overrideHint"
-                    ><UInput v-model="draft.reason" :placeholder="cfg.pdf.reason" class="cd-w-input"
-                /></UFormField>
-                <UFormField :label="s.pdf.location"><UInput v-model="draft.location" :placeholder="cfg.pdf.location" class="cd-w-input" /></UFormField>
-                <UFormField :label="s.pdf.contact"><UInput v-model="draft.contactInfo" :placeholder="cfg.pdf.contactInfo" class="cd-w-input" /></UFormField>
-                <div class="actions">
-                    <UButton :label="t.common.cancel" size="sm" color="neutral" variant="ghost" @click="editing = null" />
-                    <UButton :label="t.common.save" size="sm" @click="saveEdit" />
-                </div>
-            </div>
-        </div>
-        <p v-if="!certs.length" class="cd-muted note">{{ s.pdf.noCerts }}</p>
-        <UDropdownMenu :items="addItems">
-            <UButton :label="s.pdf.addCert" size="sm" color="neutral" variant="outline" icon="i-lucide-plus" class="self-start" />
-        </UDropdownMenu>
-
-        <div v-if="adding" class="cert add">
-            <UFormField :label="s.pdf.label" :help="s.pdf.labelHint"><UInput v-model="newLabel" class="cd-w-input" /></UFormField>
-            <template v-if="adding === 'p12'">
-                <input ref="p12Input" type="file" accept=".p12,.pfx,application/x-pkcs12" hidden @change="onP12" />
-                <UFormField :label="s.pdf.importP12">
-                    <UButton :label="s.pdf.pickP12" size="sm" color="neutral" variant="outline" icon="i-lucide-file-key" @click="pickP12" />
-                    <span v-if="p12File" class="cd-muted picked">{{ s.pdf.p12Picked }}</span>
-                </UFormField>
-                <UFormField v-if="p12File" :label="s.pdf.password">
-                    <UInput v-model="p12Password" type="password" autocomplete="off" class="cd-w-input" @keydown.enter="importP12" />
-                </UFormField>
-                <div class="actions">
-                    <UButton :label="t.common.cancel" size="sm" color="neutral" variant="ghost" @click="adding = null" />
-                    <UButton :label="s.pdf.importP12" size="sm" :disabled="!p12File" @click="importP12" />
-                </div>
-            </template>
-            <template v-else>
-                <UFormField :label="s.pdf.selfName"><UInput v-model="self.name" class="cd-w-input" /></UFormField>
-                <UFormField :label="s.pdf.selfOrg"><UInput v-model="self.org" class="cd-w-input" /></UFormField>
-                <UFormField :label="s.pdf.selfEmail"><UInput v-model="self.email" type="email" class="cd-w-input" /></UFormField>
-                <UFormField :label="s.pdf.selfYears" :help="s.pdf.selfNote">
-                    <UInput v-model.number="self.years" type="number" min="1" max="10" class="cd-w-small" />
-                </UFormField>
-                <div class="actions">
-                    <UButton :label="t.common.cancel" size="sm" color="neutral" variant="ghost" @click="adding = null" />
-                    <UButton :label="s.pdf.createSelf" size="sm" :disabled="!self.name.trim()" @click="createSelf" />
-                </div>
-            </template>
-        </div>
-
-        <template v-if="certs.length">
-            <SettingRow :label="s.pdf.onExport">
-                <USwitch :model-value="cfg.pdf.onExport" @update:model-value="(v: boolean) => patch({ pdf: { onExport: v } })" />
-            </SettingRow>
-            <SettingRow :label="s.pdf.onDeliver">
-                <USwitch :model-value="cfg.pdf.onDeliver" @update:model-value="(v: boolean) => patch({ pdf: { onDeliver: v } })" />
-            </SettingRow>
-            <SettingRow :label="s.pdf.reasonCommon" :description="s.pdf.commonDesc">
-                <UInput
-                    :model-value="cfg.pdf.reason"
-                    class="cd-w-input"
-                    @change="(e: Event) => patch({ pdf: { reason: (e.target as HTMLInputElement).value } })"
-                />
-            </SettingRow>
-            <SettingRow :label="s.pdf.locationCommon">
-                <UInput
-                    :model-value="cfg.pdf.location"
-                    class="cd-w-input"
-                    @change="(e: Event) => patch({ pdf: { location: (e.target as HTMLInputElement).value } })"
-                />
-            </SettingRow>
-            <SettingRow :label="s.pdf.contactCommon">
-                <UInput
-                    :model-value="cfg.pdf.contactInfo"
-                    class="cd-w-input"
-                    @change="(e: Event) => patch({ pdf: { contactInfo: (e.target as HTMLInputElement).value } })"
-                />
-            </SettingRow>
-            <SettingRow :label="s.pdf.tsa" :description="s.pdf.tsaDesc">
-                <USwitch :model-value="cfg.pdf.tsa.enabled" @update:model-value="(v: boolean) => patch({ pdf: { tsa: { enabled: v } } })" />
-            </SettingRow>
-            <template v-if="cfg.pdf.tsa.enabled">
-                <SettingRow :label="s.pdf.tsaPreset" :description="tsaPreset?.certified ? s.pdf.tsaCertified : undefined">
-                    <USelect :model-value="cfg.pdf.tsa.preset" :items="tsaItems" class="cd-w-input" @update:model-value="(v: string) => setPreset(v)" />
-                    <UButton :label="s.pdf.tsaTest" size="sm" color="neutral" variant="outline" @click="testTsa" />
-                </SettingRow>
-                <SettingRow :label="s.pdf.tsaUrl">
-                    <UInput
-                        :model-value="cfg.pdf.tsa.url"
-                        placeholder="https://"
-                        class="cd-w-input"
-                        @change="(e: Event) => patch({ pdf: { tsa: { url: (e.target as HTMLInputElement).value } } })"
+                    <UButton
+                        :label="cfg.commit.key ? s.commit.recreate : s.commit.create"
+                        size="sm"
+                        :loading="busy"
+                        :variant="cfg.commit.key ? 'ghost' : 'solid'"
+                        :color="cfg.commit.key ? 'neutral' : 'primary'"
+                        @click="createKey"
                     />
+                    <UButton v-if="cfg.commit.key" :label="s.commit.remove" size="sm" color="error" variant="ghost" @click="removeKey" />
                 </SettingRow>
-                <template v-if="tsaPreset?.auth">
-                    <SettingRow :label="s.pdf.tsaUser">
-                        <UInput
-                            :model-value="cfg.pdf.tsa.user"
-                            class="cd-w-input"
-                            @change="(e: Event) => patch({ pdf: { tsa: { user: (e.target as HTMLInputElement).value } } })"
-                        />
-                    </SettingRow>
-                    <SettingRow :label="s.pdf.tsaPassword">
-                        <UInput
-                            v-model="tsaPassword"
-                            type="password"
-                            autocomplete="off"
-                            :placeholder="status?.hasTsaPassword ? '••••••••' : ''"
-                            class="cd-w-input"
-                            @change="saveTsaPassword"
+                <template v-if="cfg.commit.key">
+                    <SettingRow
+                        v-for="acc in app.accounts.filter((a) => a.login)"
+                        :key="acc.base"
+                        :label="s.commit.register(FORGE_LABEL[acc.kind], acc.login ?? '')"
+                        :description="manual[acc.base] ? s.commit.manual : s.commit.registerDesc"
+                    >
+                        <span v-if="registeredAt(acc.base)" class="cd-muted">{{ s.commit.registered(registeredAt(acc.base)!) }}</span>
+                        <template v-if="manual[acc.base]">
+                            <UButton :label="s.commit.copyPublic" size="sm" color="neutral" variant="outline" icon="i-lucide-copy" @click="copyPublic" />
+                            <UButton
+                                :label="s.commit.openPage"
+                                size="sm"
+                                color="neutral"
+                                variant="outline"
+                                icon="i-lucide-external-link"
+                                @click="openManual(manual[acc.base])"
+                            />
+                        </template>
+                        <UButton
+                            v-else-if="!registeredAt(acc.base)"
+                            :label="s.commit.registerButton"
+                            size="sm"
+                            color="neutral"
+                            variant="outline"
+                            @click="register(acc.base)"
                         />
                     </SettingRow>
                 </template>
             </template>
-            <SettingRow v-if="certs.some((c) => c.kind !== 'myna')" :label="s.pdf.longTerm" :description="s.pdf.longTermDesc">
+            <SettingRow v-if="cfg.commit.mode === 'external'" :label="s.commit.external" :description="s.commit.externalDesc">
+                <code v-if="status?.external" class="fp">{{ status.external.format }} · {{ status.external.key }}</code>
+                <span v-else class="cd-muted">{{ s.commit.externalNone }}</span>
+                <UButton :label="s.commit.test" size="sm" color="neutral" variant="outline" @click="testExternal" />
+            </SettingRow>
+            <SettingRow v-if="cfg.commit.mode !== 'off'" :label="s.commit.localMerge" :description="s.commit.localMergeDesc">
+                <USwitch :model-value="cfg.commit.localMerge" @update:model-value="(v: boolean) => patch({ commit: { localMerge: v } })" />
+            </SettingRow>
+
+            <h3 class="cd-subhead">{{ s.approvals.heading }}</h3>
+            <SettingRow :label="s.approvals.sign" :description="cfg.commit.key ? s.approvals.signDesc : s.approvals.needKey">
                 <USwitch
-                    :model-value="cfg.pdf.longTerm"
-                    :disabled="!cfg.pdf.tsa.enabled"
-                    @update:model-value="(v: boolean) => patch({ pdf: { longTerm: v } })"
+                    :model-value="cfg.approvals.sign"
+                    :disabled="!cfg.commit.key"
+                    @update:model-value="(v: boolean) => patch({ approvals: { sign: v } })"
                 />
             </SettingRow>
+            <SettingRow v-if="cfg.commit.key && app.repoDir" :label="s.approvals.publish" :description="s.approvals.publishDesc">
+                <UButton :label="s.approvals.publishButton" size="sm" color="neutral" variant="outline" @click="publishKey" />
+            </SettingRow>
         </template>
+        <template v-else-if="tab === 'pdf'">
+            <p class="cd-muted note">{{ s.pdf.certsDesc }}</p>
+            <div v-for="c in certs" :key="c.id" class="cert">
+                <div class="cert-head">
+                    <span class="cert-name">{{ c.label || s.pdf.kinds[c.kind] }}</span>
+                    <span class="cd-chip">{{ s.pdf.kinds[c.kind] }}</span>
+                    <UBadge v-if="cfg.pdf.defaultCert === c.id" :label="s.pdf.default" color="primary" variant="subtle" size="sm" />
+                    <UBadge v-if="expiry(c)" :label="expiry(c)!.text" :color="expiry(c)!.level" variant="subtle" size="sm" />
+                    <span class="grow" />
+                    <UButton v-if="cfg.pdf.defaultCert !== c.id" :label="s.pdf.makeDefault" size="xs" color="neutral" variant="ghost" @click="makeDefault(c)" />
+                    <UButton :label="s.pdf.edit" size="xs" color="neutral" variant="ghost" icon="i-lucide-pencil" @click="startEdit(c)" />
+                    <UButton
+                        v-if="c.kind !== 'myna'"
+                        :label="s.pdf.exportCer"
+                        size="xs"
+                        color="neutral"
+                        variant="ghost"
+                        icon="i-lucide-download"
+                        @click="exportCer(c)"
+                    />
+                    <UButton :label="s.pdf.removeCert" size="xs" color="error" variant="ghost" @click="removeCert(c)" />
+                </div>
+                <dl v-if="c.cert">
+                    <template v-for="[k, v] in certRows(c.cert)" :key="k">
+                        <dt>{{ k }}</dt>
+                        <dd>{{ v }}</dd>
+                    </template>
+                </dl>
+                <template v-if="c.kind === 'myna'">
+                    <div class="myna">
+                        <span class="cd-muted">{{ mynaLine }}</span>
+                        <UButton :label="s.myna.refresh" size="xs" color="neutral" variant="outline" icon="i-lucide-refresh-cw" @click="refreshMyna" />
+                    </div>
+                    <p class="cd-muted note">{{ s.myna.disclosure }}</p>
+                </template>
+                <p v-if="c.cert?.selfSigned" class="cd-muted note">{{ s.pdf.selfNote }}</p>
+                <div v-if="editing === c.id" class="edit">
+                    <UFormField :label="s.pdf.label" :help="s.pdf.labelHint"><UInput v-model="draft.label" class="cd-w-input" /></UFormField>
+                    <UFormField :label="s.pdf.reason" :help="s.pdf.overrideHint"
+                        ><UInput v-model="draft.reason" :placeholder="cfg.pdf.reason" class="cd-w-input"
+                    /></UFormField>
+                    <UFormField :label="s.pdf.location"><UInput v-model="draft.location" :placeholder="cfg.pdf.location" class="cd-w-input" /></UFormField>
+                    <UFormField :label="s.pdf.contact"><UInput v-model="draft.contactInfo" :placeholder="cfg.pdf.contactInfo" class="cd-w-input" /></UFormField>
+                    <div class="actions">
+                        <UButton :label="t.common.cancel" size="sm" color="neutral" variant="ghost" @click="editing = null" />
+                        <UButton :label="t.common.save" size="sm" @click="saveEdit" />
+                    </div>
+                </div>
+            </div>
+            <p v-if="!certs.length" class="cd-muted note">{{ s.pdf.noCerts }}</p>
+            <UDropdownMenu :items="addItems">
+                <UButton :label="s.pdf.addCert" size="sm" color="neutral" variant="outline" icon="i-lucide-plus" class="self-start" />
+            </UDropdownMenu>
 
-        <h3 class="cd-subhead">{{ s.seals.heading }}</h3>
-        <p class="cd-muted note">{{ s.seals.desc }}</p>
-        <div class="seals">
-            <figure v-for="seal in seals" :key="seal.id" class="seal">
-                <img v-if="sealUrls[seal.id]" :src="sealUrls[seal.id]" :alt="seal.label" />
-                <figcaption>
-                    <span>{{ seal.label || s.seals.kinds[seal.kind] }}</span>
-                    <UButton icon="i-lucide-trash-2" size="xs" color="neutral" variant="ghost" :aria-label="s.seals.remove" @click="removeSeal(seal.id)" />
-                </figcaption>
-            </figure>
-            <span v-if="!seals.length" class="cd-muted">{{ s.seals.empty }}</span>
-        </div>
-        <UButton :label="s.seals.create" size="sm" color="neutral" variant="outline" icon="i-lucide-stamp" class="self-start" @click="sealOpen = true" />
-        <SealModal v-model:open="sealOpen" library @saved="loadSeals" />
+            <div v-if="adding" class="cert add">
+                <UFormField :label="s.pdf.label" :help="s.pdf.labelHint"><UInput v-model="newLabel" class="cd-w-input" /></UFormField>
+                <template v-if="adding === 'p12'">
+                    <input ref="p12Input" type="file" accept=".p12,.pfx,application/x-pkcs12" hidden @change="onP12" />
+                    <UFormField :label="s.pdf.importP12">
+                        <UButton :label="s.pdf.pickP12" size="sm" color="neutral" variant="outline" icon="i-lucide-file-key" @click="pickP12" />
+                        <span v-if="p12File" class="cd-muted picked">{{ s.pdf.p12Picked }}</span>
+                    </UFormField>
+                    <UFormField v-if="p12File" :label="s.pdf.password">
+                        <UInput v-model="p12Password" type="password" autocomplete="off" class="cd-w-input" @keydown.enter="importP12" />
+                    </UFormField>
+                    <div class="actions">
+                        <UButton :label="t.common.cancel" size="sm" color="neutral" variant="ghost" @click="adding = null" />
+                        <UButton :label="s.pdf.importP12" size="sm" :disabled="!p12File" @click="importP12" />
+                    </div>
+                </template>
+                <template v-else>
+                    <UFormField :label="s.pdf.selfName"><UInput v-model="self.name" class="cd-w-input" /></UFormField>
+                    <UFormField :label="s.pdf.selfOrg"><UInput v-model="self.org" class="cd-w-input" /></UFormField>
+                    <UFormField :label="s.pdf.selfEmail"><UInput v-model="self.email" type="email" class="cd-w-input" /></UFormField>
+                    <UFormField :label="s.pdf.selfYears" :help="s.pdf.selfNote">
+                        <UInput v-model.number="self.years" type="number" min="1" max="10" class="cd-w-small" />
+                    </UFormField>
+                    <div class="actions">
+                        <UButton :label="t.common.cancel" size="sm" color="neutral" variant="ghost" @click="adding = null" />
+                        <UButton :label="s.pdf.createSelf" size="sm" :disabled="!self.name.trim()" @click="createSelf" />
+                    </div>
+                </template>
+            </div>
+
+            <template v-if="certs.length">
+                <SettingRow :label="s.pdf.onExport">
+                    <USwitch :model-value="cfg.pdf.onExport" @update:model-value="(v: boolean) => patch({ pdf: { onExport: v } })" />
+                </SettingRow>
+                <SettingRow :label="s.pdf.onDeliver">
+                    <USwitch :model-value="cfg.pdf.onDeliver" @update:model-value="(v: boolean) => patch({ pdf: { onDeliver: v } })" />
+                </SettingRow>
+                <SettingRow :label="s.pdf.reasonCommon" :description="s.pdf.commonDesc">
+                    <UInput
+                        :model-value="cfg.pdf.reason"
+                        class="cd-w-input"
+                        @change="(e: Event) => patch({ pdf: { reason: (e.target as HTMLInputElement).value } })"
+                    />
+                </SettingRow>
+                <SettingRow :label="s.pdf.locationCommon">
+                    <UInput
+                        :model-value="cfg.pdf.location"
+                        class="cd-w-input"
+                        @change="(e: Event) => patch({ pdf: { location: (e.target as HTMLInputElement).value } })"
+                    />
+                </SettingRow>
+                <SettingRow :label="s.pdf.contactCommon">
+                    <UInput
+                        :model-value="cfg.pdf.contactInfo"
+                        class="cd-w-input"
+                        @change="(e: Event) => patch({ pdf: { contactInfo: (e.target as HTMLInputElement).value } })"
+                    />
+                </SettingRow>
+                <SettingRow :label="s.pdf.tsa" :description="s.pdf.tsaDesc">
+                    <USwitch :model-value="cfg.pdf.tsa.enabled" @update:model-value="(v: boolean) => patch({ pdf: { tsa: { enabled: v } } })" />
+                </SettingRow>
+                <template v-if="cfg.pdf.tsa.enabled">
+                    <SettingRow :label="s.pdf.tsaPreset" :description="tsaPreset?.certified ? s.pdf.tsaCertified : undefined">
+                        <USelect :model-value="cfg.pdf.tsa.preset" :items="tsaItems" class="cd-w-input" @update:model-value="(v: string) => setPreset(v)" />
+                        <UButton :label="s.pdf.tsaTest" size="sm" color="neutral" variant="outline" @click="testTsa" />
+                    </SettingRow>
+                    <SettingRow :label="s.pdf.tsaUrl">
+                        <UInput
+                            :model-value="cfg.pdf.tsa.url"
+                            placeholder="https://"
+                            class="cd-w-input"
+                            @change="(e: Event) => patch({ pdf: { tsa: { url: (e.target as HTMLInputElement).value } } })"
+                        />
+                    </SettingRow>
+                    <template v-if="tsaPreset?.auth">
+                        <SettingRow :label="s.pdf.tsaUser">
+                            <UInput
+                                :model-value="cfg.pdf.tsa.user"
+                                class="cd-w-input"
+                                @change="(e: Event) => patch({ pdf: { tsa: { user: (e.target as HTMLInputElement).value } } })"
+                            />
+                        </SettingRow>
+                        <SettingRow :label="s.pdf.tsaPassword">
+                            <UInput
+                                v-model="tsaPassword"
+                                type="password"
+                                autocomplete="off"
+                                :placeholder="status?.hasTsaPassword ? '••••••••' : ''"
+                                class="cd-w-input"
+                                @change="saveTsaPassword"
+                            />
+                        </SettingRow>
+                    </template>
+                </template>
+                <SettingRow v-if="certs.some((c) => c.kind !== 'myna')" :label="s.pdf.longTerm" :description="s.pdf.longTermDesc">
+                    <USwitch
+                        :model-value="cfg.pdf.longTerm"
+                        :disabled="!cfg.pdf.tsa.enabled"
+                        @update:model-value="(v: boolean) => patch({ pdf: { longTerm: v } })"
+                    />
+                </SettingRow>
+            </template>
+        </template>
+        <MdSigningSettings v-else-if="tab === 'markdown' && cdsign && mdCfg" :md="mdCfg" :app-key="mdAppKey" @changed="refresh" />
+        <template v-else>
+            <p class="cd-muted note">{{ s.seals.desc }}</p>
+            <div class="seals">
+                <figure v-for="seal in seals" :key="seal.id" class="seal">
+                    <img v-if="sealUrls[seal.id]" :src="sealUrls[seal.id]" :alt="seal.label" />
+                    <figcaption>
+                        <span>{{ seal.label || s.seals.kinds[seal.kind] }}</span>
+                        <UButton icon="i-lucide-trash-2" size="xs" color="neutral" variant="ghost" :aria-label="s.seals.remove" @click="removeSeal(seal.id)" />
+                    </figcaption>
+                </figure>
+                <span v-if="!seals.length" class="cd-muted">{{ s.seals.empty }}</span>
+            </div>
+            <UButton :label="s.seals.create" size="sm" color="neutral" variant="outline" icon="i-lucide-stamp" class="self-start" @click="sealOpen = true" />
+            <SealModal v-model:open="sealOpen" library @saved="loadSeals" />
+        </template>
     </div>
 </template>
 
@@ -492,6 +517,9 @@ async function refreshMyna() {
 }
 .cd-subhead:first-child {
     margin-top: 0;
+}
+.tabs {
+    margin-bottom: 12px;
 }
 .fp {
     font-size: 12px;

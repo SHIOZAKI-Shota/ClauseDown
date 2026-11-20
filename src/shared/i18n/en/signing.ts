@@ -29,6 +29,7 @@ export const signing: Messages['signing'] = {
     },
     certFile: 'Certificate',
     section: 'Digital signatures',
+    tabs: { versions: 'Versions and approvals', pdf: 'PDF', markdown: 'Markdown (experimental)', seals: 'Seals and signature images' },
     commit: {
         heading: 'Version signing',
         mode: 'Sign versions',

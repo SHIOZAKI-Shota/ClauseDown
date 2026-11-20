@@ -27,6 +27,7 @@ export const signing = {
     },
     certFile: '証明書',
     section: '電子署名',
+    tabs: { versions: '版・承認', pdf: 'PDF', markdown: 'Markdown（試験中）', seals: '印影・署名の画像' },
     commit: {
         heading: '版の署名',
         mode: '版に署名する',

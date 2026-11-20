@@ -28,6 +28,7 @@ const SLUGS = [
     'settings',
     'shortcuts',
     'signatures',
+    'experimental',
 ]
 
 const UI = {

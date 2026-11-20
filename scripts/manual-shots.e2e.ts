@@ -9,6 +9,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { _electron, type ElectronApplication, type Locator, type Page } from 'playwright-core'
 import electronPath from 'electron'
+import { createSoftwareAuthenticator, generateEd25519, signDocument } from '@mdsig/core'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const SRC = join(ROOT, 'scripts/manual-shots')
@@ -1298,6 +1299,7 @@ shot('signature-storage.png', async () => {
     await win.evaluate(`window.api.deleteSigningKey()`)
     await repoHome(dirs.rules)
     await store(`s.openSettings('setup', 'signature')`)
+    await win.getByRole('tab', { name: 'Versions and approvals' }).first().click()
     await win.getByText('Key storage').first().waitFor()
     await wait(1200)
     const rows = win.locator('.row').filter({ has: win.getByText(/^(Key storage|Signing key)$/) })
@@ -1314,14 +1316,62 @@ shot(['setup-signature.png', 'setup-signature-pdf.png'], async () => {
     await signingSetup()
     await repoHome(dirs.rules)
     await store(`s.openSettings('setup', 'signature')`)
+    await win.getByRole('tab', { name: 'Versions and approvals' }).first().click()
     await wait(1500)
     await save('setup-signature.png')
-    await win
-        .getByRole('heading', { name: 'PDF signing' })
-        .first()
-        .evaluate((el) => el.scrollIntoView({ block: 'start' }))
+    await win.getByRole('tab', { name: 'PDF', exact: true }).first().click()
     await wait(800)
     await save('setup-signature-pdf.png')
+})
+
+async function setExperiment(id: string, on: boolean) {
+    await store(`await s.saveSettings({ ...s.settings, experiments: { ...s.settings.experiments, ${JSON.stringify(id)}: ${on} } })`)
+    await wait(300)
+}
+
+shot(['setup-signature-md.png', 'editor-signatures.png'], async () => {
+    await signingSetup()
+    await setExperiment('cdsign', true)
+    const key = (await win.evaluate(`window.api.addMdKey({ kind: 'app', label: 'Acme Corp.', method: 'dns', signer: 'acme.example', selector: '2026' })`)) as {
+        id: string
+    }
+    await repoHome(dirs.rules)
+    await store(`s.openSettings('setup', 'signature')`)
+    await win.getByRole('tab', { name: 'Markdown (experimental)', exact: true }).first().click()
+    await wait(1200)
+    await save('setup-signature-md.png')
+
+    const us = await generateEd25519()
+    const text =
+        '# Services Agreement\n' +
+        EN_STYLE +
+        '\n### Services\n- The Provider shall provide the services described in Schedule 1.\n\n### Fees\n- The Client shall pay the fees within 30 days of the invoice date.\n\n## Signatures {.closing}\n\nAcme Corp.\n\nNorthwind Traders Ltd.\n'
+    const a = await signDocument(text, {
+        signer: us.signer,
+        method: 'tofu',
+        signerId: 'legal@acme.example',
+        role: 'author',
+        require: [{ method: 'tofu', signer: 'legal@northwind.example', role: 'approver' }],
+        extra: { x_clausedown: 'a'.repeat(40) },
+    })
+    const passkey = await createSoftwareAuthenticator('sign.clausedown.app')
+    const b = await signDocument(a.text, { signer: passkey, method: 'tofu', signerId: 'legal@northwind.example', role: 'approver' })
+    for (const block of [a, b]) await win.evaluate(([signer, pubkey]) => window.api.trustMdKey(signer, pubkey), [block.fields.signer, block.fields.pubkey])
+    const done = await tempDoc(dirs.contracts, 'services-agreement-signed.md', b.text)
+    await wait(1500)
+    await win
+        .getByRole('button', { name: /^Signature verification/ })
+        .first()
+        .click()
+    await wait(1500)
+    await save('editor-signatures.png')
+    await win
+        .getByRole('button', { name: /^Signature verification/ })
+        .first()
+        .click()
+    await done()
+    await win.evaluate((id) => window.api.removeMdKey(id), key.id)
+    await setExperiment('cdsign', false)
 })
 
 shot('pdf-sign-dialog.png', async () => {

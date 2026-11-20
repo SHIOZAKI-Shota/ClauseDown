@@ -11,6 +11,8 @@ import { isEnabled } from '@shared/experiments'
 import { spellLang } from '@shared/legal-styles'
 import { docTemplates } from '@shared/doc-templates'
 import { titleEndLine } from '@shared/toc'
+import { overallStatus, type MdVerifyReport } from '@shared/mdsig'
+import { layout as sigLayout, locks as sigLocksOf } from '@shared/mdsig-layout'
 import { useApp } from '~/stores/app'
 import { lastAtOrBefore, positionLabel } from '~/utils/legal-editor'
 import { toPlain } from '~/utils/ipc'
@@ -432,6 +434,64 @@ function toggleIssues(kind: 'all' | 'error' | 'warning') {
     }
 }
 watch(text, () => (issueNote.value = null))
+const cdsign = computed(() => isEnabled(app.settings, 'cdsign'))
+const sigOpen = useStoredRef('clausedown.signatures.open', false)
+const sigReport = shallowRef<MdVerifyReport | null>(null)
+const sigBusy = ref(false)
+const sigState = computed(() => (sigBusy.value ? 'busy' : overallStatus(sigReport.value)))
+const sigCount = computed(() => doc.value.signatures?.count ?? 0)
+const cdsignOpen = ref(false)
+const hasImages = computed(() => /!\[[^\]]*\]\((?!https?:)/.test(settled.value))
+const sigFull = computed(() => cdsign.value && !!doc.value.signatures && sigLocksOf(sigLayout(settled.value)).kind === 'full')
+let blockedNoted = false
+function noteBlocked() {
+    if (blockedNoted) return
+    blockedNoted = true
+    app.notify(t.value.mdsig.blocked, true)
+    setTimeout(() => (blockedNoted = false), 5000)
+}
+watch(sigFull, (full) => {
+    if (full) showConfig.value = false
+})
+const SIG_COLOR = { none: 'neutral', busy: 'neutral', verified: 'success', pending: 'warning', unresolved: 'warning', failed: 'error' } as const
+const SIG_ICON = {
+    none: 'i-lucide-pen-line',
+    busy: 'i-lucide-loader-circle',
+    verified: 'i-lucide-shield-check',
+    pending: 'i-lucide-shield-ellipsis',
+    unresolved: 'i-lucide-shield-question',
+    failed: 'i-lucide-shield-x',
+} as const
+let sigSeq = 0
+async function verifySignatures() {
+    const seq = ++sigSeq
+    if (!cdsign.value || !app.repoDir || !doc.value.signatures) {
+        sigReport.value = null
+        sigBusy.value = false
+        return
+    }
+    sigBusy.value = true
+    try {
+        const r = await window.api.verifyMd(app.repoDir, path, settled.value)
+        if (seq === sigSeq) sigReport.value = r
+    } catch (e) {
+        if (seq === sigSeq) app.notify(e instanceof Error ? e.message : String(e), true)
+    } finally {
+        if (seq === sigSeq) sigBusy.value = false
+    }
+}
+watch([settled, cdsign], () => void verifySignatures(), { immediate: true })
+async function trustSignature(signer: string, pubkey: string) {
+    await app.run(() => window.api.trustMdKey(signer, pubkey))
+    await verifySignatures()
+}
+function toggleSignatures() {
+    sigOpen.value = !sigOpen.value
+    if (sigOpen.value) issuesOpen.value = false
+}
+watch(issuesOpen, (v) => {
+    if (v) sigOpen.value = false
+})
 const showClauses = ref(false)
 const clauseLibrary = computed(() =>
     isEnabled(app.settings, 'clauseLibrary') ? (app.settings?.repos.find((r) => r.dir === app.settings?.clauseLibrary) ?? null) : null,
@@ -746,6 +806,7 @@ const exportMenu = computed<DropdownMenuItem[]>(() => {
         { label: m.exportWord, icon: 'i-lucide-file-type', onSelect: () => exportAs('docx') },
         { label: m.exportHtml, icon: 'i-lucide-file-code', onSelect: () => exportAs('html') },
         ...(isEnabled(app.settings, 'houritsuExport') ? [{ label: m.exportMd, icon: 'i-lucide-file-code-2', onSelect: () => exportAs('md') }] : []),
+        ...(cdsign.value ? [{ label: t.value.mdsig.export.menu, icon: 'i-lucide-signature', onSelect: () => (cdsignOpen.value = true) }] : []),
     ]
 })
 const viewModes = computed(() => [
@@ -809,8 +870,9 @@ const viewModes = computed(() => [
                 </UTooltip>
             </UFieldGroup>
             <UTooltip :text="compact ? t.editor.toolbar.insertTip : ''">
-                <UDropdownMenu :items="insertMenu" :content="{ onCloseAutoFocus: backToEditor }">
+                <UDropdownMenu :items="insertMenu" :disabled="sigFull" :content="{ onCloseAutoFocus: backToEditor }">
                     <UButton
+                        :disabled="sigFull"
                         :label="compact ? undefined : t.editor.toolbar.insert"
                         :aria-label="t.editor.toolbar.insert"
                         icon="i-lucide-square-plus"
@@ -831,6 +893,7 @@ const viewModes = computed(() => [
                     size="sm"
                     :color="showConfig ? 'primary' : 'neutral'"
                     :variant="showConfig ? 'soft' : 'outline'"
+                    :disabled="sigFull"
                     @click="showConfig = !showConfig"
                 >
                     <template v-if="doc.warnings.length" #trailing>
@@ -911,6 +974,7 @@ const viewModes = computed(() => [
                             :legal="doc"
                             :wrap="app.prefs.lineWrap"
                             :guides="guides"
+                            :sign-lock="cdsign"
                             :proofread="app.prefs.proofread"
                             :readonly="aiRunning"
                             :diff-base="savedText"
@@ -920,11 +984,21 @@ const viewModes = computed(() => [
                             @shortcut="onShortcut"
                             @history="(h) => (history = h)"
                             @images="addImages"
+                            @blocked="noteBlocked"
                             @issues="(l) => (issueList = l)"
                             @open-issues="issuesOpen ? (issuesOpen = false) : toggleIssues('all')"
                         />
                     </div>
                 </UContextMenu>
+                <SignaturePane
+                    v-if="cdsign && sigOpen"
+                    :report="sigReport"
+                    :busy="sigBusy"
+                    @line="(n) => editor?.goToLine(n - 1)"
+                    @trust="trustSignature"
+                    @recheck="verifySignatures"
+                    @close="sigOpen = false"
+                />
                 <IssuePane
                     v-if="issuesOpen"
                     v-model:filter="issueFilter"
@@ -1073,6 +1147,20 @@ const viewModes = computed(() => [
                         @click="goIssue(k.kind, 1)"
                     />
                 </div>
+                <UTooltip v-if="cdsign" :text="t.mdsig.status.button">
+                    <UButton
+                        :icon="SIG_ICON[sigState]"
+                        :label="String(sigCount)"
+                        size="xs"
+                        variant="soft"
+                        :color="SIG_COLOR[sigState]"
+                        class="count sig"
+                        :class="{ on: sigOpen, spin: sigState === 'busy' }"
+                        :disabled="mode === 'preview'"
+                        :aria-label="t.mdsig.status.aria(sigCount)"
+                        @click="toggleSignatures"
+                    />
+                </UTooltip>
             </div>
             <span class="pos"> <UIcon name="i-lucide-map-pin" />{{ position || '—' }} </span>
             <UPopover v-if="trail.trail.value && trail.article.value" v-model:open="trailOpen" :content="{ side: 'top', align: 'start' }">
@@ -1101,6 +1189,7 @@ const viewModes = computed(() => [
             </span>
         </footer>
         <SealModal v-model:open="sealOpen" @insert="insertSeal" />
+        <CdsignExportModal v-if="cdsignOpen" :path="path" :title="doc.title || path" :has-images="hasImages" @close="cdsignOpen = false" />
         <PropModal v-if="propFor" :sample="propFor.sample" :inline="propFor.inline" :can-inline="propFor.inline" @close="propFor = null" @apply="applyProp" />
         <ClauseLibraryModal
             v-if="showClauses && clauseLibrary"
@@ -1192,6 +1281,27 @@ const viewModes = computed(() => [
 
 .seg.count.on {
     box-shadow: inset 0 0 0 1px currentColor;
+}
+
+.sig {
+    height: 20px;
+    min-width: 46px;
+    border-radius: 999px;
+    font-variant-numeric: tabular-nums;
+}
+
+.sig.on {
+    box-shadow: inset 0 0 0 1px currentColor;
+}
+
+.sig.spin :deep(.iconify) {
+    animation: sig-spin 1s linear infinite;
+}
+
+@keyframes sig-spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .issue-note {

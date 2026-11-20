@@ -96,6 +96,11 @@ This manual is also available in Japanese: [日本語版](../README.md)
     - [Saving a returned signed PDF](#saving-a-returned-signed-pdf)
     - [Signing with a My Number Card](#signing-with-a-my-number-card)
     - [Inserting seals and signature images](#inserting-seals-and-signature-images)
+  - [20. Experimental features](#20-experimental-features)
+    - [Clause library](#clause-library)
+    - [Connecting to Ollama on the LAN](#connecting-to-ollama-on-the-lan)
+    - [Exporting to Markdown (houritsu)](#exporting-to-markdown-houritsu)
+    - [Getting signatures on Markdown (.cdsign)](#getting-signatures-on-markdown-cdsign)
 
 ---
 
@@ -358,7 +363,7 @@ To give an article a fixed number, write `{n=10}` after its heading to make it A
 
 Click **+ Article**, **+ Para.**, **+ Item** or **+ Sub-item** on the toolbar to add a line of that kind after the cursor. Press Tab to demote a paragraph to an item or an item to a sub-item, and Shift+Tab to promote it.
 
-**Insert** lets you add everything described in this manual: chapters, articles (branch-numbered, deleted, or with a set number), paragraphs and items (sub-items, set numbers, branch numbers), a cover page, a table of contents, a preamble, supplementary provisions, a closing and signature block, seals and signatures ([chapter 19](#inserting-seals-and-signature-images)), an appendix, tables (with merged cells), diagrams (such as flowcharts), math, images, cross-references, page breaks and formatting.
+**Insert** lets you add everything described in this manual: chapters, articles (branch-numbered, deleted, or with a set number), paragraphs and items (sub-items, set numbers, branch numbers), a cover page, a table of contents, a preamble, supplementary provisions, a closing and signature block, seals and signatures ([chapter 19](#inserting-seals-and-signature-images)), an appendix, tables (with merged cells), diagrams (such as flowcharts), math, images, cross-references, page breaks and formatting. With the experimental feature [![Experimental](images/flask.svg) Clause library](#clause-library) on, **From clause library…** appears too.
 
 You can also add an image by copying it (for example, a screenshot) and pasting it into the editor, or by dropping an image file onto the editor. The image is saved in `images/<document name>/` in the same folder as the document, and a line such as `![図](images/<document name>/<date and time>.png)` is inserted. When you save a version, the image is recorded with it and is included in PDF and Word exports. PNG, JPEG, GIF and WebP files up to 20 MB are supported.
 
@@ -638,7 +643,7 @@ Choose a format from **Export** to open a screen where you choose where to save 
 
 - **Export as PDF**, **Export as Word**: Exports the document as it will look when printed. Set the font, font size, margins and so on in **Print, PDF and Word formatting** in Settings ([chapter 17](#17-settings)).
 - **Export as HTML**: Creates an HTML file that looks the same as the preview. Images are embedded in the file, so the single file opens in a browser.
-- **Export as Markdown (houritsu)**: Creates Markdown with the article and paragraph numbers written into the text. This appears in the menu only when you turn it on under **Experimental features** in **Developer** in Settings ([chapter 15](#15-importing-and-exporting-houritsu-statutes)).
+- **Export as Markdown (houritsu)**: Creates Markdown with the article and paragraph numbers written into the text. This appears in the menu only when the experimental feature [![Experimental](images/flask.svg) Exporting to Markdown (houritsu)](#exporting-to-markdown-houritsu) is on ([chapter 15](#exporting)).
 
 When the export finishes, the file name appears at the bottom right with **Open** and **Show in Explorer** (**Show in Finder** on a Mac) buttons. **Open** opens the file in the app installed on your computer; **Show in Explorer** opens the folder and selects the file. The same applies to exporting comparison tables and exporting due dates to a calendar.
 
@@ -804,7 +809,7 @@ Choose an effective version and click **Deliver**.
 
 The delivery is recorded in **Delivery records**. If the remote is on GitHub or GitLab, you can also attach the deliverables to a release on the remote.
 
-If a PDF signing certificate is registered under **Digital signatures** in Settings, **Sign digitally** in the delivery dialog adds a digital signature to the delivered PDFs. With two or more certificates, choose which one next to it ([chapter 19](#adding-a-digital-signature-to-pdfs)). When the other party signs and returns a PDF, **Save the signed PDF you received** in the delivery record saves it to the delivery folder and adds it to the record ([chapter 19](#saving-a-returned-signed-pdf)).
+If a PDF signing certificate is registered under **Digital signatures** in Settings, **Sign digitally** in the delivery dialog adds a digital signature to the delivered PDFs. With two or more certificates, choose which one next to it ([chapter 19](#adding-a-digital-signature-to-pdfs)). When the other party signs and returns a PDF, **Save the signed PDF you received** in the delivery record saves it to the delivery folder and adds it to the record ([chapter 19](#saving-a-returned-signed-pdf)). To get signatures on the Markdown itself, export a signature request from the delivery record and import the returned file ([![Experimental](images/flask.svg) Getting signatures on Markdown](#getting-signatures-on-markdown-cdsign)).
 
 ---
 
@@ -1118,7 +1123,7 @@ Converted documents can be edited, saved as versions and used in comparison tabl
 
 ### Exporting
 
-Turn on **Export to Markdown (houritsu)** under **Experimental features** in **Developer** in Settings, and the item appears in the editor's **Export** menu. **Export** → **Export as Markdown (houritsu)** creates Markdown with article, paragraph and item numbers written into the text. For imported documents, the information at the top (statute number and so on) is restored as it was. Consecutive deleted articles are combined, as in 第三条から第五条まで　削除 ("Articles 3 to 5: Deleted").
+Turn on the experimental feature [![Experimental](images/flask.svg) Exporting to Markdown (houritsu)](#exporting-to-markdown-houritsu), and the item appears in the editor's **Export** menu. **Export** → **Export as Markdown (houritsu)** creates Markdown with article, paragraph and item numbers written into the text. For imported documents, the information at the top (statute number and so on) is restored as it was. Consecutive deleted articles are combined, as in 第三条から第五条まで　削除 ("Articles 3 to 5: Deleted").
 
 ---
 
@@ -1139,7 +1144,7 @@ Before you start, choose a provider under **AI** in Settings.
 - Under **AI provider**, choose Claude (Anthropic), an OpenAI-compatible service, Ollama (AI that runs on your computer), OpenRouter or GitHub Models.
 - Enter the API key the provider needs, or sign in. Click **Test connection** to check that it works.
 - Your document's contents are sent to the AI company you chose. If you do not want documents to leave your computer, choose Ollama.
-- To use Ollama running on a server on your company network, turn on **Connect to Ollama on the LAN** under **Experimental features** in **Developer** in Settings, and enter an address such as `http://192.168.x.x:11434/v1` in **Ollama address**. The same applies to OpenAI-compatible endpoints (such as LM Studio). LAN addresses are private addresses (10.x.x.x, 172.16–31.x.x, 192.168.x.x) and names ending in `.local` and similar. Documents travel over the LAN unencrypted.
+- To use Ollama running on a server on your company network, turn on the experimental feature [![Experimental](images/flask.svg) Connecting to Ollama on the LAN](#connecting-to-ollama-on-the-lan), and enter an address such as `http://192.168.x.x:11434/v1` in **Ollama address**. The same applies to OpenAI-compatible endpoints (such as LM Studio). LAN addresses are private addresses (10.x.x.x, 172.16–31.x.x, 192.168.x.x) and names ending in `.local` and similar. Documents travel over the LAN unencrypted.
 
 ### Using Claude Desktop or Claude Code
 
@@ -1199,10 +1204,7 @@ You cannot save versions until a name is set.
 - **Typesetting CSS**: The CSS that controls how the text looks in the preview and in PDFs (including comparison table PDFs). The field starts with the default CSS, which you edit. Changes appear in the preview immediately. You can find class names such as articles (`.cd-article`), article headings (`.cd-art-title`), paragraphs (`.cd-para`) and items (`.cd-item`) in the default CSS in the field. **Restore default** returns to the default CSS. It is not used for Word export.
 - **Reset appearance, editor and other settings**: Returns the theme, zoom, editor, sync, due date notifications, export, print formatting and typesetting CSS to their initial state. Your profile, sign-ins, AI settings and repository list are not changed.
 - **Reset everything**: Deletes all settings, sign-ins, AI API keys and the repository list saved on your computer, and restarts the app. Repository folders and documents are not deleted. Permissions granted on GitHub and GitLab remain; to remove them completely, revoke them on each site.
-- **Experimental features**: Turn on features that are not finalized yet to try them. Their names and behavior may change, or they may be removed.
-  - **Clause library**: Keep frequently used clauses (confidentiality, exclusion of organized crime groups and so on) in a library repository, and insert them into documents with **Insert** → **From clause library…** in the editor. After turning it on, choose the repository that holds the clauses under **Library repository**. Library documents are written, saved as versions and synced like any other document. When you choose a clause, it is inserted after the article with the cursor. If the clause contains references to other articles (such as `[[purpose]]`), a screen asks which article in the target document each one should point to. Articles with the same heading are preselected. If there is no matching article, you can either remove the reference and keep the heading text, or leave it as is.
-  - **Connect to Ollama on the LAN**: Allows LAN http addresses (such as `http://192.168.x.x:11434`) for Ollama and OpenAI-compatible endpoints ([chapter 16](#16-asking-ai-to-check-or-rewrite)).
-  - **Export to Markdown (houritsu)**: Adds **Export as Markdown (houritsu)** to the editor's **Export** menu ([chapter 15](#15-importing-and-exporting-houritsu-statutes)). Because houritsu is a format meant to be used together with a Git version history, exporting a single document has limited use.
+- **Experimental features**: Turn on features that are not finalized yet to try them. See [chapter 20](#20-experimental-features) for each feature.
 
 ### Repository settings
 
@@ -1279,6 +1281,10 @@ The **Digital signatures** section of Settings turns on four features. All of th
 - **Approval signing**: lets anyone tell who approved a draft, even if the record is edited afterwards.
 - **PDF signatures**: lets PDF viewers confirm that an exported PDF has not been changed and who signed it.
 - **Seal and signature images**: places a seal or handwritten signature image in the signature block. This is only a picture, not a cryptographic signature.
+
+You can also get the other party's signature on the Markdown itself, without a PDF ([![Experimental](images/flask.svg) Getting signatures on Markdown](#getting-signatures-on-markdown-cdsign)).
+
+The settings page is split into the **Versions and approvals**, **PDF** and **Seals and signature images** tabs. Version signing and approval signing are set on **Versions and approvals**. When the experimental feature [![Experimental](images/flask.svg) Getting signatures on Markdown](#getting-signatures-on-markdown-cdsign) is on, a **Markdown (experimental)** tab appears too.
 
 ### Signing versions
 
@@ -1419,6 +1425,8 @@ Save a PDF that the other party signed and sent back to the delivery folder, and
 
 The PDF is copied to the delivery folder as `<original name>_received.pdf`, and the file name, who saved it, when, and the signers are listed under **Signed PDFs received** in the record. If the delivery folder isn't on this PC, you choose where to save it. Signatures are not checked here, so check them in a PDF viewer such as Acrobat.
 
+You can also have the other party return a signature on the Markdown itself instead of a PDF ([![Experimental](images/flask.svg) Getting signatures on Markdown](#getting-signatures-on-markdown-cdsign)).
+
 **Signing order**: we recommend delivering a PDF you have already signed and having the other party sign last. That way the returned PDF carries both signatures. If they sign first and you also need to sign, sign it in a PDF viewer such as Acrobat.
 
 ### Signing with a My Number Card
@@ -1463,3 +1471,83 @@ If the cursor is outside the signature block (`## {closing}`), you're asked whet
 
 
 ![A seal inserted in the signature block](images/feature-signing.png)
+
+---
+
+## 20. Experimental features
+
+These features are not finalized yet. They are available only when you turn them on under **Experimental features** in **Developer** in Settings. Their names and behavior may change, or they may be removed. In this manual, links to experimental features are marked with ![Experimental](images/flask.svg).
+
+### Clause library
+
+Keep frequently used clauses (confidentiality, exclusion of organized crime groups and so on) in a library repository, and insert them into documents with **Insert** → **From clause library…** in the editor. After turning it on, choose the repository that holds the clauses under **Library repository**. Library documents are written, saved as versions and synced like any other document. When you choose a clause, it is inserted after the article with the cursor. If the clause contains references to other articles (such as `[[purpose]]`), a screen asks which article in the target document each one should point to. Articles with the same heading are preselected. If there is no matching article, you can either remove the reference and keep the heading text, or leave it as is.
+
+### Connecting to Ollama on the LAN
+
+Allows LAN http addresses (such as `http://192.168.x.x:11434`) for Ollama and OpenAI-compatible endpoints. See [chapter 16](#16-asking-ai-to-check-or-rewrite) for how to set it up. Documents travel over the LAN unencrypted.
+
+### Exporting to Markdown (houritsu)
+
+Adds **Export as Markdown (houritsu)** to the editor's **Export** menu. It creates Markdown with article, paragraph and item numbers written into the text ([chapter 15](#exporting)). Because houritsu is a format meant to be used together with a Git version history, exporting a single document has limited use.
+
+### Getting signatures on Markdown (.cdsign)
+
+Turn on **Get signatures on Markdown (.cdsign)** under **Experimental features** in **Developer** in Settings to use it.
+
+When you need a signature from another party, you can collect signatures on the Markdown itself instead of exporting a PDF. The signatures use [md-signature](https://mdsig.dev/), an open format, and the terms shown follow the md-signature specification (SPEC).
+
+1. You sign the document in ClauseDown and export a ClauseDown signature request (`.cdsign`).
+2. The other party opens the `.cdsign` file in ClauseDown Sign (`https://sign.clausedown.app/`, coming soon), reads it with article numbers, and co-signs it. Other tools that support md-signature (such as the `mdsig` command) can also co-sign.
+3. You import the returned file into the delivery record.
+
+A `.cdsign` file is the document of the version as it is, with signature blocks added at the end. Signature blocks are HTML comments, so they do not show on GitHub or similar sites either.
+
+**Setting up keys**: Register the keys to sign with on the **Markdown (experimental)** tab of **Digital signatures** in Settings.
+
+![Markdown signature settings](images/setup-signature-md.png)
+
+| Item | Description |
+|---|---|
+| Key | **App key (Ed25519)** or **Passkey (webauthn-es256)**. The app key is the key created with safeStorage as the storage on the **Versions and approvals** tab. Security chip keys cannot be used for md-signature. For a passkey, the signing page opens in your browser, where you pick or create one |
+| method | `dns` (the public key is published in a TXT record of your company's domain), `directory` (published through a key directory that confirmed your email address) or `tofu` (the public key is only embedded in the signature block and does not prove who you are) |
+| signer | A domain name, email address or name, depending on the method |
+| role, reason | Defaults for `role` (such as author) and `reason` in the signature block |
+| Add a timestamp | Gets a `tsa_token` from the time-stamping authority chosen on the **PDF** tab. Authorities that need an ID and password are not supported |
+| Signing pages | Pages opened to sign with a passkey. You can add and remove `https://` URLs |
+
+- For a `dns` key, the TXT record to publish (`_mdsig.<domain>`) is shown. Add it to your domain's DNS.
+- For a `directory` key, register the public key with the key directory (such as keys.mdsig.dev).
+- `git-hosting` cannot be chosen. ClauseDown registers the app key on GitHub as a signing key, but `https://github.com/<user>.keys`, which md-signature reads, lists only authentication keys.
+
+**Exporting a signature request**: Export with **Export** → **ClauseDown signature request (.cdsign)** in the editor, or with **Export signature request (.cdsign)** in a delivery record.
+
+- What gets signed is the saved version of the document. If there are unsaved changes, save a version first.
+- Under **Other party (require)**, enter who must co-sign, by method and signer. With several parties, choose **Co-sign in order from the top (step)** to set the order.
+- The agreement status stays `pending` until they co-sign.
+- **Copy a message for the other party** copies a request message that includes the ClauseDown Sign URL.
+- Images in the document are not covered by the signature and are not shown to the other party.
+
+**Importing a signed file**: Choose the returned `.cdsign` file with **Import signed file** in the delivery record.
+
+- ClauseDown checks that the body matches the version the request was exported from. A file that does not match cannot be imported.
+- It also shows whether the first signature block is a valid signature by a key registered in this app.
+- The file is saved in the delivery folder as `<original name>_received.cdsign`, and the signers and agreement status are recorded in the delivery record. A `pending` file can be imported, but it is not treated as complete.
+
+**Signature verification**: When you open a document with signature blocks, a **Signatures** button appears in the status bar to the right of the proofreading buttons. Click it to open the signature verification pane in the same place as the proofreading list.
+
+![Signature verification](images/editor-signatures.png)
+
+- For each signature block, it shows the signer, method, role, `ts` (the time the signer declared) and the result (valid, invalid, unresolved, malformed or unsupported). For passkey signatures it shows `rp_id`, and for timestamps the time certified by the time-stamping authority.
+- It shows the agreement status (`none`, `complete`, `pending` or `violated`) and the co-signatures still missing.
+- It lists content that is not displayed, such as HTML comments and invisible characters in the body. Signatures cover the source, not what is displayed, so they also cover content that is not displayed. Formatting settings (`<!-- clausedown -->`) appear here too.
+- The first time a `tofu` key is seen, its fingerprint is shown. Compare it with the signer before clicking **Trust**. After that, a different key for the same signer is reported as invalid.
+
+**Editing signed documents**: To avoid breaking signatures, what you can edit is limited.
+
+| Document | What you can edit |
+|---|---|
+| No signatures | Everything |
+| Only section signatures (`scope`) | Everything except the signed sections and the signature blocks |
+| A signature over the whole document | Nothing (**Insert** and **Formatting** are unavailable too) |
+
+Lines you cannot edit show a lock. Signature blocks are folded into "N signature blocks"; click it to show them.

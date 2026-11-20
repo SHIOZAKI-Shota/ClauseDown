@@ -1,4 +1,5 @@
 import MarkdownIt from 'markdown-it'
+import { blankChain, isSectionMarker, type SignatureChain } from './mdsig-chain'
 import { readConfig, type DocConfig } from './config'
 import { blockLines } from './blocks'
 import { onLocale, t as tr } from './i18n'
@@ -74,6 +75,7 @@ export interface LegalDoc {
     preambleParts?: RawPart[]
     cover?: { line: number; end: number; parts: RawPart[] }
     toc?: { line: number }
+    signatures?: SignatureChain
     chapters: Chapter[]
     refs: Record<string, Article>
     styleId: StyleId
@@ -230,7 +232,8 @@ export function richParts(source: string): RawPart[] {
 }
 
 function parseUncached(input: string): LegalDoc {
-    const front = takeFrontParts(blankFrontmatter(input))
+    const signed = blankChain(input)
+    const front = takeFrontParts(blankFrontmatter(signed.text))
     const { source, at } = extractProps(front.source)
     const { config, warnings } = readConfig(source)
     warnings.push(...front.warnings)
@@ -240,6 +243,7 @@ function parseUncached(input: string): LegalDoc {
     const refs: Record<string, Article> = Object.create(null)
     const { id: styleId, lang } = resolveStyle(config, source)
     const doc: LegalDoc = { title: '', config, warnings, preamble: '', chapters: [], refs, styleId, lang }
+    if (signed.chain) doc.signatures = signed.chain
     const preambleRanges: [number, number][] = []
     const propsAt = (line: number) => (line >= 0 ? at[line] : undefined)
 
@@ -284,7 +288,7 @@ function parseUncached(input: string): LegalDoc {
         const line = t.map ? t.map[0] : -1
 
         if (t.level === 0 && t.map && t.nesting !== -1 && t.type !== 'heading_open') {
-            if (t.type === 'html_block' && /<!--\s*clausedown/.test(t.content)) continue
+            if (t.type === 'html_block' && (/<!--\s*clausedown/.test(t.content) || isSectionMarker(t.content))) continue
             if (!chapter && seenTitle) preambleRanges.push([t.map[0], t.map[1]])
             if (chapter?.kind === 'closing' || chapter?.kind === 'appendix') {
                 const part = lines.slice(t.map[0], t.map[1]).join('\n')

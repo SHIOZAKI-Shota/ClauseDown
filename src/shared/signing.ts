@@ -1,3 +1,4 @@
+import { cleanMdSigning, DEFAULT_MD_SIGNING, type MdSigningSettings } from './mdsig'
 export type CommitSignMode = 'off' | 'app' | 'external'
 export type PdfCertKind = 'p12' | 'self' | 'myna'
 
@@ -73,6 +74,7 @@ export interface SigningSettings {
         tsa: { enabled: boolean; preset: string; url: string; user: string }
         longTerm: boolean
     }
+    md: MdSigningSettings
 }
 
 export const DEFAULT_SIGNING: SigningSettings = {
@@ -89,6 +91,7 @@ export const DEFAULT_SIGNING: SigningSettings = {
         tsa: { enabled: false, preset: 'digicert', url: TSA_PRESETS[0].url, user: '' },
         longTerm: false,
     },
+    md: DEFAULT_MD_SIGNING,
 }
 
 const bool = (v: unknown, d: boolean) => (typeof v === 'boolean' ? v : d)
@@ -177,6 +180,7 @@ export function cleanSigning(v: unknown): SigningSettings {
             tsa: { enabled: bool(tsa.enabled, false), preset, url: text(tsa.url, 500), user: text(tsa.user) },
             longTerm: bool(p.longTerm, false),
         },
+        md: cleanMdSigning(s.md),
     }
 }
 

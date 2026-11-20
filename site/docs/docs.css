@@ -477,6 +477,15 @@ kbd {
     border: 1px solid var(--line);
     border-radius: var(--radius);
 }
+.doc img[src$='flask.svg'] {
+    display: inline;
+    width: 1em;
+    height: 1em;
+    margin: 0 0.2em 0 0;
+    vertical-align: -0.15em;
+    border: 0;
+    border-radius: 0;
+}
 .doc blockquote {
     margin: 0 0 16px;
     padding: 4px 16px;

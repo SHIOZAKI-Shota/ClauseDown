@@ -8,6 +8,7 @@ import type { AiConfig, AiProvider } from './ai-providers'
 import type { HouritsuConversion } from './houritsu'
 import type { DueEvent, DueEventInput, EventKind, Occurrence, Period, RepoSchedule, ScheduleItem } from './schedule'
 import type { CertInfo, KeyStorage, PdfCertEntry, SigInfo, SigningSettings } from './signing'
+import type { AddMdKeyInput, ExportCdsignInput, MdKeyEntry, MdSigningPatch, MdVerifyReport, ReceivedCdsign } from './mdsig'
 import type { PolicyDoc, PolicyDraft } from './policy'
 
 export type { RepoRules, ReviewAction, ReviewEvent, AppPrefs, DocStyle }
@@ -223,7 +224,14 @@ export interface DeliveryRecord {
     memo: string
     items: DeliveryItem[]
     signed?: boolean
-    received?: { file: string; at: string; by: string; signers: string[] }[]
+    received?: {
+        file: string
+        at: string
+        by: string
+        signers: string[]
+        kind?: 'pdf' | 'cdsign'
+        agreement?: 'none' | 'complete' | 'pending' | 'violated' | 'invalid'
+    }[]
     files: string[]
     folder: string
     at: string
@@ -457,6 +465,14 @@ export interface Api {
     pickReceivedPdf(): Promise<ReceivedPdf | null>
     saveReceivedPdf(input: ReceivedPdfInput): Promise<string | null>
     exportAllowedSigners(dir: string): Promise<string | null>
+    verifyMd(dir: string, path: string, text: string): Promise<MdVerifyReport>
+    trustMdKey(signer: string, pubkey: string): Promise<void>
+    addMdKey(input: AddMdKeyInput): Promise<MdKeyEntry>
+    removeMdKey(id: string): Promise<void>
+    setMdSigning(patch: MdSigningPatch): Promise<void>
+    exportCdsign(input: ExportCdsignInput): Promise<string | null>
+    pickCdsign(dir: string, deliveryId: string): Promise<ReceivedCdsign | null>
+    saveCdsign(input: { path: string; dir: string; deliveryId: string }): Promise<string | null>
     listSeals(): Promise<SealMeta[]>
     saveSeal(meta: { kind: SealMeta['kind']; label: string }, png: Uint8Array): Promise<SealMeta>
     readSeal(id: string): Promise<Uint8Array>
