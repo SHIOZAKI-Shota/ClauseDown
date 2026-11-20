@@ -3,7 +3,7 @@ import { t } from '../shared/i18n'
 import type { AuthCallback } from 'isomorphic-git'
 import git from './igit'
 import { getToken, listCredentials, loadSettings } from './settings'
-import { baseLabel, GITHUB_BASE, knownBases, underBase, type ForgeBase, type GitLabHost } from '../shared/forge'
+import { baseLabel, knownBases, underBase, type ForgeBase, type GitLabHost } from '../shared/forge'
 import type { Identity } from '../shared/api'
 
 export function safeRemoteUrl(url: string): boolean {

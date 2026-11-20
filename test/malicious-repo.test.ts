@@ -97,7 +97,7 @@ describe('リモートから届く記録', () => {
     it('プルリクエストの番号は、正の整数のときだけ使う', () => {
         const ev = (pr: unknown) => ({ branch: '案/x', action: 'request', at: '2026-01-01', pr }) as never
         expect(prOf(ev(7))).toBe(7)
-        for (const bad of ['../../../victim/repo/pulls/7', '7', 7.5, -1, 0, {}, null]) expect(prOf(ev(bad)), String(bad)).toBeUndefined()
+        for (const bad of ['../../../victim/repo/pulls/7', '7', 7.5, -1, 0, {}, null]) expect(prOf(ev(bad)), JSON.stringify(bad)).toBeUndefined()
     })
 
     it('番号が正しくなければ、GitHub・GitLab の API を呼ばない', () => {

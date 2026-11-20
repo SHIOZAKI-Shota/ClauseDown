@@ -2,7 +2,6 @@ import type { KeyStorage } from '../shared/signing'
 import { createHash, createPrivateKey, createPublicKey, generateKeyPairSync, sign, verify, type KeyObject } from 'node:crypto'
 
 export const NS_GIT = 'git'
-export const NS_REVIEW = 'clausedown-review'
 
 const MAGIC = Buffer.from('SSHSIG')
 const BEGIN = '-----BEGIN SSH SIGNATURE-----'

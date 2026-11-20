@@ -10,7 +10,7 @@ import * as gl from './gitlab'
 import { RECORD, readRecords } from './records'
 import { loadCredential, loadSettings, updateSettings } from './settings'
 import { signingSettings } from './signing'
-import { blobOfPublicKey, commitPayload, fingerprintOf, sshVerify, tagPayload, NS_GIT } from './ssh-sig'
+import { blobOfPublicKey, commitPayload, fingerprintOf, sshVerify, NS_GIT } from './ssh-sig'
 import { getRules } from './workflow'
 import { loadPolicy } from './policy'
 
@@ -144,12 +144,6 @@ export async function verifyCommits(dir: string, oids: string[]): Promise<Record
         out[oid] = infoOf(signature, payload, ring)
     }
     return out
-}
-
-export async function verifyTag(dir: string, oid: string): Promise<SigInfo> {
-    const { object } = await git.readObject({ fs, dir, oid, format: 'content' })
-    const { payload, signature } = tagPayload(new TextDecoder().decode(object as Uint8Array))
-    return infoOf(signature, payload, await keyring(dir))
 }
 
 export async function forgePublicKeys(dir: string, login: string): Promise<string[]> {

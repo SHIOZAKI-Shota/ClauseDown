@@ -50,7 +50,11 @@ function findings(html: string): string[] {
                 if (name.startsWith('on')) out.push(`handler ${a.name}=${a.value.slice(0, 40)}`)
                 if (!SAFE_ATTR_NAME.test(a.name)) out.push(`odd attr name ${JSON.stringify(a.name)} on <${tag}>`)
                 if (URL_ATTRS.has(name)) {
-                    const v = a.value.replace(/[\u0000- ]/g, '').toLowerCase()
+                    const v = a.value
+                        .split('')
+                        .filter((c) => c.charCodeAt(0) > 32)
+                        .join('')
+                        .toLowerCase()
                     if (/^(javascript|vbscript|data|file|blob):/.test(v)) out.push(`url ${name}=${a.value.slice(0, 50)}`)
                     if ((tag === 'img' || tag === 'image') && /^(https?:)?\/\//.test(v)) out.push(`remote img ${a.value.slice(0, 50)}`)
                 }

@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeTheme, net, protocol, shell } from 'electron'
 import { t } from '../shared/i18n'
-import type { AiStatus, AppSettings, DocChangedEvent, McpConfig } from '../shared/api'
+import type { AiStatus, Api, AppSettings, DocChangedEvent, McpConfig } from '../shared/api'
+import { API_METHODS, type ApiMethod } from '../shared/api-methods'
 import { existsSync, statSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, resolve, sep } from 'node:path'
@@ -170,14 +171,14 @@ async function assertAllowedDir(dir: unknown, allowPicked = false): Promise<void
     throw new Error(t().errors.app.notRegistered)
 }
 
-const PICKED_OK = new Set(['openRepo', 'initRepo'])
-const DOC_PATH = new Set(['readDoc', 'writeDoc', 'createDoc', 'discardChanges'])
+const PICKED_OK = new Set<ApiMethod>(['openRepo', 'initRepo'])
+const DOC_PATH = new Set<ApiMethod>(['readDoc', 'writeDoc', 'createDoc', 'discardChanges'])
 
 function assertPicked(dir: unknown) {
     if (typeof dir !== 'string' || ![...pickedRoots].some((root) => under(norm(dir), root))) throw new Error(t().errors.app.repickFolder)
 }
 
-const DIR_FIRST = new Set([
+const DIR_FIRST = new Set<ApiMethod>([
     'verifyMd',
     'pickCdsign',
     'exportAllowedSigners',
@@ -259,7 +260,7 @@ const DIR_FIRST = new Set([
     'moveIssuesToForge',
 ])
 
-const LOCKED = new Set([
+const LOCKED = new Set<ApiMethod>([
     'initRepo',
     'writeDoc',
     'createDoc',
@@ -345,7 +346,7 @@ async function openFolder(p: unknown): Promise<void> {
     else shell.showItemInFolder(full)
 }
 
-const handlers: Record<string, (...args: any[]) => unknown> = {
+const handlers: { [K in ApiMethod]: (...args: any[]) => ReturnType<Api[K]> | Awaited<ReturnType<Api[K]>> } = {
     getSettings: loadSettings,
     setTheme: async (theme: AppSettings['theme']) => {
         await updateSettings((s) => ({ ...s, theme }))
@@ -674,7 +675,8 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
     aiReset,
 }
 
-for (const [name, fn] of Object.entries(handlers)) {
+for (const name of API_METHODS) {
+    const fn = handlers[name] as (...args: unknown[]) => unknown
     ipcMain.handle(name, async (e, ...args) => {
         const from = e.senderFrame?.url ?? ''
         const dev = process.env.ELECTRON_RENDERER_URL

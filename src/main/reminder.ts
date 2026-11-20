@@ -1,6 +1,7 @@
 import { app, Notification } from 'electron'
 import { t } from '../shared/i18n'
 import { promises as fsp } from 'node:fs'
+import { writeAtomic } from './atomic'
 import { join } from 'node:path'
 import { dueReminders, type ScheduleItem } from '../shared/schedule'
 import type { OpenScheduleEvent } from '../shared/api'
@@ -66,7 +67,7 @@ export async function checkReminders(open: (e: OpenScheduleEvent) => void): Prom
     }
     const now = new Date().toISOString()
     for (const o of fresh) notified[keyOf(o)] = now
-    await fsp.writeFile(notifiedPath(), JSON.stringify(notified), 'utf8').catch(() => {})
+    await writeAtomic(notifiedPath(), JSON.stringify(notified)).catch(() => {})
 }
 
 export function startReminders(open: (e: OpenScheduleEvent) => void): void {

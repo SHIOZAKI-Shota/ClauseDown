@@ -1,4 +1,5 @@
 import { promises as fsp } from 'node:fs'
+import { writeAtomic } from './atomic'
 import { t } from '../shared/i18n'
 import { dirname, join } from 'node:path'
 import { APP_DIR, cleanOverride, styleFileOf, type StyleLayers, type StyleOverride } from '../shared/folder-style'
@@ -45,7 +46,7 @@ export async function saveFolderStyle(dir: string, folder: string, override: Sty
     if (Object.keys(o).length === 0) await fsp.rm(full, { force: true })
     else {
         await fsp.mkdir(dirname(full), { recursive: true })
-        await fsp.writeFile(full, JSON.stringify({ style: o }, null, 2) + '\n', 'utf8')
+        await writeAtomic(full, JSON.stringify({ style: o }, null, 2) + '\n')
     }
     return commitFile(dir, rel, t().notify.commits.folderStyle(folder || t().notify.commits.wholeRepo))
 }

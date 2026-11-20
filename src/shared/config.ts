@@ -136,18 +136,6 @@ export const CONFIG_CHOICES = {
 
 export type ConfigKey = keyof typeof CONFIG_CHOICES
 
-export const JA_ONLY_KEYS: ConfigKey[] = [
-    'chapter.numeral',
-    'article.numeral',
-    'article.numbering',
-    'paragraph.firstNumbered',
-    'paragraph.numeral',
-    'paragraph.indent',
-    'paragraph.hang',
-    'item.style',
-    'subitem.style',
-]
-
 const BLOCK_RE = /<!--\s*clausedown\b([\s\S]*?)-->/
 const FRONTMATTER_RE = /^\uFEFF?---\r?\n[\s\S]*?\r?\n---[ \t]*(?=\r?\n|$)/
 

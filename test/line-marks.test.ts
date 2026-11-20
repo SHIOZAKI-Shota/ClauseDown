@@ -31,7 +31,11 @@ describe('withLineMarks', () => {
 describe('lineSpans', () => {
     it('始まりは最初の枚、終わりは最後の枚から取る', () => {
         const spans = lineSpans([
-            [{ str: '~cds3~~cds4~', y: 0.1 }, { str: '本文', y: 0.2 }, { str: '~cde4~', y: 0.5 }],
+            [
+                { str: '~cds3~~cds4~', y: 0.1 },
+                { str: '本文', y: 0.2 },
+                { str: '~cde4~', y: 0.5 },
+            ],
             [{ str: '~cde3~', y: 0.3 }],
         ])
         expect(spans).toEqual([

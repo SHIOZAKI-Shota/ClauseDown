@@ -57,6 +57,7 @@ export const signing = {
         remove: '削除',
         copyPublic: '公開鍵をコピー',
         copied: '公開鍵をコピーしました',
+        confirmRemove: '鍵を削除すると、この鍵で署名した版は「不明な鍵」と表示されます。削除しますか？',
         confirmRecreate: '鍵を再作成すると、旧い鍵で署名した版は「不明な鍵」と表示されます。GitHub・GitLab への登録も再実行してください',
         register: (site: string, login: string) => `${site}（${login}）に登録`,
         registerDesc: '登録後は、サイトの履歴で版に「Verified」と表示されます。版のメールアドレスが、そのアカウントで確認済みであることが必要です',

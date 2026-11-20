@@ -10,7 +10,7 @@ interface LockInfo {
 
 const cache = new WeakMap<Text, LockInfo>()
 
-export function lockInfo(doc: Text): LockInfo {
+function lockInfo(doc: Text): LockInfo {
     const hit = cache.get(doc)
     if (hit) return hit
     const l = layout(doc.toString())

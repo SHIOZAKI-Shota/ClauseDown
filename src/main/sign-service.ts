@@ -244,10 +244,6 @@ async function signerFor(c: PdfCertEntry, pin?: string): Promise<{ signer: Signe
     throw new Error(t().signing.errors.noCert)
 }
 
-export async function pdfSigningReady(): Promise<boolean> {
-    return (await signingSettings()).pdf.certs.length > 0
-}
-
 export interface SignSession {
     sign(bytes: Uint8Array): Promise<Uint8Array>
     close(): Promise<void>

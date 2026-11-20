@@ -732,7 +732,7 @@ export async function tagEffective(dir: string, docPaths: string[], date: string
     }
     const untags = await pendingUntags(dir)
     const rest = untags.filter((t) => !docPaths.some((p) => effectiveTag(p, date) === t))
-    if (rest.length !== untags.length) await fsp.writeFile(untagFile(dir), rest.map((t) => `${t}\n`).join(''), 'utf8')
+    if (rest.length !== untags.length) await writeLines(untagFile(dir), rest)
 }
 
 export interface EffectiveVersion {
@@ -774,11 +774,11 @@ export async function removeEffective(dir: string, docPath: string, date: string
             () => true,
             () => false,
         )
-        if (!ok) await fsp.appendFile(untagFile(dir), tag + '\n', 'utf8')
+        if (!ok) await addLine(untagFile(dir), tag)
     }
     await git.deleteRef({ fs, dir, ref: `refs/tags/${tag}` }).catch(() => {})
     const rest = pending.filter((t) => t !== tag)
-    await fsp.writeFile(pendingFile(dir), rest.map((t) => `${t}\n`).join(''), 'utf8')
+    await writeLines(pendingFile(dir), rest)
 }
 
 export async function saveVersion(dir: string, input: SaveVersionInput): Promise<string> {
@@ -798,7 +798,7 @@ export async function saveVersion(dir: string, input: SaveVersionInput): Promise
 const pendingFile = (dir: string) => join(dir, '.git', 'clausedown-pending-tags')
 
 export async function addPendingTag(dir: string, ref: string) {
-    await fsp.appendFile(pendingFile(dir), ref + '\n', 'utf8')
+    await addLine(pendingFile(dir), ref)
 }
 
 async function readLines(file: string): Promise<string[]> {
@@ -807,6 +807,13 @@ async function readLines(file: string): Promise<string[]> {
     } catch {
         return []
     }
+}
+
+const writeLines = (file: string, lines: string[]) => writeAtomic(file, lines.map((l) => `${l}\n`).join(''))
+
+async function addLine(file: string, line: string) {
+    const cur = await readLines(file)
+    if (!cur.includes(line)) await writeLines(file, [...cur, line])
 }
 const pendingTags = (dir: string) => readLines(pendingFile(dir))
 
@@ -903,7 +910,11 @@ export async function push(dir: string): Promise<SyncState> {
         for (const tag of await pendingTags(dir)) {
             await pushRef(dir, `refs/tags/${tag}`, tag.startsWith(EFFECTIVE_PREFIX)).catch((error) => failed.push({ tag, error }))
         }
-        if (failed.length) await fsp.writeFile(pendingFile(dir), failed.map((f) => `${f.tag}\n`).join(''), 'utf8')
+        if (failed.length)
+            await writeLines(
+                pendingFile(dir),
+                failed.map((f) => f.tag),
+            )
         else await fsp.rm(pendingFile(dir), { force: true })
         await pushUntags(dir)
         await pushRecords(dir)

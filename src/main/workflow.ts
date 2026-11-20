@@ -1,5 +1,6 @@
 import { tagPath } from '../shared/tag-path'
 import { promises as fsp } from 'node:fs'
+import { writeAtomic } from './atomic'
 import { t } from '../shared/i18n'
 import { join } from 'node:path'
 import fs from 'node:fs'
@@ -300,7 +301,7 @@ async function deliveryFolders(dir: string): Promise<Record<string, string>> {
 async function rememberFolder(dir: string, id: string, folder: string) {
     const all = await deliveryFolders(dir)
     all[id] = folder
-    await fsp.writeFile(folderFile(dir), JSON.stringify(all, null, 2), 'utf8')
+    await writeAtomic(folderFile(dir), JSON.stringify(all, null, 2))
 }
 
 export async function recordReceived(dir: string, id: string, entry: NonNullable<DeliveryRecord['received']>[number]): Promise<void> {

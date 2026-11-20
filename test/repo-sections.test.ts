@@ -1,13 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { cleanSection, dissolveSection, groupRepos, placeRepo, renameSection, sectionNames } from '../src/shared/repo-sections'
 
-const repos = [
-    { dir: 'b1', section: 'B社' },
-    { dir: 'x' },
-    { dir: 'a1', section: 'A社' },
-    { dir: 'b2', section: 'B社' },
-    { dir: 'y', section: '  ' },
-]
+const repos = [{ dir: 'b1', section: 'B社' }, { dir: 'x' }, { dir: 'a1', section: 'A社' }, { dir: 'b2', section: 'B社' }, { dir: 'y', section: '  ' }]
 const dirs = (l: { dir: string }[]) => l.map((r) => r.dir)
 
 describe('セクション', () => {
@@ -35,7 +29,11 @@ describe('セクション', () => {
 
     it('名前を変える・解く', () => {
         expect(renameSection(repos, 'B社', 'B株式会社').filter((r) => r.section === 'B株式会社').length).toBe(2)
-        expect(dissolveSection(repos, 'B社').filter((r) => r.section).map((r) => r.dir)).toEqual(['a1', 'y'])
+        expect(
+            dissolveSection(repos, 'B社')
+                .filter((r) => r.section)
+                .map((r) => r.dir),
+        ).toEqual(['a1', 'y'])
     })
 
     it('名前は空白を詰め、空なら undefined', () => {

@@ -49,7 +49,3 @@ export async function deleteSeal(id: string): Promise<void> {
     await fs.rm(join(dir(), `${id}.png`), { force: true })
     await writeIndex((await readIndex()).filter((s) => s.id !== id))
 }
-
-export async function resetSeals(): Promise<void> {
-    await fs.rm(dir(), { recursive: true, force: true })
-}

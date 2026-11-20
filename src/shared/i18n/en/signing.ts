@@ -60,6 +60,7 @@ export const signing: Messages['signing'] = {
         remove: 'Delete',
         copyPublic: 'Copy public key',
         copied: 'Public key copied',
+        confirmRemove: 'Versions signed with this key will show as signed by an unknown key. Delete it?',
         confirmRecreate: 'Versions signed with the old key will show as signed by an unknown key. Register the new key on GitHub and GitLab again',
         register: (site, login) => `Register on ${site} (${login})`,
         registerDesc: "Once registered, the site shows your versions as Verified. The version's email address must be verified on that account",

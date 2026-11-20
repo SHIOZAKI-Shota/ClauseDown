@@ -1,23 +1,9 @@
 import type { Ref } from 'vue'
 import type { CommitInfo, EffectiveVersion } from '@shared/api'
 import type { LegalDoc } from '@shared/legal-parser'
-import { stepUnits, trailsFor, type HistEvent, type TracedUnit } from '@shared/article-history'
+import { stepUnits, trailsFor, type TracedUnit } from '@shared/article-history'
 import { useApp } from '~/stores/app'
 import { fmtWareki } from '~/utils/format'
-import { t } from '@shared/i18n'
-
-// 読むたびに今の言語の名前を返す
-export const TRAIL_KIND: Record<HistEvent['kind'], string> = {
-    get enacted() {
-        return t().shell.trail.kind.enacted
-    },
-    get added() {
-        return t().shell.trail.kind.added
-    },
-    get changed() {
-        return t().shell.trail.kind.changed
-    },
-}
 
 async function readAll<T extends { oid: string }>(dir: string, path: string, list: T[]) {
     const sources = await Promise.all(list.map((v) => window.api.readAt(dir, v.oid, path).catch(() => null)))

@@ -127,7 +127,7 @@ async function saveStore(s: Store): Promise<void> {
     }
     if (!safeStorage.isEncryptionAvailable()) throw new Error(t().errors.settings.noEncryptionAuth)
     await fs.mkdir(app.getPath('userData'), { recursive: true })
-    await fs.writeFile(tokenPath(), safeStorage.encryptString(JSON.stringify(s)))
+    await writeAtomic(tokenPath(), safeStorage.encryptString(JSON.stringify(s)))
 }
 
 let storeQueue: Promise<unknown> = Promise.resolve()
@@ -232,7 +232,7 @@ export async function saveSecret(name: SecretName, value: string): Promise<void>
     }
     if (!safeStorage.isEncryptionAvailable()) throw new Error(t().errors.settings.noEncryptionSecret)
     await fs.mkdir(app.getPath('userData'), { recursive: true })
-    await fs.writeFile(secretPath(name), safeStorage.encryptString(value))
+    await writeAtomic(secretPath(name), safeStorage.encryptString(value))
 }
 
 const OWN_FILE = /^(settings\.json(\.bak|\.broken-\d+)?|notified\.json|token\.bin|(ai-key|mcp-token)(-[a-z0-9-]+)?\.bin|sign-[a-z0-9-]+\.bin)$/

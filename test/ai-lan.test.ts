@@ -10,9 +10,22 @@ describe('LAN 内の AI の接続先', () => {
 
     it('LAN を許すと、プライベートアドレスと LAN 内の名前の http を許す', () => {
         const lan = { lan: true }
-        for (const u of ['http://192.168.1.20:11434/v1', 'http://10.0.0.5:11434', 'http://172.16.3.4:1234/v1', 'http://ollama.local:11434', 'http://gpu-box:11434', 'http://[fd12:3456::1]:11434'])
+        for (const u of [
+            'http://192.168.1.20:11434/v1',
+            'http://10.0.0.5:11434',
+            'http://172.16.3.4:1234/v1',
+            'http://ollama.local:11434',
+            'http://gpu-box:11434',
+            'http://[fd12:3456::1]:11434',
+        ])
             expect(safeAiBase(u, lan)).toBe(true)
-        for (const u of ['http://8.8.8.8:11434', 'http://172.32.0.1:11434', 'http://example.com:11434', 'http://192.168.1.300:11434', 'http://user:pw@192.168.1.20:11434'])
+        for (const u of [
+            'http://8.8.8.8:11434',
+            'http://172.32.0.1:11434',
+            'http://example.com:11434',
+            'http://192.168.1.300:11434',
+            'http://user:pw@192.168.1.20:11434',
+        ])
             expect(safeAiBase(u, lan)).toBe(false)
     })
 

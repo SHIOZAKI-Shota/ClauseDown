@@ -8,8 +8,6 @@ export interface AiConfig {
     baseUrl?: string
 }
 
-export const DEFAULT_AI: AiConfig = { provider: 'anthropic' }
-
 export interface AiProviderInfo {
     label: string
     description: string

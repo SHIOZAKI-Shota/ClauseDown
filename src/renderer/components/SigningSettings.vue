@@ -68,7 +68,7 @@ async function createKey() {
     if (next) status.value = next
 }
 async function removeKey() {
-    if (!confirm(s.value.commit.confirmRecreate)) return
+    if (!confirm(s.value.commit.confirmRemove)) return
     const next = await app.run(() => window.api.deleteSigningKey())
     if (next) status.value = next
 }
