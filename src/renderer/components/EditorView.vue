@@ -12,7 +12,7 @@ import { spellLang } from '@shared/legal-styles'
 import { docTemplates } from '@shared/doc-templates'
 import { titleEndLine } from '@shared/toc'
 import { useApp } from '~/stores/app'
-import { lastAtOrBefore, positionLabel } from '~/utils/legal-editor'
+import { lastAtOrBefore } from '~/utils/legal-editor'
 import { toPlain } from '~/utils/ipc'
 import { useStoredRef } from '~/composables/useStoredRef'
 import { useT } from '~/composables/useT'
@@ -42,6 +42,7 @@ const showSave = ref(false)
 const newDoc = ref(false)
 const confirmDiscard = ref(false)
 const cursorLine = ref(0)
+const cursor = { line: cursorLine }
 const history = ref({ undo: 0, redo: 0 })
 
 const layout = useStoredRef('clausedown.editorLayout', { mode: 'split' as 'split' | 'edit' | 'preview', ai: false })
@@ -310,13 +311,19 @@ const editMenu = computed<DropdownMenuItem[][]>(() => {
             { label: m.pageBreakBefore, icon: 'i-lucide-separator-horizontal', onSelect: addPageBreak },
         ],
         [{ label: m.insertRef, icon: 'i-lucide-link', onSelect: () => editor.value?.insertRef() }, backRefItem.value],
-        [{ label: articleHere() ? m.issueArticle : m.issueDoc, icon: 'i-lucide-list-todo', onSelect: issueHere }],
+        [{ label: hereLine.value >= 0 ? m.issueArticle : m.issueDoc, icon: 'i-lucide-list-todo', onSelect: issueHere }],
     ]
 })
-const backRefItem = computed<DropdownMenuItem>(() => {
+const articleLineAt = (withDeleted: boolean) => {
     let line = -1
-    for (const ch of doc.value.chapters) for (const a of ch.articles) if (a.line >= 0 && a.line <= cursorLine.value) line = a.line
-    const list = backs.value.get(line) ?? []
+    for (const ch of doc.value.chapters)
+        for (const a of ch.articles) if ((withDeleted || !a.deleted) && a.line >= 0 && a.line <= cursorLine.value) line = a.line
+    return line
+}
+const refLine = computed(() => articleLineAt(true))
+const hereLine = computed(() => articleLineAt(false))
+const backRefItem = computed<DropdownMenuItem>(() => {
+    const list = backs.value.get(refLine.value) ?? []
     return list.length
         ? {
               label: t.value.editor.context.backRefs(list.length),
@@ -326,10 +333,9 @@ const backRefItem = computed<DropdownMenuItem>(() => {
         : { label: t.value.editor.context.noBackRefs, icon: 'i-lucide-corner-up-left', disabled: true }
 })
 function articleHere() {
-    let hit: { label: string; title: string } | null = null
     for (const ch of doc.value.chapters)
-        for (const a of ch.articles) if (!a.deleted && a.line >= 0 && a.line <= cursorLine.value) hit = { label: a.label, title: articleTitle(a, doc.value) }
-    return hit
+        for (const a of ch.articles) if (!a.deleted && a.line === hereLine.value) return { label: a.label, title: articleTitle(a, doc.value) }
+    return null
 }
 function issueHere() {
     const name = app.docs.find((d) => d.path === path)?.title ?? path
@@ -655,7 +661,6 @@ async function saveShortcut() {
     else app.notify(t.value.editor.unchanged)
 }
 defineShortcuts({ meta_s: { handler: () => void saveShortcut(), usingInput: true } })
-const position = computed(() => positionLabel(doc.value, cursorLine.value))
 const trail = useArticleTrail(path, doc, cursorLine)
 const trailOpen = ref(false)
 watch(trailOpen, (v) => v && void trail.loadCommits())
@@ -831,7 +836,7 @@ const viewModes = computed(() => [
             <template v-else>
                 <div class="ed-left" :style="paneStyle(outlinePane)">
                     <DocTree class="ed-docs" :pane="outlinePane" />
-                    <EditorOutline class="ed-outline-pane" :legal="doc" :line="cursorLine" @jump="(l) => editor?.goToLine(l)" />
+                    <EditorOutline class="ed-outline-pane" :legal="doc" :cursor="cursor" @jump="(l) => editor?.goToLine(l)" />
                 </div>
                 <PaneResizer :pane="outlinePane" side="left" :label="t.editor.toolbar.outline" />
             </template>
@@ -938,7 +943,7 @@ const viewModes = computed(() => [
                         class="pdf"
                         :data="pdfData"
                         :zoom="app.prefs.previewZoom"
-                        :line="cursorLine"
+                        :cursor="cursor"
                         @jump="(l) => editor?.goToLine(l)"
                         @wheel="zoomPreview"
                     />
@@ -1039,7 +1044,7 @@ const viewModes = computed(() => [
                     />
                 </UTooltip>
             </div>
-            <span class="pos"> <UIcon name="i-lucide-map-pin" />{{ position || '—' }} </span>
+            <CursorPosition :doc="doc" :cursor="cursor" />
             <UPopover v-if="trail.trail.value && trail.article.value" v-model:open="trailOpen" :content="{ side: 'top', align: 'start' }">
                 <button class="trail-btn" :class="{ pending: trail.trail.value.pending }"><UIcon name="i-lucide-history" />{{ trail.summary.value }}</button>
                 <template #content>
@@ -1329,11 +1334,6 @@ const viewModes = computed(() => [
 
 .paper :deep(.cd-active) {
     background: var(--cd-highlight);
-}
-
-.pos {
-    color: var(--ui-text-toned);
-    font-weight: 600;
 }
 
 .hint {

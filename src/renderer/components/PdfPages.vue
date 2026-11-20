@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { Ref } from 'vue'
 import { getDocument, GlobalWorkerOptions, TextLayer, type PDFDocumentProxy } from 'pdfjs-dist'
 import type { TextContent, TextItem } from 'pdfjs-dist/types/src/display/api'
 // oxlint-disable-next-line import/default -- ?url の default は Vite が作る
@@ -10,7 +11,7 @@ import { refDebounced, useElementSize } from '@vueuse/core'
 
 GlobalWorkerOptions.workerSrc = workerUrl
 
-const props = defineProps<{ data: Uint8Array | null; zoom: number; line: number }>()
+const props = defineProps<{ data: Uint8Array | null; zoom: number; cursor: { line: Readonly<Ref<number>> } }>()
 const emit = defineEmits<{ jump: [line: number] }>()
 
 interface Sheet {
@@ -75,7 +76,7 @@ watch(
         margin.value = Math.max(0, Math.min(...spans.value.map((s) => s.start.y), 0.5))
         await nextTick()
         if (anchor) restore(anchor)
-        else reveal(props.line)
+        else reveal(props.cursor.line.value)
         redrawVisible()
         old?.loadingTask.destroy()
     },
@@ -121,7 +122,7 @@ function spanAt(line: number): LineSpan | null {
     return i < 0 ? null : spans.value[i]
 }
 
-const active = computed(() => spanAt(props.line))
+const active = computed(() => spanAt(props.cursor.line.value))
 
 function bands(page: number) {
     const s = active.value

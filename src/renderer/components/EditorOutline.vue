@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import type { Ref } from 'vue'
 import type { LegalDoc } from '@shared/legal-parser'
 import { tocEntries } from '@shared/toc'
 import { lastAtOrBefore } from '~/utils/legal-editor'
 import { useT } from '~/composables/useT'
 const t = useT()
-const props = defineProps<{ legal: LegalDoc; line: number }>()
+const props = defineProps<{ legal: LegalDoc; cursor: { line: Readonly<Ref<number>> } }>()
 const emit = defineEmits<{ jump: [number] }>()
 const q = ref('')
 
@@ -28,7 +29,7 @@ const filtered = computed(() => {
 })
 
 const active = computed(() => {
-    const i = lastAtOrBefore(articleLines.value, props.line)
+    const i = lastAtOrBefore(articleLines.value, props.cursor.line.value)
     return i < 0 ? -1 : articleLines.value[i]
 })
 
