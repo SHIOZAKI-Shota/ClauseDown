@@ -20,7 +20,7 @@ import { DEFAULT_PREFS, type AppPrefs, type DocStyle, type RecentDoc } from '@sh
 import { messagesOf, resolveLocale, setLocale } from '@shared/i18n'
 import { resolveStyle, type StyleLayers } from '@shared/folder-style'
 import { toPlain } from '~/utils/ipc'
-import { todayISO } from '~/utils/format'
+import { todayISO } from '@shared/date'
 import { revealLabel } from '~/utils/platform'
 import { dissolveSection, placeRepo, renameSection } from '@shared/repo-sections'
 import { addDays } from '@shared/schedule'

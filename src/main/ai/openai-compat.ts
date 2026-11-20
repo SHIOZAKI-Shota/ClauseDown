@@ -1,4 +1,5 @@
 import { aiPrompts } from '../../shared/ai-prompts'
+import { errText } from '../util'
 import OpenAI from 'openai'
 import { t } from '../../shared/i18n'
 import { z } from 'zod'
@@ -125,7 +126,7 @@ export async function runOpenAi(
                 try {
                     return { role: 'tool', tool_call_id: c.id, content: await runTool(c.name, input, ctx) }
                 } catch (e) {
-                    return { role: 'tool', tool_call_id: c.id, content: aiPrompts().toolError((e as Error).message) }
+                    return { role: 'tool', tool_call_id: c.id, content: aiPrompts().toolError(errText(e)) }
                 }
             }),
         )

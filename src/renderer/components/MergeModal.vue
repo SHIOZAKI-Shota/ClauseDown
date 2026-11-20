@@ -2,7 +2,7 @@
 import type { ConflictChoice, MergePreview } from '@shared/api'
 import { STATE_LABEL } from '@shared/review'
 import { useApp } from '~/stores/app'
-import { todayISO } from '~/utils/format'
+import { todayISO } from '@shared/date'
 import { toPlain } from '~/utils/ipc'
 import { useT } from '~/composables/useT'
 

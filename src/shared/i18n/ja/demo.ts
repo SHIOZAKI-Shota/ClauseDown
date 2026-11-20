@@ -9,7 +9,6 @@ export const demo = {
     noRepo: 'このリポジトリはデモにありません',
     issueNotFound: (n: number) => `課題 #${n} が見つかりません`,
     notFound: (path: string) => `「${path}」が見つかりません`,
-    docExists: '同じ名前の文書がすでにあります',
     defaultMessage: '版を保存',
     draftExists: (label: string) => `「${label}」という改定案はすでにあります`,
     draftNotFound: (label: string) => `改定案「${label}」が見つかりません`,

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useApp } from '~/stores/app'
-import { todayISO } from '~/utils/format'
+import { todayISO } from '@shared/date'
 import { useT } from '~/composables/useT'
 
 const props = defineProps<{ oid: string; path: string }>()

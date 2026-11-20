@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { todayISO } from '~/utils/format'
+import { todayISO } from '@shared/date'
 import { useApp } from '~/stores/app'
 import type { Issue } from '@shared/api'
 import { withIssueLines } from '@shared/issue-refs'

@@ -1,4 +1,5 @@
 import { aiPrompts } from '../../shared/ai-prompts'
+import { errText } from '../util'
 import Anthropic from '@anthropic-ai/sdk'
 import { t } from '../../shared/i18n'
 import { z } from 'zod'
@@ -119,7 +120,7 @@ export async function runAnthropic(
                 try {
                     return { type: 'tool_result', tool_use_id: u.id, content: await runTool(u.name, u.input, ctx) }
                 } catch (e) {
-                    return { type: 'tool_result', tool_use_id: u.id, is_error: true, content: (e as Error).message }
+                    return { type: 'tool_result', tool_use_id: u.id, is_error: true, content: errText(e) }
                 }
             }),
         )

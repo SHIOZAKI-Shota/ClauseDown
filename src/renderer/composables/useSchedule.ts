@@ -2,7 +2,7 @@ import type { Ref } from 'vue'
 import { addDays, byDate, kindMap, type DueEvent, type DueEventInput, type EventKind, type Occurrence, type Period, type RepoSchedule } from '@shared/schedule'
 import { t } from '@shared/i18n'
 import { useApp } from '~/stores/app'
-import { todayISO } from '~/utils/format'
+import { todayISO } from '@shared/date'
 import { toPlain } from '~/utils/ipc'
 
 const YEARS = 5

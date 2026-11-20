@@ -1,4 +1,5 @@
 import fs, { promises as fsp } from 'node:fs'
+import { errText } from './util'
 import { t } from '../shared/i18n'
 import os from 'node:os'
 import { join, resolve } from 'node:path'
@@ -87,7 +88,7 @@ export async function desktopStatus(): Promise<DesktopStatus> {
     try {
         return { state: entryState(parseConfig(await readConfig(file)), expected()), path: file }
     } catch (e) {
-        return { state: 'broken', path: file, error: (e as Error).message }
+        return { state: 'broken', path: file, error: errText(e) }
     }
 }
 

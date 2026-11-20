@@ -320,7 +320,7 @@ const impl: Partial<Api> = {
     writeDoc: mutate((dir, path, content) => setWork(repoOf(dir), path, content)),
     createDoc: mutate((dir, path, title, preset) => {
         const repo = repoOf(dir)
-        if (workOf(repo)[path] !== undefined) throw new Error(t().demo.docExists)
+        if (workOf(repo)[path] !== undefined) throw new Error(t().errors.git.docExists)
         setWork(repo, path, newDocText(title, preset))
     }),
     deleteDoc: mutate((dir, path) => {

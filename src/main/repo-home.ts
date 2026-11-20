@@ -1,9 +1,10 @@
 import { fromTagPath } from '../shared/tag-path'
+import { remember } from './memo'
 import fs, { promises as fsp } from 'node:fs'
 import { t } from '../shared/i18n'
 import git from './igit'
 import { tryResolve } from './git-base'
-import { commitFile, listDocs, readCommitCached, safeJoin } from './git'
+import { commitFile, effectiveTags, listDocs, readCommitCached, safeJoin, stripEffectiveNote } from './git'
 import { repoKey } from './repo-lock'
 import type { RepoActivity } from '../shared/api'
 import { APP_DIR } from '../shared/folder-style'
@@ -36,8 +37,6 @@ function changedBetween(a: Map<string, string>, b: Map<string, string>): string[
     return [...out].sort((x, y) => x.localeCompare(y, 'ja'))
 }
 
-const cleanMessage = (m: string) => m.replace(/\n+施行日: \S+\s*$/, '').trim()
-
 const articleMemo = new Map<string, { mtime: number; n: number }>()
 async function articleCount(full: string): Promise<number> {
     const st = await fsp.stat(full).catch(() => null)
@@ -45,9 +44,7 @@ async function articleCount(full: string): Promise<number> {
     const hit = articleMemo.get(full)
     if (hit?.mtime === st.mtimeMs) return hit.n
     const n = ((await fsp.readFile(full, 'utf8').catch(() => '')).match(/^###\s/gm) ?? []).length
-    if (articleMemo.size >= 5000) articleMemo.clear()
-    articleMemo.set(full, { mtime: st.mtimeMs, n })
-    return n
+    return remember(articleMemo, full, { mtime: st.mtimeMs, n }, 5000).n
 }
 
 type History = { recent: RepoActivity['recent']; last: Record<string, { author: string; timestamp: number }> }
@@ -72,7 +69,7 @@ async function history(dir: string, present: Set<string>): Promise<History> {
         const before = next ? await filesOf(dir, next.tree, cache) : new Map<string, string>()
         const paths = changedBetween(mine, before)
         const who = { author: commit.author.name, timestamp: commit.author.timestamp }
-        if (recent.length < RECENT) recent.push({ oid, message: cleanMessage(commit.message), ...who, paths })
+        if (recent.length < RECENT) recent.push({ oid, message: stripEffectiveNote(commit.message), ...who, paths })
         for (const p of paths) {
             if (present.has(p) && !last[p]) {
                 last[p] = who
@@ -83,8 +80,7 @@ async function history(dir: string, present: Set<string>): Promise<History> {
         oid = parent ?? null
     }
     const value = { recent, last }
-    if (historyMemo.size >= 8) historyMemo.clear()
-    historyMemo.set(repoKey(dir), { key, value })
+    remember(historyMemo, repoKey(dir), { key, value }, 8)
     return value
 }
 
@@ -101,29 +97,13 @@ export async function repoActivity(dir: string): Promise<RepoActivity> {
     return { recent: recent.map((r) => ({ ...r, paths: [...r.paths] })), docs: lastChange, effective }
 }
 
-const tagMemo = new Map<string, { oid: string; message: string }>()
-
 export async function allEffective(dir: string): Promise<RepoActivity['effective']> {
-    const out: RepoActivity['effective'] = []
-    for (const tag of await git.listTags({ fs, dir })) {
-        const m = /^施行\/(.+)\/(\d{4}-\d{2}-\d{2})$/.exec(tag)
-        if (!m) continue
-        const tagOid = await git.resolveRef({ fs, dir, ref: `refs/tags/${tag}` })
-        if (!tagMemo.has(tagOid)) {
-            let oid = tagOid
-            try {
-                oid = (await git.readTag({ fs, dir, oid })).tag.object
-            } catch {}
-            const { commit } = await git.readCommit({ fs, dir, oid }).catch(() => ({ commit: null }))
-            if (!commit) continue
-            if (tagMemo.size > 5000) tagMemo.clear()
-            tagMemo.set(tagOid, { oid, message: cleanMessage(commit.message) })
-        }
-        const hit = tagMemo.get(tagOid)
-        if (!hit) continue
-        out.push({ docPath: m[1] === 'all' ? '' : `${fromTagPath(m[1])}.md`, date: m[2], ...hit })
-    }
-    return out.sort((a, b) => b.date.localeCompare(a.date))
+    return (await effectiveTags(dir)).map((e) => ({
+        docPath: e.path === 'all' ? '' : `${fromTagPath(e.path)}.md`,
+        date: e.date,
+        oid: e.oid,
+        message: e.message,
+    }))
 }
 
 const NOTE = `${APP_DIR}/readme.md`

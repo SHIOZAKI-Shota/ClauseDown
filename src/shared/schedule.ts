@@ -1,4 +1,5 @@
 import { t, type Messages } from './i18n'
+import { pad2 } from './date'
 import { liveRecord } from './i18n/live'
 
 export interface EventKind {
@@ -136,11 +137,10 @@ export function kindMap(kinds: EventKind[]): (id: string) => EventKind {
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 export const isDate = (s: unknown): s is string => typeof s === 'string' && DATE_RE.test(s) && fromDayNum(dayNum(s)) === s
-const pad = (n: number) => String(n).padStart(2, '0')
 export const dayNum = (s: string) => Math.round(Date.parse(`${s}T00:00:00Z`) / 86400000)
 export function fromDayNum(n: number): string {
     const d = new Date(n * 86400000)
-    return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`
+    return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`
 }
 export const addDays = (s: string, n: number) => fromDayNum(dayNum(s) + n)
 
@@ -150,7 +150,7 @@ export function addMonths(s: string, months: number): string {
     const ny = Math.floor(idx / 12)
     const nm = idx - ny * 12
     const last = new Date(Date.UTC(ny, nm + 1, 0)).getUTCDate()
-    return `${ny}-${pad(nm + 1)}-${pad(Math.min(d, last))}`
+    return `${ny}-${pad2(nm + 1)}-${pad2(Math.min(d, last))}`
 }
 
 export function cleanEventInput(v: DueEventInput): DueEventInput {

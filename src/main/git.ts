@@ -1,4 +1,5 @@
 import { tagPath } from '../shared/tag-path'
+import { recent, remember } from './memo'
 import fs, { promises as fsp } from 'node:fs'
 import { join, relative, resolve, sep, dirname, basename } from 'node:path'
 import { imageExt } from '../shared/images'
@@ -6,7 +7,19 @@ import { t } from '../shared/i18n'
 import git, { TREE, dropCache } from './igit'
 import http from 'isomorphic-git/http/node'
 import type { CommitObject, TreeEntry } from 'isomorphic-git'
-import type { BranchInfo, ConflictChoice, CommitInfo, Conflict, DocFile, MergeInput, MergePreview, SaveVersionInput, SyncState } from '../shared/api'
+import type {
+    BranchInfo,
+    ConflictChoice,
+    CommitInfo,
+    Conflict,
+    DocFile,
+    EffectiveVersion,
+    MergeInput,
+    MergePreview,
+    SaveVersionInput,
+    SyncState,
+} from '../shared/api'
+import { isDate } from '../shared/schedule'
 import { author, explain, safeRemoteUrl, hasHead, hasRemote, onAuth, RECORDS_BRANCH, remoteUrl, tryResolve } from './git-base'
 import { pushRecords } from './records'
 import { autoMerge } from '../shared/merge3'
@@ -27,21 +40,8 @@ interface ObjMemo {
 }
 const MAX_OBJ = 100_000
 const memos = new Map<string, ObjMemo>()
-function memoOf(dir: string): ObjMemo {
-    const key = repoKey(dir)
-    let m = memos.get(key)
-    if (m) memos.delete(key)
-    else m = { commits: new Map(), trees: new Map(), ancestors: new Map(), analyzed: new Map() }
-    memos.set(key, m)
-    while (memos.size > 4) memos.delete(memos.keys().next().value!)
-    return m
-}
-function remember<K, V>(map: Map<K, V>, key: K, value: V, max = MAX_OBJ) {
-    if (map.size >= max) map.clear()
-    map.set(key, value)
-    return value
-}
-
+const memoOf = (dir: string): ObjMemo =>
+    recent(memos, repoKey(dir), () => ({ commits: new Map(), trees: new Map(), ancestors: new Map(), analyzed: new Map() }), 4)
 export function forgetRepo(dir: string) {
     memos.delete(repoKey(dir))
     dropCache(dir)
@@ -49,7 +49,7 @@ export function forgetRepo(dir: string) {
 
 export async function readCommitCached(dir: string, oid: string): Promise<CommitObject> {
     const m = memoOf(dir).commits
-    return m.get(oid) ?? remember(m, oid, (await git.readCommit({ fs, dir, oid })).commit)
+    return m.get(oid) ?? remember(m, oid, (await git.readCommit({ fs, dir, oid })).commit, MAX_OBJ)
 }
 
 async function treeOf(dir: string, oid: string): Promise<Map<string, TreeEntry>> {
@@ -712,7 +712,10 @@ export async function readAt(dir: string, oid: string, path: string): Promise<st
 }
 
 const EFFECTIVE_PREFIX = '施行/'
-const effectiveTag = (docPath: string, date: string) => `${EFFECTIVE_PREFIX}${tagPath(docPath)}/${date}`
+const EFFECTIVE_NOTE = /\n+施行日: \S+\s*$/
+export const withEffectiveNote = (message: string, date: string) => `${message}\n\n施行日: ${date}`
+export const stripEffectiveNote = (message: string) => message.replace(EFFECTIVE_NOTE, '').trim()
+export const effectiveTag = (docPath: string, date: string) => `${EFFECTIVE_PREFIX}${tagPath(docPath)}/${date}`
 
 export async function tagEffective(dir: string, docPaths: string[], date: string, oid: string) {
     const who = await author(dir)
@@ -735,32 +738,44 @@ export async function tagEffective(dir: string, docPaths: string[], date: string
     if (rest.length !== untags.length) await writeLines(untagFile(dir), rest)
 }
 
-export interface EffectiveVersion {
-    tag: string
-    date: string
-    oid: string
-    message: string
-    author: string
-    timestamp: number
+export interface EffectiveTag extends EffectiveVersion {
+    path: string
+}
+
+export async function effectiveTags(dir: string): Promise<EffectiveTag[]> {
+    const refs = (await tagRefs(dir)).filter((r) => r.tag.startsWith(EFFECTIVE_PREFIX))
+    const all = await Promise.all(
+        refs.map(async ({ tag, oid: tagOid }): Promise<EffectiveTag | null> => {
+            const rest = tag.slice(EFFECTIVE_PREFIX.length)
+            const cut = rest.lastIndexOf('/')
+            const date = rest.slice(cut + 1)
+            if (cut < 1 || !isDate(date)) return null
+            const oid = await peelTag(dir, tagOid)
+            const commit = await readCommitCached(dir, oid).catch(() => null)
+            if (!commit) return null
+            return {
+                tag,
+                path: rest.slice(0, cut),
+                date,
+                oid,
+                message: stripEffectiveNote(commit.message),
+                author: commit.author.name,
+                timestamp: commit.author.timestamp,
+            }
+        }),
+    )
+    return all.filter((e) => e !== null).sort((a, b) => b.date.localeCompare(a.date))
 }
 
 export async function listEffective(dir: string, docPath: string): Promise<EffectiveVersion[]> {
-    const prefix = `${EFFECTIVE_PREFIX}${tagPath(docPath)}/`
-    const out: EffectiveVersion[] = []
-    for (const tag of await git.listTags({ fs, dir })) {
-        if (!tag.startsWith(prefix)) continue
-        const date = tag.slice(prefix.length)
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue
-        const oid = await peelTag(dir, await git.resolveRef({ fs, dir, ref: `refs/tags/${tag}` }))
-        const commit = await readCommitCached(dir, oid)
-        const message = commit.message.replace(/\n+施行日: \S+\s*$/, '').trim()
-        out.push({ tag, date, oid, message, author: commit.author.name, timestamp: commit.author.timestamp })
-    }
-    return out.sort((a, b) => b.date.localeCompare(a.date))
+    const path = tagPath(docPath)
+    return (await effectiveTags(dir))
+        .filter((e) => e.path === path)
+        .map(({ tag, date, oid, message, author, timestamp }) => ({ tag, date, oid, message, author, timestamp }))
 }
 
 export async function addEffective(dir: string, docPath: string, oid: string, date: string): Promise<void> {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error(t().errors.git.effectiveDateFormat)
+    if (!isDate(date)) throw new Error(t().errors.git.effectiveDateFormat)
     if ((await readAt(dir, oid, docPath)) === null) throw new Error(t().errors.git.docNotInVersion)
     await tagEffective(dir, [docPath], date, oid)
     await push(dir)
@@ -789,7 +804,7 @@ export async function saveVersion(dir: string, input: SaveVersionInput): Promise
     const kept = changed.filter(([, , work]) => work !== 0).map(([p]) => p)
     if (gone.length) await git.remove({ fs, dir, filepath: gone })
     if (kept.length) await git.add({ fs, dir, filepath: kept })
-    const message = input.effectiveDate ? `${input.message}\n\n施行日: ${input.effectiveDate}` : input.message
+    const message = input.effectiveDate ? withEffectiveNote(input.message, input.effectiveDate) : input.message
     const oid = await git.commit({ fs, dir, message, author: await author(dir), ...(await signOpts(dir, 'commit')) })
     if (input.effectiveDate) await tagEffective(dir, [input.docPath ?? 'all'], input.effectiveDate, oid)
     return oid

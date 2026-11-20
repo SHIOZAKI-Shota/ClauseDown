@@ -1,4 +1,5 @@
 import { execFile, spawn } from 'node:child_process'
+import { errText } from './util'
 import { promises as fs } from 'node:fs'
 import os from 'node:os'
 import { delimiter, join } from 'node:path'
@@ -153,7 +154,7 @@ async function externalSign(cfg: ExternalConfig, payload: string, cwd?: string):
         }
     } catch (e) {
         if ((e as NodeJS.ErrnoException).code === 'ENOENT') throw new Error(t().signing.errors.toolMissing(cfg.program))
-        throw new Error(t().signing.errors.external((e as Error).message))
+        throw new Error(t().signing.errors.external(errText(e)))
     }
 }
 

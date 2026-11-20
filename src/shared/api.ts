@@ -3,7 +3,7 @@ import type { ExperimentId } from './experiments'
 import type { RepoRules, ReviewAction, ReviewEvent } from './review'
 import type { AppPrefs, DocStyle } from './prefs'
 import type { StyleLayers, StyleOverride } from './folder-style'
-import type { ForgeKind, GitLabHost } from './forge'
+import type { ForgeKind, ForgeLoginMethod, GitLabHost, IssueState } from './forge'
 import type { AiConfig, AiProvider } from './ai-providers'
 import type { HouritsuConversion } from './houritsu'
 import type { DueEvent, DueEventInput, EventKind, Occurrence, Period, RepoSchedule, ScheduleItem } from './schedule'
@@ -270,7 +270,7 @@ export interface ForgeAccount {
     login: string | null
     name: string | null
     email: string | null
-    method: 'app' | 'token' | null
+    method: ForgeLoginMethod | null
     deviceLogin: boolean
 }
 
@@ -319,14 +319,14 @@ export interface Issue {
     n: number
     title: string
     body: string
-    state: 'open' | 'closed'
+    state: IssueState
     author?: string
     createdAt: string
     closedAt?: string
     closedBy?: string
     url?: string
     links: IssueLink[]
-    source: 'local' | 'github' | 'gitlab'
+    source: 'local' | ForgeKind
 }
 
 export interface IssueVersion {
@@ -354,7 +354,7 @@ export interface IssueDetail extends Issue {
 export interface IssuePatch {
     title?: string
     body?: string
-    state?: 'open' | 'closed'
+    state?: IssueState
 }
 
 export interface ProofreadConfig {

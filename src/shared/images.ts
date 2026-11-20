@@ -1,4 +1,5 @@
 import type { MarkdownIt as Md } from 'markdown-it'
+import { localHms, localYmd } from './date'
 
 export type ImageExt = 'png' | 'jpg' | 'jpeg' | 'gif' | 'webp'
 
@@ -111,8 +112,7 @@ export function imagePathOf(docPath: string, src: string): string | null {
 export const markdownSrc = (rel: string): string => rel.replace(/[ ()]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)
 
 export function imageDest(docPath: string, ext: ImageExt, now = new Date()): { path: string; src: string } {
-    const p = (n: number) => String(n).padStart(2, '0')
-    const stamp = `${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}-${p(now.getHours())}${p(now.getMinutes())}${p(now.getSeconds())}`
+    const stamp = `${localYmd(now, '')}-${localHms(now)}`
     const base = docPath.split('/').pop()!.replace(/\.md$/i, '')
     const rel = `images/${base}/${stamp}.${ext}`
     return { path: [...folderOf(docPath), rel].join('/'), src: markdownSrc(rel) }

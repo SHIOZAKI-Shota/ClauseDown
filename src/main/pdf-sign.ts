@@ -1,4 +1,5 @@
 import * as asn1js from 'asn1js'
+import { errText } from './util'
 import * as pkijs from 'pkijs'
 import { CryptoKeySigner, HttpTimestampAuthority, P12Signer, PDF, TimestampError, type Signer } from '@libpdf/core'
 import { t } from '../shared/i18n'
@@ -139,7 +140,7 @@ export async function p12Signer(bytes: Uint8Array, password: string): Promise<Si
     try {
         return await P12Signer.create(bytes, password)
     } catch (e) {
-        const msg = (e as Error).message
+        const msg = errText(e)
         if (/no private key/i.test(msg)) throw new Error(t().signing.errors.noKey)
         if (/unsupported/i.test(msg)) throw new Error(t().signing.errors.unsupportedKey(msg))
         throw new Error(t().signing.errors.badPassword)
@@ -189,8 +190,8 @@ export async function signPdf(bytes: Uint8Array, opts: SignPdfOptions): Promise<
         })
         return result.bytes
     } catch (e) {
-        if (e instanceof TimestampError) throw new TsaError(t().signing.errors.tsa((e as Error).message))
-        throw new Error(t().signing.errors.sign((e as Error).message))
+        if (e instanceof TimestampError) throw new TsaError(t().signing.errors.tsa(errText(e)))
+        throw new Error(t().signing.errors.sign(errText(e)))
     }
 }
 

@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process'
+import { errText } from './util'
 import { t } from '../shared/i18n'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -60,7 +61,7 @@ function setup() {
 }
 
 function friendly(e: unknown): string {
-    const m = e instanceof Error ? e.message : String(e)
+    const m = errText(e)
     if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|ENETUNREACH|net::ERR_/i.test(m)) return t().errors.updater.offline
     if (/404|latest(-mac)?\.yml/i.test(m)) return t().errors.updater.noFeed
     return t().errors.updater.failed(m.split('\n')[0])

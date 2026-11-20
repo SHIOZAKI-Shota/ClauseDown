@@ -1,4 +1,6 @@
 import fs from 'node:fs'
+import { errText } from './util'
+import { pad2 } from '../shared/date'
 import { GITHUB_BASE, knownBases, matchRemote } from '../shared/forge'
 import type { KeyRegistration } from '../shared/api'
 import type { ReviewEvent } from '../shared/review'
@@ -34,7 +36,7 @@ export async function registerSigningKey(base: string): Promise<KeyRegistration>
         else await gl.addSigningKey(base, title, key.publicKey)
     } catch (e) {
         const status = (e as { status?: number }).status
-        if (status === 422 || (status === 400 && /taken|already/i.test((e as Error).message))) return markRegistered(base)
+        if (status === 422 || (status === 400 && /taken|already/i.test(errText(e)))) return markRegistered(base)
         if (status === 401 || status === 403 || status === 404) return { ok: false, manualUrl }
         throw e
     }
@@ -154,8 +156,7 @@ export async function forgePublicKeys(dir: string, login: string): Promise<strin
 
 const sshTime = (iso: string) => {
     const d = new Date(iso)
-    const p = (n: number) => String(n).padStart(2, '0')
-    return `${d.getUTCFullYear()}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}${p(d.getUTCHours())}${p(d.getUTCMinutes())}${p(d.getUTCSeconds())}Z`
+    return `${d.getUTCFullYear()}${pad2(d.getUTCMonth() + 1)}${pad2(d.getUTCDate())}${pad2(d.getUTCHours())}${pad2(d.getUTCMinutes())}${pad2(d.getUTCSeconds())}Z`
 }
 const principal = (v: string) => v.trim().replace(/[\s,"*?!]+/g, '_') || 'unknown'
 

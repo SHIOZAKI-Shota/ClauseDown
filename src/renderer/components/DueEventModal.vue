@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { KIND_COLORS, type DueEvent, type DueEventInput, type EventKind, type RepoSchedule } from '@shared/schedule'
 import { useApp } from '~/stores/app'
-import { todayISO } from '~/utils/format'
+import { todayISO } from '@shared/date'
 import { useT } from '~/composables/useT'
 
 const props = defineProps<{

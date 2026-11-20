@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { addDays, dayNum, fromDayNum, KIND_COLORS, type EventKind, type Occurrence, type Period } from '@shared/schedule'
 import { useStoredRef } from '~/composables/useStoredRef'
-import { todayISO } from '~/utils/format'
+import { todayISO } from '@shared/date'
 import { useT } from '~/composables/useT'
 
 export interface TimelineRow {

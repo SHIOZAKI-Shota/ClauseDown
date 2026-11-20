@@ -1,4 +1,6 @@
 import fs from 'node:fs'
+import type { IssueState } from '../shared/forge'
+import { localHm, localYmd } from '../shared/date'
 import { t } from '../shared/i18n'
 import { createHash } from 'node:crypto'
 import git from './igit'
@@ -14,7 +16,7 @@ interface LocalIssue {
     n: number
     title: string
     body: string
-    state: 'open' | 'closed'
+    state: IssueState
     author?: string
     createdAt: string
     closedAt?: string
@@ -56,12 +58,9 @@ async function localComments(dir: string, issueId: string): Promise<LocalComment
         .sort((a, b) => a.at.localeCompare(b.at) || a.id.localeCompare(b.id))
 }
 
-const pad = (v: number) => String(v).padStart(2, '0')
 function movedCommentNote(c: LocalComment): string {
     const d = new Date(c.at)
-    const when = Number.isNaN(d.getTime())
-        ? c.at
-        : `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+    const when = Number.isNaN(d.getTime()) ? c.at : `${localYmd(d, '/')} ${localHm(d)}`
     return t().notify.issues.movedComment(c.by ?? '', when)
 }
 

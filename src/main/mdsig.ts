@@ -1,8 +1,7 @@
 import { BrowserWindow, dialog, net, shell } from 'electron'
 import { createServer, type Server } from 'node:http'
-import { existsSync, promises as fsp } from 'node:fs'
-import { basename, dirname, join, resolve, sep } from 'node:path'
-import { randomBytes } from 'node:crypto'
+import { promises as fsp } from 'node:fs'
+import { basename, dirname, resolve, sep } from 'node:path'
 import {
     connectPasskeyViaPage,
     fromBase64,
@@ -43,8 +42,8 @@ import {
 import { loadSettings, updateSettings } from './settings'
 import { appKey } from './signing'
 import { changedPaths, lastChange, readAt, safeJoin } from './git'
-import { listDeliveries, recordReceived } from './workflow'
-import { author, identity } from './git-base'
+import { findDelivery, pickFile, saveReceived } from './receive'
+import { safeFileName, shortId } from './util'
 
 const fetchFn: typeof fetch = (input, init) => net.fetch(input as string, init)
 const MAX_CDSIGN = 20 * 1024 * 1024
@@ -131,13 +130,6 @@ function loopbackTransport(): { returnUrl: Promise<string>; transport: (req: Han
     return { returnUrl, transport, close: () => server?.close() }
 }
 
-const newId = () =>
-    randomBytes(9)
-        .toString('base64url')
-        .toLowerCase()
-        .replace(/[^a-z0-9]/g, '0')
-        .slice(0, 12)
-
 function checkIdentity(method: MdMethod, signer: string, selector?: string) {
     if (!validSigner(method, signer)) throw new Error(t().mdsig.errors.badSigner)
     if (selector && (method !== 'dns' || !validSelector(selector))) throw new Error(t().mdsig.errors.badSelector)
@@ -157,7 +149,7 @@ export async function addMdKey(input: AddMdKeyInput): Promise<MdKeyEntry> {
     const md = await mdSettings()
     if (md.keys.length >= MAX_MD_KEYS) throw new Error(t().mdsig.errors.tooManyKeys)
     const base = {
-        id: newId(),
+        id: shortId(),
         label: input.label.slice(0, 80),
         method: input.method,
         signer: input.signer,
@@ -258,12 +250,6 @@ export async function signMd(text: string, input: SignMdInput): Promise<SignResu
     }
 }
 
-function safeName(s: string): string {
-    let out = ''
-    for (let i = 0; i < s.length; i++) out += s.charCodeAt(i) < 0x20 || '\\/:*?"<>|'.includes(s[i]) ? '_' : s[i]
-    return out.trim() || 'document'
-}
-
 export async function exportCdsign(parent: BrowserWindow | null, input: ExportCdsignInput): Promise<string | null> {
     const md = await mdSettings()
     const key = input.keyId ? md.keys.find((k) => k.id === input.keyId) : resolveMdKey(md, input.dir)
@@ -283,7 +269,7 @@ export async function exportCdsign(parent: BrowserWindow | null, input: ExportCd
         name: input.title,
     })
     const opts = {
-        defaultPath: `${safeName(input.title)}${t().mdsig.export.suffix}.${CDSIGN_EXT}`,
+        defaultPath: `${safeFileName(input.title, 'document')}${t().mdsig.export.suffix}.${CDSIGN_EXT}`,
         filters: [{ name: t().mdsig.export.filter, extensions: [CDSIGN_EXT] }],
     }
     const r = parent ? await dialog.showSaveDialog(parent, opts) : await dialog.showSaveDialog(opts)
@@ -313,12 +299,10 @@ async function checkCdsign(dir: string, delivery: DeliveryRecord, text: string, 
 const picked = new Map<string, string>()
 
 export async function pickCdsign(parent: BrowserWindow | null, dir: string, deliveryId: string): Promise<ReceivedCdsign | null> {
-    const delivery = (await listDeliveries(dir)).find((d) => d.id === deliveryId)
+    const delivery = await findDelivery(dir, deliveryId)
     if (!delivery) return null
-    const opts = { properties: ['openFile'] as 'openFile'[], filters: [{ name: t().mdsig.export.filter, extensions: [CDSIGN_EXT, 'md'] }] }
-    const r = parent ? await dialog.showOpenDialog(parent, opts) : await dialog.showOpenDialog(opts)
-    const path = r.filePaths[0]
-    if (r.canceled || !path) return null
+    const path = await pickFile(parent, { name: t().mdsig.export.filter, extensions: [CDSIGN_EXT, 'md'] })
+    if (!path) return null
     if ((await fsp.stat(path)).size > MAX_CDSIGN) throw new Error(t().mdsig.errors.tooLarge)
     const text = await fsp.readFile(path, 'utf8')
     picked.set(path, text)
@@ -326,39 +310,27 @@ export async function pickCdsign(parent: BrowserWindow | null, dir: string, deli
     return { path, name: basename(path), report, check: await checkCdsign(dir, delivery, text, report) }
 }
 
-function freePath(folder: string, source: string): string {
-    const base = `${basename(source).replace(/\.(cdsign|md)$/i, '')}${t().signing.received.suffix}`
-    let out = join(folder, `${base}.${CDSIGN_EXT}`)
-    for (let i = 2; existsSync(out); i++) out = join(folder, `${base} (${i}).${CDSIGN_EXT}`)
-    return out
-}
-
 export async function saveCdsign(parent: BrowserWindow | null, input: { path: string; dir: string; deliveryId: string }): Promise<string | null> {
     const text = picked.get(input.path)
     if (text === undefined) throw new Error(t().signing.received.notPicked)
-    const delivery = (await listDeliveries(input.dir)).find((d) => d.id === input.deliveryId)
+    const delivery = await findDelivery(input.dir, input.deliveryId)
     if (!delivery) return null
     const report = await verifyMd(text)
     const check = await checkCdsign(input.dir, delivery, text, report)
     if (!check.bodyMatches) throw new Error(t().mdsig.errors.bodyMismatch)
-    let out: string | null = null
-    if (delivery.folder && existsSync(delivery.folder)) out = freePath(delivery.folder, input.path)
-    else {
-        const opts = { defaultPath: freePath(dirname(input.path), input.path), filters: [{ name: t().mdsig.export.filter, extensions: [CDSIGN_EXT] }] }
-        const r = parent ? await dialog.showSaveDialog(parent, opts) : await dialog.showSaveDialog(opts)
-        out = r.canceled || !r.filePath ? null : r.filePath
-    }
-    if (!out) return null
-    await fsp.writeFile(out, text, 'utf8')
-    picked.delete(input.path)
-    const me = (await identity(input.dir).catch(() => null))?.name ?? (await author(input.dir)).name
-    await recordReceived(input.dir, delivery.id, {
-        file: basename(out),
-        at: new Date().toISOString(),
-        by: me,
-        signers: report.result.signatures.filter((s) => s.fields.method !== 'tsa').map((s) => `${s.fields.method}:${s.fields.signer}`),
-        kind: 'cdsign',
-        agreement: report.result.ok ? report.result.agreement.status : 'invalid',
+    const out = await saveReceived(parent, {
+        dir: input.dir,
+        delivery,
+        source: input.path,
+        ext: CDSIGN_EXT,
+        filter: t().mdsig.export.filter,
+        data: text,
+        entry: {
+            signers: report.result.signatures.filter((s) => s.fields.method !== 'tsa').map((s) => `${s.fields.method}:${s.fields.signer}`),
+            kind: 'cdsign',
+            agreement: report.result.ok ? report.result.agreement.status : 'invalid',
+        },
     })
+    if (out) picked.delete(input.path)
     return out
 }

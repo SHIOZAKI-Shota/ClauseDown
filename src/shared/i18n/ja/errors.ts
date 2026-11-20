@@ -101,7 +101,6 @@ export const errors = {
         notFound: (folder: string) => `ディレクトリ「${folder}」が見つかりません`,
     },
     images: {
-        mdRequired: '文書（.md）を指定してください',
         noData: '画像のデータがありません',
         tooLarge: '画像が大きすぎます（20MB まで）',
         badType: 'PNG・JPEG・GIF・WebP の画像だけ貼り付けられます',
@@ -128,12 +127,14 @@ export const errors = {
         ownPr: '自分が依頼した改定案は、GitHub では承認できません',
         notMergeable: (msg: string) => `GitHub の設定により、まだ反映できません（${msg}）`,
     },
+    oauth: {
+        unknown: '不明なエラー',
+        cancelled: 'ログインを中止しました',
+    },
     githubAuth: {
         noClientId: 'GitHub App の Client ID が設定されていません。設定画面で入力してください',
         cannotLogin: (why: string) => `GitHub にログインできません（${why}）`,
-        unknown: '不明なエラー',
         pressLoginFirst: '先に「GitHub でログイン」を押してください',
-        cancelled: 'ログインを中止しました',
         denied: 'GitHub でのログインが取り消されました',
         expired: 'コードの有効期限が切れました。もう一度「GitHub でログイン」を押してください',
         tokenLogin: '（トークン）',
@@ -249,7 +250,6 @@ export const errors = {
         openrouter: {
             success: 'ログインできました。ClauseDown に戻ってください。このページは閉じてかまいません。',
             timeout: 'ログインの時間が切れました。もう一度「OpenRouter でログイン」を押してください',
-            cancelled: 'ログインを中止しました',
             noKey: (why: string) => `OpenRouter のキーを受け取れませんでした（${why}）`,
         },
     },

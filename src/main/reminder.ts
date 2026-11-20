@@ -1,4 +1,5 @@
 import { app, Notification } from 'electron'
+import { todayISO } from '../shared/date'
 import { t } from '../shared/i18n'
 import { promises as fsp } from 'node:fs'
 import { writeAtomic } from './atomic'
@@ -21,12 +22,6 @@ async function readNotified(): Promise<Record<string, string>> {
     }
 }
 
-const p = (n: number) => String(n).padStart(2, '0')
-const localToday = () => {
-    const d = new Date()
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
-}
-
 function bodyOf(o: ScheduleItem, today: string): string {
     const days = Math.round((Date.parse(o.date) - Date.parse(today)) / 86400000)
     const r = t().notify.reminder
@@ -38,7 +33,7 @@ function bodyOf(o: ScheduleItem, today: string): string {
 export async function checkReminders(open: (e: OpenScheduleEvent) => void): Promise<void> {
     const { prefs } = await loadSettings()
     if (prefs.notifyDue === false || !Notification.isSupported()) return
-    const today = localToday()
+    const today = todayISO()
     const due = dueReminders(await scheduleAll(today, 365), today)
     if (!due.length) return
     const notified = await readNotified()

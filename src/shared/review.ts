@@ -1,4 +1,5 @@
 import { t } from './i18n'
+import type { ForgeKind } from './forge'
 import { liveRecord } from './i18n/live'
 import type { DsseEnvelope } from './attestation'
 
@@ -13,14 +14,14 @@ export interface ReviewEvent {
     byLogin?: string
     at: string
     text: string
-    source?: 'app' | 'github' | 'gitlab'
+    source?: 'app' | ForgeKind
     githubPr?: number
     pr?: number
-    forge?: 'github' | 'gitlab'
+    forge?: ForgeKind
     forgeUser?: string
     attestation?: DsseEnvelope
     publicKey?: string
-    mirror?: { forge: 'github' | 'gitlab'; pr: number }
+    mirror?: { forge: ForgeKind; pr: number }
     signed?: 'verified' | 'unverified'
 }
 

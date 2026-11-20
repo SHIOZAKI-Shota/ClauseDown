@@ -1,9 +1,10 @@
 import { app, safeStorage } from 'electron'
+import { githubWeb, gitlabWeb, oauthPost } from './forge-http'
 import { t } from '../shared/i18n'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import type { AppSettings } from '../shared/api'
-import { cleanGitLabHosts, GITHUB_BASE, type ForgeKind } from '../shared/forge'
+import { cleanGitLabHosts, GITHUB_BASE, type ForgeKind, type ForgeLoginMethod } from '../shared/forge'
 import { cleanAiConfig } from '../shared/ai-providers'
 import { isEnabled } from '../shared/experiments'
 import { cleanStyle, DEFAULT_PREFS } from '../shared/prefs'
@@ -79,7 +80,7 @@ export function forgetCachedSettings() {
 
 export interface Credential {
     provider?: ForgeKind
-    method: 'token' | 'app'
+    method: ForgeLoginMethod
     access: string
     refresh?: string
     expiresAt?: number
@@ -160,22 +161,14 @@ export async function setToken(base: string, token: string, provider: ForgeKind)
     await saveCredential(base, token ? { provider, method: 'token', access: token } : null)
 }
 
-const githubWeb = () => process.env.CLAUSEDOWN_GITHUB_WEB ?? GITHUB_BASE
-export const gitlabWeb = (base: string) => process.env.CLAUSEDOWN_GITLAB_WEB ?? base
-
 async function refresh(base: string, c: Credential): Promise<Credential | null> {
     if (!c.refresh || !c.clientId) return null
     if (c.refreshExpiresAt && c.refreshExpiresAt < Date.now()) return null
     const gitlab = c.provider === 'gitlab'
     const url = gitlab ? `${gitlabWeb(base)}/oauth/token` : `${githubWeb()}/login/oauth/access_token`
     const body = { client_id: c.clientId, grant_type: 'refresh_token', refresh_token: c.refresh }
-    const res = await fetch(url, {
-        method: 'POST',
-        headers: { Accept: 'application/json', 'Content-Type': gitlab ? 'application/x-www-form-urlencoded' : 'application/json' },
-        body: gitlab ? new URLSearchParams(body).toString() : JSON.stringify(body),
-    })
-    const j = (await res.json().catch(() => ({}))) as OAuthResponse
-    if (!res.ok || !j.access_token) return null
+    const { ok, json: j } = await oauthPost(url, body, gitlab)
+    if (!ok || !j.access_token) return null
     const next = credentialFromResponse(j, c.provider ?? 'github', c.clientId, c)
     await saveCredential(base, next)
     return next

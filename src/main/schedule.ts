@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import { localYmd } from '../shared/date'
 import { t } from '../shared/i18n'
 import { author } from './git-base'
 import { newId, readRecord, readRecords, RECORD, writeRecord } from './records'
@@ -92,11 +93,7 @@ export async function setEventDone(dir: string, id: string, date: string, done: 
     await writeRecord(dir, fileOf(id), { ...prev, done: [...set].sort(), updatedAt: new Date().toISOString() })
 }
 
-const localDate = (iso: string) => {
-    const d = new Date(iso)
-    const p = (n: number) => String(n).padStart(2, '0')
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
-}
+const localDate = (iso: string) => localYmd(new Date(iso))
 
 export async function occurrences(
     dir: string,

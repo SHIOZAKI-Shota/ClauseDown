@@ -1,11 +1,5 @@
 import { locale, t } from '@shared/i18n'
-
-const pad = (n: number) => String(n).padStart(2, '0')
-
-export function todayISO(): string {
-    const d = new Date()
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
+import { localHm, todayISO } from '@shared/date'
 
 function toDate(t: number | string): Date {
     return typeof t === 'number' ? new Date(t * 1000) : new Date(t)
@@ -14,7 +8,7 @@ function toDate(t: number | string): Date {
 export function fmtDate(t: number | string, kind: 'md' | 'ymd' | 'mdhm' | 'ymdhm'): string {
     const d = toDate(t)
     const md = `${d.getMonth() + 1}/${d.getDate()}`
-    const hm = `${pad(d.getHours())}:${pad(d.getMinutes())}`
+    const hm = localHm(d)
     switch (kind) {
         case 'md':
             return md

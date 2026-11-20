@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import MarkdownIt from 'markdown-it'
 import type { CommitInfo, Issue, IssueDetail } from '@shared/api'
+import type { IssueState } from '@shared/forge'
 import { useApp } from '~/stores/app'
 import { fmtDate } from '~/utils/format'
 import { MOD_KEY } from '~/utils/platform'
@@ -19,7 +20,7 @@ const dir = app.repoDir!
 const list = ref<Issue[]>([])
 const loading = ref(true)
 const error = ref('')
-const filter = ref<'open' | 'closed'>('open')
+const filter = ref<IssueState>('open')
 const q = ref('')
 const selected = ref<number | null>(null)
 const detail = ref<IssueDetail | null>(null)

@@ -1,4 +1,5 @@
 import { createPublicKey, randomBytes } from 'node:crypto'
+import { errText } from './util'
 import { t } from '../shared/i18n'
 import { loadNative } from './native'
 import { blobOfPublicKey, p256Blob, publicBlob, type KeySigner } from './ssh-sig'
@@ -42,7 +43,7 @@ export function chipAvailable(): Promise<boolean> {
     return availability
 }
 
-const fail = (e: unknown) => new Error((e as Error).message === 'cancelled' ? t().signing.errors.chipCancelled : t().signing.errors.chip((e as Error).message))
+const fail = (e: unknown) => new Error(errText(e) === 'cancelled' ? t().signing.errors.chipCancelled : t().signing.errors.chip(errText(e)))
 
 export async function createChipKey(): Promise<{ key: ChipKey; blob: Buffer }> {
     const n = load()

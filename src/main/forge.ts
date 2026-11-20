@@ -1,4 +1,5 @@
 import { GITHUB_BASE, knownBases, matchRemote, type ForgeKind } from '../shared/forge'
+import { ForgeHttpError } from './forge-http'
 import { t } from '../shared/i18n'
 import type { ReviewAction, ReviewEvent } from '../shared/review'
 import type { Issue, IssuePatch } from '../shared/api'
@@ -186,7 +187,7 @@ function gitlabForge(r: gl.GitLabRepo): Forge {
                     const me = (await loadCredential(r.base))?.login
                     const already = me && (await gl.listApprovals(r, n).catch(() => [] as string[])).includes(me)
                     if (!already) {
-                        if (e instanceof gl.GitLabError && e.status === 409) {
+                        if (e instanceof ForgeHttpError && e.status === 409) {
                             throw new Error(t().errors.forge.gitlabDivergedApprove)
                         }
                         throw e
