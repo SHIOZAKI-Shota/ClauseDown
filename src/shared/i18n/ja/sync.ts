@@ -1,5 +1,4 @@
 export const sync = {
-    cancel: 'やめる',
     status: {
         remote: 'リモート',
         remoteWith: (text: string) => `リモート・${text}`,

@@ -142,6 +142,7 @@ const indent = (depth: number) => ({ paddingLeft: `${6 + depth * 14}px` })
                     variant="ghost"
                     class="add"
                     :title="t.docs.tree.addDoc"
+                    :aria-label="t.docs.tree.addDoc"
                     @click.stop="app.dialog = { kind: 'newDoc', folder: r.node.path || undefined }"
                 />
             </div>

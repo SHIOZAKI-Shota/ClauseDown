@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useConfirm } from '~/composables/useConfirm'
 import type { AiModel, AiStatus } from '@shared/api'
 import { AI_PROVIDERS, OPENAI_PRESETS, aiBaseOf, type AiConfig, type AiProvider } from '@shared/ai-providers'
 import { GITHUB_BASE } from '@shared/forge'
@@ -8,6 +9,7 @@ import { useT } from '~/composables/useT'
 const emit = defineEmits<{ status: [AiStatus] }>()
 const app = useApp()
 const t = useT()
+const ask = useConfirm()
 
 const status = ref<AiStatus | null>(null)
 const provider = ref<AiProvider>('anthropic')
@@ -89,6 +91,17 @@ async function pickModel(v: string) {
     model.value = v
     await save()
 }
+async function clearKey() {
+    if (
+        await ask({
+            title: t.value.ai.settings.clearKeyConfirm,
+            description: t.value.ai.settings.clearKeyDesc,
+            confirmLabel: t.value.ai.settings.clearKey,
+            color: 'error',
+        })
+    )
+        await saveKey(true)
+}
 async function saveKey(clear = false) {
     const s = await app.run(
         () => window.api.setAiKey(provider.value, clear ? '' : key.value, config.value.baseUrl),
@@ -151,11 +164,18 @@ async function test() {
             :placeholder="status?.hasKey ? t.ai.settings.overwrite : provider === 'anthropic' ? 'sk-ant-…' : ''"
         >
             <template #trailing>
-                <UButton :icon="showKey ? 'i-lucide-eye-off' : 'i-lucide-eye'" size="xs" color="neutral" variant="link" @click="showKey = !showKey" />
+                <UButton
+                    :icon="showKey ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                    size="xs"
+                    color="neutral"
+                    variant="link"
+                    :aria-label="showKey ? t.common.hide : t.common.show"
+                    @click="showKey = !showKey"
+                />
             </template>
         </UInput>
         <UButton :label="t.common.save" size="sm" color="neutral" variant="outline" :disabled="!key.trim()" @click="saveKey()" />
-        <UButton v-if="status?.hasKey" :label="t.ai.settings.clearKey" size="sm" color="error" variant="ghost" @click="saveKey(true)" />
+        <UButton v-if="status?.hasKey" :label="t.ai.settings.clearKey" size="sm" color="error" variant="ghost" @click="clearKey" />
     </SettingRow>
     <SettingRow
         v-if="info.auth === 'oauth'"

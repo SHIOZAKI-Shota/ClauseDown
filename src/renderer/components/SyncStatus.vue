@@ -57,8 +57,7 @@ const webUrl = computed(() => app.repo?.url?.replace(/\.git$/, ''))
 const where = computed(() => (app.forge ? FORGE_LABEL[app.forge] : t.value.sync.status.browser))
 async function copyUrl() {
     if (!webUrl.value) return
-    await navigator.clipboard.writeText(webUrl.value)
-    app.notify(t.value.sync.status.urlCopied)
+    await app.copy(webUrl.value, t.value.sync.status.urlCopied)
 }
 
 const menu = computed<DropdownMenuItem[][]>(() => {
@@ -114,7 +113,7 @@ watch(
                 size="xs"
                 class="seg main"
                 :trailing-icon="local ? 'i-lucide-plus' : diverged ? 'i-lucide-git-merge' : 'i-lucide-refresh-cw'"
-                :ui="{ trailingIcon: app.busy && !local ? 'spin' : '' }"
+                :ui="{ trailingIcon: app.busy && !local ? 'cd-spin' : '' }"
                 :disabled="app.busy && !local"
                 :title="`${status.title}\n${local ? t.sync.status.hintAdd : diverged ? t.sync.status.hintResolve : t.sync.status.hintSync}`"
                 :aria-label="local ? t.sync.status.ariaAdd : diverged ? t.sync.status.ariaResolve : t.sync.status.ariaSync"
@@ -168,15 +167,5 @@ watch(
     padding-left: 4px;
     padding-right: 6px;
     margin-left: 1px;
-}
-
-.pill :deep(.spin) {
-    animation: cd-spin 0.9s linear infinite;
-}
-
-@keyframes cd-spin {
-    to {
-        transform: rotate(360deg);
-    }
 }
 </style>

@@ -46,7 +46,7 @@ const menu = computed<ContextMenuItem[][]>(() => {
         <div class="head" :class="{ drop: dropFolder === '' }" @dragover="onDragOver('', $event)" @dragleave="onDragLeave('')" @drop="onDrop('', $event)">
             <span>{{ dragging ? t.docs.tree.dropToRoot : t.docs.document }}</span>
             <span class="cd-grow" />
-            <UButton icon="i-lucide-plus" size="xs" color="neutral" variant="ghost" :title="t.docs.newDoc" @click="newDocIn()" />
+            <UButton icon="i-lucide-plus" size="xs" color="neutral" variant="ghost" :aria-label="t.docs.newDoc" :title="t.docs.newDoc" @click="newDocIn()" />
             <PaneControls v-if="pane" :pane="pane" side="left" :label="t.docs.tree.paneLabel" />
         </div>
         <UInput v-model="q" icon="i-lucide-search" :placeholder="t.docs.tree.search" size="sm" @keydown="onKey" />

@@ -443,3 +443,34 @@ button.cd-chip:hover {
 :root.dark {
     --cd-brand: #9d9bff;
 }
+
+:root {
+    --cd-fs-xs: 11px;
+    --cd-fs-sm: 12px;
+    --cd-fs-md: 13px;
+    --cd-radius-sm: 4px;
+    --cd-radius-md: 6px;
+}
+
+.cd-spin {
+    animation: cd-spin 1s linear infinite;
+}
+
+@keyframes cd-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.cd-note {
+    margin: 0;
+    font-size: var(--cd-fs-sm);
+    color: var(--ui-text-muted);
+}
+
+.cd-empty {
+    margin: 0;
+    padding: 6px 12px;
+    font-size: var(--cd-fs-sm);
+    color: var(--ui-text-muted);
+}

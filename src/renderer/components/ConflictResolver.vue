@@ -199,8 +199,24 @@ const plain = (lines: string[]) => (lines.length ? esc(lines.join('\n')) : `<spa
         <section class="center">
             <div class="cd-toolbar toolbar">
                 <UFieldGroup size="sm">
-                    <UButton icon="i-lucide-chevron-up" color="neutral" variant="outline" square :disabled="index === 0" @click="go(-1)" />
-                    <UButton icon="i-lucide-chevron-down" color="neutral" variant="outline" square :disabled="index === spots.length - 1" @click="go(1)" />
+                    <UButton
+                        icon="i-lucide-chevron-up"
+                        color="neutral"
+                        variant="outline"
+                        square
+                        :aria-label="t.common.prev"
+                        :disabled="index === 0"
+                        @click="go(-1)"
+                    />
+                    <UButton
+                        icon="i-lucide-chevron-down"
+                        color="neutral"
+                        variant="outline"
+                        square
+                        :aria-label="t.common.next"
+                        :disabled="index === spots.length - 1"
+                        @click="go(1)"
+                    />
                 </UFieldGroup>
                 <span class="where">{{ spot.label }}</span>
                 <span class="cd-grow" />

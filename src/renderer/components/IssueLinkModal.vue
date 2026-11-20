@@ -66,7 +66,7 @@ async function save() {
         </template>
         <template #footer>
             <div class="cd-modal-foot">
-                <UButton :label="t.issues.cancel" color="neutral" variant="outline" @click="emit('close')" />
+                <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="emit('close')" />
                 <UButton :label="oid ? t.issues.link : t.issues.linkModal.record" :disabled="!!oid && !picked.length" @click="save" />
             </div>
         </template>

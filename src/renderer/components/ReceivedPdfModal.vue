@@ -46,8 +46,8 @@ async function save() {
             </div>
         </template>
         <template #footer>
-            <div class="footer">
-                <UButton :label="t.common.cancel" color="neutral" variant="ghost" @click="emit('close')" />
+            <div class="cd-modal-foot">
+                <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="emit('close')" />
                 <UButton :label="c.save" icon="i-lucide-file-check" :loading="busy" @click="save" />
             </div>
         </template>
@@ -81,11 +81,5 @@ async function save() {
 .note {
     font-size: 12px;
     margin: 0;
-}
-.footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    width: 100%;
 }
 </style>

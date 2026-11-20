@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useConfirm } from '~/composables/useConfirm'
 import type { SegmentItem } from '~/components/SegmentSwitch.vue'
 import { isHttpsUrl, MD_METHODS, validSelector, validSigner, type MdKeyEntry, type MdKeyKind, type MdMethod, type MdSigningSettings } from '@shared/mdsig'
 import { useApp } from '~/stores/app'
@@ -8,6 +9,7 @@ const props = defineProps<{ md: MdSigningSettings; appKey: boolean }>()
 const emit = defineEmits<{ changed: [] }>()
 const app = useApp()
 const t = useT()
+const ask = useConfirm()
 const m = computed(() => t.value.mdsig.settings)
 
 const kindItems = computed<SegmentItem<MdKeyKind>[]>(() => [
@@ -60,7 +62,7 @@ async function add() {
 }
 
 async function remove(k: MdKeyEntry) {
-    if (!confirm(m.value.confirmRemove)) return
+    if (!(await ask({ title: m.value.confirmRemove, confirmLabel: t.value.common.delete, color: 'error' }))) return
     await app.run(() => window.api.removeMdKey(k.id))
     emit('changed')
 }
@@ -75,8 +77,7 @@ const keyValue = (k: MdKeyEntry) => k.publicKey?.slice(k.publicKey.indexOf(':') 
 const dnsName = (k: MdKeyEntry) => `${k.selector ? `${k.selector}.` : ''}_mdsig.${k.signer}`
 const dnsRecord = (k: MdKeyEntry) => `${dnsName(k)}. IN TXT "v=mdsig1; k=${keyType(k)}; p=${keyValue(k)}"`
 async function copy(text: string) {
-    await navigator.clipboard.writeText(text)
-    app.notify(m.value.copied)
+    await app.copy(text, m.value.copied)
 }
 
 const newPage = ref('')
@@ -103,7 +104,7 @@ const repoKey = computed(() => (app.repoDir ? (props.md.repoKeys[app.repoDir] ??
             <span class="key-name">{{ k.label || `${k.method}:${k.signer}` }}</span>
             <span class="cd-chip">{{ m.kinds[k.kind] }}</span>
             <UBadge v-if="md.defaultKey === k.id" :label="m.default" color="primary" variant="subtle" size="sm" />
-            <span class="grow" />
+            <span class="cd-grow" />
             <UButton v-if="md.defaultKey !== k.id" :label="m.makeDefault" size="xs" color="neutral" variant="ghost" @click="set({ defaultKey: k.id })" />
             <UButton :label="m.remove" size="xs" color="error" variant="ghost" @click="remove(k)" />
         </div>
@@ -151,7 +152,7 @@ const repoKey = computed(() => (app.repoDir ? (props.md.repoKeys[app.repoDir] ??
         </UFormField>
         <div class="actions">
             <span v-if="waiting" class="cd-muted">{{ m.adding }}</span>
-            <UButton :label="t.common.cancel" size="sm" color="neutral" variant="ghost" :disabled="waiting" @click="adding = false" />
+            <UButton :label="t.common.cancel" size="sm" color="neutral" variant="outline" :disabled="waiting" @click="adding = false" />
             <UButton :label="m.add" size="sm" :disabled="!formOk || waiting" :loading="waiting" @click="add" />
         </div>
     </div>
@@ -225,9 +226,6 @@ const repoKey = computed(() => (app.repoDir ? (props.md.repoKeys[app.repoDir] ??
 }
 .key-name {
     font-weight: 600;
-}
-.grow {
-    flex: 1;
 }
 dl {
     display: grid;

@@ -71,6 +71,5 @@ export const history: Messages['history'] = {
         pickIssue: 'Choose an issue…',
         searchIssue: 'Search by number or title',
         recordEffective: 'Record effective date',
-        cancel: 'Cancel',
     },
 }

@@ -181,7 +181,6 @@ export const settings: Messages['settings'] = {
         dupTitle: 'Duplicate repository',
         dupDesc: (name) => `Copies “${name}” with its version history to another folder. The copy has no remote.`,
         dupName: 'New repository name',
-        cancel: 'Cancel',
         duplicated: (from, to) => `Duplicated “${from}” as “${to}”`,
         forkWith: (where) => `Fork on ${where}`,
         forkDesc: (where, name) =>

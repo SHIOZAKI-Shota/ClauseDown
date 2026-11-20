@@ -53,7 +53,7 @@ async function create() {
         </template>
         <template #footer>
             <div class="cd-modal-foot">
-                <UButton :label="t.sync.cancel" color="neutral" variant="outline" @click="emit('close')" />
+                <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="emit('close')" />
                 <UButton :label="t.sync.newBranch.submit" :disabled="!label.trim() || (!fromCurrent && app.hasUnsaved)" :loading="app.busy" @click="create" />
             </div>
         </template>

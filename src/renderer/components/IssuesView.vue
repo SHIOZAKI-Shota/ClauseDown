@@ -4,6 +4,7 @@ import type { CommitInfo, Issue, IssueDetail } from '@shared/api'
 import type { IssueState } from '@shared/forge'
 import { useApp } from '~/stores/app'
 import { fmtDate } from '~/utils/format'
+import { ipcError } from '~/utils/ipc'
 import { MOD_KEY } from '~/utils/platform'
 import { useT } from '~/composables/useT'
 
@@ -53,7 +54,7 @@ async function load() {
         app.openIssueCount = list.value.filter((i) => i.state === 'open').length
         pending.value = await window.api.pendingLocalIssues(dir).catch(() => 0)
     } catch (e) {
-        error.value = String((e as Error).message ?? e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
+        error.value = ipcError(e)
     } finally {
         loading.value = false
     }
@@ -102,8 +103,11 @@ function startNew(draft?: { title: string; body: string }) {
     newBody.value = draft?.body ?? ''
 }
 
+const saving = ref(false)
 async function create() {
+    saving.value = true
     const made = await app.run(() => window.api.createIssue(dir, { title: newTitle.value, body: newBody.value }), t.value.issues.created)
+    saving.value = false
     if (!made) return
     await load()
     filter.value = 'open'
@@ -119,7 +123,9 @@ function startEdit() {
 
 async function saveEdit() {
     if (!detail.value) return
+    saving.value = true
     const ok = await app.run(() => window.api.updateIssue(dir, detail.value!.n, { title: editTitle.value, body: editBody.value }))
+    saving.value = false
     if (!ok) return
     editing.value = false
     await Promise.all([load(), open(detail.value.n)])
@@ -253,8 +259,8 @@ onMounted(async () => {
                         <UTextarea v-model="newBody" :rows="10" class="w-full" />
                     </UFormField>
                     <div class="cd-modal-foot">
-                        <UButton :label="t.issues.cancel" color="neutral" variant="outline" @click="creating = false" />
-                        <UButton :label="t.issues.create" icon="i-lucide-plus" :disabled="!newTitle.trim()" @click="create" />
+                        <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="creating = false" />
+                        <UButton :label="t.issues.create" icon="i-lucide-plus" :loading="saving" :disabled="!newTitle.trim()" @click="create" />
                     </div>
                 </div>
 
@@ -267,7 +273,7 @@ onMounted(async () => {
                             :icon="detail.state === 'open' ? 'i-lucide-circle-dot' : 'i-lucide-circle-check'"
                         />
                         <h3 v-if="!editing">#{{ detail.n }} {{ detail.title }}</h3>
-                        <UInput v-else v-model="editTitle" class="grow" />
+                        <UInput v-else v-model="editTitle" class="cd-grow" />
                         <span class="cd-grow" />
                         <UTooltip :text="t.issues.reloadTip">
                             <UButton
@@ -316,8 +322,8 @@ onMounted(async () => {
                             <UButton :label="t.issues.edit" icon="i-lucide-pencil" size="sm" color="neutral" variant="ghost" @click="startEdit" />
                         </template>
                         <template v-else>
-                            <UButton :label="t.issues.cancel" size="sm" color="neutral" variant="outline" @click="editing = false" />
-                            <UButton :label="t.common.save" size="sm" :disabled="!editTitle.trim()" @click="saveEdit" />
+                            <UButton :label="t.common.cancel" size="sm" color="neutral" variant="outline" @click="editing = false" />
+                            <UButton :label="t.common.save" size="sm" :loading="saving" :disabled="!editTitle.trim()" @click="saveEdit" />
                         </template>
                     </div>
 
@@ -415,7 +421,7 @@ onMounted(async () => {
             </template>
             <template #footer>
                 <div class="cd-modal-foot">
-                    <UButton :label="t.issues.cancel" color="neutral" variant="outline" @click="picker = null" />
+                    <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="picker = null" />
                     <UButton :label="picker === 'close' ? t.issues.close : t.issues.link" :disabled="picker === 'link' && !pickOid" @click="confirmPicker" />
                 </div>
             </template>
@@ -553,10 +559,6 @@ onMounted(async () => {
 .d-head h3 {
     margin: 0;
     font-size: 18px;
-}
-
-.grow {
-    flex: 1;
 }
 
 .sub {

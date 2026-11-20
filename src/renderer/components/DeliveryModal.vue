@@ -119,7 +119,7 @@ async function go() {
         </template>
         <template #footer>
             <div class="cd-modal-foot">
-                <UButton :label="t.schedule.cancel" color="neutral" variant="outline" @click="emit('close')" />
+                <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="emit('close')" />
                 <UButton :label="t.releases.delivery.submit" icon="i-lucide-package" :disabled="!items.length" :loading="app.busy" @click="go" />
             </div>
         </template>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useConfirm } from '~/composables/useConfirm'
 import type { SegmentItem } from '~/components/SegmentSwitch.vue'
 import type { CertInfo, DeepPartial, MynaStatus, SealMeta, SigningStatus } from '@shared/api'
 import { TSA_PRESETS, type CommitSignMode, type KeyStorage, type PdfCertEntry, type SigningSettings } from '@shared/signing'
@@ -10,6 +11,7 @@ import { useStoredRef } from '~/composables/useStoredRef'
 
 const app = useApp()
 const t = useT()
+const ask = useConfirm()
 const s = computed(() => t.value.signing)
 
 const status = ref<SigningStatus | null>(null)
@@ -61,21 +63,24 @@ const storageItems = computed<SegmentItem<KeyStorage>[]>(() => [
 ])
 
 async function createKey() {
-    if (cfg.value?.commit.key && !confirm(s.value.commit.confirmRecreate)) return
+    if (
+        cfg.value?.commit.key &&
+        !(await ask({ title: s.value.commit.recreate, description: s.value.commit.confirmRecreate, confirmLabel: s.value.commit.recreate, color: 'error' }))
+    )
+        return
     busy.value = true
     const next = await app.run(() => window.api.generateSigningKey(status.value?.chip ? storage.value : 'app'))
     busy.value = false
     if (next) status.value = next
 }
 async function removeKey() {
-    if (!confirm(s.value.commit.confirmRemove)) return
+    if (!(await ask({ title: s.value.commit.confirmRemove, confirmLabel: t.value.common.delete, color: 'error' }))) return
     const next = await app.run(() => window.api.deleteSigningKey())
     if (next) status.value = next
 }
 async function copyPublic() {
     if (!cfg.value?.commit.key) return
-    await navigator.clipboard.writeText(cfg.value.commit.key.publicKey)
-    app.notify(s.value.commit.copied)
+    await app.copy(cfg.value.commit.key.publicKey, s.value.commit.copied)
 }
 async function register(base: string) {
     const r = await app.run(() => window.api.registerSigningKey(base))
@@ -155,7 +160,7 @@ function applySigning(next: SigningSettings | undefined | null) {
     if (next && status.value) status.value = { ...status.value, signing: next }
 }
 async function removeCert(c: PdfCertEntry) {
-    if (!confirm(s.value.pdf.confirmRemove(c.label || s.value.pdf.kinds[c.kind]))) return
+    if (!(await ask({ title: s.value.pdf.confirmRemove(c.label || s.value.pdf.kinds[c.kind]), confirmLabel: t.value.common.delete, color: 'error' }))) return
     applySigning(await app.run(() => window.api.removePdfCert(c.id)))
 }
 async function makeDefault(c: PdfCertEntry) {
@@ -220,6 +225,7 @@ async function loadSeals() {
 onMounted(loadSeals)
 onBeforeUnmount(() => Object.values(sealUrls.value).forEach((u) => URL.revokeObjectURL(u)))
 async function removeSeal(id: string) {
+    if (!(await ask({ title: s.value.seals.confirmRemove, confirmLabel: t.value.common.delete, color: 'error' }))) return
     await app.run(() => window.api.deleteSeal(id))
     await loadSeals()
 }
@@ -336,7 +342,7 @@ async function refreshMyna() {
                     <span class="cd-chip">{{ s.pdf.kinds[c.kind] }}</span>
                     <UBadge v-if="cfg.pdf.defaultCert === c.id" :label="s.pdf.default" color="primary" variant="subtle" size="sm" />
                     <UBadge v-if="expiry(c)" :label="expiry(c)!.text" :color="expiry(c)!.level" variant="subtle" size="sm" />
-                    <span class="grow" />
+                    <span class="cd-grow" />
                     <UButton v-if="cfg.pdf.defaultCert !== c.id" :label="s.pdf.makeDefault" size="xs" color="neutral" variant="ghost" @click="makeDefault(c)" />
                     <UButton :label="s.pdf.edit" size="xs" color="neutral" variant="ghost" icon="i-lucide-pencil" @click="startEdit(c)" />
                     <UButton
@@ -372,7 +378,7 @@ async function refreshMyna() {
                     <UFormField :label="s.pdf.location"><UInput v-model="draft.location" :placeholder="cfg.pdf.location" class="cd-w-input" /></UFormField>
                     <UFormField :label="s.pdf.contact"><UInput v-model="draft.contactInfo" :placeholder="cfg.pdf.contactInfo" class="cd-w-input" /></UFormField>
                     <div class="actions">
-                        <UButton :label="t.common.cancel" size="sm" color="neutral" variant="ghost" @click="editing = null" />
+                        <UButton :label="t.common.cancel" size="sm" color="neutral" variant="outline" @click="editing = null" />
                         <UButton :label="t.common.save" size="sm" @click="saveEdit" />
                     </div>
                 </div>
@@ -394,7 +400,7 @@ async function refreshMyna() {
                         <UInput v-model="p12Password" type="password" autocomplete="off" class="cd-w-input" @keydown.enter="importP12" />
                     </UFormField>
                     <div class="actions">
-                        <UButton :label="t.common.cancel" size="sm" color="neutral" variant="ghost" @click="adding = null" />
+                        <UButton :label="t.common.cancel" size="sm" color="neutral" variant="outline" @click="adding = null" />
                         <UButton :label="s.pdf.importP12" size="sm" :disabled="!p12File" @click="importP12" />
                     </div>
                 </template>
@@ -406,7 +412,7 @@ async function refreshMyna() {
                         <UInput v-model.number="self.years" type="number" min="1" max="10" class="cd-w-small" />
                     </UFormField>
                     <div class="actions">
-                        <UButton :label="t.common.cancel" size="sm" color="neutral" variant="ghost" @click="adding = null" />
+                        <UButton :label="t.common.cancel" size="sm" color="neutral" variant="outline" @click="adding = null" />
                         <UButton :label="s.pdf.createSelf" size="sm" :disabled="!self.name.trim()" @click="createSelf" />
                     </div>
                 </template>
@@ -493,7 +499,7 @@ async function refreshMyna() {
                     <img v-if="sealUrls[seal.id]" :src="sealUrls[seal.id]" :alt="seal.label" />
                     <figcaption>
                         <span>{{ seal.label || s.seals.kinds[seal.kind] }}</span>
-                        <UButton icon="i-lucide-trash-2" size="xs" color="neutral" variant="ghost" :aria-label="s.seals.remove" @click="removeSeal(seal.id)" />
+                        <UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" :aria-label="s.seals.remove" @click="removeSeal(seal.id)" />
                     </figcaption>
                 </figure>
                 <span v-if="!seals.length" class="cd-muted">{{ s.seals.empty }}</span>
@@ -564,9 +570,6 @@ async function refreshMyna() {
 }
 .cert-name {
     font-weight: 600;
-}
-.grow {
-    flex: 1;
 }
 .myna {
     display: flex;

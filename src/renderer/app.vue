@@ -42,6 +42,7 @@ defineShortcuts({
 
 <template>
     <UApp :locale="uiLocale" :toaster="{ position: 'bottom-center' }">
+        <ConfirmHost />
         <TitleBar @search="app.paletteOpen = true" />
         <UDashboardGroup v-if="app.settings" unit="px" storage="local" storage-key="clausedown" class="cd-group">
             <AppSidebar />

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useConfirm } from '~/composables/useConfirm'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { parseLegal, articleTitle } from '@shared/legal-parser'
 import { renderDoc } from '@shared/legal-renderer'
@@ -30,6 +31,7 @@ import { usePdfSign } from '~/composables/usePdfSign'
 
 const app = useApp()
 const t = useT()
+const ask = useConfirm()
 const path = app.currentPath!
 const text = ref('')
 const loaded = ref(false)
@@ -324,7 +326,8 @@ async function insertSeal(s: SealInsert) {
     if (!saved) return
     const size = s.size && s.size !== (s.mark === 'sign' ? 12 : 15) ? `=${s.size}mm` : ''
     const mark = `![${s.label.replace(/[[\]]/g, '')}](${saved.src}){${s.mark ?? 'seal'}${size}}`
-    if (!inClosing() && confirm(t.value.signing.sealModal.outsideClosing)) {
+    const sm = t.value.signing.sealModal
+    if (!inClosing() && (await ask({ title: sm.outsideClosing, description: sm.outsideClosingDesc, confirmLabel: sm.toClosing, cancelLabel: sm.here }))) {
         const end = closingEnd()
         if (end === null) {
             editor.value?.goToLine(text.value.split('\n').length - 1)
@@ -822,6 +825,7 @@ const viewModes = computed(() => [
             <UTooltip :text="t.editor.toolbar.outline">
                 <UButton
                     icon="i-lucide-list-tree"
+                    :aria-label="t.editor.toolbar.outline"
                     size="sm"
                     square
                     data-guide="outline"
@@ -920,7 +924,7 @@ const viewModes = computed(() => [
                 <UButton
                     :label="compact ? undefined : t.editor.toolbar.discard"
                     :aria-label="t.editor.toolbar.discard"
-                    :icon="compact ? 'i-lucide-rotate-ccw' : undefined"
+                    :icon="compact ? 'i-lucide-undo-2' : undefined"
                     size="sm"
                     color="error"
                     variant="ghost"
@@ -1015,7 +1019,7 @@ const viewModes = computed(() => [
                 <div class="cd-pane-bar">
                     <span class="cd-pane-title">{{ t.editor.panes.preview }}</span>
                     <span v-if="showPrint" class="pdf-state">
-                        <UIcon v-if="pdfBusy" name="i-lucide-loader-circle" class="spin" :aria-label="t.editor.panes.rendering" />
+                        <UIcon v-if="pdfBusy" name="i-lucide-loader-circle" class="cd-spin" :aria-label="t.editor.panes.rendering" />
                     </span>
                     <div class="zoom" data-guide="zoom">
                         <USlider
@@ -1184,7 +1188,10 @@ const viewModes = computed(() => [
             <span v-if="issueNote" class="issue-note" :class="issueNote.kind">{{ issueNote.text }}</span>
             <span v-else class="hint">{{ t.editor.status.hint(keys('Ctrl+F')) }}</span>
             <span :class="['save', saving === 'pending' ? 'pending' : changed ? 'dirty' : 'clean']">
-                <UIcon :name="saving === 'pending' ? 'i-lucide-loader' : changed ? 'i-lucide-circle-dot' : 'i-lucide-circle-check'" />
+                <UIcon
+                    :name="saving === 'pending' ? 'i-lucide-loader-circle' : changed ? 'i-lucide-circle-dot' : 'i-lucide-circle-check'"
+                    :class="{ 'cd-spin': saving === 'pending' }"
+                />
                 {{ saveState }}
             </span>
         </footer>
@@ -1295,13 +1302,7 @@ const viewModes = computed(() => [
 }
 
 .sig.spin :deep(.iconify) {
-    animation: sig-spin 1s linear infinite;
-}
-
-@keyframes sig-spin {
-    to {
-        transform: rotate(360deg);
-    }
+    animation: cd-spin 1s linear infinite;
 }
 
 .issue-note {
@@ -1398,16 +1399,6 @@ const viewModes = computed(() => [
     margin-left: 6px;
     font-size: 11px;
     color: var(--ui-text-muted);
-}
-
-.spin {
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
 }
 
 .print-body {

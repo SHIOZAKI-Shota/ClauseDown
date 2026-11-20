@@ -68,8 +68,7 @@ async function write() {
 }
 
 async function copyMessage() {
-    await navigator.clipboard.writeText(e.value.messageText(props.title, DEFAULT_SIGN_PAGE))
-    app.notify(t.value.mdsig.settings.copied)
+    await app.copy(e.value.messageText(props.title, DEFAULT_SIGN_PAGE), t.value.mdsig.settings.copied)
 }
 </script>
 
@@ -77,7 +76,7 @@ async function copyMessage() {
     <UModal :open="true" :title="e.title" @update:open="(v) => !v && emit('close')">
         <template #body>
             <div v-if="md" class="cd-form">
-                <p v-if="versionLabel" class="cd-muted ver">{{ e.version(versionLabel) }}</p>
+                <p v-if="versionLabel" class="cd-note">{{ e.version(versionLabel) }}</p>
                 <template v-if="keys.length">
                     <UFormField :label="e.key">
                         <USelect v-model="keyId" :items="keyItems" class="cd-full" />
@@ -114,7 +113,7 @@ async function copyMessage() {
                         </div>
                     </UFormField>
                     <UCheckbox v-if="filled.length > 1" v-model="sequential" :label="e.sequential" :description="e.sequentialDesc" />
-                    <p v-if="hasImages" class="cd-muted note">{{ e.images }}</p>
+                    <p v-if="hasImages" class="cd-note">{{ e.images }}</p>
                 </template>
                 <div v-else class="none">
                     <p class="cd-muted">{{ e.noKeys }}</p>
@@ -123,10 +122,10 @@ async function copyMessage() {
             </div>
         </template>
         <template #footer>
-            <div class="footer">
+            <div class="cd-modal-foot">
                 <UButton :label="e.message" icon="i-lucide-copy" color="neutral" variant="ghost" @click="copyMessage" />
-                <span class="grow" />
-                <UButton :label="t.common.cancel" color="neutral" variant="ghost" @click="emit('close')" />
+                <span class="cd-grow" />
+                <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="emit('close')" />
                 <UButton :label="e.write" icon="i-lucide-signature" :loading="busy" :disabled="!valid" @click="write" />
             </div>
         </template>
@@ -134,11 +133,6 @@ async function copyMessage() {
 </template>
 
 <style scoped>
-.ver,
-.note {
-    margin: 0;
-    font-size: 12px;
-}
 .rows {
     display: flex;
     flex-direction: column;
@@ -155,14 +149,5 @@ async function copyMessage() {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
-}
-.footer {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-}
-.grow {
-    flex: 1;
 }
 </style>

@@ -179,7 +179,6 @@ export const settings = {
         dupTitle: 'リポジトリを複製',
         dupDesc: (name: string) => `「${name}」を、版の履歴ごと別のフォルダにコピーします。コピーにはリモートを付けません。`,
         dupName: '新しいリポジトリの名前',
-        cancel: 'やめる',
         duplicated: (from: string, to: string) => `「${from}」を「${to}」として複製しました`,
         forkWith: (where: string) => `${where} でフォーク`,
         forkDesc: (where: string, name: string) =>

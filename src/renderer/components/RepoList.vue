@@ -88,7 +88,15 @@ function onDragEnd() {
             @drop.prevent="onDrop({ kind: 'top' })"
         >
             <span>{{ t.repo.list.heading }}</span>
-            <UButton icon="i-lucide-plus" size="xs" color="neutral" variant="ghost" :title="t.repo.addManage" @click="app.openSettings('setup', 'repos')" />
+            <UButton
+                icon="i-lucide-plus"
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                :title="t.repo.addManage"
+                :aria-label="t.repo.addManage"
+                @click="app.openSettings('setup', 'repos')"
+            />
         </div>
         <UContextMenu :items="menu" size="sm" :disabled="!menu.length">
             <div class="scroll" @contextmenu.capture="menuFor = null">

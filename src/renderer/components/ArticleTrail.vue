@@ -43,7 +43,7 @@ const saved = computed(() =>
         <p v-if="!effective.length" class="none">{{ t.editor.trail.none }}</p>
 
         <div class="group">{{ t.editor.trail.saved }}</div>
-        <p v-if="loading" class="none"><UIcon name="i-lucide-loader-circle" class="spin" />{{ t.editor.trail.loading }}</p>
+        <p v-if="loading" class="none"><UIcon name="i-lucide-loader-circle" class="cd-spin" />{{ t.editor.trail.loading }}</p>
         <template v-else>
             <button v-for="{ e, c } in saved" :key="c.oid" class="row" @click="emit('commit', c)">
                 <span class="when">{{ fmtDate(c.timestamp, 'ymd') }}</span>
@@ -142,15 +142,5 @@ const saved = computed(() =>
     margin: 0;
     padding: 4px 12px;
     color: var(--ui-text-muted);
-}
-
-.spin {
-    animation: cd-spin 0.9s linear infinite;
-}
-
-@keyframes cd-spin {
-    to {
-        transform: rotate(360deg);
-    }
 }
 </style>

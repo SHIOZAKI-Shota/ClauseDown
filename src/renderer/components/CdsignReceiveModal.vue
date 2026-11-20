@@ -54,8 +54,8 @@ async function save() {
             </div>
         </template>
         <template #footer>
-            <div class="footer">
-                <UButton :label="t.common.cancel" color="neutral" variant="ghost" @click="emit('close')" />
+            <div class="cd-modal-foot">
+                <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="emit('close')" />
                 <UButton :label="c.save" icon="i-lucide-file-check" :loading="busy" :disabled="!file.check.bodyMatches" @click="save" />
             </div>
         </template>
@@ -98,11 +98,5 @@ async function save() {
     border: 1px solid var(--ui-border);
     border-radius: 6px;
     overflow: hidden;
-}
-.footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    width: 100%;
 }
 </style>

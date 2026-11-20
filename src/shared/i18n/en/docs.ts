@@ -1,7 +1,6 @@
 import type { Messages } from '../types'
 
 export const docs: Messages['docs'] = {
-    cancel: 'Cancel',
     repository: 'Repository',
     document: 'Documents',
     directory: 'Folders',

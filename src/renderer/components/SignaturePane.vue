@@ -2,7 +2,7 @@
 import type { BlockResult } from '@mdsig/core'
 import { overallStatus, type MdVerifyReport } from '@shared/mdsig'
 import { FINDING_ORDER, type Finding, type FindingKind } from '@shared/mdsig-layout'
-import { useStoredRef } from '~/composables/useStoredRef'
+import { useVerticalResize } from '~/composables/useVerticalResize'
 import { useT } from '~/composables/useT'
 
 const props = defineProps<{ report: MdVerifyReport | null; busy: boolean; embedded?: boolean }>()
@@ -10,29 +10,7 @@ const emit = defineEmits<{ line: [number]; trust: [string, string]; recheck: [];
 const t = useT()
 const p = computed(() => t.value.mdsig.pane)
 
-const MIN = 80
-const MAX = 600
-const height = useStoredRef('clausedown.pane.signatures', 220, { delay: 300 })
-let startY = 0
-let startH = 0
-const dragging = ref(false)
-function down(e: PointerEvent) {
-    if (e.button !== 0) return
-    e.preventDefault()
-    startY = e.clientY
-    startH = height.value
-    dragging.value = true
-    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-    document.body.classList.add('cd-resizing-v')
-}
-function move(e: PointerEvent) {
-    if (dragging.value) height.value = Math.round(Math.min(MAX, Math.max(MIN, startH - (e.clientY - startY))))
-}
-function up() {
-    dragging.value = false
-    document.body.classList.remove('cd-resizing-v')
-}
-onBeforeUnmount(up)
+const { height, dragging, down, move, up, reset } = useVerticalResize('clausedown.pane.signatures', 220, { min: 80, max: () => 600, grow: 'up' })
 
 const overall = computed(() => overallStatus(props.report))
 const OVERALL_ICON = {
@@ -88,16 +66,16 @@ const findings = computed(() => {
             @pointermove="move"
             @pointerup="up"
             @pointercancel="up"
-            @dblclick="height = 220"
+            @dblclick="reset"
         />
         <div class="cd-pane-bar">
             <span class="cd-pane-title">{{ p.title }}</span>
             <span class="overall" :class="overall">
-                <UIcon :name="busy ? 'i-lucide-loader-circle' : OVERALL_ICON[overall]" :class="{ spin: busy }" />{{
+                <UIcon :name="busy ? 'i-lucide-loader-circle' : OVERALL_ICON[overall]" :class="{ 'cd-spin': busy }" />{{
                     busy ? t.mdsig.status.checking : p.overall[overall]
                 }}
             </span>
-            <span class="grow" />
+            <span class="cd-grow" />
             <UTooltip v-if="!embedded" :text="p.recheck">
                 <UButton
                     icon="i-lucide-refresh-cw"
@@ -115,9 +93,9 @@ const findings = computed(() => {
             </UTooltip>
         </div>
         <div class="list">
-            <p v-if="!report || (!report.result.signatures.length && !report.result.error)" class="empty">{{ p.empty }}</p>
+            <p v-if="!report || (!report.result.signatures.length && !report.result.error)" class="cd-empty">{{ p.empty }}</p>
             <template v-else>
-                <p v-if="report.result.error" class="row-note bad">{{ report.result.error }}</p>
+                <p v-if="report.result.error" class="cd-empty bad">{{ report.result.error }}</p>
                 <button v-for="s in report.result.signatures" :key="s.index" class="row" :class="s.status" @click="emit('line', s.line)">
                     <UIcon :name="STATUS_ICON[s.status]" class="mark" />
                     <span class="main">
@@ -194,10 +172,6 @@ const findings = computed(() => {
     background: color-mix(in oklab, var(--ui-color-primary-500) 40%, transparent);
 }
 
-.grow {
-    flex: 1;
-}
-
 .overall {
     display: inline-flex;
     align-items: center;
@@ -218,16 +192,6 @@ const findings = computed(() => {
 
 .overall.failed {
     color: var(--ui-error);
-}
-
-.spin {
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
 }
 
 .list {
@@ -364,14 +328,7 @@ const findings = computed(() => {
     overflow-wrap: anywhere;
 }
 
-.empty,
-.row-note {
-    margin: 0;
-    padding: 6px 12px;
-    color: var(--ui-text-muted);
-}
-
-.row-note.bad {
+.cd-empty.bad {
     color: var(--ui-error);
 }
 </style>

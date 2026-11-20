@@ -174,8 +174,7 @@ async function regenerateToken() {
 const mcpUrl = computed(() => ai.value?.mcp.url || `http://127.0.0.1:${mcpPort.value}/mcp`)
 const claudeCommand = computed(() => `claude mcp add --transport http clausedown ${mcpUrl.value} --header "Authorization: Bearer ${mcpToken.value}"`)
 async function copy(text: string, what: string) {
-    await navigator.clipboard.writeText(text)
-    app.notify(st.value.copied(what))
+    await app.copy(text, st.value.copied(what))
 }
 
 const mode = ref<'new' | 'open' | 'clone'>('new')
@@ -617,6 +616,7 @@ const GUIDE_KEYS = [
                         <template #trailing>
                             <UButton
                                 :icon="showMcpToken ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                                :aria-label="showMcpToken ? t.common.hide : t.common.show"
                                 size="xs"
                                 color="neutral"
                                 variant="link"
@@ -905,7 +905,7 @@ const GUIDE_KEYS = [
         <template #body>
             <div class="dup">
                 <SettingRow :label="t.settings.repos.dupName" stacked>
-                    <UInput v-model="dupName" class="cd-w-input" />
+                    <UInput v-model="dupName" class="cd-w-input" @keydown.enter="dupName.trim() && dupParent && !dupBusy && duplicate()" />
                 </SettingRow>
                 <SettingRow :label="t.settings.repos.location" stacked>
                     <span class="path">{{ dupParent || t.settings.unselected }}</span>
@@ -915,7 +915,7 @@ const GUIDE_KEYS = [
         </template>
         <template #footer>
             <div class="cd-modal-foot">
-                <UButton :label="t.settings.repos.cancel" color="neutral" variant="outline" :disabled="dupBusy" @click="dupOf = null" />
+                <UButton :label="t.common.cancel" color="neutral" variant="outline" :disabled="dupBusy" @click="dupOf = null" />
                 <UButton :label="t.settings.repos.duplicate" :loading="dupBusy" :disabled="!dupName.trim() || !dupParent" @click="duplicate" />
             </div>
         </template>

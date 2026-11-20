@@ -76,6 +76,8 @@ export const ai = {
         keyOther: 'その接続先で発行したキーを入力してください。',
         overwrite: '入力すると上書きします',
         clearKey: '消す',
+        clearKeyConfirm: 'API キーを消しますか？',
+        clearKeyDesc: 'もう一度入力するまで、この AI は使用できません。',
         openRouterAccount: 'OpenRouter のアカウント',
         openRouterStored: 'ログインしてあります（受け取ったキーを、ローカル の中で暗号化しています）。',
         openRouterHint: 'ブラウザで OpenRouter にログインすると、このアプリ用のキーが発行されます。',

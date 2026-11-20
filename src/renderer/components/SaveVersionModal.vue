@@ -216,7 +216,7 @@ function save() {
         </template>
         <template #footer>
             <div class="cd-modal-foot">
-                <UButton :label="t.history.save.cancel" color="neutral" variant="outline" @click="emit('close')" />
+                <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="emit('close')" />
                 <UButton :label="t.common.save" :disabled="!canSave" :loading="busy" @click="save" />
             </div>
         </template>

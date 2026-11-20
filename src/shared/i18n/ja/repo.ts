@@ -1,5 +1,4 @@
 export const repo = {
-    cancel: 'やめる',
     notFound: '見つかりません',
     removeFromList: '一覧から外す',
     addManage: 'リポジトリの追加・管理',
@@ -19,7 +18,7 @@ export const repo = {
         displayNameDesc: 'タイトルバーのリポジトリの切り替えに出る名前です。ローカル の中だけの名前で、ほかの人には影響しません。',
         folder: 'フォルダ',
         openFolder: 'フォルダを開く',
-        removeDesc: 'ローカル の一覧から外すだけで、フォルダや版は消えません。',
+        removeDesc: 'この PC の一覧から外すだけで、フォルダや版は消えません。',
         scope: '設定する範囲',
         scopeDesc: 'ディレクトリごとに変えられます。変えていない項目は、上（リポジトリ全体 → ローカル の設定）の設定を使用します。',
         styleNote: (folder: string) =>

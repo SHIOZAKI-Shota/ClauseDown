@@ -1,5 +1,4 @@
 export const docs = {
-    cancel: 'やめる',
     repository: 'リポジトリ',
     document: '文書',
     directory: 'ディレクトリ',

@@ -24,7 +24,7 @@ async function save() {
         </template>
         <template #footer>
             <div class="cd-modal-foot">
-                <UButton :label="t.schedule.cancel" color="neutral" variant="outline" @click="emit('close')" />
+                <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="emit('close')" />
                 <UButton :label="t.releases.effective.submit" :loading="app.busy" @click="save" />
             </div>
         </template>

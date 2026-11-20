@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { LegalDoc } from '@shared/legal-parser'
 import { positionLabel } from '~/utils/legal-editor'
-import { useStoredRef } from '~/composables/useStoredRef'
+import { useVerticalResize } from '~/composables/useVerticalResize'
 import { useT } from '~/composables/useT'
 
 export interface EditorIssue {
@@ -18,9 +18,7 @@ const filter = defineModel<'all' | 'error' | 'warning'>('filter', { default: 'al
 const emit = defineEmits<{ pick: [EditorIssue]; close: [] }>()
 const t = useT()
 
-const MIN = 80
-const MAX = 600
-const height = useStoredRef('clausedown.pane.issues', 180, { delay: 300 })
+const { height, dragging, down, move, up, reset } = useVerticalResize('clausedown.pane.issues', 180, { min: 80, max: () => 600, grow: 'up' })
 const errors = computed(() => props.items.filter((i) => i.severity === 'error').length)
 const warnings = computed(() => props.items.length - errors.value)
 const shown = computed(() => (filter.value === 'all' ? props.items : props.items.filter((i) => i.severity === filter.value)))
@@ -29,27 +27,6 @@ const FILTERS = computed(() => [
     { value: 'error' as const, label: t.value.editor.issues.error(errors.value) },
     { value: 'warning' as const, label: t.value.editor.issues.warning(warnings.value) },
 ])
-
-let startY = 0
-let startH = 0
-const dragging = ref(false)
-function down(e: PointerEvent) {
-    if (e.button !== 0) return
-    e.preventDefault()
-    startY = e.clientY
-    startH = height.value
-    dragging.value = true
-    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-    document.body.classList.add('cd-resizing-v')
-}
-function move(e: PointerEvent) {
-    if (dragging.value) height.value = Math.round(Math.min(MAX, Math.max(MIN, startH - (e.clientY - startY))))
-}
-function up() {
-    dragging.value = false
-    document.body.classList.remove('cd-resizing-v')
-}
-onBeforeUnmount(up)
 
 const list = ref<HTMLElement>()
 watch(
@@ -73,7 +50,7 @@ watch(
             @pointermove="move"
             @pointerup="up"
             @pointercancel="up"
-            @dblclick="height = 180"
+            @dblclick="reset"
         />
         <div class="cd-pane-bar">
             <span class="cd-pane-title">{{ t.editor.issues.title }}</span>

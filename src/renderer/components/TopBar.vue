@@ -6,7 +6,7 @@ const app = useApp()
 const t = useT()
 
 const tabs = computed(() => [
-    { label: t.value.shell.topBar.edit, value: 'editor', icon: 'i-lucide-pencil' },
+    { label: t.value.shell.topBar.edit, value: 'editor', icon: 'i-lucide-square-pen' },
     { label: t.value.shell.topBar.history, value: 'history', icon: 'i-lucide-git-commit-vertical' },
     { label: t.value.shell.topBar.compare, value: 'compare', icon: 'i-lucide-columns-2' },
     { label: t.value.shell.topBar.releases, value: 'releases', icon: 'i-lucide-calendar-check' },

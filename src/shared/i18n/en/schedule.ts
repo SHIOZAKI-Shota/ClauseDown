@@ -20,7 +20,6 @@ export const schedule: Messages['schedule'] = {
     undoDone: 'Mark as not done',
     edit: 'Edit',
     remove: 'Delete',
-    cancel: 'Cancel',
     add: 'Add due date',
     removeTitle: 'Delete due date',
     removeBody: 'This due date will be deleted. If it repeats, all occurrences will be deleted.',

@@ -19,7 +19,6 @@ export const merge = {
     memo: '記録するメモ',
     effectiveDate: '施行日',
     deleteAfterShort: '反映後に改定案を削除する',
-    cancel: 'やめる',
     adopt: '現行版に反映',
     update: '取り込む',
     checking: '変更を調べています…',

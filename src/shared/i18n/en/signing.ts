@@ -188,6 +188,7 @@ export const signing: Messages['signing'] = {
         empty: 'None yet',
         create: 'Create',
         remove: 'Delete',
+        confirmRemove: 'Delete this seal or signature? Images already inserted into documents stay.',
         kinds: { seal: 'Seal', sign: 'Signature', image: 'Image' },
     },
     sealModal: {
@@ -209,8 +210,9 @@ export const signing: Messages['signing'] = {
         insert: 'Insert',
         saveOnly: 'Save',
         size: 'Size (mm)',
-        outsideClosing:
-            'The cursor is outside the signature block. Insert into the signature block? (One is added at the end if there is none. Cancel inserts at the cursor.)',
+        outsideClosing: 'The cursor is outside the signature block. Insert into the signature block?',
+        outsideClosingDesc: 'One is added at the end if there is none.',
+        toClosing: 'Insert into the signature block',
         addClosing: 'Add a signature block and insert',
         here: 'Insert here',
         tooMany: 'A kanji seal can have up to 4 characters',
@@ -304,6 +306,7 @@ export const signing: Messages['signing'] = {
         noKey: 'No key',
         addPerson: 'Add',
         addMyKey: 'Add my key',
+        addKey: 'Add a key',
         pasteKey: 'Paste public key',
         fromForge: 'Get from GitHub/GitLab',
         noForgeKeys: 'No published signing keys were found',

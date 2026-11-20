@@ -19,7 +19,7 @@ import { FORGE_LABEL, type ForgeKind } from '@shared/forge'
 import { DEFAULT_PREFS, type AppPrefs, type DocStyle, type RecentDoc } from '@shared/prefs'
 import { messagesOf, resolveLocale, setLocale } from '@shared/i18n'
 import { resolveStyle, type StyleLayers } from '@shared/folder-style'
-import { toPlain } from '~/utils/ipc'
+import { ipcError, toPlain } from '~/utils/ipc'
 import { todayISO } from '@shared/date'
 import { revealLabel } from '~/utils/platform'
 import { dissolveSection, placeRepo, renameSection } from '@shared/repo-sections'
@@ -170,13 +170,21 @@ export const useApp = defineStore('app', () => {
             if (done) notify(done)
             return r
         } catch (e) {
-            notify(String((e as Error).message ?? e).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''), true)
+            notify(ipcError(e), true)
             return undefined
         } finally {
             busyCount.value--
         }
     }
 
+    async function copy(text: string, done: string) {
+        try {
+            await navigator.clipboard.writeText(text)
+            notify(done)
+        } catch {
+            notify(t.value.common.copyFailed, true)
+        }
+    }
     async function runOk(fn: () => Promise<unknown>, done?: string): Promise<boolean> {
         const ok = await run(async () => {
             await fn()
@@ -670,6 +678,7 @@ export const useApp = defineStore('app', () => {
         touchSchedule,
         run,
         runOk,
+        copy,
         notify,
         notifyExported,
         sync,

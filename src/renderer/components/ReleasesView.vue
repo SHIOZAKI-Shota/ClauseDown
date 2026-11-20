@@ -7,6 +7,7 @@ import type { ReceivedCdsign } from '@shared/mdsig'
 import { useApp } from '~/stores/app'
 import { usePane } from '~/composables/usePane'
 import { useSchedule } from '~/composables/useSchedule'
+import { useVerticalResize } from '~/composables/useVerticalResize'
 import { useStoredRef } from '~/composables/useStoredRef'
 import { daysUntil, firstLine, fmtDate, untilLabel } from '~/utils/format'
 import { todayISO } from '@shared/date'
@@ -23,31 +24,7 @@ const loaded = ref(false)
 const delivering = ref<{ oid: string; baseOid?: string; date?: string } | null>(null)
 const removing = ref<EffectiveVersion | null>(null)
 const sel = ref<{ kind: 'v' | 'd' | 'e'; id: string } | null>(null)
-const STRIP_DEFAULT = 132
-const STRIP_MIN = 80
-const stripHeight = useStoredRef('clausedown.pane.releasesTimeline', STRIP_DEFAULT, { delay: 300 })
-const stripDragging = ref(false)
-let stripStartY = 0
-let stripStartH = 0
-function stripDown(e: PointerEvent) {
-    if (e.button !== 0) return
-    e.preventDefault()
-    stripStartY = e.clientY
-    stripStartH = stripHeight.value
-    stripDragging.value = true
-    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-    document.body.classList.add('cd-resizing-v')
-}
-function stripMove(e: PointerEvent) {
-    if (!stripDragging.value) return
-    const max = Math.max(STRIP_MIN, Math.round(window.innerHeight * 0.7))
-    stripHeight.value = Math.round(Math.min(max, Math.max(STRIP_MIN, stripStartH + (e.clientY - stripStartY))))
-}
-function stripUp() {
-    stripDragging.value = false
-    document.body.classList.remove('cd-resizing-v')
-}
-onBeforeUnmount(stripUp)
+const strip = useVerticalResize('clausedown.pane.releasesTimeline', 132, { min: 80, max: () => Math.round(window.innerHeight * 0.7), grow: 'down' })
 
 const s = useSchedule()
 const showTimeline = useStoredRef('clausedown.releases.timeline', true)
@@ -171,7 +148,7 @@ const versionLabel = (oid: string, date?: string) => (date ? t.value.releases.ef
         <TimelineChart
             v-if="showTimeline"
             class="strip"
-            :style="{ height: `${stripHeight}px` }"
+            :style="{ height: `${strip.height.value}px` }"
             :rows="[{ id: 'doc', label: '' }]"
             :items="timelineItems"
             :bands="bands"
@@ -201,16 +178,16 @@ const versionLabel = (oid: string, date?: string) => (date ? t.value.releases.ef
         <div
             v-if="showTimeline"
             class="strip-grip"
-            :class="{ dragging: stripDragging }"
+            :class="{ dragging: strip.dragging.value }"
             role="separator"
             aria-orientation="horizontal"
             :aria-label="t.releases.resizeTimeline"
             :title="t.releases.resizeTimeline"
-            @pointerdown="stripDown"
-            @pointermove="stripMove"
-            @pointerup="stripUp"
-            @pointercancel="stripUp"
-            @dblclick="stripHeight = STRIP_DEFAULT"
+            @pointerdown="strip.down"
+            @pointermove="strip.move"
+            @pointerup="strip.up"
+            @pointercancel="strip.up"
+            @dblclick="strip.reset"
         />
         <div class="releases">
             <SidePane :pane="listPane" side="left" :label="t.releases.pane" icon="i-lucide-calendar-check">

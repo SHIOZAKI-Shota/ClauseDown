@@ -8,6 +8,7 @@ export interface SealInput {
 }
 
 export const SEAL_COLOR = '#d7261e'
+export const SIGN_INK = '#1f2937'
 export const SEAL_SIZE = 200
 const MINCHO = `'Hiragino Mincho ProN','Yu Mincho','YuMincho','MS Mincho','Noto Serif JP',serif`
 const SERIF = `'Times New Roman','Georgia',serif`

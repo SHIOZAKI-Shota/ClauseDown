@@ -1,7 +1,6 @@
 import type { Messages } from '../types'
 
 export const repo: Messages['repo'] = {
-    cancel: 'Cancel',
     notFound: 'Not found',
     removeFromList: 'Remove from list',
     addManage: 'Add or manage repositories',

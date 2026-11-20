@@ -22,8 +22,8 @@ const emit = defineEmits<{ confirm: [] }>()
         </template>
         <template #footer>
             <div class="cd-modal-foot">
-                <UButton :label="cancelLabel ?? t.common.stop" color="neutral" variant="outline" @click="open = false" />
-                <UButton :label="confirmLabel" :color="color" :loading="loading" @click="emit('confirm')" />
+                <UButton :label="cancelLabel ?? t.common.cancel" color="neutral" variant="outline" @click="open = false" />
+                <UButton :label="confirmLabel" :color="color" :loading="loading" autofocus @click="emit('confirm')" />
             </div>
         </template>
     </UModal>

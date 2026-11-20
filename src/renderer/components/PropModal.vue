@@ -68,10 +68,10 @@ function apply() {
                     <SegmentSwitch v-model="mode" :items="MODES" :aria-label="t.editor.prop.scope" />
                 </UFormField>
                 <div class="row">
-                    <UFormField :label="t.editor.prop.size" class="grow">
+                    <UFormField :label="t.editor.prop.size" class="cd-grow">
                         <UInputNumber v-model="size" :min="5" :max="40" :step="0.5" :placeholder="t.editor.prop.none" />
                     </UFormField>
-                    <UFormField v-if="lines" :label="t.editor.prop.lineHeight" class="grow">
+                    <UFormField v-if="lines" :label="t.editor.prop.lineHeight" class="cd-grow">
                         <UInputNumber v-model="lineHeight" :min="0.8" :max="4" :step="0.1" :placeholder="t.editor.prop.none" />
                     </UFormField>
                 </div>
@@ -95,8 +95,8 @@ function apply() {
             </div>
         </template>
         <template #footer>
-            <div class="foot">
-                <UButton :label="t.editor.prop.cancel" color="neutral" variant="outline" @click="emit('close')" />
+            <div class="cd-modal-foot">
+                <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="emit('close')" />
                 <UButton :label="onlyBreak ? t.editor.prop.insertBreak : t.editor.prop.wrap" :disabled="!ready" @click="apply" />
             </div>
         </template>
@@ -113,10 +113,6 @@ function apply() {
 .row {
     display: flex;
     gap: 12px;
-}
-
-.grow {
-    flex: 1;
 }
 
 .preview {
@@ -144,12 +140,5 @@ function apply() {
     font-size: 12px;
     color: var(--ui-text-muted);
     overflow-wrap: anywhere;
-}
-
-.foot {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    width: 100%;
 }
 </style>

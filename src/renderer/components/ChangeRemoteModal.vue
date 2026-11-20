@@ -35,7 +35,7 @@ async function save() {
         </template>
         <template #footer>
             <div class="cd-modal-foot">
-                <UButton :label="t.repo.cancel" color="neutral" variant="outline" @click="open = false" />
+                <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="open = false" />
                 <UButton :label="t.repo.changeRemote.submit" :loading="sending" :disabled="!changed" @click="save" />
             </div>
         </template>

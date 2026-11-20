@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useConfirm } from '~/composables/useConfirm'
 import type { RepoEntry, RepoState } from '@shared/api'
 import { useApp } from '~/stores/app'
 import { useT } from '~/composables/useT'
@@ -6,6 +7,18 @@ import { useT } from '~/composables/useT'
 const props = defineProps<{ repo: RepoEntry; state: RepoState; compact?: boolean }>()
 const app = useApp()
 const t = useT()
+const ask = useConfirm()
+async function forget() {
+    if (
+        await ask({
+            title: t.value.repo.removeFromList,
+            description: t.value.repo.settings.removeDesc,
+            confirmLabel: t.value.repo.removeFromList,
+            color: 'error',
+        })
+    )
+        await app.forgetRepo(props.repo.dir)
+}
 const checking = ref(false)
 
 const title = computed(() =>
@@ -41,7 +54,7 @@ async function retry() {
         <div class="actions">
             <UButton :label="t.repo.missing.relocate" icon="i-lucide-folder-search" @click="app.relocateRepo(repo.dir)" />
             <UButton :label="t.repo.missing.retry" icon="i-lucide-refresh-cw" color="neutral" variant="outline" :loading="checking" @click="retry" />
-            <UButton :label="t.repo.removeFromList" color="error" variant="ghost" @click="app.forgetRepo(repo.dir)" />
+            <UButton :label="t.repo.removeFromList" color="error" variant="ghost" @click="forget" />
         </div>
         <p v-if="repo.url" class="cd-muted hint">{{ t.repo.missing.hint(repo.url) }}</p>
     </div>

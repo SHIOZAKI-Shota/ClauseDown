@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { SegmentItem } from '~/components/SegmentSwitch.vue'
 import type { SealMeta } from '@shared/api'
-import { SEAL_COLOR, sealSvg, type SealStyle } from '@shared/seal'
+import { SEAL_COLOR, SIGN_INK, sealSvg, type SealStyle } from '@shared/seal'
 import { useApp } from '~/stores/app'
 import { useT } from '~/composables/useT'
 import { imageToPng, pngUrl, svgToPng } from '~/utils/seal-image'
@@ -47,7 +47,7 @@ const preview = computed(() => {
 const previewUrl = computed(() => (preview.value ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(preview.value)}` : ''))
 
 const pad = ref<{ toPng: () => Promise<Uint8Array | null>; clear: () => void; undo: () => void; empty: boolean } | null>(null)
-const inkColor = ref('#1f2937')
+const inkColor = ref(SIGN_INK)
 
 const fileBlob = ref<Blob | null>(null)
 const transparent = ref(true)
@@ -208,8 +208,8 @@ async function submit() {
             </div>
         </template>
         <template #footer>
-            <div class="footer">
-                <UButton :label="t.common.cancel" color="neutral" variant="ghost" @click="open = false" />
+            <div class="cd-modal-foot">
+                <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="open = false" />
                 <UButton :label="library ? m.saveOnly : m.insert" :loading="busy" @click="submit" />
             </div>
         </template>
@@ -297,11 +297,5 @@ async function submit() {
     width: 100%;
     height: 64px;
     object-fit: contain;
-}
-.footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    width: 100%;
 }
 </style>

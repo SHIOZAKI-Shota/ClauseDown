@@ -183,6 +183,7 @@ export const signing = {
         empty: '未登録',
         create: '作成',
         remove: '削除',
+        confirmRemove: 'この印影・署名を削除しますか？文書に挿入済みの画像は残ります',
         kinds: { seal: '印影', sign: '署名', image: '画像' },
     },
     sealModal: {
@@ -204,8 +205,9 @@ export const signing = {
         insert: '挿入',
         saveOnly: '保存',
         size: '寸法（mm）',
-        outsideClosing:
-            'カーソルが署名欄（後文）の外にあります。署名欄に挿入しますか？（署名欄がない場合は文書末尾に追加します。「キャンセル」でカーソル位置に挿入します）',
+        outsideClosing: 'カーソルが署名欄（後文）の外にあります。署名欄に挿入しますか？',
+        outsideClosingDesc: '署名欄がない場合は、文書の末尾に追加します。',
+        toClosing: '署名欄に挿入',
         addClosing: '署名欄を追加して挿入',
         here: 'カーソル位置に挿入',
         tooMany: '漢字の丸印は 4 字までです',
@@ -298,6 +300,7 @@ export const signing = {
         noKey: '鍵なし',
         addPerson: '追加',
         addMyKey: '自分の鍵を追加',
+        addKey: '鍵を追加',
         pasteKey: '公開鍵を貼り付け',
         fromForge: 'GitHub・GitLab から取得',
         noForgeKeys: '公開された署名鍵が見つかりません',

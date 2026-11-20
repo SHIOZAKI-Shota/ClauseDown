@@ -18,7 +18,6 @@ export const schedule = {
     undoDone: '済みを取り消す',
     edit: '直す',
     remove: '消す',
-    cancel: 'やめる',
     add: '期日の追加',
     removeTitle: '期日を消す',
     removeBody: 'この期日を消します。繰り返す期日なら、すべての回が消えます。',

@@ -171,7 +171,7 @@ function save() {
                     class="del"
                     @click="emit('remove', event.id, dir)"
                 />
-                <UButton :label="t.schedule.cancel" color="neutral" variant="outline" @click="emit('close')" />
+                <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="emit('close')" />
                 <UButton :label="event ? t.common.save : t.schedule.modal.add" :disabled="!!error" :loading="app.busy" @click="save" />
             </div>
         </template>
