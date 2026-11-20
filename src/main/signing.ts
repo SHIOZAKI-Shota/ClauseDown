@@ -105,10 +105,28 @@ function run(cmd: string, args: string[], opts: { cwd?: string; input?: string }
     })
 }
 
-function gitConfig(dir: string | undefined, key: string): Promise<string> {
-    return new Promise((resolve) => {
-        execFile('git', ['config', '--get', key], { cwd: dir, env: toolEnv(), windowsHide: true }, (err, out) => resolve(err ? '' : out.trim()))
+const configMemo = new Map<string, { at: number; value: Promise<Map<string, string>> }>()
+
+function signingConfig(dir: string | undefined): Promise<Map<string, string>> {
+    const key = dir ?? ''
+    const hit = configMemo.get(key)
+    if (hit && Date.now() - hit.at < 5000) return hit.value
+    const value = new Promise<Map<string, string>>((resolve) => {
+        execFile('git', ['config', '-z', '--get-regexp', '^(user\\.signingkey|gpg\\.)'], { cwd: dir, env: toolEnv(), windowsHide: true }, (err, out) => {
+            const m = new Map<string, string>()
+            if (!err) {
+                for (const rec of out.split('\0')) {
+                    if (!rec) continue
+                    const cut = rec.indexOf('\n')
+                    m.set((cut < 0 ? rec : rec.slice(0, cut)).toLowerCase(), cut < 0 ? '' : rec.slice(cut + 1).trim())
+                }
+            }
+            resolve(m)
+        })
     })
+    if (configMemo.size >= 32) configMemo.clear()
+    configMemo.set(key, { at: Date.now(), value })
+    return value
 }
 
 export interface ExternalConfig {
@@ -118,14 +136,12 @@ export interface ExternalConfig {
 }
 
 export async function externalConfig(dir?: string): Promise<ExternalConfig | null> {
-    const key = await gitConfig(dir, 'user.signingkey')
+    const c = await signingConfig(dir)
+    const key = c.get('user.signingkey')
     if (!key) return null
-    const raw = (await gitConfig(dir, 'gpg.format')) || 'openpgp'
+    const raw = c.get('gpg.format') || 'openpgp'
     const format = raw === 'ssh' || raw === 'x509' ? raw : 'openpgp'
-    const program =
-        format === 'ssh'
-            ? (await gitConfig(dir, 'gpg.ssh.program')) || 'ssh-keygen'
-            : (await gitConfig(dir, `gpg.${format}.program`)) || (await gitConfig(dir, 'gpg.program')) || 'gpg'
+    const program = format === 'ssh' ? c.get('gpg.ssh.program') || 'ssh-keygen' : c.get(`gpg.${format}.program`) || c.get('gpg.program') || 'gpg'
     return { format, key, program }
 }
 

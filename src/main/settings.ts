@@ -102,7 +102,15 @@ interface Store {
     hosts: Record<string, Credential>
 }
 
+let storeMemo: { mtime: number; store: Store } | null = null
+
 async function loadStore(): Promise<Store> {
+    const mtime = (await fs.stat(tokenPath()).catch(() => null))?.mtimeMs ?? 0
+    if (storeMemo?.mtime !== mtime) storeMemo = { mtime, store: await readStore() }
+    return structuredClone(storeMemo.store)
+}
+
+async function readStore(): Promise<Store> {
     let raw: string
     try {
         raw = safeStorage.decryptString(await fs.readFile(tokenPath()))
@@ -122,6 +130,7 @@ async function loadStore(): Promise<Store> {
 }
 
 async function saveStore(s: Store): Promise<void> {
+    storeMemo = null
     if (!Object.keys(s.hosts).length) {
         await fs.rm(tokenPath(), { force: true })
         return
@@ -231,6 +240,7 @@ export async function saveSecret(name: SecretName, value: string): Promise<void>
 const OWN_FILE = /^(settings\.json(\.bak|\.broken-\d+)?|notified\.json|token\.bin|(ai-key|mcp-token)(-[a-z0-9-]+)?\.bin|sign-[a-z0-9-]+\.bin)$/
 
 export async function resetAllData(): Promise<void> {
+    storeMemo = null
     const dir = app.getPath('userData')
     const names = await fs.readdir(dir).catch(() => [] as string[])
     await Promise.all(names.filter((n) => OWN_FILE.test(n)).map((n) => fs.rm(join(dir, n), { force: true })))

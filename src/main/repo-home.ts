@@ -2,9 +2,8 @@ import { fromTagPath } from '../shared/tag-path'
 import { remember } from './memo'
 import fs, { promises as fsp } from 'node:fs'
 import { t } from '../shared/i18n'
-import git from './igit'
 import { tryResolve } from './git-base'
-import { commitFile, effectiveTags, listDocs, readCommitCached, safeJoin, stripEffectiveNote } from './git'
+import { changedDocs, commitFile, effectiveTags, listDocs, readCommitCached, safeJoin, stripEffectiveNote } from './git'
 import { repoKey } from './repo-lock'
 import type { RepoActivity } from '../shared/api'
 import { APP_DIR } from '../shared/folder-style'
@@ -12,30 +11,6 @@ import { dirname, join } from 'node:path'
 
 const MAX_COMMITS = 500
 const RECENT = 20
-
-async function filesOf(dir: string, treeOid: string, cache: Map<string, Map<string, string>>): Promise<Map<string, string>> {
-    const hit = cache.get(treeOid)
-    if (hit) return hit
-    const out = new Map<string, string>()
-    const { tree } = await git.readTree({ fs, dir, oid: treeOid })
-    for (const e of tree) {
-        if (e.path.startsWith('.')) continue
-        if (e.type === 'tree') {
-            for (const [p, o] of await filesOf(dir, e.oid, cache)) out.set(`${e.path}/${p}`, o)
-        } else if (e.type === 'blob' && e.path.toLowerCase().endsWith('.md')) {
-            out.set(e.path, e.oid)
-        }
-    }
-    cache.set(treeOid, out)
-    return out
-}
-
-function changedBetween(a: Map<string, string>, b: Map<string, string>): string[] {
-    const out = new Set<string>()
-    for (const [p, o] of a) if (b.get(p) !== o) out.add(p)
-    for (const p of b.keys()) if (!a.has(p)) out.add(p)
-    return [...out].sort((x, y) => x.localeCompare(y, 'ja'))
-}
 
 const articleMemo = new Map<string, { mtime: number; n: number }>()
 async function articleCount(full: string): Promise<number> {
@@ -57,17 +32,14 @@ async function history(dir: string, present: Set<string>): Promise<History> {
     if (hit?.key === key) return hit.value
     const recent: RepoActivity['recent'] = []
     const last: History['last'] = {}
-    const cache = new Map<string, Map<string, string>>()
     let oid = head
     let found = 0
     let next = oid ? await readCommitCached(dir, oid) : null
     for (let i = 0; oid && next && i < MAX_COMMITS; i++) {
         const commit = next
         const parent = commit.parent[0]
-        const mine = await filesOf(dir, commit.tree, cache)
         next = parent ? await readCommitCached(dir, parent) : null
-        const before = next ? await filesOf(dir, next.tree, cache) : new Map<string, string>()
-        const paths = changedBetween(mine, before)
+        const paths = (await changedDocs(dir, commit.tree, next?.tree ?? null)).sort((x, y) => x.localeCompare(y, 'ja'))
         const who = { author: commit.author.name, timestamp: commit.author.timestamp }
         if (recent.length < RECENT) recent.push({ oid, message: stripEffectiveNote(commit.message), ...who, paths })
         for (const p of paths) {

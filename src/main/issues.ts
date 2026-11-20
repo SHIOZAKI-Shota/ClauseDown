@@ -7,6 +7,7 @@ import git from './igit'
 import type { Issue, IssueComment, IssueDetail, IssueLink, IssuePatch, IssueVersion } from '../shared/api'
 import { issueRefs } from '../shared/issue-refs'
 import { forgeOf, type Forge } from './forge'
+import { repoKey } from './repo-lock'
 import { author } from './git-base'
 import { newId, readRecords, RECORD, writeRecord } from './records'
 import * as g from './git'
@@ -130,8 +131,39 @@ async function commitMessage(dir: string, oid: string): Promise<string> {
 
 const cleanText = (s: unknown, max: number) => (typeof s === 'string' ? s.replace(/\r\n?/g, '\n').slice(0, max) : '')
 
-export async function listIssues(dir: string): Promise<Issue[]> {
+const ISSUE_TTL = 30_000
+const issueMemo = new Map<string, { at: number; list: Promise<Issue[]> }>()
+
+async function issueForge(dir: string): Promise<Forge | null> {
     const forge = await forgeOf(dir)
+    if (!forge) return null
+    const key = repoKey(dir)
+    const dropping = async <R>(run: () => Promise<R>) => {
+        try {
+            return await run()
+        } finally {
+            issueMemo.delete(key)
+        }
+    }
+    return {
+        ...forge,
+        listIssues: async () => {
+            let hit = issueMemo.get(key)
+            if (!hit || Date.now() - hit.at > ISSUE_TTL) {
+                hit = { at: Date.now(), list: forge.listIssues() }
+                issueMemo.set(key, hit)
+                hit.list.catch(() => issueMemo.delete(key))
+            }
+            return (await hit.list).slice()
+        },
+        createIssue: (title, body) => dropping(() => forge.createIssue(title, body)),
+        updateIssue: (n, patch) => dropping(() => forge.updateIssue(n, patch)),
+        comment: (n, body) => dropping(() => forge.comment(n, body)),
+    }
+}
+
+export async function listIssues(dir: string): Promise<Issue[]> {
+    const forge = await issueForge(dir)
     const list = forge ? await forge.listIssues() : (await localActive(dir)).map(toIssue)
     return list.sort((a, b) => b.n - a.n)
 }
@@ -140,7 +172,7 @@ export async function createIssue(dir: string, input: { title?: unknown; body?: 
     const title = cleanText(input?.title, 300).trim()
     if (!title) throw new Error(t().errors.issues.titleRequired)
     const body = cleanText(input?.body, 60_000)
-    const forge = await forgeOf(dir)
+    const forge = await issueForge(dir)
     if (forge) return forge.createIssue(title, body)
     const all = await localAll(dir)
     const issue: LocalIssue = {
@@ -165,7 +197,7 @@ export async function updateIssue(dir: string, n: number, patch: IssuePatch): Pr
     }
     if (patch?.body !== undefined) clean.body = cleanText(patch.body, 60_000)
     if (patch?.state === 'open' || patch?.state === 'closed') clean.state = patch.state
-    const forge = await forgeOf(dir)
+    const forge = await issueForge(dir)
     if (forge) return forge.updateIssue(n, clean)
     const i = await findLocal(dir, n)
     Object.assign(i, clean)
@@ -180,7 +212,7 @@ export async function updateIssue(dir: string, n: number, patch: IssuePatch): Pr
 
 export async function linkIssue(dir: string, n: number, oid: string): Promise<void> {
     const message = await commitMessage(dir, oid)
-    const forge = await forgeOf(dir)
+    const forge = await issueForge(dir)
     if (forge) return forge.comment(n, linkComment(oid, message))
     const i = await findLocal(dir, n)
     if ((i.links ?? []).some((l) => l.oid === oid)) return
@@ -190,7 +222,7 @@ export async function linkIssue(dir: string, n: number, oid: string): Promise<vo
 
 export async function closeIssue(dir: string, n: number, oid?: string): Promise<Issue> {
     const message = oid ? await commitMessage(dir, oid) : ''
-    const forge = await forgeOf(dir)
+    const forge = await issueForge(dir)
     if (forge) {
         if (oid) await forge.comment(n, closeComment(oid, message))
         return forge.updateIssue(n, { state: 'closed' })
@@ -206,7 +238,7 @@ export async function closeIssue(dir: string, n: number, oid?: string): Promise<
 export async function commentIssue(dir: string, n: number, body: unknown): Promise<void> {
     const text = cleanText(body, 60_000)
     if (!text.trim()) throw new Error(t().errors.issues.commentRequired)
-    const forge = await forgeOf(dir)
+    const forge = await issueForge(dir)
     if (forge) return forge.comment(n, text)
     const issue = await findLocal(dir, n)
     const c: LocalComment = { id: newId(), issue: issue.id, body: text, by: (await author(dir).catch(() => null))?.name, at: now() }
@@ -214,7 +246,7 @@ export async function commentIssue(dir: string, n: number, body: unknown): Promi
 }
 
 export async function issueDetail(dir: string, n: number): Promise<IssueDetail> {
-    const forge = await forgeOf(dir)
+    const forge = await issueForge(dir)
     const local = forge ? null : await findLocal(dir, n)
     const issue = forge ? (await forge.listIssues()).find((i) => i.n === n) : toIssue(local!)
     if (!issue) throw new Error(t().errors.issues.notFound(n))
@@ -280,7 +312,7 @@ async function closeOnForge(forge: Forge, n: number, oid: string, message: strin
 export async function afterMain(dir: string, commits: { oid: string; message: string }[], branch?: string): Promise<number[]> {
     const linked = branch ? await branchIssues(dir, branch) : []
     const head = commits[0]
-    const forge = await forgeOf(dir)
+    const forge = await issueForge(dir)
     const closed: number[] = []
     if (forge) {
         if (!head) return closed
@@ -313,12 +345,12 @@ export async function afterSave(dir: string, oid: string): Promise<number[]> {
 }
 
 export async function pendingLocalIssues(dir: string): Promise<number> {
-    if (!(await forgeOf(dir))) return 0
+    if (!(await issueForge(dir))) return 0
     return (await localActive(dir)).length
 }
 
 export async function moveIssuesToForge(dir: string): Promise<{ moved: number; renumbered: { from: number; to: number }[] }> {
-    const forge = await forgeOf(dir)
+    const forge = await issueForge(dir)
     if (!forge) throw new Error(t().errors.issues.noForge)
     const local = (await localActive(dir)).sort((a, b) => a.n - b.n)
     const renumbered: { from: number; to: number }[] = []

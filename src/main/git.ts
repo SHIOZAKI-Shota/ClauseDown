@@ -60,6 +60,24 @@ async function treeOf(dir: string, oid: string): Promise<Map<string, TreeEntry>>
     return remember(m, oid, new Map(tree.map((e) => [e.path, e])), 20_000)
 }
 
+export async function changedDocs(dir: string, a: string | null, b: string | null, prefix = ''): Promise<string[]> {
+    if (a === b) return []
+    const [ea, eb] = await Promise.all([a ? treeOf(dir, a) : new Map<string, TreeEntry>(), b ? treeOf(dir, b) : new Map<string, TreeEntry>()])
+    const out: string[] = []
+    for (const name of new Set([...ea.keys(), ...eb.keys()])) {
+        if (name.startsWith('.')) continue
+        const x = ea.get(name)
+        const y = eb.get(name)
+        if (x?.oid === y?.oid) continue
+        const path = `${prefix}${name}`
+        const sub = (e?: TreeEntry) => (e?.type === 'tree' ? e.oid : null)
+        const doc = (e?: TreeEntry) => (e?.type === 'blob' && name.toLowerCase().endsWith('.md') ? e.oid : null)
+        if (sub(x) !== sub(y)) out.push(...(await changedDocs(dir, sub(x), sub(y), `${path}/`)))
+        if (doc(x) !== doc(y)) out.push(path)
+    }
+    return out
+}
+
 const isDotGit = (part: string) => {
     const n = part
         .replace(/[\u200C-\u200F\u202A-\u202E\u206A-\u206F\uFEFF]/g, '')
@@ -494,6 +512,33 @@ function topoSort(list: CommitInfo[]): CommitInfo[] {
     return out
 }
 
+export function shownParentsOf(parentsOf: (oid: string) => readonly string[], shown: ReadonlySet<string>): (oid: string) => string[] {
+    const reach = new Map<string, string[]>()
+    const collect = (parents: readonly string[]): string[] => {
+        const out: string[] = []
+        for (const p of parents) for (const s of shown.has(p) ? [p] : through(p)) if (!out.includes(s)) out.push(s)
+        return out
+    }
+    const through = (start: string): string[] => {
+        const stack = [start]
+        while (stack.length) {
+            const oid = stack[stack.length - 1]
+            if (reach.has(oid)) {
+                stack.pop()
+                continue
+            }
+            const pending = parentsOf(oid).filter((p) => !shown.has(p) && !reach.has(p))
+            if (pending.length) stack.push(...pending)
+            else {
+                reach.set(oid, collect(parentsOf(oid)))
+                stack.pop()
+            }
+        }
+        return reach.get(start)!
+    }
+    return (oid) => collect(parentsOf(oid))
+}
+
 export async function log(dir: string, path?: string, all = false): Promise<CommitInfo[]> {
     if (!(await hasHead(dir))) return []
     const main = await mainBranch(dir)
@@ -583,24 +628,7 @@ export async function log(dir: string, path?: string, all = false): Promise<Comm
         }
     }
 
-    const shownParents = (oid: string): string[] => {
-        const out: string[] = []
-        const seen = new Set<string>()
-        for (const direct of graph.get(oid)?.commit.parent ?? []) {
-            const stack = [direct]
-            while (stack.length) {
-                const p = stack.pop()!
-                if (seen.has(p)) continue
-                seen.add(p)
-                if (shown.has(p)) {
-                    if (!out.includes(p)) out.push(p)
-                } else {
-                    stack.push(...[...(graph.get(p)?.commit.parent ?? [])].reverse())
-                }
-            }
-        }
-        return out
-    }
+    const shownParents = shownParentsOf((oid) => graph.get(oid)?.commit.parent ?? [], shown)
 
     const list: CommitInfo[] = [...shown]
         .filter((oid) => graph.has(oid))

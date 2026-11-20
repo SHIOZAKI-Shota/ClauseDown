@@ -162,7 +162,7 @@ async function applyMcp() {
     const s = await app.run(() => window.api.setMcp({ enabled: mcpEnabled.value, port: Number(mcpPort.value) }))
     if (!s) return
     ai.value = s
-    app.settings!.mcp = { enabled: mcpEnabled.value, port: Number(mcpPort.value) }
+    app.settings = { ...app.settings!, mcp: { enabled: mcpEnabled.value, port: Number(mcpPort.value) } }
     if (mcpEnabled.value) mcpToken.value = await window.api.getMcpToken()
     if (s.mcp.error) app.notify(s.mcp.error, true)
     else flash()

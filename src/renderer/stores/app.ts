@@ -31,7 +31,7 @@ export type View = 'home' | 'setup' | 'about' | 'repo' | 'docs' | 'schedule' | '
 export const useApp = defineStore('app', () => {
     const toast = useToast()
 
-    const settings = ref<AppSettings | null>(null)
+    const settings = shallowRef<AppSettings | null>(null)
     const view = ref<View>('home')
     const settingsTab = ref<Partial<Record<'setup' | 'repo', string>>>({})
     const paletteOpen = ref(false)
@@ -87,9 +87,8 @@ export const useApp = defineStore('app', () => {
         identity.value = await window.api.identity(repoDir.value).catch(() => null)
     }
     watch(
-        () => [repoDir.value, repo.value?.url, settings.value?.author, settings.value?.identityDefault, accounts.value],
+        () => JSON.stringify([repoDir.value, repo.value?.url, settings.value?.author, settings.value?.identityDefault, accounts.value]),
         () => void refreshIdentity(),
-        { deep: true },
     )
     const me = computed(() => identity.value?.name ?? '')
     const reviewer = computed<Reviewer>(() => ({ name: me.value || undefined, login: identity.value?.login }))
