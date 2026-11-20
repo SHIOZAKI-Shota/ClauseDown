@@ -3,7 +3,6 @@ import { useConfirm } from '~/composables/useConfirm'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { parseLegal, articleTitle } from '@shared/legal-parser'
 import { renderDoc } from '@shared/legal-renderer'
-import { autoMerge } from '@shared/merge3'
 import { CONTRACT_PRESET, DEFAULT_CONFIG, readConfig, writeConfig, type DocConfig } from '@shared/config'
 import { extOfMime } from '@shared/images'
 import { clauseInsertLine, type ClauseInsert } from '@shared/clauses'
@@ -12,8 +11,6 @@ import { isEnabled } from '@shared/experiments'
 import { spellLang } from '@shared/legal-styles'
 import { docTemplates } from '@shared/doc-templates'
 import { titleEndLine } from '@shared/toc'
-import { overallStatus, type MdVerifyReport } from '@shared/mdsig'
-import { layout as sigLayout, locks as sigLocksOf } from '@shared/mdsig-layout'
 import { useApp } from '~/stores/app'
 import { lastAtOrBefore, positionLabel } from '~/utils/legal-editor'
 import { toPlain } from '~/utils/ipc'
@@ -28,6 +25,9 @@ import type PdfPagesView from '~/components/PdfPages.vue'
 import type { SaveRequest } from '~/components/SaveVersionModal.vue'
 import type { SealInsert } from '~/components/SealModal.vue'
 import { usePdfSign } from '~/composables/usePdfSign'
+import { usePrintPreview } from '~/composables/usePrintPreview'
+import { useAutosave } from '~/composables/useAutosave'
+import { SIG_COLOR, SIG_ICON, useSignatureVerify } from '~/composables/useSignatureVerify'
 
 const app = useApp()
 const t = useT()
@@ -40,7 +40,6 @@ const preview = ref<HTMLDivElement>()
 const showConfig = ref(false)
 const showSave = ref(false)
 const newDoc = ref(false)
-const saving = ref<'idle' | 'pending' | 'saved'>('idle')
 const confirmDiscard = ref(false)
 const cursorLine = ref(0)
 const history = ref({ undo: 0, redo: 0 })
@@ -105,37 +104,9 @@ const PREVIEW_KINDS = computed(() => [
 const demo = isDemo()
 const showPrint = computed(() => !demo && mode.value !== 'edit' && printKind.value === 'print')
 const html = computed(() => (mode.value === 'edit' || showPrint.value ? '' : withImages(renderDoc(doc.value), app.repoDir, path)))
-const pdfData = shallowRef<Uint8Array | null>(null)
 const PdfPages = defineAsyncComponent(() => import('~/components/PdfPages.vue'))
 const pdfPages = ref<InstanceType<typeof PdfPagesView>>()
-const pdfBusy = ref(false)
-const pdfError = ref('')
-let pdfSeq = 0
-let pdfTimer: ReturnType<typeof setTimeout> | undefined
-async function makePdf() {
-    const n = ++pdfSeq
-    pdfBusy.value = true
-    try {
-        const bytes = await window.api.previewPdf(settled.value, toPlain(app.style), { dir: app.repoDir!, docPath: path })
-        if (n !== pdfSeq) return
-        pdfData.value = bytes
-        pdfError.value = ''
-    } catch (e) {
-        if (n === pdfSeq) pdfError.value = (e as Error).message
-    } finally {
-        if (n === pdfSeq) pdfBusy.value = false
-    }
-}
-watch(
-    () => [showPrint.value, settled.value, app.style] as const,
-    ([on]) => {
-        clearTimeout(pdfTimer)
-        if (on && loaded.value) pdfTimer = setTimeout(() => void makePdf(), pdfData.value ? 900 : 0)
-    },
-    { deep: true },
-)
-watch(loaded, (v) => v && showPrint.value && void makePdf())
-onBeforeUnmount(() => clearTimeout(pdfTimer))
+const { pdfData, pdfBusy, pdfError } = usePrintPreview({ on: showPrint, ready: loaded, source: settled, path })
 
 const savedText = ref<string | null>(null)
 async function loadSaved() {
@@ -144,8 +115,7 @@ async function loadSaved() {
 
 onMounted(async () => {
     const [content] = await Promise.all([window.api.readDoc(app.repoDir!, path), loadSaved()])
-    lastWritten = content
-    text.value = content
+    reset(content)
     settled.value = content
     loaded.value = true
 })
@@ -161,42 +131,7 @@ watch(
     { immediate: true },
 )
 
-let timer: ReturnType<typeof setTimeout> | undefined
-let lastWritten = ''
-watch(text, (v) => {
-    if (!loaded.value || v === lastWritten) return
-    saving.value = 'pending'
-    clearTimeout(timer)
-    timer = setTimeout(() => writeNow(), 500)
-})
-
-let writing: Promise<void> = Promise.resolve()
-function writeNow(): Promise<void> {
-    editor.value?.flush()
-    clearTimeout(timer)
-    writing = writing
-        .then(async () => {
-            const v = text.value
-            if (v !== lastWritten) {
-                await window.api.writeDoc(app.repoDir!, path, v)
-                lastWritten = v
-                app.markChanged(path)
-            }
-            if (text.value === lastWritten) saving.value = 'saved'
-        })
-        .catch((e) => {
-            saving.value = 'pending'
-            app.notify(t.value.editor.saveFailed((e as Error).message), true)
-        })
-    return writing
-}
-
-app.setEditorFlush(writeNow)
-
-onBeforeUnmount(() => {
-    app.setEditorFlush(null)
-    void writeNow()
-})
+const { saving, writeNow, reset, reloadFromDisk, cancel: cancelSave } = useAutosave({ text, loaded, path, flush: () => editor.value?.flush() })
 
 const indentOf = () => /^(\s*)/.exec(editor.value?.currentLine() ?? '')![1].length
 function addChapter() {
@@ -437,15 +372,10 @@ function toggleIssues(kind: 'all' | 'error' | 'warning') {
     }
 }
 watch(text, () => (issueNote.value = null))
-const cdsign = computed(() => isEnabled(app.settings, 'cdsign'))
 const sigOpen = useStoredRef('clausedown.signatures.open', false)
-const sigReport = shallowRef<MdVerifyReport | null>(null)
-const sigBusy = ref(false)
-const sigState = computed(() => (sigBusy.value ? 'busy' : overallStatus(sigReport.value)))
-const sigCount = computed(() => doc.value.signatures?.count ?? 0)
+const { cdsign, sigReport, sigBusy, sigState, sigCount, sigFull, verifySignatures, trustSignature } = useSignatureVerify({ doc, source: settled, path })
 const cdsignOpen = ref(false)
 const hasImages = computed(() => /!\[[^\]]*\]\((?!https?:)/.test(settled.value))
-const sigFull = computed(() => cdsign.value && !!doc.value.signatures && sigLocksOf(sigLayout(settled.value)).kind === 'full')
 let blockedNoted = false
 function noteBlocked() {
     if (blockedNoted) return
@@ -456,38 +386,6 @@ function noteBlocked() {
 watch(sigFull, (full) => {
     if (full) showConfig.value = false
 })
-const SIG_COLOR = { none: 'neutral', busy: 'neutral', verified: 'success', pending: 'warning', unresolved: 'warning', failed: 'error' } as const
-const SIG_ICON = {
-    none: 'i-lucide-pen-line',
-    busy: 'i-lucide-loader-circle',
-    verified: 'i-lucide-shield-check',
-    pending: 'i-lucide-shield-ellipsis',
-    unresolved: 'i-lucide-shield-question',
-    failed: 'i-lucide-shield-x',
-} as const
-let sigSeq = 0
-async function verifySignatures() {
-    const seq = ++sigSeq
-    if (!cdsign.value || !app.repoDir || !doc.value.signatures) {
-        sigReport.value = null
-        sigBusy.value = false
-        return
-    }
-    sigBusy.value = true
-    try {
-        const r = await window.api.verifyMd(app.repoDir, path, settled.value)
-        if (seq === sigSeq) sigReport.value = r
-    } catch (e) {
-        if (seq === sigSeq) app.notify(e instanceof Error ? e.message : String(e), true)
-    } finally {
-        if (seq === sigSeq) sigBusy.value = false
-    }
-}
-watch([settled, cdsign], () => void verifySignatures(), { immediate: true })
-async function trustSignature(signer: string, pubkey: string) {
-    await app.run(() => window.api.trustMdKey(signer, pubkey))
-    await verifySignatures()
-}
 function toggleSignatures() {
     sigOpen.value = !sigOpen.value
     if (sigOpen.value) issuesOpen.value = false
@@ -694,29 +592,6 @@ const aiRunning = ref(false)
 const beforeAi = ref<string | null>(null)
 const aiChanged = ref(false)
 
-async function reloadFromDisk() {
-    editor.value?.flush()
-    await writing
-    const fresh = await window.api.readDoc(app.repoDir!, path)
-    const mine = text.value
-    const base = lastWritten
-    lastWritten = fresh
-    if (fresh === mine) {
-        saving.value = 'saved'
-        return
-    }
-    if (mine === base) {
-        clearTimeout(timer)
-        text.value = fresh
-        saving.value = 'saved'
-        return
-    }
-    const merged = autoMerge(base, mine, fresh)
-    if (merged !== null) text.value = merged
-    else app.notify(t.value.editor.conflictKept, true)
-    void writeNow()
-}
-
 const offDocChanged = app.onDocChanged(async (e) => {
     if (e.dir !== app.repoDir || e.path !== path) return
     await reloadFromDisk()
@@ -745,7 +620,7 @@ async function discard() {
     confirmDiscard.value = false
     editor.value?.flush()
     await nextTick()
-    clearTimeout(timer)
+    cancelSave()
     await app.run(() => window.api.discardChanges(app.repoDir!, path), t.value.editor.discarded)
     await app.refreshDocs()
     if (!app.docs.some((d) => d.path === path)) {
@@ -753,9 +628,7 @@ async function discard() {
         return
     }
     const [fresh] = await Promise.all([window.api.readDoc(app.repoDir!, path), loadSaved()])
-    lastWritten = fresh
-    text.value = fresh
-    saving.value = 'idle'
+    reset(fresh)
 }
 
 async function exportAs(format: 'pdf' | 'docx' | 'html' | 'md') {

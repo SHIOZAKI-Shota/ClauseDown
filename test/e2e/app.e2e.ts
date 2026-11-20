@@ -144,6 +144,7 @@ describe('画面', () => {
             .getByText(/^SHA256:/)
             .first()
             .waitFor({ timeout: 15000 })
+        await win.getByRole('tab', { name: 'PDF', exact: true }).click()
         await win.getByRole('button', { name: '証明書を追加' }).click()
         await win.getByRole('menuitem', { name: '自己署名の証明書を作成' }).click()
         await win.getByLabel('名前').filter({ visible: true }).first().fill('個人')
@@ -251,14 +252,24 @@ describe('画面', () => {
         await win.getByRole('button', { name: '挿入' }).first().click()
         await win.getByRole('menuitem', { name: '印影・署名' }).click()
         await win.getByRole('textbox').filter({ visible: true }).first().fill('山田')
-        win.once('dialog', (d) => void d.accept())
         await win.getByRole('button', { name: '挿入' }).click()
+        await win.getByRole('button', { name: '署名欄に挿入' }).click()
         await expect.poll(() => win.locator('.cm-content').first().textContent(), { timeout: 10000 }).toMatch(/!\[山田\]\(images\/.+\.png\)\{seal\}/)
         await expect.poll(() => win.locator('.cm-content').first().textContent(), { timeout: 10000 }).toContain('{closing}')
         const body = (await win.locator('.cm-content').first().textContent()) ?? ''
         expect(body.indexOf('{closing}')).toBeGreaterThan(body.indexOf('目的'))
         await win.locator('img.cd-seal').first().waitFor({ state: 'attached', timeout: 10000 })
         await win.screenshot({ path: join(tmp, '..', 'clausedown-seal-e2e.png') })
+    })
+
+    it('編集：入力すると自動で保存され、ファイルに書き込まれる', async () => {
+        await store(`s.view = 'docs'`)
+        await store(`s.openDoc(${JSON.stringify(DOC)})`)
+        await win.locator('.cm-content').first().click()
+        await win.keyboard.press('ControlOrMeta+End')
+        await win.keyboard.type('自動保存の確認')
+        await expect.poll(() => fs.readFileSync(join(dir, DOC), 'utf8'), { timeout: 10000 }).toContain('自動保存の確認')
+        await seen('版を保存していない変更があります')
     })
 
     it('規則の署名：署名なしの規則に署名し、承認者を足す変更を提案すると第 2 版になる', async () => {

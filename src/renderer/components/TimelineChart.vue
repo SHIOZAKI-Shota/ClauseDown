@@ -2,6 +2,7 @@
 import { addDays, dayNum, fromDayNum, KIND_COLORS, type EventKind, type Occurrence, type Period } from '@shared/schedule'
 import { useStoredRef } from '~/composables/useStoredRef'
 import { todayISO } from '@shared/date'
+import { buildAxis, packLanes } from '~/utils/timeline-layout'
 import { useT } from '~/composables/useT'
 
 export interface TimelineRow {
@@ -97,71 +98,7 @@ function reveal(date: string) {
 }
 defineExpose({ reveal, goToday })
 
-interface Tick {
-    x: number
-    w: number
-    label: string
-    key: string
-    weekend?: boolean
-    strong?: boolean
-}
-function monthStarts(fromN: number, toN: number): number[] {
-    const d = fromDayNum(Math.floor(fromN))
-    let [y, m] = d.split('-').map(Number)
-    const out: number[] = []
-    for (let i = 0; i < 400; i++) {
-        const n = dayNum(`${y}-${String(m).padStart(2, '0')}-01`)
-        if (n > toN) break
-        out.push(n)
-        m++
-        if (m > 12) {
-            m = 1
-            y++
-        }
-    }
-    return out
-}
-const axis = computed(() => {
-    const a = Math.floor(left.value) - 1
-    const b = Math.ceil(left.value + days.value) + 1
-    const major: Tick[] = []
-    const minor: Tick[] = []
-    const lines: Tick[] = []
-    const months = monthStarts(a - 31, b + 31)
-    const p = ppd.value
-    const s = t.value.schedule
-    if (p >= 14) {
-        for (let i = 0; i < months.length - 1; i++) {
-            const d = fromDayNum(months[i])
-            major.push({ x: xOf(months[i]), w: (months[i + 1] - months[i]) * p, label: s.monthLabel(Number(d.slice(0, 4)), Number(d.slice(5, 7))), key: d })
-        }
-        for (let n = a; n <= b; n++) {
-            const wd = new Date(n * 86400000).getUTCDay()
-            const d = fromDayNum(n)
-            minor.push({ x: xOf(n), w: p, label: String(Number(d.slice(8))), key: d, weekend: wd === 0 || wd === 6, strong: d.endsWith('-01') })
-        }
-        lines.push(...minor)
-    } else {
-        const years = months.filter((n) => fromDayNum(n).endsWith('-01-01'))
-        const ys = [months[0], ...years.filter((n) => n !== months[0])]
-        for (let i = 0; i < ys.length; i++) {
-            const end = ys[i + 1] ?? months[months.length - 1]
-            major.push({ x: xOf(ys[i]), w: (end - ys[i]) * p, label: s.yearLabel(Number(fromDayNum(ys[i]).slice(0, 4))), key: `y${ys[i]}` })
-        }
-        const monthW = 30 * p
-        for (let i = 0; i < months.length - 1; i++) {
-            const d = fromDayNum(months[i])
-            const mo = Number(d.slice(5, 7))
-            const label = monthW >= 26 ? s.monthShort(mo) : monthW >= 9 && (mo - 1) % 3 === 0 ? `${mo}` : ''
-            minor.push({ x: xOf(months[i]), w: (months[i + 1] - months[i]) * p, label, key: d, strong: mo === 1 })
-        }
-        lines.push(...minor.filter((t) => monthW >= 6 || t.strong))
-    }
-    const majorLabels = major
-        .map((t) => ({ key: t.key, label: t.label, x: Math.max(t.x, 0) + 6, room: t.x + t.w - Math.max(t.x, 0) }))
-        .filter((l) => l.room > l.label.length * 12 + 8)
-    return { major, minor, lines, majorLabels }
-})
+const axis = computed(() => buildAxis(left.value, days.value, ppd.value, t.value.schedule))
 
 interface Placed {
     it: TimelineItem
@@ -188,15 +125,8 @@ const layout = computed(() => {
     }
     const heights = new Map<string, number>()
     for (const [row, list] of byRow) {
-        list.sort((a, b) => a.x - b.x || b.w - a.w)
-        const ends: number[] = []
-        for (const pl of list) {
-            let lane = ends.findIndex((e) => e <= pl.x - 4)
-            if (lane === -1) lane = ends.length
-            ends[lane] = pl.x + pl.w
-            pl.lane = lane
-        }
-        heights.set(row, Math.max(1, ends.length) * LANE_H + 10 + (bandRows.value.has(row) ? BAND_H : 0))
+        const lanes = packLanes(list)
+        heights.set(row, Math.max(1, lanes) * LANE_H + 10 + (bandRows.value.has(row) ? BAND_H : 0))
     }
     return { byRow, heights }
 })
