@@ -50,7 +50,7 @@ describe('悪意のあるフォルダ・リポジトリ', () => {
 
         vi.stubEnv('CLAUSEDOWN_LOOPBACK_BASE', 'https://github.com')
         try {
-            expect(((await base.onAuth(url, {} as never)) as { password?: string }).password).toBe('SECRET-TOKEN')
+            expect(((await base.onAuth(url, {})) as { password?: string }).password).toBe('SECRET-TOKEN')
             await git.sync(dir).catch(() => {})
             await git.push(dir).catch(() => {})
         } finally {
@@ -61,7 +61,7 @@ describe('悪意のあるフォルダ・リポジトリ', () => {
     })
 
     it('この PC の中のサーバー（http://127.0.0.1 など）には、トークンを渡さない', async () => {
-        const ask = (u: string) => base.onAuth(u, {} as never) as Promise<{ cancel?: boolean }>
+        const ask = (u: string) => base.onAuth(u, {}) as Promise<{ cancel?: boolean }>
         expect((await ask('http://127.0.0.1:11434/x.git')).cancel).toBe(true)
         expect((await ask('http://localhost:8080/x.git')).cancel).toBe(true)
     })

@@ -118,7 +118,7 @@ export function renderRich(raw: string, props?: CdProps): string {
     for (const m of raw.matchAll(re)) {
         out.push(inlinePropsHtml(md.render(raw.slice(last, m.index))))
         out.push(renderBlock(m[0]))
-        last = m.index! + m[0].length
+        last = m.index + m[0].length
     }
     out.push(inlinePropsHtml(md.render(raw.slice(last))))
     const html = withCols(out.join(''), props)
@@ -171,7 +171,7 @@ export function appendixLines(raw: string): string[] {
                 .filter((l) => l.trim()),
         )
         out.push(...blockLines(m[0]))
-        last = m.index! + m[0].length
+        last = m.index + m[0].length
     }
     out.push(
         ...raw

@@ -328,7 +328,7 @@ export const useApp = defineStore('app', () => {
     async function loadRepoState() {
         if (!repoDir.value) return
         const dir = repoDir.value
-        const folderState = (await window.api.repoStatus([dir]).catch(() => ({}) as Record<string, RepoState>))[dir]
+        const folderState = (await window.api.repoStatus([dir]).catch((): Record<string, RepoState> => ({})))[dir]
         if (folderState) repoStates.value = { ...repoStates.value, [dir]: folderState }
         if (folderState && folderState !== 'ok') {
             clearRepoData()
@@ -340,7 +340,7 @@ export const useApp = defineStore('app', () => {
             window.api.listReviews(dir).catch(() => []),
             window.api.getRules(dir).catch(() => ({ ...DEFAULT_RULES })),
             window.api.forgeKind(dir).catch(() => null),
-            window.api.listFolderStyles(dir).catch(() => ({}) as StyleLayers),
+            window.api.listFolderStyles(dir).catch((): StyleLayers => ({})),
             isDemo() ? Promise.resolve(null) : window.api.policyStatus(dir).catch(() => null),
         ])
         if (dir !== repoDir.value) return

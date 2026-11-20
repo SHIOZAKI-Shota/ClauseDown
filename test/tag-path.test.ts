@@ -28,7 +28,7 @@ describe('施行日の印に入れる文書のパス', () => {
         fs.mkdirSync(dir)
         await git.initRepo(dir)
         await git.createDoc(dir, 'Employee Handbook.md', 'Employee Handbook')
-        await git.saveVersion(dir, { message: 'First', effectiveDate: '2026-04-01', docPath: 'Employee Handbook.md' } as never)
+        await git.saveVersion(dir, { message: 'First', effectiveDate: '2026-04-01', docPath: 'Employee Handbook.md' })
         const [eff] = await git.listEffective(dir, 'Employee Handbook.md')
         expect(eff?.date).toBe('2026-04-01')
         const all = await home.allEffective(dir)

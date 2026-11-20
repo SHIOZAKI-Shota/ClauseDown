@@ -1,14 +1,14 @@
-import type { Ref } from 'vue'
+import { computed, ref, watch, type Ref } from 'vue'
 
 export type View = 'home' | 'setup' | 'about' | 'repo' | 'docs' | 'schedule' | 'issues' | 'editor' | 'history' | 'compare' | 'releases'
 export type Page = 'issues' | 'schedule'
 type DocView = 'editor' | 'history' | 'compare' | 'releases'
 
-const OVERLAY: View[] = ['setup', 'about', 'repo']
-const DOC_VIEWS: View[] = ['editor', 'history', 'compare', 'releases']
-const PAGES: View[] = ['issues', 'schedule']
+const OVERLAY = new Set<View>(['setup', 'about', 'repo'])
+const DOC_VIEWS = new Set<View>(['editor', 'history', 'compare', 'releases'])
+const PAGES = new Set<View>(['issues', 'schedule'])
 
-export const isDocView = (v: View): v is DocView => DOC_VIEWS.includes(v)
+export const isDocView = (v: View): v is DocView => DOC_VIEWS.has(v)
 
 export function backTargetOf(from: View | null, o: { hasRepo: boolean; hasDoc: boolean }): View {
     if (!o.hasRepo || !from) return 'home'
@@ -27,8 +27,8 @@ export function useNav(view: Ref<View>, o: { hasRepo: () => boolean; hasDoc: () 
     const lastDocView = ref<DocView>('editor')
     const pageFrom = ref<Record<Page, View | null>>({ issues: null, schedule: null })
     watch(view, (to, from) => {
-        if (OVERLAY.includes(to) && !OVERLAY.includes(from)) returnView.value = from
-        if (PAGES.includes(to) && from !== to && !OVERLAY.includes(from)) pageFrom.value[to as Page] = from
+        if (OVERLAY.has(to) && !OVERLAY.has(from)) returnView.value = from
+        if (PAGES.has(to) && from !== to && !OVERLAY.has(from)) pageFrom.value[to as Page] = from
         if (to === 'docs') o.onEnterDocs()
         if (isDocView(to)) lastDocView.value = to
     })

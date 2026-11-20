@@ -47,3 +47,18 @@ export async function startGitServer(): Promise<{ root: string; url: string; clo
     const url = `http://127.0.0.1:${(server.address() as any).port}/docs.git`
     return { root, url, close: () => server.close() }
 }
+
+export function mergeOnServer(root: string, head: string, title: string, who: string): string {
+    const work = fs.mkdtempSync(join(os.tmpdir(), 'clausedown-merge-'))
+    const g = (...args: string[]) =>
+        execFileSync('git', ['-C', work, '-c', `user.name=${who}`, '-c', 'user.email=forge@example.com', ...args])
+            .toString()
+            .trim()
+    execFileSync('git', ['clone', '-q', join(root, 'docs.git'), work])
+    g('merge', '--no-ff', '-q', '-m', title, `origin/${head}`)
+    g('push', '-q', 'origin', 'HEAD:main')
+    return g('rev-parse', 'HEAD')
+}
+
+export const remoteFile = (root: string, path: string) => execFileSync('git', ['-C', join(root, 'docs.git'), 'show', `main:${path}`]).toString()
+export const remoteRefs = (root: string) => execFileSync('git', ['-C', join(root, 'docs.git'), 'show-ref']).toString()

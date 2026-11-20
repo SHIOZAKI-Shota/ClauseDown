@@ -128,7 +128,7 @@ export function reviewStatus(all: ReviewEvent[], branch: string, tipOid: string,
     }
     const needed = Math.max(1, Math.round(rules.approvalThreshold ?? 1))
     const decisions = [...latest.values()].sort(byTime)
-    const changes = decisions.filter((d) => d.action === 'changes').at(-1)
+    const changes = decisions.findLast((d) => d.action === 'changes')
     const fresh = decisions.filter((d) => d.action === 'approve' && d.oid === tipOid)
     const stale = decisions.filter((d) => d.action === 'approve' && d.oid !== tipOid)
     let state: ReviewState = 'none'

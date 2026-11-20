@@ -113,10 +113,10 @@ describe('GitLab のログイン', () => {
 
     it('GitLab のトークンは GitLab にだけ、ユーザー名 oauth2 で渡す。GitHub のトークンとは別に持つ', async () => {
         await accounts.setToken('https://github.com', 'ghp_x')
-        expect(await onAuth(`${BASE}/office/docs.git`, {} as never)).toEqual({ username: 'oauth2', password: 'glo_new1' })
-        expect(await onAuth('https://github.com/office/docs.git', {} as never)).toMatchObject({ password: 'ghp_x' })
-        expect(await onAuth('https://gitlab.example.co.jp.evil.com/a/b.git', {} as never)).toEqual({ cancel: true })
-        expect(await onAuth('https://gitlab.com/a/b.git', {} as never)).toEqual({ cancel: true })
+        expect(await onAuth(`${BASE}/office/docs.git`, {})).toEqual({ username: 'oauth2', password: 'glo_new1' })
+        expect(await onAuth('https://github.com/office/docs.git', {})).toMatchObject({ password: 'ghp_x' })
+        expect(await onAuth('https://gitlab.example.co.jp.evil.com/a/b.git', {})).toEqual({ cancel: true })
+        expect(await onAuth('https://gitlab.com/a/b.git', {})).toEqual({ cancel: true })
     })
 
     it('アクセストークンは持ち主を確かめてから保存する。ログアウトはそのサーバーだけ', async () => {

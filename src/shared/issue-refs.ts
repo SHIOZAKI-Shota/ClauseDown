@@ -30,7 +30,7 @@ export function splitIssueRefs(text: string): (string | number)[] {
     const out: (string | number)[] = []
     let last = 0
     for (const m of text.matchAll(REF_RE)) {
-        const at = m.index! + m[1].length
+        const at = m.index + m[1].length
         if (at > last) out.push(text.slice(last, at))
         out.push(Number(m[2]))
         last = at + 1 + m[2].length

@@ -25,7 +25,7 @@ function normalize(saved: Partial<AppSettings>): AppSettings {
         ai: cleanAiConfig(saved.ai, { lan: isEnabled(saved, 'lanAi') }),
         prefs: { ...prefs, docStyle: cleanStyle(prefs.docStyle) },
         signing: cleanSigning(saved.signing),
-    } as AppSettings
+    }
 }
 
 async function readJson(path: string): Promise<Partial<AppSettings> | null> {

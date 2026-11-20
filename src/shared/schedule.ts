@@ -232,7 +232,7 @@ export function fromEffective(list: { docPath: string; date: string; oid?: strin
         source: 'tag' as const,
         id: e.tag ?? `${e.docPath}:${e.date}`,
         kind: EFFECTIVE_KIND,
-        title: e.message?.split(/\r?\n/)[0] || `${k.label}`,
+        title: e.message?.split(/\r?\n/)[0] || k.label,
         docPath: e.docPath,
         date: e.date,
         task: false,

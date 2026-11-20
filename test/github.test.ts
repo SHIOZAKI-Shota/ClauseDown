@@ -3,8 +3,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import http from 'node:http'
 import { join } from 'node:path'
-import { execFileSync } from 'node:child_process'
-import { startGitServer } from './git-server'
+import { mergeOnServer, remoteFile, remoteRefs, startGitServer } from './git-server'
 
 vi.mock('../src/main/settings', () => ({
     getToken: async () => 'dummy',
@@ -22,19 +21,6 @@ const state = {
     pulls: [] as { number: number; head: string; base: string; title: string; author: string; state: string; merged: boolean }[],
     reviews: [] as { id: number; pr: number; user: { login: string }; state: string; body: string; commit_id: string; submitted_at: string }[],
     releases: [] as { id: number; tag: string; name: string; body: string; assets: string[] }[],
-}
-
-function mergeOnServer(head: string, title: string): string {
-    const work = fs.mkdtempSync(join(os.tmpdir(), 'clausedown-gh-'))
-    const bare = join(root, 'docs.git')
-    const g = (...args: string[]) =>
-        execFileSync('git', ['-C', work, '-c', 'user.name=GitHub', '-c', 'user.email=gh@example.com', ...args])
-            .toString()
-            .trim()
-    execFileSync('git', ['clone', '-q', bare, work])
-    g('merge', '--no-ff', '-q', '-m', title, `origin/${head}`)
-    g('push', '-q', 'origin', 'HEAD:main')
-    return g('rev-parse', 'HEAD')
 }
 
 beforeAll(async () => {
@@ -97,7 +83,7 @@ beforeAll(async () => {
             if (!state.reviews.some((r) => r.pr === pr.number && r.state === 'APPROVED')) {
                 return send(405, { message: 'At least 1 approving review is required by reviewers with write access. (protected branch)' })
             }
-            const sha = mergeOnServer(pr.head, body.commit_title)
+            const sha = mergeOnServer(root, pr.head, body.commit_title, 'GitHub')
             pr.state = 'closed'
             pr.merged = true
             return send(200, { merged: true, sha })
@@ -135,8 +121,8 @@ afterAll(() => {
 
 const DOC = '株式会社A/就業規則.md'
 const V1 = '# 就業規則\n\n### 休日\n- 日曜\n'
-const remoteMain = () => execFileSync('git', ['-C', join(root, 'docs.git'), 'show', 'main:' + DOC]).toString()
-const remoteRefs = () => execFileSync('git', ['-C', join(root, 'docs.git'), 'show-ref']).toString()
+const remoteMain = () => remoteFile(root, DOC)
+const listRemoteRefs = () => remoteRefs(root)
 
 describe('GitHub 連携', () => {
     const pc = () => join(root, 'pc')
@@ -155,7 +141,7 @@ describe('GitHub 連携', () => {
         await wf.addReview(pc(), { branch: draft, action: 'request', text: '' })
 
         expect(state.pulls).toMatchObject([{ number: 1, head: draft, base: 'main', title: '改定案「2026年改定」の確認依頼' }])
-        expect(remoteRefs()).toContain(`refs/heads/${draft}`)
+        expect(listRemoteRefs()).toContain(`refs/heads/${draft}`)
         await wf.addReview(pc(), { branch: draft, action: 'request', text: '再依頼' })
         expect(state.pulls.length).toBe(1)
     })
@@ -185,8 +171,8 @@ describe('GitHub 連携', () => {
         expect(remoteMain()).toContain('土曜及び日曜')
         expect(await git.readDoc(pc(), DOC)).toContain('土曜及び日曜')
         expect((await git.listBranches(pc())).map((b) => b.label)).toEqual(['現行版'])
-        expect(remoteRefs()).not.toContain(`refs/heads/${draft}`)
-        expect(remoteRefs()).toContain('refs/tags/施行/株式会社A/就業規則/2026-04-01')
+        expect(listRemoteRefs()).not.toContain(`refs/heads/${draft}`)
+        expect(listRemoteRefs()).toContain('refs/tags/施行/株式会社A/就業規則/2026-04-01')
     })
 
     it('納品を GitHub の Releases に載せる', async () => {
@@ -204,6 +190,6 @@ describe('GitHub 連携', () => {
         expect(state.releases[0]).toMatchObject({ assets: ['就業規則.pdf:4', '就業規則 新旧対照表.docx:2'] })
         expect(state.releases[0].tag).toMatch(/^納品\/株式会社A\/就業規則\//)
         expect(state.releases[0].body).toContain('宛先：株式会社A')
-        expect(remoteRefs()).toContain(`refs/tags/${state.releases[0].tag}`)
+        expect(listRemoteRefs()).toContain(`refs/tags/${state.releases[0].tag}`)
     })
 })

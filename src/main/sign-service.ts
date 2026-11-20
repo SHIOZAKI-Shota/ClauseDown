@@ -28,7 +28,7 @@ function merge<T>(base: T, patch: DeepPartial<T> | undefined): T {
     const out: Record<string, unknown> = { ...(base as Record<string, unknown>) }
     for (const [k, v] of Object.entries(patch)) {
         const cur = out[k]
-        out[k] = v && typeof v === 'object' && !Array.isArray(v) && cur && typeof cur === 'object' ? merge(cur, v as DeepPartial<typeof cur>) : v
+        out[k] = v && typeof v === 'object' && !Array.isArray(v) && cur && typeof cur === 'object' ? merge(cur, v) : v
     }
     return out as T
 }
@@ -208,7 +208,7 @@ async function tsaOf(s: SigningSettings): Promise<Tsa | undefined> {
     const headers: Record<string, string> = {}
     const pass = await loadSecret('sign-tsa-pass')
     if (s.pdf.tsa.user && pass) headers.Authorization = `Basic ${Buffer.from(`${s.pdf.tsa.user}:${pass}`).toString('base64')}`
-    return { url: checkTsaUrl(url), headers, fetch: ((input, init) => net.fetch(input as string, init)) as typeof globalThis.fetch }
+    return { url: checkTsaUrl(url), headers, fetch: (input, init) => net.fetch(input as string, init) }
 }
 
 export async function testTimestamp(): Promise<{ ok: true }> {

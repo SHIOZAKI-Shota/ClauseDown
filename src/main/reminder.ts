@@ -32,7 +32,7 @@ function bodyOf(o: ScheduleItem, today: string): string {
 
 export async function checkReminders(open: (e: OpenScheduleEvent) => void): Promise<void> {
     const { prefs } = await loadSettings()
-    if (prefs.notifyDue === false || !Notification.isSupported()) return
+    if (!prefs.notifyDue || !Notification.isSupported()) return
     const today = todayISO()
     const due = dueReminders(await scheduleAll(today, 365), today)
     if (!due.length) return

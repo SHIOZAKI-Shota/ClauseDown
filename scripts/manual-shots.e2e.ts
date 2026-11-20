@@ -1165,7 +1165,7 @@ shot(['houritsu-ask.png', 'houritsu-done.png', 'houritsu-doc.png'], async () => 
 shot(['issue-comments.png', 'issue-hash.png', 'save-version-issues.png', 'issue-link.png', 'issues.png'], async () => {
     await viewport(1280, 800)
     await app.evaluate(({ dialog }, d) => {
-        dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [d] })) as typeof dialog.showOpenDialog
+        dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [d] })
     }, dirs.beta)
     await store(`
         await window.api.pickFolder()

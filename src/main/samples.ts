@@ -5,7 +5,7 @@ import fs, { promises as fsp } from 'node:fs'
 import { dirname, join } from 'node:path'
 import git from './igit'
 
-const SOURCES = import.meta.glob('../../example_repository/**/*.md', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
+const SOURCES = import.meta.glob('../../example_repository/**/*.md', { query: '?raw', import: 'default', eager: true })
 const ROOT = '../../example_repository/'
 
 const PEOPLE: Record<string, string> = {

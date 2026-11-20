@@ -8,7 +8,6 @@ const caches = new Map<string, object>()
 export const cacheFor = (dir: string) => recent(caches, repoKey(dir), () => ({}), MAX_CACHED)
 export const dropCache = (dir: string) => caches.delete(repoKey(dir))
 
-type Iso = typeof iso.default
 const git = new Proxy(iso.default, {
     get(target, key, recv) {
         const v = Reflect.get(target, key, recv)
@@ -22,7 +21,7 @@ const git = new Proxy(iso.default, {
             return (v as (...a: unknown[]) => unknown).call(target, arg, ...rest)
         }
     },
-}) as Iso
+})
 
 export default git
 export const TREE = iso.TREE

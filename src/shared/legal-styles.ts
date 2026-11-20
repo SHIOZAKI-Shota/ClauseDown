@@ -123,7 +123,7 @@ const ja: LegalStyle = {
     sep: '　',
     perChapter: false,
     resetInSupplement: true,
-    chapterLabel: (n, config) => (config.chapter.numeral === 'none' ? '' : `第${formatNumber(n, config.chapter.numeral as NumeralStyle)}章`),
+    chapterLabel: (n, config) => (config.chapter.numeral === 'none' ? '' : `第${formatNumber(n, config.chapter.numeral)}章`),
     articleLabel(a, _ch, config) {
         const style = config.article.numeral as NumeralStyle
         const base = `第${formatNumber(a.number, style)}条`
@@ -141,7 +141,7 @@ const ja: LegalStyle = {
     },
     itemLabel(n, path, level, config) {
         const styles = jaSubitemStyles(config)
-        const style: NumeralStyle = level === 1 ? (config.item.style as NumeralStyle) : styles[Math.min(level - 2, styles.length - 1)]
+        const style: NumeralStyle = level === 1 ? config.item.style : styles[Math.min(level - 2, styles.length - 1)]
         return formatNumber(n, style) + branchSuffixJa(path, style === 'kanji' ? 'kanji' : 'arabic')
     },
     ref(t, config) {
@@ -495,7 +495,7 @@ export function detectLang(source: string, minChars = MIN_DETECT_CHARS): DocLang
 }
 
 export function resolveStyle(config: DocConfig, source: string): { id: StyleId; lang: DocLang } {
-    const choice = (config.doc?.style ?? 'auto') as StyleChoice
+    const choice = config.doc?.style ?? 'auto'
     const detected = detectLang(source)
     const id: StyleId = choice === 'auto' ? (detected === 'en' ? 'contract' : 'ja') : choice
     const style = legalStyle(id, config, id === 'decimal' ? detectLang(source, 20) : detected)

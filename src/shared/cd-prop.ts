@@ -227,9 +227,9 @@ export function inlineRuns(text: string): InlineRun[] {
     const out: InlineRun[] = []
     let last = 0
     for (const m of text.matchAll(INLINE_RE)) {
-        if (m.index! > last) out.push({ text: text.slice(last, m.index) })
+        if (m.index > last) out.push({ text: text.slice(last, m.index) })
         out.push({ text: m[1], props: parseProps(m[2]) })
-        last = m.index! + m[0].length
+        last = m.index + m[0].length
     }
     if (last < text.length) out.push({ text: text.slice(last) })
     return out

@@ -172,7 +172,7 @@ describe('画面', () => {
 
         const out = join(tmp, 'signed.pdf')
         await app.evaluate(({ dialog }, path) => {
-            dialog.showSaveDialog = (async () => ({ canceled: false, filePath: path })) as typeof dialog.showSaveDialog
+            dialog.showSaveDialog = async () => ({ canceled: false, filePath: path })
         }, out)
         const req = { kind: 'doc', format: 'pdf', source: '# 就業規則\n\n### 目的\n- 本文\n', name: 'x', dir, docPath: DOC, sign: true }
         await win.evaluate(`window.api.exportFile(${JSON.stringify(req)})`)
@@ -193,7 +193,7 @@ describe('画面', () => {
     it('表紙と目次：PDF の 1 ページ目が表紙で、目次の番号がその条のあるページと合う', async () => {
         const out = join(tmp, 'cover-toc.pdf')
         await app.evaluate(({ dialog }, path) => {
-            dialog.showSaveDialog = (async () => ({ canceled: false, filePath: path })) as typeof dialog.showSaveDialog
+            dialog.showSaveDialog = async () => ({ canceled: false, filePath: path })
         }, out)
         const source = [
             '# 就業規則',
@@ -293,7 +293,7 @@ describe('画面', () => {
         const outDir = join(tmp, 'delivered')
         fs.mkdirSync(outDir)
         await app.evaluate(({ dialog }, path) => {
-            dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [path] })) as typeof dialog.showOpenDialog
+            dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] })
         }, outDir)
         const oid = await win.evaluate(`window.api.log(${JSON.stringify(dir)}, ${JSON.stringify(DOC)}).then((l) => l[0].oid)`)
         const input = { docPath: DOC, oid, to: '相手方', memo: '', items: ['docPdf'], publishRelease: false, sign: true }
@@ -304,7 +304,7 @@ describe('画面', () => {
         }
         const returned = join(rec.folder, rec.files[0])
         await app.evaluate(({ dialog }, path) => {
-            dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [path] })) as typeof dialog.showOpenDialog
+            dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] })
         }, returned)
         const picked = (await win.evaluate('window.api.pickReceivedPdf()')) as { path: string; signatures: { signer: string }[] }
         expect(picked.signatures).toHaveLength(1)

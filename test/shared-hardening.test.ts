@@ -77,7 +77,7 @@ describe('doc-view', () => {
         const t = performance.now()
         const issues = checkDoc(src)
         expect(performance.now() - t).toBeLessThan(1000)
-        expect(issues.filter((i) => i.severity === 'error').at(-1)!.line).toBe(10001)
+        expect(issues.findLast((i) => i.severity === 'error')!.line).toBe(10001)
     })
 })
 

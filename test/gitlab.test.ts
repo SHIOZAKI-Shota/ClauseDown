@@ -4,7 +4,7 @@ import os from 'node:os'
 import http from 'node:http'
 import { join } from 'node:path'
 import { execFileSync } from 'node:child_process'
-import { startGitServer } from './git-server'
+import { mergeOnServer, remoteFile, remoteRefs, startGitServer } from './git-server'
 import { reviewStatus } from '../src/shared/review'
 
 vi.mock('../src/main/settings', () => ({
@@ -45,7 +45,7 @@ const headOf = (branch: string) => {
 function syncVersion(iid: number) {
     const mr = state.mrs.find((m) => m.iid === iid)!
     const sha = headOf(mr.source)
-    const last = state.versions.filter((v) => v.iid === iid).at(-1)
+    const last = state.versions.findLast((v) => v.iid === iid)
     if (sha && last?.head_commit_sha !== sha) {
         state.versions.push({ id: state.versions.length + 1, iid, head_commit_sha: sha, created_at: new Date().toISOString() })
     }
@@ -53,18 +53,6 @@ function syncVersion(iid: number) {
 }
 const note = (iid: number, body: string, system: boolean) =>
     state.notes.push({ id: state.notes.length + 1, iid, body, system, author: { username: state.login }, created_at: new Date().toISOString() })
-
-function mergeOnServer(head: string, title: string): string {
-    const work = fs.mkdtempSync(join(os.tmpdir(), 'clausedown-gl-'))
-    const g = (...args: string[]) =>
-        execFileSync('git', ['-C', work, '-c', 'user.name=GitLab', '-c', 'user.email=gl@example.com', ...args])
-            .toString()
-            .trim()
-    execFileSync('git', ['clone', '-q', bare(), work])
-    g('merge', '--no-ff', '-q', '-m', title, `origin/${head}`)
-    g('push', '-q', 'origin', 'HEAD:main')
-    return g('rev-parse', 'HEAD')
-}
 
 beforeAll(async () => {
     ;({ root, url, close: closeGit } = await startGitServer())
@@ -153,7 +141,7 @@ beforeAll(async () => {
             if (sub === '/merge' && req.method === 'PUT') {
                 if (!approved.size) return send(405, { message: '405 Method Not Allowed' })
                 if (body.sha !== sha) return send(409, { message: 'SHA does not match HEAD of source branch' })
-                mr.merge_commit_sha = mergeOnServer(mr.source, body.merge_commit_message)
+                mr.merge_commit_sha = mergeOnServer(root, mr.source, body.merge_commit_message, 'GitLab')
                 mr.state = 'merged'
                 return send(200, toJson(mr))
             }
@@ -188,8 +176,8 @@ afterAll(() => {
 
 const DOC = '株式会社A/就業規則.md'
 const V1 = '# 就業規則\n\n### 休日\n- 日曜\n'
-const remoteMain = () => execFileSync('git', ['-C', bare(), 'show', 'main:' + DOC]).toString()
-const remoteRefs = () => execFileSync('git', ['-C', bare(), 'show-ref']).toString()
+const remoteMain = () => remoteFile(root, DOC)
+const listRemoteRefs = () => remoteRefs(root)
 const RULES = { requireApproval: true, approvers: [] }
 
 describe('GitLab 連携', () => {
@@ -219,7 +207,7 @@ describe('GitLab 連携', () => {
         await wf.addReview(pc(), { branch: draft, action: 'request', text: '' })
 
         expect(state.mrs).toMatchObject([{ iid: 1, source: draft, target: 'main', title: '改定案「2026年改定」の確認依頼', author: 'staff-a' }])
-        expect(remoteRefs()).toContain(`refs/heads/${draft}`)
+        expect(listRemoteRefs()).toContain(`refs/heads/${draft}`)
         const req = (await wf.listReviews(pc())).find((e) => e.action === 'request')!
         expect(req).toMatchObject({ pr: 1, forge: 'gitlab', forgeUser: 'staff-a' })
         expect(req.githubPr).toBeUndefined()
@@ -277,8 +265,8 @@ describe('GitLab 連携', () => {
         expect(state.mrs[0]).toMatchObject({ state: 'merged' })
         expect(remoteMain()).toContain('土曜、日曜及び祝日')
         expect(await git.readDoc(pc(), DOC)).toContain('土曜、日曜及び祝日')
-        expect(remoteRefs()).not.toContain(`refs/heads/${draft}`)
-        expect(remoteRefs()).toContain('refs/tags/施行/株式会社A/就業規則/2026-04-01')
+        expect(listRemoteRefs()).not.toContain(`refs/heads/${draft}`)
+        expect(listRemoteRefs()).toContain('refs/tags/施行/株式会社A/就業規則/2026-04-01')
     })
 
     it('納品を GitLab のリリースに載せ、ファイルをアップロードしてリンクを付ける', async () => {
@@ -301,7 +289,7 @@ describe('GitLab 連携', () => {
             { name: '就業規則.pdf', url: `${BASE}/-/project/1/uploads/abc/就業規則.pdf` },
             { name: '就業規則 新旧対照表.docx', url: `${BASE}/-/project/1/uploads/abc/就業規則 新旧対照表.docx` },
         ])
-        expect(remoteRefs()).toContain(`refs/tags/${rel.tag}`)
+        expect(listRemoteRefs()).toContain(`refs/tags/${rel.tag}`)
     })
 
     it('記録ブランチに書かれた「GitLab で承認」は数えない', async () => {

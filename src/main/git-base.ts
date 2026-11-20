@@ -47,7 +47,7 @@ export async function identity(dir?: string | null): Promise<Identity | null> {
     const settings = await loadSettings()
     const creds = await Promise.resolve()
         .then(() => listCredentials())
-        .catch(() => ({}) as Awaited<ReturnType<typeof listCredentials>>)
+        .catch((): Awaited<ReturnType<typeof listCredentials>> => ({}))
     const bases = knownBases(settings)
     const fromLogin = (base: string): Identity | null => {
         const b = bases.find((x) => x.base === base)

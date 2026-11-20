@@ -60,7 +60,7 @@ describe('共有の文言の切り替え', () => {
 })
 
 // 英語の語順では前に置くので、後ろに付ける語がないもの
-const EMPTY_OK = ['root.editor.lint.backrefSuffix']
+const EMPTY_OK = new Set(['root.editor.lint.backrefSuffix'])
 
 describe('辞書の形', () => {
     it('日本語と英語の辞書で、キーと関数の引数の数がそろい、空の文字がない', async () => {
@@ -72,7 +72,7 @@ describe('辞書の形', () => {
                 return
             }
             if (typeof a === 'string') {
-                if (typeof b !== 'string' || (a !== '' && b === '' && !EMPTY_OK.includes(path))) problems.push(`${path}: 文字がない`)
+                if (typeof b !== 'string' || (a !== '' && b === '' && !EMPTY_OK.has(path))) problems.push(`${path}: 文字がない`)
                 return
             }
             if (a && typeof a === 'object') {

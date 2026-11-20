@@ -78,7 +78,7 @@ export function imageSize(bytes: Uint8Array): { width: number; height: number } 
 export const isLocalSrc = (src: string): boolean => !/^[a-z][a-z0-9+.-]*:/i.test(src) && !/^[\\/#]/.test(src)
 
 export function useLocalImages(md: Md): Md {
-    const base = md.renderer.rules.image!
+    const base = md.renderer.rules.image
     md.renderer.rules.image = (tokens, idx, options, env, self) => {
         const src = String(tokens[idx].attrGet('src') ?? '')
         if (isLocalSrc(src)) return base(tokens, idx, options, env, self)
@@ -141,7 +141,7 @@ const INLINE_IMAGE_RE = /!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)(?:\{([^{}]*)\
 
 export function inlineImages(text: string): { index: number; length: number; alt: string; src: string; attrs?: string }[] {
     return [...text.matchAll(INLINE_IMAGE_RE)].map((m) => ({
-        index: m.index!,
+        index: m.index,
         length: m[0].length,
         alt: m[1],
         src: m[2],

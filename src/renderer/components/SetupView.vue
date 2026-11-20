@@ -16,8 +16,8 @@ const t = useT()
 const { set: setTheme } = useTheme()
 
 const demo = isDemo()
-const DEMO_SECTIONS = ['display', 'editor', 'print']
-const shown = (id: string) => !demo || DEMO_SECTIONS.includes(id)
+const DEMO_SECTIONS = new Set(['display', 'editor', 'print'])
+const shown = (id: string) => !demo || DEMO_SECTIONS.has(id)
 const SECTION_ICONS = {
     profile: 'i-lucide-user',
     display: 'i-lucide-monitor',
