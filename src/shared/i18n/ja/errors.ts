@@ -5,7 +5,7 @@ export const errors = {
         dotGit: (path: string) => `版管理のフォルダ（.git）は読み書きできません: ${path}`,
         symlink: (path: string) => `リンクになっている場所には書き込めません: ${path}`,
         mdOnly: (path: string) => `扱えるのはリポジトリ内の .md の文書だけです: ${path}`,
-        alreadyRepo: 'このフォルダはすでに版管理されています。「ローカル にあるフォルダを開く」を使ってください',
+        alreadyRepo: 'このフォルダはすでに版管理されています。「この PC にあるフォルダを開く」を使ってください',
         folderNotEmpty: (name: string) => `「${name}」という名前のフォルダがすでにあり、中にファイルがあります。別の名前にしてください`,
         httpsOnly: 'リモートの URL は https:// で始まるものを入力してください',
         notRepo: 'このフォルダは版管理されていません',
@@ -106,17 +106,17 @@ export const errors = {
         badType: 'PNG・JPEG・GIF・WebP の画像だけ貼り付けられます',
     },
     settings: {
-        noEncryptionAuth: 'ローカル では認証情報を暗号化して保存できません',
+        noEncryptionAuth: 'この PC では認証情報を暗号化して保存できません',
         badName: '不正な名前です',
-        noEncryptionSecret: 'ローカル では API キーなどを暗号化して保存できません',
+        noEncryptionSecret: 'この PC では API キーなどを暗号化して保存できません',
     },
     accounts: {
         unknownServer: '登録されていないサーバーです',
         gitlabToken: 'このトークンでは GitLab にログインできませんでした。トークンと、scope（api・read_repository・write_repository）を確かめてください',
     },
     forge: {
-        gitlabDivergedApprove: 'GitLab 側の改定案が、ローカル の改定案と違っています。同期してからもう一度承認してください',
-        gitlabDivergedMerge: 'GitLab 側の改定案が、ローカル の改定案と違っています。同期してからもう一度反映してください',
+        gitlabDivergedApprove: 'GitLab 側の改定案が、手元の改定案と違っています。同期してからもう一度承認してください',
+        gitlabDivergedMerge: 'GitLab 側の改定案が、手元の改定案と違っています。同期してからもう一度反映してください',
     },
     github: {
         badNumber: 'プルリクエスト・課題の番号が正しくありません',
@@ -239,8 +239,8 @@ export const errors = {
             api: (who: string, detail: string) => `${who} の呼び出しに失敗しました（${detail}）`,
         },
         provider: {
-            urlLan: '接続先の URL は https か、ローカル の中（http://127.0.0.1）か LAN 内（http://192.168.x.x など）にしてください',
-            url: '接続先の URL は https か、ローカル の中（http://127.0.0.1）にしてください',
+            urlLan: '接続先の URL は https か、この PC の中（http://127.0.0.1）か LAN 内（http://192.168.x.x など）にしてください',
+            url: '接続先の URL は https か、この PC の中（http://127.0.0.1）にしてください',
             noClaudeKey: 'Claude の API キーが設定されていません',
             noKey: 'この接続先の API キーが設定されていません',
             noOpenRouter: 'OpenRouter にログインしていません',

@@ -80,9 +80,9 @@ export const labels = {
                 'OpenAI、Google Gemini、DeepSeek、LM Studio など、OpenAI 互換の API を持つサービスを、URL と API キーを指定して使用します。文書の内容はその接続先に送られます。',
         },
         ollama: {
-            label: 'Ollama（ローカル の中）',
+            label: 'Ollama（この PC の中）',
             description:
-                'ローカル で動いている Ollama を使用します。API キーは不要で、文書は PC の外に送られません。道具（tools）に対応したモデル（qwen3、llama3.1、gpt-oss など）が必要です。',
+                'この PC で動いている Ollama を使用します。API キーは不要で、文書は PC の外に送られません。道具（tools）に対応したモデル（qwen3、llama3.1、gpt-oss など）が必要です。',
         },
         openrouter: {
             label: 'OpenRouter（ブラウザでログイン）',
@@ -109,7 +109,7 @@ export const labels = {
         gitlab: (n: number) => `GitLab のマージリクエスト !${n}`,
     },
     styleSource: {
-        app: 'ローカル の設定',
+        app: 'この PC の設定',
         repo: 'リポジトリの設定',
         folder: (folder: string) => `「${folder}」の設定`,
     },

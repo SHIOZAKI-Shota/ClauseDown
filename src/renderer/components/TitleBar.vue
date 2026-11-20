@@ -5,6 +5,7 @@ const app = useApp()
 const t = useT()
 const emit = defineEmits<{ search: [] }>()
 const demo = isDemo()
+const hasRepos = computed(() => !!app.settings?.repos.length)
 const inDoc = computed(() => ['editor', 'history', 'compare', 'releases'].includes(app.view))
 function backToDoc() {
     if (app.currentDoc && !inDoc.value) app.openDoc(app.currentDoc.path, app.lastDocView)
@@ -13,37 +14,38 @@ function backToDoc() {
 
 <template>
     <header class="titlebar" :class="{ mac: IS_MAC && !demo }">
-        <button class="brand" :title="t.shell.titleBar.home" :aria-label="t.shell.titleBar.homeAria" @click="app.view = 'home'">
-            <BrandLogo class="logo" />
-        </button>
+        <div class="left">
+            <button class="brand" :title="t.shell.titleBar.home" :aria-label="t.shell.titleBar.homeAria" @click="app.view = 'home'">
+                <BrandLogo class="logo" />
+            </button>
 
-        <nav class="crumbs" :aria-label="t.shell.titleBar.crumbs">
-            <RepoSwitcher v-if="app.settings?.repos.length" />
-            <template v-if="app.repoDir && app.currentBranch">
-                <UIcon name="i-lucide-chevron-right" class="sep" />
-                <BranchMenu />
-            </template>
-            <template v-if="app.repoDir && app.currentDoc">
-                <UIcon name="i-lucide-chevron-right" class="sep" />
-                <button
-                    class="cd-crumb-btn doc"
-                    :class="{ here: inDoc }"
-                    :aria-current="inDoc ? 'page' : undefined"
-                    :title="inDoc ? app.currentDoc.path : t.shell.titleBar.backTo(app.currentDoc.title)"
-                    @click="backToDoc"
-                >
-                    <UIcon name="i-lucide-file-text" class="ci" />
-                    <span class="nm">{{ app.currentDoc.title }}</span>
-                </button>
-            </template>
-        </nav>
+            <nav class="crumbs" :aria-label="t.shell.titleBar.crumbs">
+                <RepoSwitcher v-if="hasRepos" />
+                <template v-if="app.repoDir && app.currentBranch">
+                    <UIcon name="i-lucide-chevron-right" class="sep" />
+                    <BranchMenu />
+                </template>
+                <template v-if="app.repoDir && app.currentDoc">
+                    <UIcon name="i-lucide-chevron-right" class="sep" />
+                    <button
+                        class="cd-crumb-btn doc"
+                        :class="{ here: inDoc }"
+                        :aria-current="inDoc ? 'page' : undefined"
+                        :title="inDoc ? app.currentDoc.path : t.shell.titleBar.backTo(app.currentDoc.title)"
+                        @click="backToDoc"
+                    >
+                        <UIcon name="i-lucide-file-text" class="ci" />
+                        <span class="nm">{{ app.currentDoc.title }}</span>
+                    </button>
+                </template>
+            </nav>
+        </div>
 
         <button class="search" data-guide="search" @click="emit('search')">
             <UIcon name="i-lucide-search" />
             <span class="txt">{{ t.shell.titleBar.search }}</span>
             <span class="kbd">{{ IS_MAC ? '⌘K' : 'Ctrl K' }}</span>
         </button>
-        <span class="cd-grow" />
         <div class="right">
             <DemoActions v-if="demo" />
             <SyncStatus v-else />
@@ -60,7 +62,8 @@ function backToDoc() {
     inset: 0 0 auto 0;
     height: 40px;
     z-index: 40;
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
     gap: 14px;
     padding-left: 12px;
@@ -77,8 +80,16 @@ function backToDoc() {
     padding-left: calc(env(titlebar-area-x, 80px) + 8px);
 }
 
+.left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+
 .brand {
     -webkit-app-region: no-drag;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     height: 28px;
@@ -100,12 +111,11 @@ function backToDoc() {
 }
 
 .crumbs {
-    --search-half: 190px;
     display: flex;
     align-items: center;
     gap: 2px;
     min-width: 0;
-    max-width: calc(50vw - var(--search-half) - 140px);
+    overflow: hidden;
     white-space: nowrap;
 }
 
@@ -141,9 +151,6 @@ function backToDoc() {
 
 .search {
     -webkit-app-region: no-drag;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -170,6 +177,7 @@ function backToDoc() {
 
 .right {
     -webkit-app-region: no-drag;
+    justify-self: end;
     display: flex;
     align-items: center;
 }
@@ -185,10 +193,6 @@ function backToDoc() {
     .search {
         width: 240px;
     }
-
-    .crumbs {
-        --search-half: 130px;
-    }
 }
 
 @media (max-width: 1240px) {
@@ -201,10 +205,6 @@ function backToDoc() {
     .search .txt,
     .search .kbd {
         display: none;
-    }
-
-    .crumbs {
-        --search-half: 16px;
     }
 }
 </style>

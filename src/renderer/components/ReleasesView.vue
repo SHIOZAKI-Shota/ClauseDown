@@ -8,6 +8,7 @@ import { useApp } from '~/stores/app'
 import { usePane } from '~/composables/usePane'
 import { useSchedule } from '~/composables/useSchedule'
 import { useVerticalResize } from '~/composables/useVerticalResize'
+import { vLiveStyle } from '~/utils/live-style'
 import { useStoredRef } from '~/composables/useStoredRef'
 import { daysUntil, firstLine, fmtDate, untilLabel } from '~/utils/format'
 import { todayISO } from '@shared/date'
@@ -121,7 +122,7 @@ watch(
 async function remove() {
     const v = removing.value!
     removing.value = null
-    await app.run(() => window.api.removeEffective(app.repoDir!, path, v.date), t.value.releases.removedEffective(v.date))
+    await app.run(() => window.api.removeEffective(app.repoDir!, path, v.date), t.value.releases.removedEffective(fmtDate(v.date, 'ymd')))
     await load()
     app.touchSchedule(app.repoDir!)
 }
@@ -148,7 +149,7 @@ const versionLabel = (oid: string, date?: string) => (date ? t.value.releases.ef
         <TimelineChart
             v-if="showTimeline"
             class="strip"
-            :style="{ height: `${strip.height.value}px` }"
+            v-live-style="() => ({ height: `${strip.height.value}px` })"
             :rows="[{ id: 'doc', label: '' }]"
             :items="timelineItems"
             :bands="bands"

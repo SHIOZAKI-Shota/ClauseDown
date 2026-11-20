@@ -371,16 +371,20 @@ async function refreshMyna() {
                 </template>
                 <p v-if="c.cert?.selfSigned" class="cd-muted note">{{ s.pdf.selfNote }}</p>
                 <div v-if="editing === c.id" class="edit">
-                    <UFormField :label="s.pdf.label" :help="s.pdf.labelHint"><UInput v-model="draft.label" class="cd-w-input" /></UFormField>
-                    <UFormField :label="s.pdf.reason" :help="s.pdf.overrideHint"
-                        ><UInput v-model="draft.reason" :placeholder="cfg.pdf.reason" class="cd-w-input"
-                    /></UFormField>
-                    <UFormField :label="s.pdf.location"><UInput v-model="draft.location" :placeholder="cfg.pdf.location" class="cd-w-input" /></UFormField>
-                    <UFormField :label="s.pdf.contact"><UInput v-model="draft.contactInfo" :placeholder="cfg.pdf.contactInfo" class="cd-w-input" /></UFormField>
-                    <div class="actions">
-                        <UButton :label="t.common.cancel" size="sm" color="neutral" variant="outline" @click="editing = null" />
-                        <UButton :label="t.common.save" size="sm" @click="saveEdit" />
-                    </div>
+                    <RenderScope>
+                        <UFormField :label="s.pdf.label" :help="s.pdf.labelHint"><UInput v-model="draft.label" class="cd-w-input" /></UFormField>
+                        <UFormField :label="s.pdf.reason" :help="s.pdf.overrideHint"
+                            ><UInput v-model="draft.reason" :placeholder="cfg.pdf.reason" class="cd-w-input"
+                        /></UFormField>
+                        <UFormField :label="s.pdf.location"><UInput v-model="draft.location" :placeholder="cfg.pdf.location" class="cd-w-input" /></UFormField>
+                        <UFormField :label="s.pdf.contact"
+                            ><UInput v-model="draft.contactInfo" :placeholder="cfg.pdf.contactInfo" class="cd-w-input"
+                        /></UFormField>
+                        <div class="actions">
+                            <UButton :label="t.common.cancel" size="sm" color="neutral" variant="outline" @click="editing = null" />
+                            <UButton :label="t.common.save" size="sm" @click="saveEdit" />
+                        </div>
+                    </RenderScope>
                 </div>
             </div>
             <p v-if="!certs.length" class="cd-muted note">{{ s.pdf.noCerts }}</p>
@@ -389,33 +393,35 @@ async function refreshMyna() {
             </UDropdownMenu>
 
             <div v-if="adding" class="cert add">
-                <UFormField :label="s.pdf.label" :help="s.pdf.labelHint"><UInput v-model="newLabel" class="cd-w-input" /></UFormField>
-                <template v-if="adding === 'p12'">
-                    <input ref="p12Input" type="file" accept=".p12,.pfx,application/x-pkcs12" hidden @change="onP12" />
-                    <UFormField :label="s.pdf.importP12">
-                        <UButton :label="s.pdf.pickP12" size="sm" color="neutral" variant="outline" icon="i-lucide-file-key" @click="pickP12" />
-                        <span v-if="p12File" class="cd-muted picked">{{ s.pdf.p12Picked }}</span>
-                    </UFormField>
-                    <UFormField v-if="p12File" :label="s.pdf.password">
-                        <UInput v-model="p12Password" type="password" autocomplete="off" class="cd-w-input" @keydown.enter="importP12" />
-                    </UFormField>
-                    <div class="actions">
-                        <UButton :label="t.common.cancel" size="sm" color="neutral" variant="outline" @click="adding = null" />
-                        <UButton :label="s.pdf.importP12" size="sm" :disabled="!p12File" @click="importP12" />
-                    </div>
-                </template>
-                <template v-else>
-                    <UFormField :label="s.pdf.selfName"><UInput v-model="self.name" class="cd-w-input" /></UFormField>
-                    <UFormField :label="s.pdf.selfOrg"><UInput v-model="self.org" class="cd-w-input" /></UFormField>
-                    <UFormField :label="s.pdf.selfEmail"><UInput v-model="self.email" type="email" class="cd-w-input" /></UFormField>
-                    <UFormField :label="s.pdf.selfYears" :help="s.pdf.selfNote">
-                        <UInput v-model.number="self.years" type="number" min="1" max="10" class="cd-w-small" />
-                    </UFormField>
-                    <div class="actions">
-                        <UButton :label="t.common.cancel" size="sm" color="neutral" variant="outline" @click="adding = null" />
-                        <UButton :label="s.pdf.createSelf" size="sm" :disabled="!self.name.trim()" @click="createSelf" />
-                    </div>
-                </template>
+                <RenderScope>
+                    <UFormField :label="s.pdf.label" :help="s.pdf.labelHint"><UInput v-model="newLabel" class="cd-w-input" /></UFormField>
+                    <template v-if="adding === 'p12'">
+                        <input ref="p12Input" type="file" accept=".p12,.pfx,application/x-pkcs12" hidden @change="onP12" />
+                        <UFormField :label="s.pdf.importP12">
+                            <UButton :label="s.pdf.pickP12" size="sm" color="neutral" variant="outline" icon="i-lucide-file-key" @click="pickP12" />
+                            <span v-if="p12File" class="cd-muted picked">{{ s.pdf.p12Picked }}</span>
+                        </UFormField>
+                        <UFormField v-if="p12File" :label="s.pdf.password">
+                            <UInput v-model="p12Password" type="password" autocomplete="off" class="cd-w-input" @keydown.enter="importP12" />
+                        </UFormField>
+                        <div class="actions">
+                            <UButton :label="t.common.cancel" size="sm" color="neutral" variant="outline" @click="adding = null" />
+                            <UButton :label="s.pdf.importP12" size="sm" :disabled="!p12File" @click="importP12" />
+                        </div>
+                    </template>
+                    <template v-else>
+                        <UFormField :label="s.pdf.selfName"><UInput v-model="self.name" class="cd-w-input" /></UFormField>
+                        <UFormField :label="s.pdf.selfOrg"><UInput v-model="self.org" class="cd-w-input" /></UFormField>
+                        <UFormField :label="s.pdf.selfEmail"><UInput v-model="self.email" type="email" class="cd-w-input" /></UFormField>
+                        <UFormField :label="s.pdf.selfYears" :help="s.pdf.selfNote">
+                            <UInput v-model.number="self.years" type="number" min="1" max="10" class="cd-w-small" />
+                        </UFormField>
+                        <div class="actions">
+                            <UButton :label="t.common.cancel" size="sm" color="neutral" variant="outline" @click="adding = null" />
+                            <UButton :label="s.pdf.createSelf" size="sm" :disabled="!self.name.trim()" @click="createSelf" />
+                        </div>
+                    </template>
+                </RenderScope>
             </div>
 
             <template v-if="certs.length">

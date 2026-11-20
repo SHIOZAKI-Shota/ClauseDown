@@ -2,7 +2,9 @@ import { locale, t } from '@shared/i18n'
 import { localHm, todayISO } from '@shared/date'
 
 function toDate(t: number | string): Date {
-    return typeof t === 'number' ? new Date(t * 1000) : new Date(t)
+    if (typeof t === 'number') return new Date(t * 1000)
+    const day = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t)
+    return day ? new Date(Number(day[1]), Number(day[2]) - 1, Number(day[3])) : new Date(t)
 }
 
 export function fmtDate(t: number | string, kind: 'md' | 'ymd' | 'mdhm' | 'ymdhm'): string {

@@ -10,7 +10,7 @@ export const releases: Messages['releases'] = {
         cmpDocx: 'Comparison table (Word)',
     },
     allDocsDue: 'Due dates & validity periods of all documents',
-    pane: 'Due dates, validity & delivery',
+    pane: 'Effective dates & delivery',
     hideTimeline: 'Hide timeline',
     resizeTimeline: 'Drag to resize the timeline (double-click to reset)',
     showTimeline: 'Show timeline',

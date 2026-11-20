@@ -6,7 +6,7 @@ const app = useApp()
 
 <template>
     <div class="about-view">
-        <UButton :label="app.returnLabel" icon="i-lucide-arrow-left" size="sm" color="neutral" variant="ghost" class="back" @click="app.goBack()" />
+        <BackButton :label="app.returnLabel" class="back" @click="app.goBack()" />
         <AboutSection />
     </div>
 </template>

@@ -138,23 +138,27 @@ const repoKey = computed(() => (app.repoDir ? (props.md.repoKeys[app.repoDir] ??
     <UButton v-if="!adding" :label="m.add" size="sm" color="neutral" variant="outline" icon="i-lucide-plus" class="self-start" @click="adding = true" />
 
     <div v-if="adding" class="key add">
-        <UFormField :label="m.kind" :help="form.kind === 'passkey' ? m.passkeyNote : !appKey ? m.noAppKey : undefined">
-            <SegmentSwitch v-model="form.kind" :items="kindItems" size="sm" />
-        </UFormField>
-        <UFormField :label="m.label" :help="m.labelHint"><UInput v-model="form.label" class="cd-w-input" /></UFormField>
-        <UFormField :label="m.method" :help="m.methodDesc[form.method]">
-            <SegmentSwitch v-model="form.method" :items="methodItems" size="sm" />
-        </UFormField>
-        <UFormField :label="m.signer"><UInput v-model="form.signer" :placeholder="m.signerHint[form.method]" class="cd-w-input" /></UFormField>
-        <UFormField v-if="form.method === 'dns'" :label="m.selector" :help="m.selectorHint"><UInput v-model="form.selector" class="cd-w-small" /></UFormField>
-        <UFormField v-if="form.kind === 'passkey'" :label="m.page">
-            <USelect v-model="form.page" :items="md.pages" class="cd-w-input" />
-        </UFormField>
-        <div class="actions">
-            <span v-if="waiting" class="cd-muted">{{ m.adding }}</span>
-            <UButton :label="t.common.cancel" size="sm" color="neutral" variant="outline" :disabled="waiting" @click="adding = false" />
-            <UButton :label="m.add" size="sm" :disabled="!formOk || waiting" :loading="waiting" @click="add" />
-        </div>
+        <RenderScope>
+            <UFormField :label="m.kind" :help="form.kind === 'passkey' ? m.passkeyNote : !appKey ? m.noAppKey : undefined">
+                <SegmentSwitch v-model="form.kind" :items="kindItems" size="sm" />
+            </UFormField>
+            <UFormField :label="m.label" :help="m.labelHint"><UInput v-model="form.label" class="cd-w-input" /></UFormField>
+            <UFormField :label="m.method" :help="m.methodDesc[form.method]">
+                <SegmentSwitch v-model="form.method" :items="methodItems" size="sm" />
+            </UFormField>
+            <UFormField :label="m.signer"><UInput v-model="form.signer" :placeholder="m.signerHint[form.method]" class="cd-w-input" /></UFormField>
+            <UFormField v-if="form.method === 'dns'" :label="m.selector" :help="m.selectorHint"
+                ><UInput v-model="form.selector" class="cd-w-small"
+            /></UFormField>
+            <UFormField v-if="form.kind === 'passkey'" :label="m.page">
+                <USelect v-model="form.page" :items="md.pages" class="cd-w-input" />
+            </UFormField>
+            <div class="actions">
+                <span v-if="waiting" class="cd-muted">{{ m.adding }}</span>
+                <UButton :label="t.common.cancel" size="sm" color="neutral" variant="outline" :disabled="waiting" @click="adding = false" />
+                <UButton :label="m.add" size="sm" :disabled="!formOk || waiting" :loading="waiting" @click="add" />
+            </div>
+        </RenderScope>
     </div>
 
     <SettingRow v-if="app.repoDir && md.keys.length" :label="m.repoKey">

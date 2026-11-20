@@ -80,7 +80,7 @@ describe('画面', () => {
 
     it('左のペインをすべてのリポジトリの期日・有効期間に切り替え、一覧から済みにすると記録に残る', async () => {
         await win.getByRole('radio', { name: 'すべてのリポジトリの期日・有効期間' }).click()
-        await win.getByRole('button', { name: 'カレンダーに書き出す' }).waitFor()
+        await win.getByRole('button', { name: 'その他の操作' }).first().waitFor()
         await win.getByRole('radio', { name: '一覧' }).click()
         await win.getByRole('checkbox', { name: '済みにする' }).first().click()
         await expect.poll(async () => (await sch.listEvents(dir)).find((e) => e.id === overdueId)?.done, { timeout: 10000 }).toEqual([addDays(today, -10)])
@@ -88,7 +88,7 @@ describe('画面', () => {
         await win.getByRole('radio', { name: '最近開いた文書' }).click()
     })
 
-    it('リポジトリ・編集・改定履歴・新旧対照表・期日・有効期間・納品・期日・有効期間の画面を開ける', async () => {
+    it('リポジトリ・編集・改定履歴・新旧対照表・施行・納品・期日・有効期間の画面を開ける', async () => {
         await store(`s.view = 'docs'`)
         await seen('就業規則')
         await store(`s.openDoc(${JSON.stringify(DOC)})`)

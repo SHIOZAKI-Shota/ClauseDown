@@ -3,7 +3,7 @@ export const sync = {
         remote: 'リモート',
         remoteWith: (text: string) => `リモート・${text}`,
         local: 'ローカル',
-        localTitle: 'リモートがなく、ローカル だけで管理しています',
+        localTitle: 'リモートがなく、この PC だけで管理しています',
         unknown: '未確認',
         unknownTitle: 'まだ同期していません',
         upToDateTitle: (url: string) => `リモート（${url}）と同じ、最新の状態です`,
@@ -17,7 +17,7 @@ export const sync = {
         error: '同期できませんでした',
         browser: 'ブラウザ',
         urlCopied: 'リモートの URL をコピーしました',
-        localOnly: 'ローカル だけで管理しています',
+        localOnly: 'この PC だけで管理しています',
         addRemote: 'リモートを追加…',
         forgeLogin: 'GitHub/GitLab のログイン',
         resolve: '重なりを解決…',
@@ -37,7 +37,7 @@ export const sync = {
         disconnectTitle: 'リモートから外す',
         disconnectConfirm: '外す',
         disconnectDesc: (url: string) =>
-            `リモート（${url}）とのつながりを外し、ローカル だけで管理する形に戻します。リモートのリポジトリと、ローカル の版は消えません。あとで「リモートを追加」からつなぎ直せます。`,
+            `リモート（${url}）とのつながりを外し、この PC だけで管理する形に戻します。リモートのリポジトリと、この PC の版は消えません。あとで「リモートを追加」からつなぎ直せます。`,
     },
     conflict: {
         summary: (n: number, auto: number) => `同じ箇所の重なり ${n} 件${auto ? `・自動で統合 ${auto} 件` : ''}`,

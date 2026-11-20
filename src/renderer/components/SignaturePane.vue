@@ -3,6 +3,7 @@ import type { BlockResult } from '@mdsig/core'
 import { overallStatus, type MdVerifyReport } from '@shared/mdsig'
 import { FINDING_ORDER, type Finding, type FindingKind } from '@shared/mdsig-layout'
 import { useVerticalResize } from '~/composables/useVerticalResize'
+import { vLiveStyle } from '~/utils/live-style'
 import { useT } from '~/composables/useT'
 
 const props = defineProps<{ report: MdVerifyReport | null; busy: boolean; embedded?: boolean }>()
@@ -54,7 +55,7 @@ const findings = computed(() => {
 </script>
 
 <template>
-    <section class="sigs" :class="{ embedded }" :style="embedded ? undefined : { height: `${height}px` }">
+    <section class="sigs" :class="{ embedded }" v-live-style="() => (embedded ? undefined : { height: `${height}px` })">
         <div
             v-if="!embedded"
             class="grip"

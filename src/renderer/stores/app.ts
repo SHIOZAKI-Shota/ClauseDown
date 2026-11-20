@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { computed, ref, shallowRef, watch } from 'vue'
+import { computed, ref, shallowReactive, shallowRef, watch } from 'vue'
 import type {
     AppSettings,
     PolicyPending,
@@ -19,7 +19,7 @@ import { FORGE_LABEL, type ForgeKind } from '@shared/forge'
 import { DEFAULT_PREFS, type AppPrefs, type DocStyle, type RecentDoc } from '@shared/prefs'
 import { messagesOf, resolveLocale, setLocale } from '@shared/i18n'
 import { resolveStyle, type StyleLayers } from '@shared/folder-style'
-import { ipcError, toPlain } from '~/utils/ipc'
+import { ipcError, sameJson, toPlain } from '~/utils/ipc'
 import { useDebounced } from '~/composables/useDebounced'
 import { revealLabel } from '~/utils/platform'
 import { dissolveSection, placeRepo, renameSection } from '@shared/repo-sections'
@@ -93,13 +93,27 @@ export const useApp = defineStore('app', () => {
     )
     const me = computed(() => identity.value?.name ?? '')
     const reviewer = computed<Reviewer>(() => ({ name: me.value || undefined, login: identity.value?.login }))
-    const prefs = computed<AppPrefs>(() => ({ ...DEFAULT_PREFS, ...settings.value?.prefs }))
+    const prefsState = shallowReactive<AppPrefs>({ ...DEFAULT_PREFS })
+    watch(
+        () => settings.value?.prefs,
+        (saved) => {
+            const next: AppPrefs = { ...DEFAULT_PREFS, ...saved }
+            for (const key of Object.keys(next) as (keyof AppPrefs)[]) {
+                if (!sameJson(prefsState[key], next[key])) Object.assign(prefsState, { [key]: next[key] })
+            }
+        },
+        { immediate: true, flush: 'sync' },
+    )
+    const prefs = computed<AppPrefs>(() => prefsState)
     const systemLanguages = ref<string[]>([...navigator.languages])
     const locale = computed(() => resolveLocale(prefs.value.language, systemLanguages.value))
     watch(locale, (l) => setLocale(l), { immediate: true, flush: 'sync' })
     const t = computed(() => messagesOf(locale.value))
     const styleFor = (path: string) => resolveStyle(prefs.value.docStyle, styleLayers.value, path).style
-    const style = computed<DocStyle>(() => styleFor(currentPath.value ?? ''))
+    const style = computed<DocStyle>((prev) => {
+        const next = styleFor(currentPath.value ?? '')
+        return prev && sameJson(prev, next) ? prev : next
+    })
 
     async function setPrefs(patch: Partial<AppPrefs>) {
         if (!settings.value) return

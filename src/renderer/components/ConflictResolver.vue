@@ -324,11 +324,13 @@ const plain = (lines: string[]) => (lines.length ? esc(lines.join('\n')) : `<spa
                 <div class="paper cd-paper" v-html="previewHtml" />
             </div>
             <div v-else class="right-body text">
-                <textarea v-model="fullText" class="out full" spellcheck="false" :disabled="!fs.merge" />
-                <div v-if="fs.override !== null" class="sub">
-                    <span class="hint">{{ t.merge.conflict.overriding }}</span>
-                    <UButton :label="t.merge.conflict.undo" size="xs" color="neutral" variant="link" @click="fs.override = null" />
-                </div>
+                <RenderScope>
+                    <textarea v-model="fullText" class="out full" spellcheck="false" :disabled="!fs.merge" />
+                    <div v-if="fs.override !== null" class="sub">
+                        <span class="hint">{{ t.merge.conflict.overriding }}</span>
+                        <UButton :label="t.merge.conflict.undo" size="xs" color="neutral" variant="link" @click="fs.override = null" />
+                    </div>
+                </RenderScope>
             </div>
         </section>
 

@@ -20,7 +20,7 @@ export const docs: Messages['docs'] = {
         },
         reversed: (label: string) => `${label} (reversed)`,
         history: 'History',
-        releases: 'Due dates',
+        releases: 'Effective dates & delivery',
         open: 'Open',
         views: { cards: 'Cards', list: 'List', table: 'Details' },
         schedule: 'Due dates and validity',

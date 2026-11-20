@@ -7,6 +7,7 @@ import { useApp } from '~/stores/app'
 import { useT } from '~/composables/useT'
 import { useConfirm } from '~/composables/useConfirm'
 import { baseName } from '~/utils/folders'
+import { sameJson } from '~/utils/ipc'
 
 const app = useApp()
 const t = useT()
@@ -118,7 +119,11 @@ async function removeRepo(r: RepoEntry) {
         await app.forgetRepo(r.dir)
 }
 
-const forgeOf = (r: RepoEntry) => (app.settings ? matchRemote(r.url, knownBases(app.settings)) : null)
+const bases = computed<ReturnType<typeof knownBases>>((prev) => {
+    const next = app.settings ? knownBases(app.settings) : []
+    return prev && sameJson(prev, next) ? prev : next
+})
+const forgeOf = (r: RepoEntry) => matchRemote(r.url, bases.value)
 const parentOf = (p: string) => p.replace(/[\\/]+$/, '').replace(/[\\/][^\\/]*$/, '')
 
 const dupOf = ref<RepoEntry | null>(null)
@@ -169,8 +174,9 @@ async function fork() {
 }
 
 const noSection = computed(() => st.value.repos.noSection)
-const repoGroups = computed(() => groupRepos(app.settings?.repos ?? []))
-const sectionChoices = computed(() => [noSection.value, ...sectionNames(app.settings?.repos ?? [])])
+const repos = computed(() => app.settings?.repos ?? [])
+const repoGroups = computed(() => groupRepos(repos.value))
+const sectionChoices = computed(() => [noSection.value, ...sectionNames(repos.value)])
 function setSection(r: RepoEntry, v: string) {
     const next = v === noSection.value ? undefined : cleanSection(v)
     if (next !== cleanSection(r.section)) void app.moveRepo(r.dir, { section: next })
@@ -235,7 +241,7 @@ function setSection(r: RepoEntry, v: string) {
             <UButton :label="t.settings.repos.remove" size="sm" color="error" variant="ghost" :title="t.settings.repos.removeTitle" @click="removeRepo(r)" />
         </SettingRow>
     </template>
-    <p v-if="app.settings!.repos.length === 0" class="cd-muted">{{ t.settings.repos.empty }}</p>
+    <p v-if="repos.length === 0" class="cd-muted">{{ t.settings.repos.empty }}</p>
 
     <h3>{{ t.settings.repos.addHeading }}</h3>
     <SettingRow :label="t.settings.repos.addMethod" stacked>

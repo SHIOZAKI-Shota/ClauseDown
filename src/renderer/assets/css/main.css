@@ -331,6 +331,15 @@ button.cd-chip:hover {
     background: var(--cd-sidebar);
 }
 
+.cd-statusbar {
+    overflow: hidden;
+}
+
+.cd-statusbar > * {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
 .cd-statusbar > span {
     display: inline-flex;
     align-items: center;

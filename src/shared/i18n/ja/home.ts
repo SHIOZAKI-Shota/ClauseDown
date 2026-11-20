@@ -8,7 +8,7 @@ export const home = {
     addRepo: 'リポジトリを追加',
     repoMissing: '見つかりません（押して場所を選び直す）',
     repoNotGit: 'リポジトリになっていません（押して選び直す）',
-    localOnly: 'ローカル（ローカル だけ）',
+    localOnly: 'この PC だけ',
     steps: {
         title: 'はじめに',
         login: 'GitHub/GitLab にログインする（または名前を入れる）',
@@ -63,8 +63,8 @@ export const home = {
     summary: {
         workingTitle: '作業中（現行版か改定案）',
         current: '現行版',
-        localOnlyTitle: 'ローカル だけで管理しています',
-        localOnly: 'ローカル だけ',
+        localOnlyTitle: 'この PC だけで管理しています',
+        localOnly: 'この PC だけ',
         counts: (docs: number, folders: number) => `${docs} 文書${folders ? `・${folders} ディレクトリ` : ''}`,
         unsaved: (n: number) => `未保存 ${n}`,
         unsavedNote: '版として保存していない変更があります',

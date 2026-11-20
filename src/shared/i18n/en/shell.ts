@@ -116,7 +116,7 @@ export const shell: Messages['shell'] = {
         edit: 'Edit',
         history: 'Revision history',
         compare: 'Comparison table',
-        releases: 'Due dates & delivery',
+        releases: 'Effective dates & delivery',
         due: 'Due dates',
         dueTitle: (overdue: number, soon: number) => `${overdue} overdue · ${soon} within 30 days`,
         versionTitle: (branch: string, message: string, author: string, at: string) => `${branch}: "${message}" (${author}, ${at})`,

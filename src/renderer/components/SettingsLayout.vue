@@ -38,7 +38,7 @@ watch(active, () => body.value?.scrollTo({ top: 0 }))
 <template>
     <div class="settings">
         <aside class="index">
-            <button class="back" @click="app.goBack()"><UIcon name="i-lucide-arrow-left" />{{ app.returnLabel }}</button>
+            <BackButton :label="app.returnLabel" class="back" @click="app.goBack()" />
             <div class="index-head" :class="{ stacked: stackedHead }">{{ title }}<span class="scope">{{ scope }}</span></div>
             <div role="tablist" aria-orientation="vertical" class="tabs">
                 <button v-for="s in sections" :key="s.id" role="tab" :aria-selected="active === s.id" :class="{ on: active === s.id }" @click="active = s.id">
@@ -75,13 +75,8 @@ watch(active, () => body.value?.scrollTo({ top: 0 }))
 }
 
 .index .back {
-    margin-bottom: 10px;
-    font-size: 12px;
-    color: var(--ui-text-muted);
-}
-
-.index .back:hover {
-    color: var(--ui-text-highlighted);
+    align-self: flex-start;
+    margin: 0 0 6px -2px;
 }
 
 .index-head {

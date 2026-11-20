@@ -1,4 +1,4 @@
-// 期日・有効期間・納品（ReleasesView・EffectiveDateModal・DeliveryModal）
+// 施行・納品（ReleasesView・EffectiveDateModal・DeliveryModal）
 export const releases = {
     state: { upcoming: '施行予定', current: '施行中', past: '過去の版' },
     removedEffective: (date: string) => `施行日 ${date} を外しました`,
@@ -9,7 +9,7 @@ export const releases = {
         cmpDocx: '新旧対照表（Word）',
     },
     allDocsDue: 'すべての文書の期日・有効期間',
-    pane: '期日・有効期間・納品',
+    pane: '施行・納品',
     hideTimeline: 'タイムラインを隠す',
     resizeTimeline: 'ドラッグでタイムラインの高さを変更（ダブルクリックで元に戻す）',
     showTimeline: 'タイムラインを出す',

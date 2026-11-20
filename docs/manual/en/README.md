@@ -53,7 +53,7 @@ This manual is also available in Japanese: [日本語版](../README.md)
     - [Merging into the current version](#merging-into-the-current-version)
   - [11. Recording effective dates and delivering](#11-recording-effective-dates-and-delivering)
     - [Setting an effective date](#setting-an-effective-date)
-    - [The due dates and delivery tab](#the-due-dates-and-delivery-tab)
+    - [The effective dates and delivery tab](#the-effective-dates-and-delivery-tab)
     - [Delivering](#delivering)
   - [12. Managing issues](#12-managing-issues)
     - [Creating an issue](#creating-an-issue)
@@ -334,7 +334,7 @@ The editor is divided into three areas, from left to right.
 
 Hold Ctrl and turn the mouse wheel over the editor to change the editor's font size (the same setting as the font size under **Editor** in Settings). Do the same over the preview to change the preview zoom in 10% steps. You can also change the zoom with the slider and number box to the right of the preview heading; the box accepts values from 50 to 200 in 1% steps. Turn on the chain button to its right (**Sync zoom with the editor**) to zoom both panes by the same number of steps when you zoom one of them. This does not make the two sizes equal; each moves from its current size, one step being 1px for the editor and 10% for the preview. Both sizes are kept until the next time you start the app.
 
-At the top of the screen are the **Edit**, **Revision history**, **Comparison table** and **Due dates & delivery** tabs, with the editing tools below them. Click **Repository home** at the right end of the tab row to go to the repository home. If someone has asked you to review a draft, the button shows the number of drafts awaiting review. Click **Issues** to its left to go to the issues screen (it shows the number of open issues). When the window is narrow, the **Insert**, **Formatting**, **Export** and **Discard changes** buttons are shown as icons without text. Hover over an icon to see its name.
+At the top of the screen are the **Edit**, **Revision history**, **Comparison table** and **Effective dates & delivery** tabs, with the editing tools below them. Click **Repository home** at the right end of the tab row to go to the repository home. If someone has asked you to review a draft, the button shows the number of drafts awaiting review. Click **Issues** to its left to go to the issues screen (it shows the number of open issues). When the window is narrow, the **Insert**, **Formatting**, **Export** and **Discard changes** buttons are shown as icons without text. Hover over an icon to see its name.
 
 ### Writing articles, paragraphs and items
 
@@ -395,7 +395,7 @@ Click it to open the amendment history of that article.
 
 ![Amendment history of an article](images/editor-trail.png)
 
-- **Effective versions**: The effective versions that enacted, added or amended the article, newest first. Click one to open it on the **Due dates & delivery** tab.
+- **Effective versions**: The effective versions that enacted, added or amended the article, newest first. Click one to open it on the **Effective dates & delivery** tab.
 - **Saved versions**: All versions that changed the article, including those without an effective date. Click one to open it in the revision history.
 
 An article whose number only shifted because other articles were added is not counted as amended. An article is treated as the same article if it has the same `{#name}`, or otherwise the same heading.
@@ -786,11 +786,11 @@ You can set an effective date with **Record effective date** when you save a ver
 
 ![Set effective date](images/effective-modal.png)
 
-### The due dates and delivery tab
+### The effective dates and delivery tab
 
-The document's **Due dates & delivery** tab shows the document's due dates, effective versions and delivery records together.
+The document's **Effective dates & delivery** tab shows the document's due dates, effective versions and delivery records together.
 
-![The due dates and delivery tab](images/releases.png)
+![The effective dates and delivery tab](images/releases.png)
 
 - At the top is a timeline for this document only. Use **Add due date** to record a due date for this document. The validity period of each effective version is shown as a band at the top of the row. Drag the border between the timeline and the list below to change the timeline's height (double-click to reset).
 - The list on the left has three sections: **Due dates**, **Effective versions** and **Delivery records**. The version in force today is labeled **In force**. Effective versions that have a later version show the last day they are in force ("until …").
@@ -942,7 +942,7 @@ Enter a date in the date field on the toolbar, or click the scale at the top, to
 
 - A blue dotted line is drawn on the timeline, and the bands that include that date are shown darker.
 - The top of the right pane shows "Versions on (date)". For each document, it lists the validity period of the effective version in force on that date. Documents that first took effect after that date show **Not yet effective**.
-- Click a document to open its **Due dates & delivery** tab with that effective version selected and its text shown.
+- Click a document to open its **Effective dates & delivery** tab with that effective version selected and its text shown.
 - Click × in the date field to clear the date.
 
 Click a validity period band to select that effective version's effective date and show the validity period in the details on the right. Click **Open due dates, validity & delivery** to open the tab with that effective version selected.
@@ -1420,7 +1420,7 @@ Save a PDF that the other party signed and sent back to the delivery folder, and
 
 ![Saving a returned signed PDF](images/received-modal.png)
 
-1. On the Due dates & delivery tab, open the delivery record, click **Save the signed PDF you received**, and choose the returned PDF.
+1. On the Effective dates & delivery tab, open the delivery record, click **Save the signed PDF you received**, and choose the returned PDF.
 2. Check the signers and signing times in the PDF, then click **Save**.
 
 The PDF is copied to the delivery folder as `<original name>_received.pdf`, and the file name, who saved it, when, and the signers are listed under **Signed PDFs received** in the record. If the delivery folder isn't on this PC, you choose where to save it. Signatures are not checked here, so check them in a PDF viewer such as Acrobat.

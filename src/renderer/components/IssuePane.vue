@@ -2,6 +2,7 @@
 import type { LegalDoc } from '@shared/legal-parser'
 import { positionLabel } from '~/utils/legal-editor'
 import { useVerticalResize } from '~/composables/useVerticalResize'
+import { vLiveStyle } from '~/utils/live-style'
 import { useT } from '~/composables/useT'
 
 export interface EditorIssue {
@@ -39,7 +40,7 @@ watch(
 </script>
 
 <template>
-    <section class="issues" :style="{ height: `${height}px` }">
+    <section class="issues" v-live-style="() => ({ height: `${height}px` })">
         <div
             class="grip"
             :class="{ dragging }"
