@@ -141,7 +141,8 @@ const openUrl = (u: string) => window.api.openExternal(u)
 const forgeOf = (d: DeliveryRecord) => FORGE_LABEL[d.releaseForge ?? 'github']
 
 const itemsOf = (d: DeliveryRecord) => d.items.map((x) => (t.value.releases.item as Record<string, string>)[x] ?? x)
-const versionLabel = (oid: string, date?: string) => (date ? t.value.releases.effectiveVersion(date) : t.value.releases.version(oid.slice(0, 7)))
+const versionLabel = (oid: string, date?: string) =>
+    date ? t.value.releases.effectiveVersion(fmtDate(date, 'ymd')) : t.value.releases.version(oid.slice(0, 7))
 </script>
 
 <template>

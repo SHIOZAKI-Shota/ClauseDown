@@ -62,11 +62,12 @@ function backToDoc() {
     inset: 0 0 auto 0;
     height: 40px;
     z-index: 40;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    --pad-left: 12px;
+    --search-half: 180px;
+    display: flex;
     align-items: center;
     gap: 14px;
-    padding-left: 12px;
+    padding-left: var(--pad-left);
     /* 窓のボタンは OS が描くので、Window Controls Overlay の領域の分を空ける */
     padding-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw) + 12px);
     background: var(--cd-titlebar);
@@ -77,7 +78,7 @@ function backToDoc() {
 }
 
 .titlebar.mac {
-    padding-left: calc(env(titlebar-area-x, 80px) + 8px);
+    --pad-left: calc(env(titlebar-area-x, 80px) + 8px);
 }
 
 .left {
@@ -85,6 +86,7 @@ function backToDoc() {
     align-items: center;
     gap: 14px;
     min-width: 0;
+    max-width: calc(50vw - var(--search-half) - var(--pad-left) - 12px);
 }
 
 .brand {
@@ -151,6 +153,9 @@ function backToDoc() {
 
 .search {
     -webkit-app-region: no-drag;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -177,7 +182,7 @@ function backToDoc() {
 
 .right {
     -webkit-app-region: no-drag;
-    justify-self: end;
+    margin-left: auto;
     display: flex;
     align-items: center;
 }
@@ -190,12 +195,20 @@ function backToDoc() {
 }
 
 @media (max-width: 1500px) {
+    .titlebar {
+        --search-half: 120px;
+    }
+
     .search {
         width: 240px;
     }
 }
 
 @media (max-width: 1240px) {
+    .titlebar {
+        --search-half: 16px;
+    }
+
     .search {
         width: 32px;
         padding: 0;

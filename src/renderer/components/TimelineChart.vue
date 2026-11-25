@@ -2,6 +2,7 @@
 import { addDays, dayNum, fromDayNum, KIND_COLORS, type EventKind, type Occurrence, type Period } from '@shared/schedule'
 import { useStoredRef } from '~/composables/useStoredRef'
 import { todayISO } from '@shared/date'
+import { fmtDate } from '~/utils/format'
 import { buildAxis, packLanes } from '~/utils/timeline-layout'
 import { useT } from '~/composables/useT'
 
@@ -153,7 +154,7 @@ const bandsOf = (row: string) => {
         })
         .filter((v) => v.x + v.w >= -40 && v.x <= trackW.value + 40)
 }
-const bandTip = (b: TimelineBand) => [t.value.schedule.span(b.date, b.until ?? ''), b.title].filter(Boolean).join('\n')
+const bandTip = (b: TimelineBand) => [t.value.schedule.span(fmtDate(b.date, 'ymd'), b.until ? fmtDate(b.until, 'ymd') : ''), b.title].filter(Boolean).join('\n')
 const xIn = (pl: Placed) => pl.x - offX.value
 const visible = (pl: Placed) => xIn(pl) + pl.w >= -40 && xIn(pl) <= trackW.value + 40
 const rowHeight = (id: string) => layout.value.heights.get(id) ?? LANE_H + 10
@@ -269,7 +270,7 @@ const rangeLabel = computed(() => {
 const tipOf = (it: TimelineItem) =>
     [
         t.value.schedule.tip(props.kindOf(it.kind, it.dir).label, it.title),
-        it.end ? t.value.schedule.span(it.date, it.end) : it.date,
+        it.end ? t.value.schedule.span(fmtDate(it.date, 'ymd'), fmtDate(it.end, 'ymd')) : fmtDate(it.date, 'ymd'),
         it.done ? t.value.schedule.done : it.overdue ? t.value.schedule.overdue : '',
         it.note ?? '',
     ]

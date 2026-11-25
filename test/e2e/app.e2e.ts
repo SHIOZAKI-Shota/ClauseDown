@@ -181,7 +181,7 @@ describe('画面', () => {
         expect(pdf).toMatch(/\/ByteRange\s*\[/)
         expect(listSignatures(new Uint8Array(fs.readFileSync(out))).map((x) => x.signer)).toEqual(['テスト'])
 
-        const corp = (await win.evaluate(`window.api.createSelfSignedCert({ name: '見本株式会社 代表取締役', label: '法人' })`)) as { id: string }
+        const corp = await win.evaluate<{ id: string }>(`window.api.createSelfSignedCert({ name: '見本株式会社 代表取締役', label: '法人' })`)
         await win.evaluate(`window.api.exportFile(${JSON.stringify({ ...req, certId: corp.id })})`)
         expect(listSignatures(new Uint8Array(fs.readFileSync(out))).map((x) => x.signer)).toEqual(['見本株式会社 代表取締役'])
         await win.evaluate(`window.api.setRepoPdfCert(${JSON.stringify(dir)}, ${JSON.stringify(corp.id)})`)
@@ -297,24 +297,26 @@ describe('画面', () => {
         }, outDir)
         const oid = await win.evaluate(`window.api.log(${JSON.stringify(dir)}, ${JSON.stringify(DOC)}).then((l) => l[0].oid)`)
         const input = { docPath: DOC, oid, to: '相手方', memo: '', items: ['docPdf'], publishRelease: false, sign: true }
-        const rec = (await win.evaluate(`window.api.deliver(${JSON.stringify(dir)}, ${JSON.stringify(input)})`)) as {
+        const rec = await win.evaluate<{
             id: string
             folder: string
             files: string[]
-        }
+        }>(`window.api.deliver(${JSON.stringify(dir)}, ${JSON.stringify(input)})`)
         const returned = join(rec.folder, rec.files[0])
         await app.evaluate(({ dialog }, path) => {
             dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] })
         }, returned)
-        const picked = (await win.evaluate('window.api.pickReceivedPdf()')) as { path: string; signatures: { signer: string }[] }
+        const picked = await win.evaluate<{ path: string; signatures: { signer: string }[] }>('window.api.pickReceivedPdf()')
         expect(picked.signatures).toHaveLength(1)
-        const out = (await win.evaluate(`window.api.saveReceivedPdf(${JSON.stringify({ path: picked.path, dir, deliveryId: rec.id })})`)) as string
+        const out = await win.evaluate<string>(`window.api.saveReceivedPdf(${JSON.stringify({ path: picked.path, dir, deliveryId: rec.id })})`)
         expect(out).toBe(join(rec.folder, rec.files[0].replace(/\.pdf$/, '_受領.pdf')))
         expect(fs.readFileSync(out).equals(fs.readFileSync(returned))).toBe(true)
-        const list = (await win.evaluate(`window.api.listDeliveries(${JSON.stringify(dir)}, ${JSON.stringify(DOC)})`)) as {
-            id: string
-            received?: { file: string; signers: string[] }[]
-        }[]
+        const list = await win.evaluate<
+            {
+                id: string
+                received?: { file: string; signers: string[] }[]
+            }[]
+        >(`window.api.listDeliveries(${JSON.stringify(dir)}, ${JSON.stringify(DOC)})`)
         const got = list.find((d) => d.id === rec.id)?.received
         expect(got?.map((x) => x.file)).toEqual([out.split(/[\\/]/).pop()])
         expect(got?.[0].signers).toHaveLength(1)

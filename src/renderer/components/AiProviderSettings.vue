@@ -115,7 +115,7 @@ async function saveKey(clear = false) {
 async function loginOpenRouter() {
     loggingIn.value = true
     try {
-        const s = await app.run(() => window.api.aiLoginOpenRouter(), t.value.ai.settings.openRouterSignedIn)
+        const s = await app.run(() => window.api.aiLoginOpenRouter(), t.value.ai.settings.openRouterSignedIn, { busy: false })
         if (s) {
             setStatus(s)
             void loadModels()

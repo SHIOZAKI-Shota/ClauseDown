@@ -32,7 +32,9 @@
         "typecheck": "tsc -p tsconfig.node.json && nuxt typecheck",
         "test": "vitest run",
         "test:e2e": "npm run build && vitest run -c vitest.e2e.config.ts",
-        "manual:shots": "npm run build && vitest run -c vitest.e2e.config.ts scripts/manual-shots.e2e.ts",
+        "manual:shots": "node scripts/manual-shots.mjs",
+        "manual:shots:en": "node scripts/manual-shots.mjs en",
+        "manual:shots:ja": "node scripts/manual-shots.mjs ja",
         "dist": "npm run build && npm run build:native && electron-builder --mac --win --publish never",
         "dist:win": "npm run build && npm run build:native && electron-builder --win --publish never",
         "dist:mac": "npm run build && npm run build:native && electron-builder --mac --publish never",
@@ -47,8 +49,8 @@
         "format:check": "oxfmt --check",
         "build:demo": "CLAUSEDOWN_DEMO=1 nuxt generate",
         "site": "node scripts/site.mjs",
-        "build:myna": "napi build --release --platform --cwd native/myna --output-dir . && napi build --release --platform --target x86_64-pc-windows-msvc -x --cwd native/myna --output-dir .",
-        "build:keychip": "napi build --release --platform --cwd native/keychip --output-dir . && napi build --release --platform --target x86_64-pc-windows-msvc -x --cwd native/keychip --output-dir .",
+        "build:myna": "export RUSTFLAGS=\"--remap-path-prefix=$HOME=~\" && napi build --release --platform --cwd native/myna --output-dir . && napi build --release --platform --target x86_64-pc-windows-msvc -x --cwd native/myna --output-dir .",
+        "build:keychip": "export RUSTFLAGS=\"--remap-path-prefix=$HOME=~\" && napi build --release --platform --cwd native/keychip --output-dir . && napi build --release --platform --target x86_64-pc-windows-msvc -x --cwd native/keychip --output-dir .",
         "build:native": "npm run build:myna && npm run build:keychip"
     },
     "dependencies": {

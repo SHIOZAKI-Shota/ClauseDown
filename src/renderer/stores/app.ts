@@ -177,8 +177,9 @@ export const useApp = defineStore('app', () => {
         })
     }
 
-    async function run<T>(fn: () => Promise<T>, done?: string): Promise<T | undefined> {
-        busyCount.value++
+    async function run<T>(fn: () => Promise<T>, done?: string, opts: { busy?: boolean } = {}): Promise<T | undefined> {
+        const counted = opts.busy ?? true
+        if (counted) busyCount.value++
         try {
             const r = await fn()
             if (done) notify(done)
@@ -187,7 +188,7 @@ export const useApp = defineStore('app', () => {
             notify(ipcError(e), true)
             return undefined
         } finally {
-            busyCount.value--
+            if (counted) busyCount.value--
         }
     }
 

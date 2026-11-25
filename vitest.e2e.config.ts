@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
 
-// npm run manual:shots で名指ししたときだけ、英語版マニュアルの画面写真を撮るスクリプトも対象にする
+// npm run manual:shots で名指ししたときだけ、マニュアルの画面写真を撮るスクリプトも対象にする
 const manualShots = process.argv.some((a) => a.includes('manual-shots'))
 
 export default defineConfig({

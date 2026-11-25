@@ -255,7 +255,7 @@ When you choose a repository, its repository home opens. This screen shows the r
 
 ![Repository home](images/repo-home.png)
 
-- **Top row**: Below the repository name you see the working draft, whether there is a remote (**Local only** if not), and the number of documents and folders. The buttons to the right open the repository folder and the repository settings. **Due dates and validity** and **Issues** at the top right open the due dates screen and the issues screen. The **Issues** button shows the number of open issues. **New document** at the far right creates a document in the folder that is currently open.
+- **Top row**: Below the repository name you see the working draft, whether there is a remote (**Local only** if not), and the number of documents and folders. The buttons to the right open the repository folder and the repository settings. **Due dates and validity** and **Issues** at the top right open the due dates screen and the issues screen. The due dates button shows the number of due dates, and when any are overdue it adds a separate red **overdue** count. The **Issues** button shows the number of open issues. **New document** at the far right creates a document in the folder that is currently open.
 - **Folders on the left**: The repository's folders as a tree. Click a name to open that folder; click the arrow to its left to expand or collapse it. The number on the right is the number of documents inside.
 - **Center**: The contents of the folder that is currently open.
 - **Right pane**: From the top: **Notes** (a place to write down the client, the person in charge, the next scheduled review and so on), **Drafts**, **Due dates** and **Recent changes**. Each draft shows its review status (**Awaiting review**, **Approved** or **No review request**).
@@ -334,7 +334,7 @@ The editor is divided into three areas, from left to right.
 
 Hold Ctrl and turn the mouse wheel over the editor to change the editor's font size (the same setting as the font size under **Editor** in Settings). Do the same over the preview to change the preview zoom in 10% steps. You can also change the zoom with the slider and number box to the right of the preview heading; the box accepts values from 50 to 200 in 1% steps. Turn on the chain button to its right (**Sync zoom with the editor**) to zoom both panes by the same number of steps when you zoom one of them. This does not make the two sizes equal; each moves from its current size, one step being 1px for the editor and 10% for the preview. Both sizes are kept until the next time you start the app.
 
-At the top of the screen are the **Edit**, **Revision history**, **Comparison table** and **Effective dates & delivery** tabs, with the editing tools below them. Click **Repository home** at the right end of the tab row to go to the repository home. If someone has asked you to review a draft, the button shows the number of drafts awaiting review. Click **Issues** to its left to go to the issues screen (it shows the number of open issues). When the window is narrow, the **Insert**, **Formatting**, **Export** and **Discard changes** buttons are shown as icons without text. Hover over an icon to see its name.
+The top row has the **Edit**, **Revision history**, **Comparison table** and **Effective dates & delivery** tabs and, on the same line, the document name and current version (on a narrow window the name is left out and shown in the title bar instead). The editing tools are below them. Click **Repository home** at the right end of the tab row to go to the repository home. If someone has asked you to review a draft, the button shows the number of drafts awaiting review. Click **Issues** to its left to go to the issues screen (it shows the number of open issues). When the window is narrow, the **Insert**, **Formatting**, **Export** and **Discard changes** buttons are shown as icons without text. Hover over an icon to see its name.
 
 ### Writing articles, paragraphs and items
 
@@ -910,7 +910,7 @@ Open the due dates screen with **Due dates** at the top right of the repository 
 - It is a timeline with documents arranged vertically and dates horizontally. The top row, **Whole repository**, is for due dates not tied to a document.
 - A single-day due date is shown as ◆, and a period (a due date with a start and end date) as a band. The color depends on the due date type.
 - The red vertical line is today. Due dates that have passed and are not marked as done are outlined in red.
-- **Due date details** on the right shows overdue items, items in the next 30 days and items recently marked as done.
+- When nothing is selected, the right pane is **Coming up** and shows overdue items, items in the next 30 days and items recently marked as done. Select a due date and it becomes **Due date details**, showing that due date.
 
 Timeline controls:
 
@@ -971,7 +971,7 @@ Repeating due dates are marked as done one occurrence at a time. Occurrences old
 
 ### Changing due date types
 
-Change each type's name, color, whether it can be marked as done, and how many days in advance to notify by default under **Due date types** in the repository settings. You can also open it with the button at the right end of the due dates screen's toolbar. Types are set per repository and shared with everyone who uses it.
+Change each type's name, color, whether it can be marked as done, and how many days in advance to notify by default under **Due date types** in the repository settings. You can also open it with **Due date types** under **…** (More actions) at the right end of the due dates screen's toolbar. Types are set per repository and shared with everyone who uses it.
 
 ![Due date types](images/repo-kinds.png)
 
@@ -985,14 +985,14 @@ Turn on **Show desktop notifications for due dates** under **Due dates** in Sett
 
 ### Exporting to a calendar app
 
-Click the button with a calendar and a down arrow on the due dates screen's toolbar (**Export to calendar**) to export due dates to an iCalendar (.ics) file. You can import it into calendar apps that support iCalendar, such as Outlook and Google Calendar.
+Choose **Export to calendar** from **…** (More actions) at the right end of the due dates screen's toolbar to export due dates to an iCalendar (.ics) file. You can import it into calendar apps that support iCalendar, such as Outlook and Google Calendar.
 
 - Due dates not marked as done and effective dates from one year ago to five years ahead are exported.
 - Each occurrence of a repeating due date becomes one event.
 - An alarm is set for 9:00 on the notification day.
 - The exported file is a snapshot of the due dates at that time. Changes you make later in the app are not reflected in the calendar; export and import again. Whether reimporting replaces the earlier events or adds duplicates depends on the calendar app.
 
-Clicking the same button in **Due dates across all repositories** on Home exports the due dates of all repositories together.
+Doing the same in **Due dates across all repositories** on Home exports the due dates of all repositories together.
 
 ---
 

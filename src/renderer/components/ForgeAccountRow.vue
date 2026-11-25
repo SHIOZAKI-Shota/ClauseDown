@@ -28,7 +28,7 @@ async function startLogin() {
     const info = await app.run(() => window.api.loginStart(a.value.base))
     if (!info) return
     login.value = info
-    const acc = await app.run(() => window.api.loginWait(a.value.base))
+    const acc = await app.run(() => window.api.loginWait(a.value.base), undefined, { busy: false })
     login.value = null
     if (acc) {
         await app.refreshAccounts()
