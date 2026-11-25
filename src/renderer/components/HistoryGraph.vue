@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { CommitInfo, SigInfo } from '@shared/api'
 import { layoutGraph } from '~/utils/graph'
-import { firstLine, relTime } from '~/utils/format'
+import { firstLine, fmtDate, relTime } from '~/utils/format'
 import { useApp } from '~/stores/app'
 import { useT } from '~/composables/useT'
 
@@ -98,7 +98,7 @@ function chipsOf(c: CommitInfo): Chip[] {
     }
     const dates = [...new Set(c.tags.filter((t) => t.startsWith('施行/')).map((t) => t.replace(/^施行\/.*\/([^/]+)$/, '$1')))]
     if (!dates.length && effective(c.message)) dates.push(effective(c.message)!)
-    if (dates.length) out.push({ label: g.effective(dates[0]), cls: 'tag', title: dates.map((d) => g.effective(d)).join('\n') })
+    if (dates.length) out.push({ label: g.effective(fmtDate(dates[0], 'ymd')), cls: 'tag', title: dates.map((d) => g.effective(fmtDate(d, 'ymd'))).join('\n') })
     const deliveries = c.tags.filter((t) => t.startsWith('納品/')).length
     if (deliveries) out.push({ label: g.delivered(deliveries), cls: 'tag', title: g.deliveredTitle(deliveries) })
     return out

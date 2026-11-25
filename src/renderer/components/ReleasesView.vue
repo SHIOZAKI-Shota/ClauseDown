@@ -2,11 +2,16 @@
 import type { DeliveryRecord, EffectiveVersion, ReceivedPdf } from '@shared/api'
 import { addDays, effectivePeriods, inForceAt, KIND_COLORS, type DueEventInput, type Occurrence } from '@shared/schedule'
 import { FORGE_LABEL } from '@shared/forge'
+import { isEnabled } from '@shared/experiments'
+import type { ReceivedCdsign } from '@shared/mdsig'
 import { useApp } from '~/stores/app'
 import { usePane } from '~/composables/usePane'
 import { useSchedule } from '~/composables/useSchedule'
+import { useVerticalResize } from '~/composables/useVerticalResize'
+import { vLiveStyle } from '~/utils/live-style'
 import { useStoredRef } from '~/composables/useStoredRef'
-import { daysUntil, firstLine, fmtDate, todayISO, untilLabel } from '~/utils/format'
+import { daysUntil, firstLine, fmtDate, untilLabel } from '~/utils/format'
+import { todayISO } from '@shared/date'
 import { useT } from '~/composables/useT'
 import type { TimelineBand, TimelineItem } from '~/components/TimelineChart.vue'
 
@@ -20,31 +25,7 @@ const loaded = ref(false)
 const delivering = ref<{ oid: string; baseOid?: string; date?: string } | null>(null)
 const removing = ref<EffectiveVersion | null>(null)
 const sel = ref<{ kind: 'v' | 'd' | 'e'; id: string } | null>(null)
-const STRIP_DEFAULT = 132
-const STRIP_MIN = 80
-const stripHeight = useStoredRef('clausedown.pane.releasesTimeline', STRIP_DEFAULT, { delay: 300 })
-const stripDragging = ref(false)
-let stripStartY = 0
-let stripStartH = 0
-function stripDown(e: PointerEvent) {
-    if (e.button !== 0) return
-    e.preventDefault()
-    stripStartY = e.clientY
-    stripStartH = stripHeight.value
-    stripDragging.value = true
-    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-    document.body.classList.add('cd-resizing-v')
-}
-function stripMove(e: PointerEvent) {
-    if (!stripDragging.value) return
-    const max = Math.max(STRIP_MIN, Math.round(window.innerHeight * 0.7))
-    stripHeight.value = Math.round(Math.min(max, Math.max(STRIP_MIN, stripStartH + (e.clientY - stripStartY))))
-}
-function stripUp() {
-    stripDragging.value = false
-    document.body.classList.remove('cd-resizing-v')
-}
-onBeforeUnmount(stripUp)
+const strip = useVerticalResize('clausedown.pane.releasesTimeline', 132, { min: 80, max: () => Math.round(window.innerHeight * 0.7), grow: 'down' })
 
 const s = useSchedule()
 const showTimeline = useStoredRef('clausedown.releases.timeline', true)
@@ -117,6 +98,13 @@ const received = ref<ReceivedPdf | null>(null)
 async function pickReceived() {
     received.value = (await app.run(() => window.api.pickReceivedPdf())) ?? null
 }
+const cdsign = computed(() => isEnabled(app.settings, 'cdsign'))
+const cdsignExport = ref(false)
+const cdsignFile = ref<ReceivedCdsign | null>(null)
+async function pickCdsignFile() {
+    if (!app.repoDir || !selDelivery.value) return
+    cdsignFile.value = (await app.run(() => window.api.pickCdsign(app.repoDir!, selDelivery.value!.id))) ?? null
+}
 const selOid = computed(() => selVersion.value?.oid ?? selDelivery.value?.oid)
 
 const content = ref<string | null | undefined>(undefined)
@@ -134,7 +122,7 @@ watch(
 async function remove() {
     const v = removing.value!
     removing.value = null
-    await app.run(() => window.api.removeEffective(app.repoDir!, path, v.date), t.value.releases.removedEffective(v.date))
+    await app.run(() => window.api.removeEffective(app.repoDir!, path, v.date), t.value.releases.removedEffective(fmtDate(v.date, 'ymd')))
     await load()
     app.touchSchedule(app.repoDir!)
 }
@@ -153,7 +141,8 @@ const openUrl = (u: string) => window.api.openExternal(u)
 const forgeOf = (d: DeliveryRecord) => FORGE_LABEL[d.releaseForge ?? 'github']
 
 const itemsOf = (d: DeliveryRecord) => d.items.map((x) => (t.value.releases.item as Record<string, string>)[x] ?? x)
-const versionLabel = (oid: string, date?: string) => (date ? t.value.releases.effectiveVersion(date) : t.value.releases.version(oid.slice(0, 7)))
+const versionLabel = (oid: string, date?: string) =>
+    date ? t.value.releases.effectiveVersion(fmtDate(date, 'ymd')) : t.value.releases.version(oid.slice(0, 7))
 </script>
 
 <template>
@@ -161,7 +150,7 @@ const versionLabel = (oid: string, date?: string) => (date ? t.value.releases.ef
         <TimelineChart
             v-if="showTimeline"
             class="strip"
-            :style="{ height: `${stripHeight}px` }"
+            v-live-style="() => ({ height: `${strip.height.value}px` })"
             :rows="[{ id: 'doc', label: '' }]"
             :items="timelineItems"
             :bands="bands"
@@ -191,16 +180,16 @@ const versionLabel = (oid: string, date?: string) => (date ? t.value.releases.ef
         <div
             v-if="showTimeline"
             class="strip-grip"
-            :class="{ dragging: stripDragging }"
+            :class="{ dragging: strip.dragging.value }"
             role="separator"
             aria-orientation="horizontal"
             :aria-label="t.releases.resizeTimeline"
             :title="t.releases.resizeTimeline"
-            @pointerdown="stripDown"
-            @pointermove="stripMove"
-            @pointerup="stripUp"
-            @pointercancel="stripUp"
-            @dblclick="stripHeight = STRIP_DEFAULT"
+            @pointerdown="strip.down"
+            @pointermove="strip.move"
+            @pointerup="strip.up"
+            @pointercancel="strip.up"
+            @dblclick="strip.reset"
         />
         <div class="releases">
             <SidePane :pane="listPane" side="left" :label="t.releases.pane" icon="i-lucide-calendar-check">
@@ -429,6 +418,24 @@ const versionLabel = (oid: string, date?: string) => (date ? t.value.releases.ef
                             variant="outline"
                             @click="pickReceived"
                         />
+                        <template v-if="cdsign && !demo">
+                            <UButton
+                                :label="t.mdsig.export.fromDelivery"
+                                icon="i-lucide-signature"
+                                size="sm"
+                                color="neutral"
+                                variant="outline"
+                                @click="cdsignExport = true"
+                            />
+                            <UButton
+                                :label="t.mdsig.receive.fromDelivery"
+                                icon="i-lucide-file-signature"
+                                size="sm"
+                                color="neutral"
+                                variant="outline"
+                                @click="pickCdsignFile"
+                            />
+                        </template>
                         <UButton
                             v-if="selDelivery.releaseUrl"
                             :label="t.releases.viewOn(forgeOf(selDelivery))"
@@ -456,6 +463,9 @@ const versionLabel = (oid: string, date?: string) => (date ? t.value.releases.ef
                                 <div v-for="(x, i) in selDelivery.received" :key="i">
                                     {{ t.signing.received.recordRow(x.file, x.by) }}<span class="cd-muted">{{ t.common.sep }}{{ fmtDate(x.at, 'ymdhm') }}</span>
                                     <div v-if="x.signers.length" class="cd-muted">{{ t.signing.received.signers(x.signers.join(t.common.sep)) }}</div>
+                                    <div v-if="x.kind === 'cdsign' && x.agreement" class="cd-muted">
+                                        {{ t.mdsig.pane.agreement.title }}{{ t.common.sep }}{{ t.mdsig.receive.agreement[x.agreement] }}
+                                    </div>
                                 </div>
                             </dd>
                         </template>
@@ -522,6 +532,15 @@ const versionLabel = (oid: string, date?: string) => (date ? t.value.releases.ef
                 @done="delivered"
             />
             <ReceivedPdfModal v-if="received && selDelivery" :pdf="received" :delivery-id="selDelivery.id" @close="received = null" @done="load" />
+            <CdsignExportModal
+                v-if="cdsignExport && selDelivery"
+                :path="selDelivery.docPath"
+                :title="selDelivery.title"
+                :oid="selDelivery.oid"
+                :version-label="versionLabel(selDelivery.oid, selDelivery.effectiveDate ? fmtDate(selDelivery.effectiveDate, 'ymd') : undefined)"
+                @close="cdsignExport = false"
+            />
+            <CdsignReceiveModal v-if="cdsignFile && selDelivery" :file="cdsignFile" :delivery-id="selDelivery.id" @close="cdsignFile = null" @done="load" />
             <ConfirmModal
                 :open="!!removing"
                 :title="t.releases.removeEffective"

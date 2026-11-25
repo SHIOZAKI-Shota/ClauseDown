@@ -1,4 +1,5 @@
 import { t } from './i18n'
+import type { ForgeKind } from './forge'
 import { liveRecord } from './i18n/live'
 import type { DsseEnvelope } from './attestation'
 
@@ -13,14 +14,14 @@ export interface ReviewEvent {
     byLogin?: string
     at: string
     text: string
-    source?: 'app' | 'github' | 'gitlab'
+    source?: 'app' | ForgeKind
     githubPr?: number
     pr?: number
-    forge?: 'github' | 'gitlab'
+    forge?: ForgeKind
     forgeUser?: string
     attestation?: DsseEnvelope
     publicKey?: string
-    mirror?: { forge: 'github' | 'gitlab'; pr: number }
+    mirror?: { forge: ForgeKind; pr: number }
     signed?: 'verified' | 'unverified'
 }
 
@@ -127,7 +128,7 @@ export function reviewStatus(all: ReviewEvent[], branch: string, tipOid: string,
     }
     const needed = Math.max(1, Math.round(rules.approvalThreshold ?? 1))
     const decisions = [...latest.values()].sort(byTime)
-    const changes = decisions.filter((d) => d.action === 'changes').at(-1)
+    const changes = decisions.findLast((d) => d.action === 'changes')
     const fresh = decisions.filter((d) => d.action === 'approve' && d.oid === tipOid)
     const stale = decisions.filter((d) => d.action === 'approve' && d.oid !== tipOid)
     let state: ReviewState = 'none'

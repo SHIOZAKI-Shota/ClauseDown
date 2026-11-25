@@ -1,20 +1,11 @@
-import { isPrNumber } from '../shared/review'
+import { ForgeHttpError, gitlabApi, paginate, prNumber } from './forge-http'
+import type { IssueState } from '../shared/forge'
 import { t } from '../shared/i18n'
-import { gitlabApi } from './gitlab-auth'
 import { getToken } from './settings'
 
 export interface GitLabRepo {
     base: string
     path: string
-}
-
-export class GitLabError extends Error {
-    constructor(
-        public status: number,
-        message: string,
-    ) {
-        super(message)
-    }
 }
 
 async function call<T>(r: GitLabRepo, method: string, path: string, body?: unknown, form?: FormData): Promise<T> {
@@ -36,7 +27,7 @@ async function call<T>(r: GitLabRepo, method: string, path: string, body?: unkno
             const m = j.message ?? j.error
             if (m) msg = typeof m === 'string' ? m : JSON.stringify(m)
         } catch {}
-        throw new GitLabError(res.status, gitlabMessage(res.status, msg))
+        throw new ForgeHttpError(res.status, gitlabMessage(res.status, msg))
     }
     if (res.status === 204) return undefined as T
     const text = await res.text()
@@ -48,11 +39,6 @@ function gitlabMessage(status: number, msg: string): string {
     if (status === 403) return t().errors.gitlab.forbidden(msg)
     if (status === 404) return t().errors.gitlab.notFound(msg)
     return `GitLab：${msg}`
-}
-
-function num(v: unknown): number {
-    if (!isPrNumber(v)) throw new Error(t().errors.github.badNumber)
-    return v
 }
 
 const enc = encodeURIComponent
@@ -99,42 +85,39 @@ export function createMr(r: GitLabRepo, source: string, target: string, title: s
 }
 
 export function getMr(r: GitLabRepo, iid: number) {
-    return call<MergeRequest>(r, 'GET', `${proj(r)}/merge_requests/${num(iid)}`)
+    return call<MergeRequest>(r, 'GET', `${proj(r)}/merge_requests/${prNumber(iid)}`)
 }
 
 export function closeMr(r: GitLabRepo, iid: number) {
-    return call<MergeRequest>(r, 'PUT', `${proj(r)}/merge_requests/${num(iid)}`, { state_event: 'close' })
+    return call<MergeRequest>(r, 'PUT', `${proj(r)}/merge_requests/${prNumber(iid)}`, { state_event: 'close' })
 }
 
 export async function listApprovals(r: GitLabRepo, iid: number): Promise<string[]> {
-    const j = await call<{ approved_by?: { user?: { username?: string } }[] }>(r, 'GET', `${proj(r)}/merge_requests/${num(iid)}/approvals`)
+    const j = await call<{ approved_by?: { user?: { username?: string } }[] }>(r, 'GET', `${proj(r)}/merge_requests/${prNumber(iid)}/approvals`)
     return (j.approved_by ?? []).map((a) => a.user?.username).filter((u): u is string => !!u)
 }
 
 export function approve(r: GitLabRepo, iid: number, sha?: string) {
-    return call<unknown>(r, 'POST', `${proj(r)}/merge_requests/${num(iid)}/approve`, sha ? { sha } : {})
+    return call<unknown>(r, 'POST', `${proj(r)}/merge_requests/${prNumber(iid)}/approve`, sha ? { sha } : {})
 }
 
 export function unapprove(r: GitLabRepo, iid: number) {
-    return call<unknown>(r, 'POST', `${proj(r)}/merge_requests/${num(iid)}/unapprove`, {})
+    return call<unknown>(r, 'POST', `${proj(r)}/merge_requests/${prNumber(iid)}/unapprove`, {})
 }
 
 export async function listNotes(r: GitLabRepo, iid: number): Promise<Note[]> {
-    const out: Note[] = []
-    for (let page = 1; page <= 20; page++) {
-        const list = await call<Note[]>(r, 'GET', `${proj(r)}/merge_requests/${num(iid)}/notes?sort=asc&order_by=created_at&per_page=100&page=${page}`)
-        out.push(...list)
-        if (list.length < 100) break
-    }
-    return out
+    return paginate(
+        (page) => call<Note[]>(r, 'GET', `${proj(r)}/merge_requests/${prNumber(iid)}/notes?sort=asc&order_by=created_at&per_page=100&page=${page}`),
+        20,
+    )
 }
 
 export function addNote(r: GitLabRepo, iid: number, body: string) {
-    return call<Note>(r, 'POST', `${proj(r)}/merge_requests/${num(iid)}/notes`, { body })
+    return call<Note>(r, 'POST', `${proj(r)}/merge_requests/${prNumber(iid)}/notes`, { body })
 }
 
 export function listVersions(r: GitLabRepo, iid: number) {
-    return call<MrVersion[]>(r, 'GET', `${proj(r)}/merge_requests/${num(iid)}/versions?per_page=100`)
+    return call<MrVersion[]>(r, 'GET', `${proj(r)}/merge_requests/${prNumber(iid)}/versions?per_page=100`)
 }
 
 export async function mergeMr(r: GitLabRepo, iid: number, message: string, sha: string): Promise<string> {
@@ -144,14 +127,14 @@ export async function mergeMr(r: GitLabRepo, iid: number, message: string, sha: 
         mr = await getMr(r, iid)
     }
     try {
-        const done = await call<MergeRequest>(r, 'PUT', `${proj(r)}/merge_requests/${num(iid)}/merge`, {
+        const done = await call<MergeRequest>(r, 'PUT', `${proj(r)}/merge_requests/${prNumber(iid)}/merge`, {
             merge_commit_message: message,
             sha,
             should_remove_source_branch: false,
         })
         return done.merge_commit_sha ?? done.squash_commit_sha ?? sha
     } catch (e) {
-        if (!(e instanceof GitLabError)) throw e
+        if (!(e instanceof ForgeHttpError)) throw e
         if (e.status === 409) throw new Error(t().errors.forge.gitlabDivergedMerge)
         if (e.status === 405 || e.status === 406 || e.status === 422) {
             throw new Error(t().errors.gitlab.notMergeable(e.message))
@@ -208,21 +191,15 @@ export interface GitLabIssue {
 }
 
 export async function listIssues(r: GitLabRepo): Promise<GitLabIssue[]> {
-    const out: GitLabIssue[] = []
-    for (let page = 1; page <= 10; page++) {
-        const list = await call<GitLabIssue[]>(r, 'GET', `${proj(r)}/issues?scope=all&per_page=100&page=${page}`)
-        out.push(...list)
-        if (list.length < 100) break
-    }
-    return out
+    return paginate((page) => call<GitLabIssue[]>(r, 'GET', `${proj(r)}/issues?scope=all&per_page=100&page=${page}`), 10)
 }
 
 export function createIssue(r: GitLabRepo, title: string, description: string) {
     return call<GitLabIssue>(r, 'POST', `${proj(r)}/issues`, { title, description })
 }
 
-export function updateIssue(r: GitLabRepo, iid: number, patch: { title?: string; body?: string; state?: 'open' | 'closed' }) {
-    return call<GitLabIssue>(r, 'PUT', `${proj(r)}/issues/${num(iid)}`, {
+export function updateIssue(r: GitLabRepo, iid: number, patch: { title?: string; body?: string; state?: IssueState }) {
+    return call<GitLabIssue>(r, 'PUT', `${proj(r)}/issues/${prNumber(iid)}`, {
         ...(patch.title !== undefined ? { title: patch.title } : {}),
         ...(patch.body !== undefined ? { description: patch.body } : {}),
         ...(patch.state ? { state_event: patch.state === 'closed' ? 'close' : 'reopen' } : {}),
@@ -230,20 +207,22 @@ export function updateIssue(r: GitLabRepo, iid: number, patch: { title?: string;
 }
 
 export function commentIssue(r: GitLabRepo, iid: number, body: string) {
-    return call<unknown>(r, 'POST', `${proj(r)}/issues/${num(iid)}/notes`, { body })
+    return call<unknown>(r, 'POST', `${proj(r)}/issues/${prNumber(iid)}/notes`, { body })
 }
 
 export async function issueComments(
     r: GitLabRepo,
     iid: number,
 ): Promise<{ id: number; body: string; system?: boolean; author?: { username: string }; created_at: string }[]> {
-    const out: { id: number; body: string; system?: boolean; author?: { username: string }; created_at: string }[] = []
-    for (let page = 1; page <= 20; page++) {
-        const list = await call<typeof out>(r, 'GET', `${proj(r)}/issues/${num(iid)}/notes?per_page=100&sort=asc&order_by=created_at&page=${page}`)
-        out.push(...list)
-        if (list.length < 100) break
-    }
-    return out
+    return paginate(
+        (page) =>
+            call<{ id: number; body: string; system?: boolean; author?: { username: string }; created_at: string }[]>(
+                r,
+                'GET',
+                `${proj(r)}/issues/${prNumber(iid)}/notes?per_page=100&sort=asc&order_by=created_at&page=${page}`,
+            ),
+        20,
+    )
 }
 
 export async function addSigningKey(base: string, title: string, key: string): Promise<void> {

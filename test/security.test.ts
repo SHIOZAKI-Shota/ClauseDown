@@ -37,7 +37,7 @@ describe('リモートとトークン', () => {
         expect(base.safeRemoteUrl('file:///C:/x')).toBe(false)
     })
     it('GitHub 以外のサーバーにはトークンを渡さない', async () => {
-        const ask = (url: string) => base.onAuth(url, {} as never) as Promise<{ cancel?: boolean; password?: string }>
+        const ask = (url: string) => base.onAuth(url, {}) as Promise<{ cancel?: boolean; password?: string }>
         expect((await ask('https://evil.example.com/x.git')).cancel).toBe(true)
         expect((await ask('http://github.com/a/b.git')).cancel).toBe(true)
         expect((await ask('https://github.com/a/b.git')).password).toBe('secret-token')

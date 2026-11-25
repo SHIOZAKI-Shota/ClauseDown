@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { daysUntil, todayISO, urgencyOf } from '~/utils/format'
+import { daysUntil, urgencyOf } from '~/utils/format'
+import { todayISO } from '@shared/date'
 
 const props = defineProps<{
     date: string

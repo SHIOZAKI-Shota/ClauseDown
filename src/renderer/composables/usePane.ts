@@ -10,6 +10,7 @@ export interface PaneOptions {
 
 export interface Pane {
     state: Ref<{ size: number; collapsed: boolean }>
+    collapsed: Readonly<Ref<boolean>>
     opts: PaneOptions
     setSize(px: number): void
     grow(step?: number): void
@@ -30,6 +31,7 @@ export function usePane(key: string, opts: PaneOptions): Pane {
     const current = () => state.value.size || measure.value?.() || opts.min
     return {
         state,
+        collapsed: computed(() => state.value.collapsed),
         opts,
         measure,
         setSize: (px) => (state.value = { ...state.value, size: clamp(px), collapsed: false }),

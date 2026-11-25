@@ -1,7 +1,7 @@
-// 英語版マニュアル（docs/manual/en）の画面写真を撮る。
-// npm run manual:shots で、ビルドしたアプリを英語で起動し、見本のリポジトリを作って docs/manual/en/images/ に保存する。
+// マニュアル（docs/manual・docs/manual/en）の画面写真を撮る。
+// npm run manual:shots で、ビルドしたアプリを MANUAL_LANG（ja・en）の言語で起動し、見本のリポジトリを作って images/ に保存する。
 // 一部だけ撮り直すときは SHOTS=home,editor のように名前を並べる（見本づくりは毎回行う）。
-// 外部のサイトの画像（gh-*・gl-*）は撮れないので、日本語版の画像をそのまま写す。
+// 外部のサイトの画像（gh-*・gl-*）は撮れないので、英語版には日本語版の画像をそのまま写す。
 import { afterAll, beforeAll, describe, it, vi } from 'vitest'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -9,19 +9,26 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { _electron, type ElectronApplication, type Locator, type Page } from 'playwright-core'
 import electronPath from 'electron'
+import { createSoftwareAuthenticator, generateEd25519, signDocument } from '@mdsig/core'
+import { content, type Lang } from './manual-shots/content'
 
+const LANG: Lang = process.env.MANUAL_LANG === 'ja' ? 'ja' : 'en'
+const C = content[LANG]
+const S = C.shots
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
-const SRC = join(ROOT, 'scripts/manual-shots')
+const SRC = join(ROOT, 'scripts/manual-shots', LANG)
 const JA_IMAGES = join(ROOT, 'docs/manual/images')
-const OUT = join(ROOT, 'docs/manual/en/images')
+const OUT = LANG === 'ja' ? JA_IMAGES : join(ROOT, 'docs/manual/en/images')
 const ONLY = (process.env.SHOTS ?? '')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean)
 const COPIED = ['gh-create.png', 'gh-create2.png', 'gh-repos-select.jpg', 'gl-create.png', 'gl-create2.png', 'gl-device.jpg']
 
-const ME = { name: 'Alex Morgan', email: 'alex@example.com' }
-const PEOPLE: Record<string, string> = { 'Alex Morgan': 'alex@example.com', 'Jordan Lee': 'jordan@example.com', 'Sam Patel': 'sam@example.com' }
+const ME = C.me
+const JORDAN = C.jordan.name
+const SAM = C.sam.name
+const PEOPLE: Record<string, string> = Object.fromEntries([C.me, C.jordan, C.sam].map((p) => [p.name, p.email]))
 const repos: { name: string; dir: string; url?: string; section?: string }[] = []
 
 vi.mock('../src/main/settings', () => ({
@@ -29,8 +36,11 @@ vi.mock('../src/main/settings', () => ({
     listCredentials: async () => [],
     loadSettings: async () => ({ repos, author: ME, username: '', prefs: {} }),
 }))
-const { setLocale } = await import('../src/shared/i18n')
-setLocale('en')
+const { messagesOf, setLocale } = await import('../src/shared/i18n')
+setLocale(LANG)
+const L = messagesOf(LANG)
+const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const head = (fn: (n: number) => string) => fn(987).split('987')[0]
 const git = await import('../src/main/git')
 const records = await import('../src/main/records')
 const issues = await import('../src/main/issues')
@@ -44,7 +54,9 @@ const fromToday = (days: number) => {
     d.setDate(d.getDate() + days)
     return iso8601(d)
 }
-const source = (name: string) => fs.readFileSync(join(SRC, name), 'utf8')
+const source = (doc: { src: string }) => fs.readFileSync(join(SRC, doc.src), 'utf8')
+const day = (d: string | number) => (typeof d === 'number' ? fromToday(d) : d)
+const replaceAll = (text: string, pairs: string[][]) => pairs.reduce((t, [from, to]) => t.replace(from, to), text)
 
 // ---------- 見本のリポジトリ ----------
 
@@ -94,7 +106,7 @@ class Sample {
                 fs,
                 dir,
                 ref: `施行/${d.replace(/\.md$/, '')}/${effective}`,
-                message: `${d} effective ${effective}`,
+                message: C.tagMessage(d, effective ?? ''),
                 tagger: s,
                 object: oid,
                 force: true,
@@ -117,7 +129,7 @@ class Sample {
     async record(folder: string, data: Record<string, unknown>, date = TODAY) {
         const id = `${atOf(date)
             .replace(/[-:TZ]/g, '')
-            .slice(0, 14)}-en${String(++this.seq).padStart(4, '0')}`
+            .slice(0, 14)}-${LANG}${String(++this.seq).padStart(4, '0')}`
         await records.writeRecord(this.dir, `${folder}/${id}.json`, { id, ...data })
         return id
     }
@@ -141,22 +153,22 @@ class Sample {
 
     event(
         e: { kind: string; title: string; docPath: string; date: string; end?: string; repeat?: { every: 'year' | 'month' }; done?: string[] },
-        by = 'Jordan Lee',
+        by = JORDAN,
         at = '2026-10-20',
     ) {
         return this.record('events', { done: [], by, at: atOf(at), updatedAt: atOf(at), ...e }, at)
     }
 }
 
-const HANDBOOK = 'employee-handbook.md'
-const BEREAVE_OLD = '  - Upon the death of a sibling, grandparent, or parent or sibling of the spouse: 2 days\n'
-const AMENDED_2026 =
-    '\n\n## Supplementary Provisions (Amended April 1, 2026) {supplement}\n\n### Effective Date\n- These amendments take effect on April 1, 2026.\n'
-const MSA = 'services/master-services-agreement.md'
-const NDA = 'nda/mutual-nda.md'
-const LICENSE = 'licensing/software-license-agreement.md'
-const ENERGY = 'energy-efficiency-grants.md'
-const REPAIR = 'home-repair-grants.md'
+const R = C.rules
+const HANDBOOK = R.doc.path
+const BEREAVE_OLD = R.bereaveOld
+const AMENDED_2026 = R.amended
+const MSA = C.contracts.msa.path
+const NDA = C.contracts.nda.path
+const LICENSE = C.contracts.third.path
+const ENERGY = C.city.energy.path
+const REPAIR = C.city.repair.path
 
 let tmp = ''
 const dirs = { rules: '', contracts: '', city: '', houritsu: '', beta: '' }
@@ -165,58 +177,36 @@ const oids = { v2: '' }
 async function seedRules(dir: string) {
     const r = new Sample(dir)
     await r.init()
-    const final = source(HANDBOOK)
-    r.write(
-        HANDBOOK,
-        final
-            .replace('up to 5 days of leave per year', 'up to 3 days of leave per year')
-            .replace('up to $500 per month', 'up to $300 per month')
-            .replace(AMENDED_2026, '\n'),
-    )
-    await r.save('2025-02-03', 'Create the handbook based on the model work rules', 'Jordan Lee', '2025-04-01', [HANDBOOK])
+    const final = source(R.doc)
+    r.write(HANDBOOK, replaceAll(final, R.v1).replace(AMENDED_2026, '\n'))
+    await r.save('2025-02-03', R.create, JORDAN, '2025-04-01', [HANDBOOK])
     r.write(HANDBOOK, final)
-    oids.v2 = await r.save('2026-02-10', 'Raise fertility treatment leave and the commuting allowance cap', 'Sam Patel', '2026-04-01', [HANDBOOK])
+    oids.v2 = await r.save('2026-02-10', R.raise, SAM, '2026-04-01', [HANDBOOK])
     await r.draft(
-        'April-2027-revision',
+        R.draft,
         '2026-10-20',
-        'Sam Patel',
+        SAM,
         [
-            [HANDBOOK, BEREAVE_OLD, `${BEREAVE_OLD}  - When the employee's child starts elementary school: 1 day\n`],
-            [
-                HANDBOOK,
-                AMENDED_2026,
-                `${AMENDED_2026}\n## Supplementary Provisions (Amended April 1, 2027) {supplement}\n\n### Effective Date\n- These amendments take effect on April 1, 2027.\n`,
-            ],
+            [HANDBOOK, BEREAVE_OLD, `${BEREAVE_OLD}${R.schoolLine}`],
+            [HANDBOOK, AMENDED_2026, `${AMENDED_2026}${R.amended2027}`],
         ],
-        "Add bereavement leave for a child's school entry",
-        'Added a day of leave when a child starts elementary school. Please review.',
+        R.draftMessage,
+        R.draftRequest,
     )
-    const draft = git.draftRef('April-2027-revision')
+    const draft = git.draftRef(R.draft)
     await records.writeRecord(dir, 'settings/rules.json', { requireApproval: true, approvers: [ME.name] })
-    await r.issue(1, 'Clarify the probationary period rules', 'Spell out whether the probationary period can be extended.', 'Sam Patel', '2026-11-02', {
+    await r.issue(1, R.issues[0][0], R.issues[0][1], SAM, '2026-11-02', {
         closed: '2026-11-05',
     })
-    await r.issue(2, 'State the harassment consultation desk', 'Add where employees can report harassment.', 'Sam Patel', '2026-11-12')
-    const school = await r.issue(
-        3,
-        "Add bereavement leave for a child's school entry",
-        'Requested in the employee survey.\n\n- Event: starting elementary school\n- Days: 1',
-        'Sam Patel',
-        '2026-11-12',
-    )
-    await r.issue(
-        4,
-        'Reflect the amended family care leave rules',
-        'Check the separate rules on parental and family care leave against the new law.',
-        'Sam Patel',
-        '2026-11-12',
-    )
+    await r.issue(2, R.issues[1][0], R.issues[1][1], SAM, '2026-11-12')
+    const school = await r.issue(3, R.issues[2][0], R.issues[2][1], SAM, '2026-11-12')
+    await r.issue(4, R.issues[3][0], R.issues[3][1], SAM, '2026-11-12')
     await r.record(
         'issue-comments',
         {
             issue: school,
-            body: 'I added this to 5.6 (Bereavement Leave) in the draft "April-2027-revision". Please review.',
-            by: 'Sam Patel',
+            body: R.comments[0],
+            by: SAM,
             at: atOf('2026-11-12'),
         },
         '2026-11-12',
@@ -225,39 +215,35 @@ async function seedRules(dir: string) {
         'issue-comments',
         {
             issue: school,
-            body: 'One day is **fine**.\nWe will consider middle school entry in the next revision.',
-            by: 'Alex Morgan',
+            body: R.comments[1],
+            by: ME.name,
             at: new Date(new Date(`2026-11-12T10:05:00`)).toISOString(),
         },
         '2026-11-12',
     )
     await issues.setBranchIssues(dir, draft, [3])
+    await r.event({ kind: 'notify', title: R.events.notify2026, docPath: HANDBOOK, date: '2026-03-13', done: ['2026-03-13'] }, ME.name, '2026-02-10')
+    await r.event({ kind: 'notify', title: R.events.notify2027, docPath: HANDBOOK, date: '2027-03-12' }, ME.name)
     await r.event(
-        { kind: 'notify', title: 'Notify employees of the 2026 revision', docPath: HANDBOOK, date: '2026-03-13', done: ['2026-03-13'] },
-        'Alex Morgan',
+        { kind: 'renew', title: R.events.renew, docPath: '', date: '2026-03-31', repeat: { every: 'year' }, done: ['2026-03-31'] },
+        ME.name,
         '2026-02-10',
     )
-    await r.event({ kind: 'notify', title: 'Notify employees of the 2027 revision', docPath: HANDBOOK, date: '2027-03-12' }, 'Alex Morgan')
-    await r.event(
-        { kind: 'renew', title: 'Renew the overtime agreement', docPath: '', date: '2026-03-31', repeat: { every: 'year' }, done: ['2026-03-31'] },
-        'Alex Morgan',
-        '2026-02-10',
-    )
-    await r.event({ kind: 'deadline', title: 'Staff comments on the draft due', docPath: HANDBOOK, date: fromToday(-3) }, 'Alex Morgan')
-    await r.event({ kind: 'submit', title: 'Submit the draft to the board', docPath: HANDBOOK, date: fromToday(14) }, 'Alex Morgan')
+    await r.event({ kind: 'deadline', title: R.events.comments, docPath: HANDBOOK, date: fromToday(-3) }, ME.name)
+    await r.event({ kind: 'submit', title: R.events.board, docPath: HANDBOOK, date: fromToday(14) }, ME.name)
     // 今日、現行版で同じ条を直した版（改定案と重なる）
-    r.edit(HANDBOOK, BEREAVE_OLD, BEREAVE_OLD.replace('2 days', '3 days'))
-    await git.saveVersion(dir, { message: 'Change bereavement leave for the death of a sibling, etc. to 3 days', docPath: HANDBOOK })
+    r.edit(HANDBOOK, BEREAVE_OLD, R.bereaveNew)
+    await git.saveVersion(dir, { message: R.today, docPath: HANDBOOK })
     await r.record('deliveries', {
         docPath: HANDBOOK,
-        title: 'Employee Handbook',
+        title: R.title,
         client: '',
         oid: oids.v2,
         effectiveDate: '2026-04-01',
-        to: 'Acme Corp. HR Department',
+        to: R.deliverTo,
         memo: '',
         items: ['docPdf', 'docDocx', 'cmpPdf', 'cmpDocx'],
-        files: ['Employee Handbook.pdf', 'Employee Handbook.docx'],
+        files: [`${R.title}.pdf`, `${R.title}.docx`],
         folder: '',
         at: new Date().toISOString(),
         by: ME.name,
@@ -267,38 +253,37 @@ async function seedRules(dir: string) {
 async function seedContracts(dir: string) {
     const r = new Sample(dir)
     await r.init()
-    const msa = source('master-services-agreement.md')
-    const nda = source('mutual-nda.md')
-    r.write(MSA, msa.replace('$3,000 per month', '$2,500 per month').replace('continue for three years after', 'continue for two years after'))
-    r.write(NDA, nda.replace('survive for three years', 'survive for two years'))
-    r.write(LICENSE, source('software-license-agreement.md'))
-    await r.save('2026-02-16', 'Draft the services agreement, NDA and license agreement', 'Jordan Lee')
+    const K = C.contracts
+    const msa = source(K.msa)
+    const nda = source(K.nda)
+    r.write(MSA, replaceAll(msa, K.msaV1))
+    r.write(NDA, replaceAll(nda, K.ndaV1))
+    r.write(LICENSE, source(K.third))
+    await r.save('2026-02-16', K.create, JORDAN)
     r.write(MSA, msa)
     r.write(NDA, nda)
-    await r.save('2026-03-18', 'Reflect negotiations with the counterparties (fees, confidentiality period)', 'Jordan Lee', '2026-04-01', [MSA, NDA])
-    await r.draft('FY2027-renewal', '2026-11-02', 'Jordan Lee', [[MSA, '$3,000 per month', '$3,200 per month']], 'Revise the monthly fee for FY2027')
-    await r.event({ kind: 'start', title: 'Services begin', docPath: MSA, date: '2026-04-01' })
-    await r.event({ kind: 'end', title: 'Services term ends', docPath: MSA, date: '2027-03-31' })
-    await r.event({ kind: 'deadline', title: 'Deadline for notice of non-renewal', docPath: MSA, date: '2027-02-28' })
-    await r.event({ kind: 'deadline', title: 'Send the renewal fee proposal', docPath: MSA, date: fromToday(21) })
-    await r.event({ kind: 'end', title: 'NDA expires', docPath: NDA, date: '2028-03-31' })
-    await r.event({ kind: 'renew', title: 'License renewal', docPath: LICENSE, date: '2027-02-16' })
+    await r.save('2026-03-18', K.negotiate, JORDAN, '2026-04-01', [MSA, NDA])
+    await r.draft(K.draft, '2026-11-02', JORDAN, [[MSA, K.draftEdit[0], K.draftEdit[1]]], K.draftMessage)
+    const paths: Record<string, string> = { msa: MSA, nda: NDA, third: LICENSE }
+    for (const e of K.events) await r.event({ kind: e.kind, title: e.title, docPath: paths[e.doc], date: day(e.date) })
 }
 
 async function seedCity(dir: string) {
     const r = new Sample(dir)
     await r.init()
-    const repair = source('home-repair-grants.md')
-    r.write(REPAIR, repair.replace('up to $5,000', 'up to $3,000').replace('\n- The amendments to these Guidelines take effect on October 1, 2026.', ''))
-    r.write(ENERGY, source('energy-efficiency-grants.md'))
-    await r.save('2026-01-08', 'Create the grant guidelines', 'Jordan Lee', '2026-04-01', [REPAIR, ENERGY])
+    const K = C.city
+    const repair = source(K.repair)
+    r.write(REPAIR, replaceAll(repair, K.repairV1))
+    r.write(ENERGY, source(K.energy))
+    for (const d of K.extra) r.write(d.path, source(d))
+    await r.save('2026-01-08', K.create, JORDAN, '2026-04-01', [REPAIR, ENERGY, ...K.extra.map((d) => d.path)])
     r.write(REPAIR, repair)
-    await r.save('2026-08-25', 'Raise the home repair grant cap to $5,000', 'Sam Patel', '2026-10-01', [REPAIR])
-    await r.event({ kind: 'deadline', title: 'Public comment deadline', docPath: REPAIR, date: '2026-01-30', done: ['2026-01-30'] })
-    await r.event({ kind: 'submit', title: 'Submit to the city council', docPath: REPAIR, date: '2026-02-20', done: ['2026-02-20'] })
-    await r.event({ kind: 'deadline', title: 'Grant applications open', docPath: REPAIR, date: '2026-05-01', end: '2027-01-29' })
-    await r.event({ kind: 'submit', title: 'Submit the 2027 amendments to the council', docPath: REPAIR, date: '2027-02-19' })
-    await r.event({ kind: 'start', title: 'Public comment on the amendments', docPath: ENERGY, date: fromToday(7), end: fromToday(37) })
+    await r.save('2026-08-25', K.raise, SAM, '2026-10-01', [REPAIR])
+    const paths: Record<string, string> = { repair: REPAIR, energy: ENERGY }
+    for (const e of K.events) {
+        const date = day(e.date)
+        await r.event({ kind: e.kind, title: e.title, docPath: paths[e.doc], date, ...(e.end ? { end: day(e.end) } : {}), ...(e.done ? { done: [date] } : {}) })
+    }
 }
 
 async function seedHouritsu(dir: string) {
@@ -315,27 +300,24 @@ async function seedHouritsu(dir: string) {
                 .join('/'),
             fs.readFileSync(f, 'utf8'),
         )
-    await r.save('2026-11-01', 'Fetch 3 statutes from houritsu', 'Jordan Lee')
+    await r.save('2026-11-01', C.houritsu.message, JORDAN)
 }
 
 async function seedBeta(dir: string) {
     const r = new Sample(dir)
     await r.init()
-    r.write('work-rules.md', source('work-rules.md'))
-    await r.save('2026-11-12', 'First version', 'Alex Morgan')
-    const one = await r.issue(1, 'Make Saturdays a day off', 'Review the days off in Section 2.', 'Alex Morgan', '2026-11-12')
-    await r.issue(2, 'Add retirement provisions', 'Add sections on the retirement age and resignation.', 'Alex Morgan', '2026-11-12')
-    await r.record(
-        'issue-comments',
-        { issue: one, body: "Checking with the client's HR department whether Saturdays can be days off.", by: 'Alex Morgan', at: atOf('2026-11-12') },
-        '2026-11-12',
-    )
+    const B = C.beta
+    r.write(B.doc.path, source(B.doc))
+    await r.save('2026-11-12', B.create, ME.name)
+    const one = await r.issue(1, B.issues[0][0], B.issues[0][1], ME.name, '2026-11-12')
+    await r.issue(2, B.issues[1][0], B.issues[1][1], ME.name, '2026-11-12')
+    await r.record('issue-comments', { issue: one, body: B.comments[0], by: ME.name, at: atOf('2026-11-12') }, '2026-11-12')
     await r.record(
         'issue-comments',
         {
             issue: one,
-            body: 'Decided at the 11/20 meeting:\n\n- **Saturdays and Sundays** are days off\n- Public holidays to be handled separately',
-            by: 'Alex Morgan',
+            body: B.comments[1],
+            by: ME.name,
             at: new Date('2026-11-12T10:05:00').toISOString(),
         },
         '2026-11-12',
@@ -362,13 +344,23 @@ interface ShotOptions {
     clip?: { x: number; y: number; width: number; height: number }
     locator?: Locator
     hi?: boolean
+    native?: boolean
 }
 async function save(name: string, o: ShotOptions = {}) {
     if (!want(name)) return
     await wait(400)
     const path = join(OUT, name)
     const scale = o.hi ? 'device' : 'css'
-    if (o.locator) await o.locator.screenshot({ path, scale, animations: 'disabled' })
+    if (o.native && o.clip) {
+        const png = await app.evaluate(
+            ({ BrowserWindow }, rect) =>
+                BrowserWindow.getAllWindows()[0]
+                    .webContents.capturePage(rect)
+                    .then((i) => i.resize({ width: rect.width, quality: 'best' }).toPNG().toString('base64')),
+            o.clip,
+        )
+        fs.writeFileSync(path, Buffer.from(png, 'base64'))
+    } else if (o.locator) await o.locator.screenshot({ path, scale, animations: 'disabled' })
     else await win.screenshot({ path, scale, clip: o.clip, animations: 'disabled' })
 }
 
@@ -381,6 +373,8 @@ async function reset() {
     await wait(200)
 }
 
+const AI = 'AI'
+
 async function openDoc(dir: string, path: string, view = 'editor') {
     await store(
         `if (s.repoDir !== ${JSON.stringify(dir)}) await s.switchRepo(${JSON.stringify(dir)}); s.openDoc(${JSON.stringify(path)}, ${JSON.stringify(view)})`,
@@ -388,7 +382,7 @@ async function openDoc(dir: string, path: string, view = 'editor') {
     if (view === 'editor') {
         await win.locator('.cm-content').first().waitFor()
         // AI のパネルは開いたままになるので、撮る画面ごとに閉じておく
-        if (await win.locator('aside.ai-panel').count()) await win.getByRole('button', { name: 'AI', exact: true }).first().click()
+        if (await win.locator('aside.ai-panel').count()) await win.getByRole('button', { name: AI, exact: true }).first().click()
     }
     await wait(800)
 }
@@ -421,21 +415,21 @@ shot('home-schedule.png', async () => {
 shot('palette.png', async () => {
     await store(`s.view = 'home'; s.paletteOpen = true`)
     await wait(500)
-    await win.keyboard.type('leave')
+    await win.keyboard.type(S.palette)
     await wait(800)
     await save('palette.png')
 })
 
 shot('setup-repos.png', async () => {
     await store(`s.view = 'home'; s.openSettings('setup', 'repos')`)
-    await seen('Add a repository')
+    await seen(L.settings.repos.addHeading)
     await wait(800)
     await save('setup-repos.png', { clip: { x: 0, y: 0, width: 1920, height: 760 } })
 })
 
 async function repoRowButton(repo: string, label: string) {
     await store(`s.view = 'home'; s.openSettings('setup', 'repos')`)
-    await seen('Add a repository')
+    await seen(L.settings.repos.addHeading)
     const row = win
         .locator('div', { has: win.getByText(repo, { exact: false }) })
         .filter({ has: win.getByRole('button', { name: label }) })
@@ -446,46 +440,46 @@ async function repoRowButton(repo: string, label: string) {
 
 shot('repo-duplicate.png', async () => {
     await repoHome(dirs.rules)
-    await repoRowButton('Acme_Internal_Rules', 'Duplicate')
-    await seen('Duplicate repository')
+    await repoRowButton(C.repos.rules.name, L.settings.repos.duplicate)
+    await seen(L.settings.repos.dupTitle)
     await save('repo-duplicate.png')
 })
 
 shot('repo-fork.png', async () => {
     await repoHome(dirs.rules)
-    await repoRowButton('Acme_Contracts', 'Fork')
+    await repoRowButton(C.repos.contracts.name, L.settings.repos.fork)
     await save('repo-fork.png')
 })
 
 shot('repo-switcher.png', async () => {
     await store(`s.homeTab = 'recent'; s.view = 'home'`)
     await wait(600)
-    await win.locator('header button', { hasText: 'Acme_Internal_Rules' }).first().click()
+    await win.locator('header button', { hasText: C.repos.rules.name }).first().click()
     await wait(500)
-    await win.getByText('Move to group').filter({ visible: true }).first().hover()
+    await win.getByText(L.repo.moveSection).filter({ visible: true }).first().hover()
     await wait(700)
     await save('repo-switcher.png', { clip: { x: 0, y: 0, width: 1240, height: 600 } })
 })
 
 shot('repo-sections.png', async () => {
     await store(`s.homeTab = 'recent'; s.view = 'home'`)
-    await win.getByRole('button', { name: 'Open sidebar' }).first().click()
+    await win.getByRole('button', { name: L.shell.sidebar.open }).first().click()
     await wait(600)
-    await win.locator('.repos .repo', { hasText: 'Acme_Internal_Rules' }).first().click({ button: 'right' })
+    await win.locator('.repos .repo', { hasText: C.repos.rules.name }).first().click({ button: 'right' })
     await wait(400)
-    const item = win.getByText('Move to group').filter({ visible: true }).first()
+    const item = win.getByText(L.repo.moveSection).filter({ visible: true }).first()
     await item.hover()
     await wait(300)
     const ib = (await item.boundingBox())!
     await win.mouse.move(ib.x + 10, ib.y + ib.height / 2, { steps: 4 })
     await win.mouse.move(ib.x + 40, ib.y + ib.height / 2, { steps: 4 })
     await wait(800)
-    if (process.env.DEBUG_SHOTS) console.log('submenu', await win.getByText('New group…').count(), await win.locator('[role=menu]').count())
+    if (process.env.DEBUG_SHOTS) console.log('submenu', await win.getByText(L.shell.repoSection.create).count(), await win.locator('[role=menu]').count())
     await save('repo-sections.png', { clip: { x: 0, y: 0, width: 1000, height: 560 } })
     await win.keyboard.press('Escape')
     await win.keyboard.press('Escape')
     await win
-        .getByRole('button', { name: /Close sidebar|Collapse sidebar/ })
+        .getByRole('button', { name: L.shell.pane.collapse(L.shell.sidebar.sidebar) })
         .first()
         .click({ timeout: 3000 })
         .catch(() => {})
@@ -493,7 +487,7 @@ shot('repo-sections.png', async () => {
 
 shot('repo-home.png', async () => {
     await repoHome(dirs.contracts)
-    const toggle = win.getByRole('switch', { name: 'Include documents in subfolders' })
+    const toggle = win.getByRole('switch', { name: L.docs.list.recursive })
     if ((await toggle.getAttribute('aria-checked')) !== 'true') await toggle.click()
     await wait(1500)
     await save('repo-home.png')
@@ -543,20 +537,20 @@ const lineOf = (text: string) => win.locator('.cm-line', { hasText: text }).firs
 
 shot(['editor-ref.png', 'editor-edited.png', 'save-version.png'], async () => {
     await openDoc(dirs.rules, HANDBOOK)
-    await cursorAt('governed by applicable employment laws and regulations.', { end: true })
+    await cursorAt(S.ref.after, { end: true })
     await win.keyboard.press('Enter')
-    await win.keyboard.type('Notwithstanding the preceding paragraph, officers among the persons covered by clause [[sco', { delay: 30 })
+    await win.keyboard.type(S.ref.typed, { delay: 30 })
     await wait(1200)
     await save('editor-ref.png')
     await win.locator('.cm-tooltip-autocomplete li').first().click()
     await wait(300)
     await win.keyboard.press('End')
-    await win.keyboard.type(' are subject to separate rules.', { delay: 10 })
+    await win.keyboard.type(S.ref.rest, { delay: 10 })
     await wait(2500)
     await save('editor-edited.png')
-    await win.getByRole('button', { name: 'Save version' }).first().click()
+    await win.getByRole('button', { name: L.editor.toolbar.saveVersion }).first().click()
     await wait(600)
-    await win.keyboard.type('1.1: add a paragraph on officers')
+    await win.keyboard.type(S.ref.message)
     await wait(500)
     await save('save-version.png')
     await win.keyboard.press('Escape')
@@ -565,11 +559,11 @@ shot(['editor-ref.png', 'editor-edited.png', 'save-version.png'], async () => {
 
 shot('editor-backref.png', async () => {
     await openDoc(dirs.contracts, MSA)
-    await cursorAt('The fee for the Services', { offset: 4 })
-    await lineOf('The fee for the Services').click({ button: 'right', position: { x: 120, y: 10 } })
+    await cursorAt(S.backref, { offset: 4 })
+    await lineOf(S.backref).click({ button: 'right', position: { x: 120, y: 10 } })
     await wait(400)
     await win
-        .getByText(/Referenced by \(/)
+        .getByText(new RegExp(esc(head(L.editor.context.backRefs))))
         .filter({ visible: true })
         .first()
         .hover()
@@ -579,7 +573,7 @@ shot('editor-backref.png', async () => {
 
 shot('editor-trail.png', async () => {
     await openDoc(dirs.rules, HANDBOOK)
-    await cursorAt('Employees undergoing fertility treatment', { top: true })
+    await cursorAt(S.fertility, { top: true })
     await wait(600)
     await win.locator('.trail-btn').first().click()
     await wait(1500)
@@ -588,10 +582,10 @@ shot('editor-trail.png', async () => {
 
 shot('editor-issues.png', async () => {
     await openDoc(dirs.rules, HANDBOOK)
-    await cursorAt('may take up to 5 days of leave per year upon request.', { end: true })
-    await win.keyboard.type(' The Company shall approve the leave prior to the start date and/or as set out in [[Leave Procedure]].', { delay: 5 })
+    await cursorAt(S.issues.after, { end: true })
+    await win.keyboard.type(S.issues.typed, { delay: 5 })
     await wait(2500)
-    await cursorAt('Employees undergoing fertility treatment', { top: true })
+    await cursorAt(S.fertility, { top: true })
     await win.keyboard.press(process.platform === 'darwin' ? 'Meta+Shift+M' : 'Control+Shift+M')
     await wait(1200)
     await save('editor-issues.png', { clip: { x: 0, y: 634, width: 1100, height: 566 } })
@@ -621,7 +615,6 @@ async function hoverText(text: string, offset = 1) {
 }
 
 // 一時的な見本の文書。撮ったら消す（版には入れない）
-const EN_STYLE = '<!-- clausedown\ndoc: { style: contract }\n-->\n'
 const temps: string[] = []
 async function tempDoc(dir: string, path: string, text: string) {
     fs.writeFileSync(join(dir, path), text, 'utf8')
@@ -639,45 +632,37 @@ async function tempDoc(dir: string, path: string, text: string) {
 const EDITOR_TOP = { x: 262, y: 185, width: 590, height: 210 }
 
 shot('editor-definitions.png', async () => {
-    const done = await tempDoc(
-        dirs.contracts,
-        'consulting-agreement.md',
-        '# Consulting Agreement\n\n### Engagement\n- The Client engages the Consultant to provide advisory services.\n- Acme Corp. (the "Client") engages Riverside Consulting LLC (the "Consultant") under this Agreement.\n- The consulting fee (the "Fee") will be agreed separately.\n',
-    )
+    const done = await tempDoc(dirs.contracts, S.definitions.file, S.definitions.text)
     await wait(1500)
-    await hoverText('The Client engages', 5)
-    await save('editor-definitions.png', { clip: EDITOR_TOP, hi: true })
+    await hoverText(S.definitions.hover, S.definitions.offset)
+    await save('editor-definitions.png', { clip: EDITOR_TOP, hi: true, native: true })
     await done()
 })
 
 shot('editor-proofread.png', async () => {
-    const done = await tempDoc(
-        dirs.contracts,
-        'consulting-agreement.md',
-        '# Consulting Agreement\n\n### Engagement\n- Acme Corp. and Riverside Consulting LLC agree as follows.\n- Prior to the start date, the Consultant shall deliver the work plan and/or the schedule described herein.\n- The consulting fee (the "Fee") will be agreed separately.\n',
-    )
+    const done = await tempDoc(dirs.contracts, S.proofread.file, S.proofread.text)
     await wait(1500)
-    await hoverText('Prior to the start', 2)
-    await save('editor-proofread.png', { clip: EDITOR_TOP, hi: true })
+    await hoverText(S.proofread.hover, S.proofread.offset)
+    await save('editor-proofread.png', { clip: EDITOR_TOP, hi: true, native: true })
     await done()
 })
 
 shot('editor-config.png', async () => {
     await openDoc(dirs.contracts, NDA)
-    await win.getByRole('button', { name: 'Formatting' }).first().click()
+    await win.getByRole('button', { name: L.editor.toolbar.formatting }).first().click()
     await wait(1200)
     await save('editor-config.png')
-    await win.getByRole('button', { name: 'Formatting' }).first().click()
+    await win.getByRole('button', { name: L.editor.toolbar.formatting }).first().click()
 })
 
 const MOD = process.platform === 'darwin' ? 'Meta' : 'Control'
 
 shot('editor-search.png', async () => {
     await openDoc(dirs.rules, HANDBOOK)
-    await cursorAt('This Handbook applies to all employees', { offset: 30 })
+    await cursorAt(S.search.at, { offset: S.search.offset })
     await win.keyboard.press(`${MOD}+F`)
     await wait(300)
-    await win.keyboard.type('employee')
+    await win.keyboard.type(S.search.query)
     await wait(1500)
     await save('editor-search.png')
     await win.keyboard.press('Escape')
@@ -685,29 +670,25 @@ shot('editor-search.png', async () => {
 
 shot(['editor-context.png', 'format-modal.png'], async () => {
     await openDoc(dirs.rules, HANDBOOK)
-    await selectText('working conditions and rules of conduct')
+    await selectText(S.select)
     const box = (await cm(`
-        const i = v.state.doc.toString().indexOf('working conditions and rules of conduct')
+        const i = v.state.doc.toString().indexOf(${JSON.stringify(S.select)})
         const r = v.coordsAtPos(i + 10)
         return { x: r.left, y: (r.top + r.bottom) / 2 }
     `)) as { x: number; y: number }
     await win.mouse.click(box.x, box.y, { button: 'right' })
     await wait(800)
     await save('editor-context.png')
-    await win.getByText('Format selection…').filter({ visible: true }).first().click()
+    await win.getByText(L.editor.context.formatSelection).filter({ visible: true }).first().click()
     await wait(1000)
     await save('format-modal.png')
     await win.keyboard.press('Escape')
 })
 
 shot('prop.png', async () => {
-    const done = await tempDoc(
-        dirs.contracts,
-        'fee-schedule.md',
-        `# Fee Schedule\n${EN_STYLE}\n### Fees\n- The fees are as set out in the following table.\n  ::: {size=8.5pt cols=25,75}\n  | Item | Details |\n  |---|---|\n  | Base fee | $3,000 per month (excluding tax) |\n  :::\n`,
-    )
+    const done = await tempDoc(dirs.contracts, S.prop.file, S.prop.text)
     await wait(2500)
-    const art = (await win.locator('.cd-para', { hasText: 'following table' }).first().boundingBox())!
+    const art = (await win.locator('.cd-para', { hasText: S.prop.anchor }).first().boundingBox())!
     const table = (await win.locator('.cd-article table').first().boundingBox())!
     await save('prop.png', {
         clip: { x: art.x - 6, y: art.y - 6, width: Math.max(art.width, table.x + table.width - art.x) + 12, height: table.y + table.height - art.y + 12 },
@@ -716,11 +697,7 @@ shot('prop.png', async () => {
 })
 
 shot('table1.png', async () => {
-    const done = await tempDoc(
-        dirs.contracts,
-        'pay-table.md',
-        `# Pay Table\n${EN_STYLE}\n### Pay\n- Pay is as follows.\n  | Category | > | Details |\n  |---|---|---|\n  | Full-time | Monthly | No fixed term |\n  | ^ | Hourly | During probation |\n`,
-    )
+    const done = await tempDoc(dirs.contracts, S.table.file, S.table.text)
     await wait(2500)
     const table = win.locator('.cd-paper table, .preview table').first()
     const b = (await table.boundingBox())!
@@ -746,10 +723,10 @@ shot('editor-math.png', async () => {
 
 shot('editor-insert.png', async () => {
     await openDoc(dirs.city, ENERGY)
-    await cursorAt('Any fraction of less than', { offset: 3 })
-    await win.getByRole('button', { name: 'Insert' }).first().click()
+    await cursorAt(C.city.insertAt, { offset: 3 })
+    await win.getByRole('button', { name: L.editor.toolbar.insert }).first().click()
     await wait(500)
-    await win.getByRole('menuitem', { name: 'Math' }).first().hover()
+    await win.getByRole('menuitem', { name: L.editor.insert.math }).first().hover()
     await wait(800)
     const menu = (await win.locator('[role="menu"]').first().boundingBox())!
     await save('editor-insert.png', { clip: { x: menu.x - 4, y: menu.y - 4, width: 470, height: Math.max(490, menu.height + 8) }, hi: true })
@@ -757,34 +734,34 @@ shot('editor-insert.png', async () => {
 
 shot('editor-guides.png', async () => {
     await openDoc(dirs.rules, HANDBOOK)
-    await cursorAt('Proof of address')
+    await cursorAt(S.guides.at)
     await wait(800)
     const box = (await win.locator('.cm-editor').first().boundingBox())!
-    const line = (await win.locator('.cm-line', { hasText: 'Hiring and Transfers' }).first().boundingBox())!
+    const line = (await win.locator('.cm-line', { hasText: S.guides.line }).first().boundingBox())!
     await save('editor-guides.png', { clip: { x: box.x, y: line.y - 8, width: Math.min(box.width, 760), height: 330 }, hi: true })
 })
 
 shot('editor-export.png', async () => {
     await openDoc(dirs.rules, HANDBOOK)
-    await win.getByRole('button', { name: 'Export' }).first().click()
+    await win.getByRole('button', { name: L.editor.toolbar.export }).first().click()
     await wait(800)
     await save('editor-export.png', { clip: { x: 560, y: 0, width: 1360, height: 560 } })
 })
 
 shot('export-toast.png', async () => {
     await openDoc(dirs.rules, HANDBOOK)
-    const file = join(tmp, 'Employee Handbook.html')
+    const file = join(tmp, `${R.title}.html`)
     fs.writeFileSync(file, '<!doctype html>', 'utf8')
     await app.evaluate(({ ipcMain }, p) => {
         ipcMain.removeHandler('exportFile')
         ipcMain.handle('exportFile', async () => p)
     }, file)
-    await win.getByRole('button', { name: 'Export' }).first().click()
+    await win.getByRole('button', { name: L.editor.toolbar.export }).first().click()
     await wait(500)
-    await win.getByRole('menuitem', { name: 'Export as HTML' }).first().click()
+    await win.getByRole('menuitem', { name: L.editor.toolbar.exportHtml }).first().click()
     const toast = win
-        .locator('[data-slot="root"]', { hasText: 'Exported' })
-        .or(win.locator('li', { hasText: 'Exported' }))
+        .locator('[data-slot="root"]', { hasText: L.editor.exported })
+        .or(win.locator('li', { hasText: L.editor.exported }))
         .first()
     await toast.waitFor()
     await wait(800)
@@ -794,13 +771,9 @@ shot('export-toast.png', async () => {
 
 shot('render_example.png', async () => {
     await viewport(1000, 700)
-    const done = await tempDoc(
-        dirs.contracts,
-        'work-rules-sample.md',
-        `# Work Rules\n${EN_STYLE}## General Provisions\n### Purpose {#purpose}\n- These rules …\n- Notwithstanding the preceding paragraph, …\n  - full-time employees\n  - fixed-term employees\n- Under [[purpose]], …\n`,
-    )
+    const done = await tempDoc(dirs.contracts, S.render.file, S.render.text)
     await hideOutline()
-    await cursorAt('Under [[purpose]]', { offset: 3 })
+    await cursorAt(S.render.at, { offset: 3 })
     await wait(2000)
     const e = await editorBox()
     await save('render_example.png', { clip: { x: e.x, y: e.y - 32, width: 912, height: 440 } })
@@ -812,10 +785,10 @@ const button = (name: string | RegExp) => win.getByRole('button', { name }).filt
 
 shot(['history.png', 'effective-modal.png'], async () => {
     await openDoc(dirs.rules, HANDBOOK, 'history')
-    await seen('Change bereavement leave for the death of a sibling')
+    await seen(R.today)
     await wait(1500)
     await save('history.png')
-    await button('Set effective date').click()
+    await button(L.history.addEffective).click()
     await wait(800)
     await save('effective-modal.png')
 })
@@ -830,7 +803,7 @@ shot('compare.png', async () => {
 
 shot(['branch-menu.png', 'new-branch.png'], async () => {
     await repoHome(dirs.rules)
-    await win.getByRole('button', { name: 'Switch working draft' }).first().click()
+    await win.getByRole('button', { name: L.sync.branchMenu.aria }).first().click()
     await wait(800)
     await save('branch-menu.png')
     await win.keyboard.press('Escape')
@@ -842,10 +815,10 @@ shot(['branch-menu.png', 'new-branch.png'], async () => {
 shot(['releases.png', 'deliver-modal.png'], async () => {
     await openDoc(dirs.rules, HANDBOOK, 'releases')
     await wait(1500)
-    await win.getByText('Raise fertility treatment leave and the commuting allowance cap').filter({ visible: true }).first().click()
+    await win.getByText(R.raise).filter({ visible: true }).first().click()
     await wait(2000)
     await save('releases.png')
-    await button('Deliver').click()
+    await button(L.releases.deliver).click()
     await wait(800)
     await save('deliver-modal.png')
 })
@@ -855,27 +828,27 @@ shot(['schedule.png', 'schedule-select.png', 'schedule-list.png', 'due-modal.png
     await store(`await s.openSchedule()`)
     await wait(2000)
     await save('schedule.png')
-    await win.locator('svg text, .tl-label, button, span', { hasText: 'Submit the draft to the board' }).filter({ visible: true }).first().click()
+    await win.locator('svg text, .tl-label, button, span', { hasText: R.events.board }).filter({ visible: true }).first().click()
     await wait(1000)
     await save('schedule-select.png')
     await win
-        .getByRole('radio', { name: 'List' })
-        .or(win.getByRole('button', { name: 'List' }))
+        .getByRole('radio', { name: L.schedule.list })
+        .or(win.getByRole('button', { name: L.schedule.list }))
         .first()
         .click()
     await wait(1200)
     await save('schedule-list.png')
     await win
-        .getByRole('radio', { name: 'Timeline' })
-        .or(win.getByRole('button', { name: 'Timeline' }))
+        .getByRole('radio', { name: L.schedule.timeline })
+        .or(win.getByRole('button', { name: L.schedule.timeline }))
         .first()
         .click()
     await wait(800)
-    await button('Add due date').click()
+    await button(L.schedule.add).click()
     await wait(800)
     await win
-        .getByRole('radio', { name: 'Promulgation' })
-        .or(win.getByRole('button', { name: 'Promulgation' }))
+        .getByRole('radio', { name: L.labels.kinds.promulgate })
+        .or(win.getByRole('button', { name: L.labels.kinds.promulgate }))
         .first()
         .click()
         .catch(() => {})
@@ -935,17 +908,17 @@ shot('remote-login.png', async () => {
     })
     await store(`s.view = 'home'; s.openSettings('setup', 'remote')`)
     await wait(1000)
-    await win.getByRole('button', { name: 'Sign in' }).first().click()
+    await win.getByRole('button', { name: L.settings.forge.login }).first().click()
     await wait(1200)
     await save('remote-login.png')
 })
 
 shot(['sync-menu.png', 'sync-add-remote.png'], async () => {
     await repoHome(dirs.rules)
-    await win.getByRole('button', { name: 'Remote menu' }).first().click()
+    await win.getByRole('button', { name: L.sync.status.menu }).first().click()
     await wait(800)
     await save('sync-menu.png')
-    await win.getByText('Add remote…').filter({ visible: true }).first().click()
+    await win.getByText(L.sync.status.addRemote).filter({ visible: true }).first().click()
     await wait(800)
     const select = win.getByRole('combobox').filter({ visible: true }).first()
     await select.click()
@@ -969,20 +942,20 @@ shot(['sync-menu.png', 'sync-add-remote.png'], async () => {
 shot('feature-editor.png', async () => {
     await viewport(1440, 900)
     await openDoc(dirs.rules, HANDBOOK)
-    await cursorAt('### Bereavement Leave', { offset: 4, top: true })
+    await cursorAt(S.heading, { offset: 4, top: true })
     await wait(1200)
     await save('feature-editor.png')
 })
 
 async function openAi() {
-    await win.getByRole('button', { name: 'AI', exact: true }).first().click()
+    await win.getByRole('button', { name: AI, exact: true }).first().click()
     await wait(1500)
 }
 
 shot('feature-ai.png', async () => {
     await viewport(1440, 900)
     await openDoc(dirs.rules, HANDBOOK)
-    await cursorAt('### Bereavement Leave', { offset: 4, top: true })
+    await cursorAt(S.heading, { offset: 4, top: true })
     await openAi()
     await save('feature-ai.png')
     await openAi()
@@ -991,23 +964,23 @@ shot('feature-ai.png', async () => {
 shot('feature-history.png', async () => {
     await viewport(1440, 900)
     await openDoc(dirs.rules, HANDBOOK, 'history')
-    await win.getByText("Add bereavement leave for a child's school entry").filter({ visible: true }).first().click()
+    await win.getByText(R.draftMessage).filter({ visible: true }).first().click()
     await wait(1500)
     await save('feature-history.png')
 })
 
 async function tableFormat() {
     await win
-        .getByRole('radio', { name: 'Comparison table' })
-        .or(win.getByRole('button', { name: 'Comparison table', exact: true }))
+        .getByRole('radio', { name: L.compare.styleTable })
+        .or(win.getByRole('button', { name: L.compare.styleTable, exact: true }))
         .last()
         .click()
     await wait(1500)
 }
 async function diffFormat() {
     await win
-        .getByRole('radio', { name: 'Diff' })
-        .or(win.getByRole('button', { name: 'Diff', exact: true }))
+        .getByRole('radio', { name: L.compare.styleInline })
+        .or(win.getByRole('button', { name: L.compare.styleInline, exact: true }))
         .first()
         .click()
     await wait(500)
@@ -1020,8 +993,8 @@ shot('feature-compare.png', async () => {
     await tableFormat()
     await win
         .locator('section, div')
-        .filter({ hasText: /^After/ })
-        .getByText('Raise fertility treatment leave')
+        .filter({ hasText: new RegExp(`^${esc(L.compare.after)}`) })
+        .getByText(R.raise)
         .first()
         .click()
         .catch(() => {})
@@ -1033,7 +1006,7 @@ shot('feature-compare.png', async () => {
 shot('feature-releases.png', async () => {
     await viewport(1440, 900)
     await openDoc(dirs.rules, HANDBOOK, 'releases')
-    await win.getByText('Raise fertility treatment leave and the commuting allowance cap').filter({ visible: true }).first().click()
+    await win.getByText(R.raise).filter({ visible: true }).first().click()
     await wait(2000)
     await save('feature-releases.png')
 })
@@ -1049,7 +1022,7 @@ shot('feature-schedule.png', async () => {
 shot('feature-review.png', async () => {
     await viewport(1440, 900)
     await repoHome(dirs.rules)
-    await store(`s.dialog = { kind: 'review', branch: ${JSON.stringify(git.draftRef('April-2027-revision'))} }`)
+    await store(`s.dialog = { kind: 'review', branch: ${JSON.stringify(git.draftRef(R.draft))} }`)
     await wait(2000)
     await save('feature-review.png')
 })
@@ -1065,9 +1038,9 @@ shot('feature-issues.png', async () => {
 shot('feature-sync.png', async () => {
     await viewport(1440, 900)
     await repoHome(dirs.rules)
-    await win.getByRole('button', { name: 'Remote menu' }).first().click()
+    await win.getByRole('button', { name: L.sync.status.menu }).first().click()
     await wait(500)
-    await win.getByText('Add remote…').filter({ visible: true }).first().click()
+    await win.getByText(L.sync.status.addRemote).filter({ visible: true }).first().click()
     await wait(1000)
     await save('feature-sync.png')
 })
@@ -1078,10 +1051,10 @@ shot('editor-ai.png', async () => {
     await viewport(1934, 1068)
     await openDoc(dirs.rules, HANDBOOK)
     await openAi()
-    await win.locator('textarea').filter({ visible: true }).last().fill('Make the wording of 5.6 more concise')
+    await win.locator('textarea').filter({ visible: true }).last().fill(S.ai)
     await wait(500)
     // 日本語版と同じく、AI のボタンとパネルを赤で囲む
-    const btn = (await win.getByRole('button', { name: 'AI', exact: true }).first().boundingBox())!
+    const btn = (await win.getByRole('button', { name: AI, exact: true }).first().boundingBox())!
     const panel = (await win.locator('aside.ai-panel').first().boundingBox())!
     await win.evaluate(
         ([b, p]) => {
@@ -1108,7 +1081,7 @@ shot('editor-ai.png', async () => {
 
 // ---------- 改定案 ----------
 
-const DRAFT = git.draftRef('April-2027-revision')
+const DRAFT = git.draftRef(R.draft)
 
 shot(['draft-repo-home.png', 'draft-editor.png', 'review-modal.png', 'dark-editor.png', 'merge-modal.png'], async () => {
     await repoHome(dirs.rules)
@@ -1116,7 +1089,7 @@ shot(['draft-repo-home.png', 'draft-editor.png', 'review-modal.png', 'dark-edito
     await wait(2000)
     if (want('draft-repo-home.png')) await save('draft-repo-home.png')
     await openDoc(dirs.rules, HANDBOOK)
-    await cursorAt('### Bereavement Leave', { offset: 4, top: true })
+    await cursorAt(S.heading, { offset: 4, top: true })
     await wait(1500)
     if (want('draft-editor.png')) await save('draft-editor.png')
     await store(`s.dialog = { kind: 'review', branch: ${JSON.stringify(DRAFT)} }`)
@@ -1125,14 +1098,14 @@ shot(['draft-repo-home.png', 'draft-editor.png', 'review-modal.png', 'dark-edito
     await store(`s.dialog = null`)
     await wait(500)
     if (want('dark-editor.png')) {
-        await cursorAt('# Employee Handbook', { top: true })
-        await win.getByRole('button', { name: 'Switch to dark mode' }).first().click()
+        await cursorAt(S.title, { top: true })
+        await win.getByRole('button', { name: L.shell.theme.toDark }).first().click()
         await wait(1500)
         await save('dark-editor.png')
-        await win.getByRole('button', { name: 'Switch to light mode' }).first().click()
+        await win.getByRole('button', { name: L.shell.theme.toLight }).first().click()
         await wait(800)
     }
-    await button(/Merge into current/).click()
+    await button(new RegExp(esc(L.merge.adopt))).click()
     await wait(2500)
     if (want('merge-modal.png')) await save('merge-modal.png')
     await win.keyboard.press('Escape')
@@ -1148,8 +1121,8 @@ shot(['houritsu-ask.png', 'houritsu-done.png', 'houritsu-doc.png'], async () => 
     await store(`const paths = await window.api.detectHouritsu(s.repoDir); s.dialog = { kind: 'houritsu', dir: s.repoDir, paths }`)
     await wait(1500)
     await save('houritsu-ask.png')
-    await button('Convert and save version').click()
-    await seen(/Converted/, 60000)
+    await button(L.editor.houritsu.convert).click()
+    await seen(new RegExp(`${esc(L.editor.houritsu.titleDone)}|${esc(L.editor.houritsu.converted(987).split('987')[1])}`), 60000)
     await wait(1500)
     await save('houritsu-done.png')
     await win.keyboard.press('Escape')
@@ -1164,11 +1137,11 @@ shot(['houritsu-ask.png', 'houritsu-done.png', 'houritsu-doc.png'], async () => 
 shot(['issue-comments.png', 'issue-hash.png', 'save-version-issues.png', 'issue-link.png', 'issues.png'], async () => {
     await viewport(1280, 800)
     await app.evaluate(({ dialog }, d) => {
-        dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [d] })) as typeof dialog.showOpenDialog
+        dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [d] })
     }, dirs.beta)
     await store(`
         await window.api.pickFolder()
-        if (!s.settings.repos.some((r) => r.dir === ${JSON.stringify(dirs.beta)})) await s.saveSettings({ ...s.settings, repos: [...s.settings.repos, { name: 'Beta_Co', dir: ${JSON.stringify(dirs.beta)}, section: 'Beta Co.' }] })
+        if (!s.settings.repos.some((r) => r.dir === ${JSON.stringify(dirs.beta)})) await s.saveSettings({ ...s.settings, repos: [...s.settings.repos, { name: ${JSON.stringify(C.repos.beta.name)}, dir: ${JSON.stringify(dirs.beta)}, section: ${JSON.stringify(C.repos.beta.section)} }] })
         await s.checkRepos()
         await s.switchRepo(${JSON.stringify(dirs.beta)})
     `)
@@ -1176,27 +1149,27 @@ shot(['issue-comments.png', 'issue-hash.png', 'save-version-issues.png', 'issue-
     await store(`s.openIssues({ n: 1 })`)
     await wait(2000)
     await save('issue-comments.png')
-    await openDoc(dirs.beta, 'work-rules.md')
-    await cursorAt('Days off are Sundays.', { offset: 12 })
-    await win.keyboard.type('Saturdays and ')
+    await openDoc(dirs.beta, C.beta.doc.path)
+    await cursorAt(C.beta.at, { offset: C.beta.offset })
+    await win.keyboard.type(C.beta.typed)
     await wait(1500)
-    await button('Save version').click()
+    await button(L.editor.toolbar.saveVersion).click()
     await wait(800)
-    await win.keyboard.type('Add Saturdays to days off #')
+    await win.keyboard.type(C.beta.message)
     await wait(800)
     await save('issue-hash.png')
-    await win.locator('.hint', { hasText: 'Make Saturdays a day off' }).first().dispatchEvent('mousedown')
+    await win.locator('.hint', { hasText: C.beta.issues[0][0] }).first().dispatchEvent('mousedown')
     await wait(500)
-    await win.getByRole('dialog').getByText('Choose an issue…').first().click()
+    await win.getByRole('dialog').getByText(L.history.save.pickIssue).first().click()
     await wait(500)
     await win.getByRole('option', { name: /#1/ }).first().click()
     await wait(800)
     await save('save-version-issues.png')
-    await win.getByRole('dialog').getByRole('button', { name: 'Save', exact: true }).click()
+    await win.getByRole('dialog').getByRole('button', { name: L.common.save, exact: true }).click()
     await wait(2500)
     await store(`s.view = 'history'`)
     await wait(2000)
-    await button('Link to issue').click()
+    await button(L.history.linkIssue).click()
     await wait(1200)
     await save('issue-link.png')
     await win.keyboard.press('Escape')
@@ -1208,65 +1181,28 @@ shot(['issue-comments.png', 'issue-hash.png', 'save-version-issues.png', 'issue-
 shot('editor-print.png', async () => {
     await openDoc(dirs.rules, HANDBOOK)
     await win
-        .getByRole('button', { name: 'Print' })
-        .or(win.getByRole('radio', { name: 'Print' }))
+        .getByRole('button', { name: L.editor.previewKinds.print })
+        .or(win.getByRole('radio', { name: L.editor.previewKinds.print }))
         .first()
         .click()
     await wait(4000)
     await save('editor-print.png')
     await win
-        .getByRole('button', { name: 'Normal' })
-        .or(win.getByRole('radio', { name: 'Normal' }))
+        .getByRole('button', { name: L.editor.previewKinds.normal })
+        .or(win.getByRole('radio', { name: L.editor.previewKinds.normal }))
         .first()
         .click()
 })
 
-const COVER_DOC = 'handbook-with-cover.md'
-const COVER_SRC = [
-    '# Employee Handbook',
-    '',
-    '::: cover',
-    '{right}',
-    'Confidential',
-    '',
-    '{center size=26pt}',
-    'Employee Handbook',
-    '',
-    '::: {center}',
-    'Policy No. 12',
-    '',
-    'Effective April 1, 2026',
-    '',
-    'Acme Corp. Human Resources',
-    ':::',
-    ':::',
-    '',
-    '[[_TOC_]]',
-    '',
-    '## General Provisions',
-    '',
-    '### Purpose',
-    '- This Handbook sets out the terms and conditions of employment and the rules of conduct that apply to all employees of Acme Corp.',
-    '',
-    '### Definitions',
-    '- In this Handbook, "employee" means any person employed by Acme Corp. under a contract of employment, whether full-time or part-time.',
-    '',
-    '## Working Hours',
-    '',
-    '### Working Hours',
-    '- Normal working hours are 9:00 a.m. to 6:00 p.m., Monday to Friday, with a one-hour lunch break.',
-    '',
-    '### Overtime',
-    '- Employees may be asked to work overtime when business needs require it, within the limits set by law and the applicable labor agreement.',
-    '',
-].join('\n')
+const COVER_DOC = S.cover.file
+const COVER_SRC = S.cover.text
 
 shot('cover-toc.png', async () => {
     fs.writeFileSync(join(dirs.rules, COVER_DOC), COVER_SRC, 'utf8')
     await openDoc(dirs.rules, COVER_DOC)
     await win
-        .getByRole('button', { name: 'Print' })
-        .or(win.getByRole('radio', { name: 'Print' }))
+        .getByRole('button', { name: L.editor.previewKinds.print })
+        .or(win.getByRole('radio', { name: L.editor.previewKinds.print }))
         .first()
         .click()
     await store(`s.prefs.zoomLinked = false; s.prefs.previewZoom = 45`)
@@ -1274,22 +1210,23 @@ shot('cover-toc.png', async () => {
     await save('cover-toc.png')
     await store(`s.prefs.previewZoom = 100; s.prefs.zoomLinked = true`)
     await win
-        .getByRole('button', { name: 'Normal' })
-        .or(win.getByRole('radio', { name: 'Normal' }))
+        .getByRole('button', { name: L.editor.previewKinds.normal })
+        .or(win.getByRole('radio', { name: L.editor.previewKinds.normal }))
         .first()
         .click()
     fs.rmSync(join(dirs.rules, COVER_DOC), { force: true })
 })
 
+const G = S.signing
 let signingReady = false
 async function signingSetup() {
     if (signingReady) return
     await win.evaluate(`(async () => {
         await window.api.generateSigningKey()
-        await window.api.createSelfSignedCert({ name: ${JSON.stringify(ME.name)}, email: ${JSON.stringify(ME.email)}, years: 3, label: 'Personal' })
-        const corp = await window.api.createSelfSignedCert({ name: ${JSON.stringify(ME.name)}, org: 'Acme Corp.', years: 2, label: 'Acme Corp. (CEO)' })
-        await window.api.updatePdfCert(corp.id, { reason: 'Execution of the agreement' })
-        await window.api.setSigningPrefs({ pdf: { reason: 'Approval', location: 'New York', tsa: { enabled: true } } })
+        await window.api.createSelfSignedCert({ name: ${JSON.stringify(ME.name)}, email: ${JSON.stringify(ME.email)}, years: 3, label: ${JSON.stringify(G.personal)} })
+        const corp = await window.api.createSelfSignedCert({ name: ${JSON.stringify(ME.name)}, org: ${JSON.stringify(G.org)}, years: 2, label: ${JSON.stringify(G.orgLabel)} })
+        await window.api.updatePdfCert(corp.id, { reason: ${JSON.stringify(G.orgReason)} })
+        await window.api.setSigningPrefs({ pdf: { reason: ${JSON.stringify(G.reason)}, location: ${JSON.stringify(G.location)}, tsa: { enabled: true } } })
     })()`)
     signingReady = true
 }
@@ -1298,9 +1235,10 @@ shot('signature-storage.png', async () => {
     await win.evaluate(`window.api.deleteSigningKey()`)
     await repoHome(dirs.rules)
     await store(`s.openSettings('setup', 'signature')`)
-    await win.getByText('Key storage').first().waitFor()
+    await win.getByRole('tab', { name: L.signing.tabs.versions }).first().click()
+    await win.getByText(L.signing.commit.storage).first().waitFor()
     await wait(1200)
-    const rows = win.locator('.row').filter({ has: win.getByText(/^(Key storage|Signing key)$/) })
+    const rows = win.locator('.row').filter({ has: win.getByText(new RegExp(`^(${esc(L.signing.commit.storage)}|${esc(L.signing.commit.key)})$`)) })
     const boxes = (await Promise.all((await rows.all()).map((r) => r.boundingBox()))).filter((b) => !!b)
     const top = Math.min(...boxes.map((b) => b.y))
     const left = Math.min(...boxes.map((b) => b.x))
@@ -1314,22 +1252,66 @@ shot(['setup-signature.png', 'setup-signature-pdf.png'], async () => {
     await signingSetup()
     await repoHome(dirs.rules)
     await store(`s.openSettings('setup', 'signature')`)
+    await win.getByRole('tab', { name: L.signing.tabs.versions }).first().click()
     await wait(1500)
     await save('setup-signature.png')
-    await win
-        .getByRole('heading', { name: 'PDF signing' })
-        .first()
-        .evaluate((el) => el.scrollIntoView({ block: 'start' }))
+    await win.getByRole('tab', { name: L.signing.tabs.pdf, exact: true }).first().click()
     await wait(800)
     await save('setup-signature-pdf.png')
+})
+
+async function setExperiment(id: string, on: boolean) {
+    await store(`await s.saveSettings({ ...s.settings, experiments: { ...s.settings.experiments, ${JSON.stringify(id)}: ${on} } })`)
+    await wait(300)
+}
+
+shot(['setup-signature-md.png', 'editor-signatures.png'], async () => {
+    await signingSetup()
+    await setExperiment('cdsign', true)
+    const key = await win.evaluate<{ id: string }>(
+        `window.api.addMdKey({ kind: 'app', label: ${JSON.stringify(G.mdLabel)}, method: 'dns', signer: ${JSON.stringify(G.mdSigner)}, selector: '2026' })`,
+    )
+    await repoHome(dirs.rules)
+    await store(`s.openSettings('setup', 'signature')`)
+    await win.getByRole('tab', { name: L.signing.tabs.markdown, exact: true }).first().click()
+    await wait(1200)
+    await save('setup-signature-md.png')
+
+    const us = await generateEd25519()
+    const a = await signDocument(G.text, {
+        signer: us.signer,
+        method: 'tofu',
+        signerId: G.author,
+        role: 'author',
+        require: [{ method: 'tofu', signer: G.approver, role: 'approver' }],
+        extra: { x_clausedown: 'a'.repeat(40) },
+    })
+    const passkey = await createSoftwareAuthenticator('sign.clausedown.app')
+    const b = await signDocument(a.text, { signer: passkey, method: 'tofu', signerId: G.approver, role: 'approver' })
+    for (const block of [a, b]) await win.evaluate(([signer, pubkey]) => window.api.trustMdKey(signer, pubkey), [block.fields.signer, block.fields.pubkey])
+    const done = await tempDoc(dirs.contracts, G.file, b.text)
+    await wait(1500)
+    await win
+        .getByRole('button', { name: new RegExp(`^${esc(L.mdsig.pane.title)}`) })
+        .first()
+        .click()
+    await wait(1500)
+    await save('editor-signatures.png')
+    await win
+        .getByRole('button', { name: new RegExp(`^${esc(L.mdsig.pane.title)}`) })
+        .first()
+        .click()
+    await done()
+    await win.evaluate((id) => window.api.removeMdKey(id), key.id)
+    await setExperiment('cdsign', false)
 })
 
 shot('pdf-sign-dialog.png', async () => {
     await signingSetup()
     await openDoc(dirs.contracts, MSA)
-    await win.getByRole('button', { name: 'Export' }).first().click()
+    await win.getByRole('button', { name: L.editor.toolbar.export }).first().click()
     await wait(600)
-    await win.getByRole('menuitem', { name: 'Export as PDF' }).first().click()
+    await win.getByRole('menuitem', { name: L.editor.toolbar.exportPdf }).first().click()
     await wait(1200)
     await save('pdf-sign-dialog.png')
     await win.keyboard.press('Escape')
@@ -1349,23 +1331,23 @@ shot('repo-policy.png', async () => {
 shot(['seal-modal.png', 'feature-signing.png'], async () => {
     await viewport(1440, 900)
     await openDoc(dirs.contracts, MSA)
-    await cursorAt('By: ____________', { end: true })
-    await win.getByRole('button', { name: 'Insert' }).first().click()
+    await cursorAt(S.seal.at, { end: true })
+    await win.getByRole('button', { name: L.editor.toolbar.insert }).first().click()
     await wait(500)
-    await win.getByRole('menuitem', { name: 'Seal or signature' }).first().click()
+    await win.getByRole('menuitem', { name: L.editor.insert.seal }).first().click()
     await wait(800)
     await win
-        .getByRole('radio', { name: 'Latin (stamp)' })
-        .or(win.getByRole('button', { name: 'Latin (stamp)' }))
+        .getByRole('radio', { name: L.signing.sealModal.styles[S.seal.style] })
+        .or(win.getByRole('button', { name: L.signing.sealModal.styles[S.seal.style] }))
         .first()
         .click()
-    await win.getByLabel('Name').first().fill(ME.name)
-    await win.getByLabel('Bottom text (optional)').first().fill('ACME CORP.')
+    await win.getByLabel(L.signing.sealModal.name).first().fill(S.seal.name)
+    if (S.seal.sub) await win.getByLabel(L.signing.sealModal.sub).first().fill(S.seal.sub)
     await wait(800)
     await save('seal-modal.png')
-    await win.getByRole('button', { name: 'Insert', exact: true }).last().click()
+    await win.getByRole('button', { name: L.signing.sealModal.insert, exact: true }).last().click()
     await wait(2000)
-    await cursorAt('By: ____________', { end: true })
+    await cursorAt(S.seal.at, { end: true })
     await win
         .locator('.preview .cd-seal, .preview img')
         .last()
@@ -1377,22 +1359,25 @@ shot(['seal-modal.png', 'feature-signing.png'], async () => {
 })
 
 shot('received-modal.png', async () => {
-    await app.evaluate(({ ipcMain }) => {
-        ipcMain.removeHandler('pickReceivedPdf')
-        ipcMain.handle('pickReceivedPdf', async () => ({
-            path: '/tmp/Employee Handbook (signed by HR).pdf',
-            name: 'Employee Handbook (signed by HR).pdf',
-            signatures: [
-                { signer: 'Alex Morgan', signedAt: '2026-04-01T01:00:00.000Z' },
-                { signer: 'Jordan Lee', signedAt: '2026-04-02T06:30:00.000Z' },
-            ],
-        }))
-    })
+    await app.evaluate(
+        ({ ipcMain }, c) => {
+            ipcMain.removeHandler('pickReceivedPdf')
+            ipcMain.handle('pickReceivedPdf', async () => ({
+                path: `/tmp/${c.file}`,
+                name: c.file,
+                signatures: [
+                    { signer: c.me, signedAt: '2026-04-01T01:00:00.000Z' },
+                    { signer: c.jordan, signedAt: '2026-04-02T06:30:00.000Z' },
+                ],
+            }))
+        },
+        { file: S.received, me: ME.name, jordan: JORDAN },
+    )
     await openDoc(dirs.rules, HANDBOOK, 'releases')
     await wait(1500)
-    await win.getByText('Acme Corp. HR Department').filter({ visible: true }).first().click()
+    await win.getByText(R.deliverTo).filter({ visible: true }).first().click()
     await wait(1200)
-    await win.getByRole('button', { name: 'Save the signed PDF you received' }).first().click()
+    await win.getByRole('button', { name: L.signing.received.fromDelivery }).first().click()
     await wait(1200)
     await save('received-modal.png')
 })
@@ -1400,7 +1385,7 @@ shot('received-modal.png', async () => {
 // ---------- 実行 ----------
 
 const want = (name: string) => !ONLY.length || ONLY.includes(name)
-const PREFS = { language: 'en', syncOnStart: false, pushOnSave: false, notifyDue: false, reopenLastDoc: false, checkUpdateOnStart: false }
+const PREFS = { language: LANG, syncOnStart: false, pushOnSave: false, notifyDue: false, reopenLastDoc: false, checkUpdateOnStart: false }
 
 async function launch(name: string, settings: Record<string, unknown>) {
     const userData = join(tmp, `user-data-${name}`)
@@ -1411,9 +1396,9 @@ async function launch(name: string, settings: Record<string, unknown>) {
     // 細かい部分の写真は 2 倍で撮るので、画面の倍率を 2 に固定する
     app = await _electron.launch({
         executablePath: electronPath as unknown as string,
-        args: ['.', `--user-data-dir=${userData}`, '--force-device-scale-factor=2', '--lang=en-US'],
+        args: ['.', `--user-data-dir=${userData}`, '--force-device-scale-factor=2', `--lang=${LANG === 'ja' ? 'ja-JP' : 'en-US'}`],
         cwd: ROOT,
-        env: { ...env, LANG: 'en_US.UTF-8' },
+        env: { ...env, LANG: LANG === 'ja' ? 'ja_JP.UTF-8' : 'en_US.UTF-8' },
     })
     win = await app.firstWindow()
     await viewport()
@@ -1426,16 +1411,17 @@ beforeAll(async () => {
     // 画面に出るパスを短くするため、Windows 以外は /tmp に作る
     tmp = fs.mkdtempSync(join(process.platform === 'win32' ? os.tmpdir() : '/tmp', 'ClauseDown-manual-'))
     const base = join(tmp, 'repos')
-    dirs.rules = join(base, 'Acme_Internal_Rules')
-    dirs.contracts = join(base, 'Acme_Contracts')
-    dirs.city = join(base, 'Riverside_City_Grants')
-    dirs.houritsu = join(base, 'SAMPLE_houritsu')
-    dirs.beta = join(base, 'Beta_Co')
+    const N = C.repos
+    dirs.rules = join(base, N.rules.name)
+    dirs.contracts = join(base, N.contracts.name)
+    dirs.city = join(base, N.city.name)
+    dirs.houritsu = join(base, N.houritsu.name)
+    dirs.beta = join(base, N.beta.name)
     repos.push(
-        { name: 'SAMPLE_houritsu', dir: dirs.houritsu },
-        { name: 'Acme_Internal_Rules', dir: dirs.rules, section: 'Acme Corp.' },
-        { name: 'Acme_Contracts', dir: dirs.contracts, url: 'https://github.com/example-office/contracts.git', section: 'Acme Corp.' },
-        { name: 'Riverside_City_Grants', dir: dirs.city, section: 'Riverside City' },
+        { name: N.houritsu.name, dir: dirs.houritsu },
+        { name: N.rules.name, dir: dirs.rules, section: N.rules.section },
+        { name: N.contracts.name, dir: dirs.contracts, url: 'https://github.com/example-office/contracts.git', section: N.contracts.section },
+        { name: N.city.name, dir: dirs.city, section: N.city.section },
     )
     await seedRules(dirs.rules)
     await seedContracts(dirs.contracts)
@@ -1446,24 +1432,24 @@ beforeAll(async () => {
     // 初めて起動したときの画面は、リポジトリも名前もない設定で別に起動して撮る
     if (want('first-launch.png')) {
         await launch('first', { repos: [], author: { name: '', email: '' }, username: '', theme: 'light', prefs: PREFS })
-        await seen('Getting started', 60000)
+        await seen(L.home.steps.title, 60000)
         await save('first-launch.png')
         await app.close()
     }
     await launch('main', { repos, author: ME, username: '', current: dirs.rules, theme: 'light', prefs: PREFS, ai: { provider: 'ollama', model: 'gemma3' } })
-    await seen('Upcoming due dates', 60000)
+    await seen(L.home.upcoming, 60000)
     await wait(1000)
 }, 600000)
 
 afterAll(async () => {
     await app?.close().catch(() => {})
-    for (const f of COPIED) if (!ONLY.length || ONLY.includes(f)) fs.copyFileSync(join(JA_IMAGES, f), join(OUT, f))
+    for (const f of LANG === 'en' ? COPIED : []) if (!ONLY.length || ONLY.includes(f)) fs.copyFileSync(join(JA_IMAGES, f), join(OUT, f))
     if (tmp && !process.env.KEEP) fs.rmSync(tmp, { recursive: true, force: true })
     for (const f of temps) fs.rmSync(f, { force: true })
     if (failed.length) console.log(`撮れなかった画面: ${failed.join(', ')}`)
 })
 
-describe('manual screenshots (en)', () => {
+describe(`manual screenshots (${LANG})`, () => {
     for (const s of shots) {
         const name = s.names.join(', ')
         it.skipIf(!s.names.some(want))(

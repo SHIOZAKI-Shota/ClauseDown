@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { getStroke } from 'perfect-freehand'
 import { canvasPng } from '~/utils/seal-image'
+import { SIGN_INK } from '@shared/seal'
 
-const props = withDefaults(defineProps<{ color?: string }>(), { color: '#1f2937' })
+const props = withDefaults(defineProps<{ color?: string }>(), { color: SIGN_INK })
 const canvas = ref<HTMLCanvasElement | null>(null)
 const strokes = ref<number[][][]>([])
 let current: number[][] | null = null

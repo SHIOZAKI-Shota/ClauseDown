@@ -1,5 +1,4 @@
 export const docs = {
-    cancel: 'やめる',
     repository: 'リポジトリ',
     document: '文書',
     directory: 'ディレクトリ',
@@ -19,7 +18,7 @@ export const docs = {
         },
         reversed: (label: string) => `${label}（逆順）`,
         history: '改定履歴',
-        releases: '期日・有効期間・納品',
+        releases: '施行・納品',
         open: '開く',
         views: { cards: 'カード', list: '一覧', table: '詳細' },
         schedule: '期日・有効期間',

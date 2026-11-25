@@ -6,6 +6,7 @@ const app = useApp()
 const t = useT()
 const md = new MarkdownIt({ html: false, linkify: false, breaks: true }).disable('image')
 const text = ref('')
+const html = computed(() => md.render(text.value))
 const draft = ref('')
 const editing = ref(false)
 const loaded = ref(false)
@@ -66,7 +67,7 @@ function onKey(e: KeyboardEvent) {
         </div>
         <template v-else-if="text">
             <!-- eslint-disable-next-line vue/no-v-html -- markdown-it は html を無効にしている -->
-            <div ref="body" class="note" :class="{ clamp: !expanded }" v-html="md.render(text)" />
+            <div ref="body" class="note" :class="{ clamp: !expanded }" v-html="html" />
             <button v-if="long || expanded" class="more" @click="expanded = !expanded">{{ expanded ? t.home.note.showLess : t.home.note.readMore }}</button>
         </template>
         <button v-else-if="loaded" class="empty" @click="edit"><UIcon name="i-lucide-plus" />{{ t.home.note.empty }}</button>

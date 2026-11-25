@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useConfirm } from '~/composables/useConfirm'
 import type { PolicyStatus, PolicyWarning } from '@shared/api'
 import type { PolicyDraft, PolicyPerson } from '@shared/policy'
 import { useApp } from '~/stores/app'
@@ -8,6 +9,7 @@ import { sameJson, toPlain } from '~/utils/ipc'
 const emit = defineEmits<{ status: [PolicyStatus | null] }>()
 const app = useApp()
 const t = useT()
+const ask = useConfirm()
 const p = computed(() => t.value.signing.policy)
 
 const status = ref<PolicyStatus | null>(null)
@@ -42,8 +44,9 @@ async function apply(fn: () => Promise<PolicyStatus>, done?: string) {
 const signRules = () => apply(() => window.api.signLegacyRules(app.repoDir!))
 const propose = () => apply(() => window.api.proposePolicy(app.repoDir!, toPlain(draft.value!)), p.value.proposed)
 const cosign = (file: string) => apply(() => window.api.cosignPolicy(app.repoDir!, file), p.value.cosigned)
-function acceptGenesis() {
-    if (confirm(p.value.acceptGenesisConfirm)) void apply(() => window.api.acceptGenesisChange(app.repoDir!))
+async function acceptGenesis() {
+    if (await ask({ title: p.value.acceptGenesis, description: p.value.acceptGenesisConfirm, confirmLabel: p.value.acceptGenesis }))
+        void apply(() => window.api.acceptGenesisChange(app.repoDir!))
 }
 function reset() {
     if (status.value) draft.value = structuredClone(toPlain(status.value.draft))
@@ -204,7 +207,14 @@ const openPending = ref<string | null>(null)
                                     },
                                 ]"
                             >
-                                <UButton icon="i-lucide-key-round" size="xs" color="neutral" variant="outline" trailing-icon="i-lucide-chevron-down" />
+                                <UButton
+                                    icon="i-lucide-key-round"
+                                    size="xs"
+                                    color="neutral"
+                                    variant="outline"
+                                    trailing-icon="i-lucide-chevron-down"
+                                    :aria-label="p.addKey"
+                                />
                             </UDropdownMenu>
                             <UButton
                                 icon="i-lucide-trash-2"

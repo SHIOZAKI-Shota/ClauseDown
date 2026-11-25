@@ -5,7 +5,8 @@ import type { RecentDoc } from '@shared/prefs'
 import { groupRepos } from '@shared/repo-sections'
 import { useApp } from '~/stores/app'
 import { baseName } from '~/utils/folders'
-import { fmtDate, todayISO } from '~/utils/format'
+import { fmtDate } from '~/utils/format'
+import { todayISO } from '@shared/date'
 
 const app = useApp()
 const t = useT()

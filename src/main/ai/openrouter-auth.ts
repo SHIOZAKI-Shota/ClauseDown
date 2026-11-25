@@ -47,7 +47,7 @@ export async function loginOpenRouter(open: (url: string) => Promise<void>): Pro
         v6.close()
     }
     const timer = setTimeout(() => fail(new Error(t().errors.ai.openrouter.timeout)), TIMEOUT())
-    current = () => fail(new Error(t().errors.ai.openrouter.cancelled))
+    current = () => fail(new Error(t().errors.oauth.cancelled))
 
     try {
         const callback = `http://localhost:${port}/cb/${nonce}`

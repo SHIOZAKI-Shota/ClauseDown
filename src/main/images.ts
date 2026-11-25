@@ -9,7 +9,7 @@ import { imageDest, imageExt, imageMime, imagePathOf, imageSize, sniffImage, typ
 const MAX_BYTES = 20 * 1024 * 1024
 
 export async function saveImage(dir: string, docPath: unknown, data: unknown, ext: unknown): Promise<SavedImage> {
-    if (typeof docPath !== 'string' || !docPath.toLowerCase().endsWith('.md')) throw new Error(t().errors.images.mdRequired)
+    if (typeof docPath !== 'string' || !docPath.toLowerCase().endsWith('.md')) throw new Error(t().errors.docOps.mdRequired)
     if (!(data instanceof Uint8Array) || !data.length) throw new Error(t().errors.images.noData)
     if (data.length > MAX_BYTES) throw new Error(t().errors.images.tooLarge)
     const kind = sniffImage(data)

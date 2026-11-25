@@ -15,7 +15,7 @@ export const STYLE_KEYS = Object.keys(DEFAULT_STYLE) as (keyof DocStyle)[]
 export function cleanOverride(o: unknown): StyleOverride {
     if (!o || typeof o !== 'object') return {}
     const src = o as Record<string, unknown>
-    const clean = cleanStyle(src as Partial<DocStyle>)
+    const clean = cleanStyle(src)
     const out: StyleOverride = {}
     for (const k of STYLE_KEYS) if (k in src && src[k] !== undefined && src[k] !== null) (out as Record<string, unknown>)[k] = clean[k]
     return out

@@ -26,6 +26,7 @@ import { styles } from './styles'
 import { checks } from './checks'
 import { labels } from './labels'
 import { signing } from './signing'
+import { mdsig } from './mdsig'
 
 export const en: Messages = {
     common,
@@ -55,4 +56,5 @@ export const en: Messages = {
     checks,
     labels,
     signing,
+    mdsig,
 }

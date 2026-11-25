@@ -17,7 +17,8 @@ function open(dir: string) {
     else void app.switchRepo(dir)
 }
 
-const groups = computed(() => groupRepos(app.settings?.repos ?? []))
+const repos = computed(() => app.settings?.repos ?? [])
+const groups = computed(() => groupRepos(repos.value))
 const closed = useStoredRef<string[]>('clausedown.repoSections.closed', [])
 const isOpen = (g: { section: string }) => !g.section || !closed.value.includes(g.section)
 const visibleRepos = (g: { section: string; repos: RepoEntry[] }) => (isOpen(g) ? g.repos : g.repos.filter((r) => r.dir === app.repoDir))
@@ -88,7 +89,15 @@ function onDragEnd() {
             @drop.prevent="onDrop({ kind: 'top' })"
         >
             <span>{{ t.repo.list.heading }}</span>
-            <UButton icon="i-lucide-plus" size="xs" color="neutral" variant="ghost" :title="t.repo.addManage" @click="app.openSettings('setup', 'repos')" />
+            <UButton
+                icon="i-lucide-plus"
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                :title="t.repo.addManage"
+                :aria-label="t.repo.addManage"
+                @click="app.openSettings('setup', 'repos')"
+            />
         </div>
         <UContextMenu :items="menu" size="sm" :disabled="!menu.length">
             <div class="scroll" @contextmenu.capture="menuFor = null">
@@ -142,7 +151,7 @@ function onDragEnd() {
                         </button>
                     </template>
                 </template>
-                <p v-if="!app.settings?.repos.length" class="empty">{{ t.repo.list.empty }}</p>
+                <p v-if="!repos.length" class="empty">{{ t.repo.list.empty }}</p>
             </div>
         </UContextMenu>
     </div>

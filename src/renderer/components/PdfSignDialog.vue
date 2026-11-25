@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { useConfirm } from '~/composables/useConfirm'
 import { usePdfSign } from '~/composables/usePdfSign'
 import { useT } from '~/composables/useT'
 
 const { prompt } = usePdfSign()
 const t = useT()
+const ask = useConfirm()
 const m = computed(() => t.value.signing.myna)
 const p = computed(() => t.value.signing.pdf)
 const certId = ref('')
@@ -22,14 +24,14 @@ watch(prompt, (v) => {
 function cancel() {
     prompt.value?.resolve(null)
 }
-function submit() {
+async function submit() {
     if (!prompt.value || !cert.value) return
     if (!isMyna.value) {
         prompt.value.resolve({ certId: certId.value })
         return
     }
     if (!validPin.value) return
-    if (retries.value === 1 && !confirm(m.value.lastTry)) return
+    if (retries.value === 1 && !(await ask({ title: m.value.lastTry, confirmLabel: t.value.common.proceed, color: 'error' }))) return
     const value = pin.value.toUpperCase()
     pin.value = ''
     prompt.value.resolve({ certId: certId.value, pin: value })
@@ -54,8 +56,8 @@ function submit() {
             </div>
         </template>
         <template #footer>
-            <div class="footer">
-                <UButton :label="t.common.cancel" color="neutral" variant="ghost" @click="cancel" />
+            <div class="cd-modal-foot">
+                <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="cancel" />
                 <UButton :label="m.sign" :disabled="!cert || (isMyna && !validPin)" icon="i-lucide-pen-line" :autofocus="!isMyna" @click="submit" />
             </div>
         </template>
@@ -70,11 +72,5 @@ function submit() {
 .note {
     font-size: 12px;
     margin: 0;
-}
-.footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    width: 100%;
 }
 </style>

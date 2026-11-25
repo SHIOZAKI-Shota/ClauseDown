@@ -32,7 +32,6 @@ export const issues: Messages['issues'] = {
     titlePlaceholder: 'e.g. Revisit the definition of holidays in Article 12',
     fBody: 'Description',
     bodyHelp: 'Markdown is supported.',
-    cancel: 'Cancel',
     create: 'Create',
     reloadTip: 'Reload comments and other changes made on the site',
     reload: 'Reload',

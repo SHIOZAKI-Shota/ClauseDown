@@ -7,7 +7,7 @@ export interface FolderGroup {
 
 export const folderOf = (path: string) => (path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '')
 
-export const baseName = (path: string) => path.split(/[\\/]/).filter(Boolean).pop() ?? path
+export const baseName = (path: string) => path.split(/[\\/]/).findLast(Boolean) ?? path
 
 export function groupByFolder(docs: DocFile[], query = ''): FolderGroup[] {
     const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean)

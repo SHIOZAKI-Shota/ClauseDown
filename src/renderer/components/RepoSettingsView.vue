@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useConfirm } from '~/composables/useConfirm'
 import type { RepoRules } from '@shared/api'
 import { FORGE_LABEL } from '@shared/forge'
 import { inheritedStyle, type StyleOverride } from '@shared/folder-style'
@@ -12,6 +13,7 @@ import { usePdfSign } from '~/composables/usePdfSign'
 
 const app = useApp()
 const t = useT()
+const ask = useConfirm()
 
 const SECTIONS = computed(() => [
     { id: 'basic', label: t.value.repo.settings.sections.basic, icon: 'i-lucide-archive' },
@@ -38,7 +40,18 @@ watch(
 )
 const openFolder = () => app.repoDir && window.api.openPath(app.repoDir)
 const openUrl = (u: string) => window.api.openExternal(u)
-const removeRepo = () => app.repoDir && app.forgetRepo(app.repoDir)
+async function removeRepo() {
+    if (
+        app.repoDir &&
+        (await ask({
+            title: t.value.repo.removeFromList,
+            description: t.value.repo.settings.removeDesc,
+            confirmLabel: t.value.repo.removeFromList,
+            color: 'error',
+        }))
+    )
+        await app.forgetRepo(app.repoDir)
+}
 
 const webUrl = computed(() => app.repo?.url?.replace(/.git$/, ''))
 const account = computed(() => {

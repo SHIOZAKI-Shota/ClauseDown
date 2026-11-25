@@ -108,7 +108,7 @@ export const settings = {
     mcp: {
         enable: '外部の AI からつなぐ（MCP）',
         enableDesc:
-            'Claude Code などの AI から、ローカル の ClauseDown の文書を読む・チェックする・書き換えることができるようにします。アプリの起動中に、ローカル の中からだけ接続できます。版の保存・現行版への反映・納品はできません。',
+            'Claude Code などの AI から、この PC の ClauseDown の文書を読む・チェックする・書き換えることができるようにします。アプリの起動中に、この PC の中からだけ接続できます。版の保存・現行版への反映・納品はできません。',
         port: 'ポート番号',
         portDesc: 'ほかのアプリと重なったときだけ変えてください。',
         listening: '待ち受け中',
@@ -152,7 +152,7 @@ export const settings = {
         empty: 'リポジトリがありません。下の「リポジトリを追加する」から追加してください。',
         addHeading: 'リポジトリを追加する',
         addMethod: '追加方法',
-        modes: { new: '新しく作る（ローカル）', open: 'ローカル にあるフォルダを開く', clone: 'GitHub・GitLab から取得' },
+        modes: { new: '新しく作る（ローカル）', open: 'この PC にあるフォルダを開く', clone: 'GitHub・GitLab から取得' },
         url: 'リポジトリの URL',
         urlDesc: '例：https://github.com/組織名/リポジトリ名、https://gitlab.com/組織名/リポジトリ名',
         urlPlaceholder: 'https://github.com/組織名/リポジトリ名',
@@ -179,11 +179,10 @@ export const settings = {
         dupTitle: 'リポジトリを複製',
         dupDesc: (name: string) => `「${name}」を、版の履歴ごと別のフォルダにコピーします。コピーにはリモートを付けません。`,
         dupName: '新しいリポジトリの名前',
-        cancel: 'やめる',
         duplicated: (from: string, to: string) => `「${from}」を「${to}」として複製しました`,
         forkWith: (where: string) => `${where} でフォーク`,
         forkDesc: (where: string, name: string) =>
-            `${where} のあなたのアカウントに「${name}」のフォークを作ります。ローカル のリポジトリの送信先をフォークに切り替え、元のリポジトリは upstream として残します。`,
+            `${where} のあなたのアカウントに「${name}」のフォークを作ります。手元のリポジトリの送信先をフォークに切り替え、元のリポジトリは upstream として残します。`,
         forked: (url: string) => `フォークしました。送信先を ${url} に切り替えました`,
     },
     developer: {
@@ -205,7 +204,7 @@ export const settings = {
         resetPrefsConfirm: '表示・エディタ・同期・期日の通知・書き出し・印刷の書式・版組 CSS が、最初の状態に戻ります。',
         resetAll: 'すべてを初期状態に戻す',
         resetAllDesc:
-            'ローカル に保存した設定・ログイン・AI の API キー・リポジトリの一覧をすべて消して、アプリを起動し直します。リポジトリのフォルダと文書は消えません。',
+            'この PC に保存した設定・ログイン・AI の API キー・リポジトリの一覧をすべて消して、アプリを起動し直します。リポジトリのフォルダと文書は消えません。',
         resetAllButton: 'すべて初期化',
         resetAllConfirm:
             '設定・ログイン・AI の API キー・リポジトリの一覧を消して、アプリを起動し直します。リポジトリのフォルダと文書は消えません。元には戻せません。',

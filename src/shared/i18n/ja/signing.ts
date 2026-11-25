@@ -27,6 +27,7 @@ export const signing = {
     },
     certFile: '証明書',
     section: '電子署名',
+    tabs: { versions: '版・承認', pdf: 'PDF', markdown: 'Markdown（試験中）', seals: '印影・署名の画像' },
     commit: {
         heading: '版の署名',
         mode: '版に署名する',
@@ -56,6 +57,7 @@ export const signing = {
         remove: '削除',
         copyPublic: '公開鍵をコピー',
         copied: '公開鍵をコピーしました',
+        confirmRemove: '鍵を削除すると、この鍵で署名した版は「不明な鍵」と表示されます。削除しますか？',
         confirmRecreate: '鍵を再作成すると、旧い鍵で署名した版は「不明な鍵」と表示されます。GitHub・GitLab への登録も再実行してください',
         register: (site: string, login: string) => `${site}（${login}）に登録`,
         registerDesc: '登録後は、サイトの履歴で版に「Verified」と表示されます。版のメールアドレスが、そのアカウントで確認済みであることが必要です',
@@ -181,6 +183,7 @@ export const signing = {
         empty: '未登録',
         create: '作成',
         remove: '削除',
+        confirmRemove: 'この印影・署名を削除しますか？文書に挿入済みの画像は残ります',
         kinds: { seal: '印影', sign: '署名', image: '画像' },
     },
     sealModal: {
@@ -202,8 +205,9 @@ export const signing = {
         insert: '挿入',
         saveOnly: '保存',
         size: '寸法（mm）',
-        outsideClosing:
-            'カーソルが署名欄（後文）の外にあります。署名欄に挿入しますか？（署名欄がない場合は文書末尾に追加します。「キャンセル」でカーソル位置に挿入します）',
+        outsideClosing: 'カーソルが署名欄（後文）の外にあります。署名欄に挿入しますか？',
+        outsideClosingDesc: '署名欄がない場合は、文書の末尾に追加します。',
+        toClosing: '署名欄に挿入',
         addClosing: '署名欄を追加して挿入',
         here: 'カーソル位置に挿入',
         tooMany: '漢字の丸印は 4 字までです',
@@ -296,6 +300,7 @@ export const signing = {
         noKey: '鍵なし',
         addPerson: '追加',
         addMyKey: '自分の鍵を追加',
+        addKey: '鍵を追加',
         pasteKey: '公開鍵を貼り付け',
         fromForge: 'GitHub・GitLab から取得',
         noForgeKeys: '公開された署名鍵が見つかりません',

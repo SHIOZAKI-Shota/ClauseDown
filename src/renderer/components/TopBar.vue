@@ -6,7 +6,7 @@ const app = useApp()
 const t = useT()
 
 const tabs = computed(() => [
-    { label: t.value.shell.topBar.edit, value: 'editor', icon: 'i-lucide-pencil' },
+    { label: t.value.shell.topBar.edit, value: 'editor', icon: 'i-lucide-square-pen' },
     { label: t.value.shell.topBar.history, value: 'history', icon: 'i-lucide-git-commit-vertical' },
     { label: t.value.shell.topBar.compare, value: 'compare', icon: 'i-lucide-columns-2' },
     { label: t.value.shell.topBar.releases, value: 'releases', icon: 'i-lucide-calendar-check' },
@@ -74,7 +74,8 @@ const savedMessage = computed(() => (lastSaved.value ? firstLine(lastSaved.value
                 @click="app.openSchedule()"
             >
                 <template v-if="app.dueCount?.due" #trailing>
-                    <UBadge :label="String(app.dueCount.due)" :color="app.dueCount.overdue ? 'error' : 'neutral'" variant="subtle" size="sm" />
+                    <UBadge :label="String(app.dueCount.due)" color="neutral" variant="subtle" size="sm" />
+                    <UBadge v-if="app.dueCount.overdue" :label="t.schedule.overdueCount(app.dueCount.overdue)" color="error" variant="subtle" size="sm" />
                 </template>
             </UButton>
             <UButton :label="t.common.issues" icon="i-lucide-list-todo" size="sm" color="neutral" variant="ghost" data-guide="issues" @click="app.openIssues()">
@@ -102,9 +103,9 @@ const savedMessage = computed(() => (lastSaved.value ? firstLine(lastSaved.value
 <style scoped>
 .doc {
     display: flex;
-    flex-direction: column;
-    align-items: center;
+    align-items: baseline;
     justify-content: center;
+    gap: 10px;
     min-width: 0;
     max-width: 100%;
 }
@@ -113,12 +114,15 @@ const savedMessage = computed(() => (lastSaved.value ? firstLine(lastSaved.value
     font-size: 14px;
     white-space: nowrap;
     line-height: 1.3;
-    max-width: 100%;
+    min-width: 0;
+    flex: 0 1 auto;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .version {
+    flex: 0 1 auto;
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -156,11 +160,19 @@ const savedMessage = computed(() => (lastSaved.value ? firstLine(lastSaved.value
 .dirty {
     color: var(--cd-draft);
 }
+
+@media (max-width: 1180px) {
+    .doc {
+        display: none;
+    }
+}
 </style>
 
 <style>
 /* UDashboardNavbar の中の要素には scoped の印が付かないので、ここは scoped にしない */
 .cd-nav {
+    height: 44px !important;
+    min-height: 44px;
     display: grid !important;
     grid-template-columns: minmax(max-content, 1fr) minmax(0, max-content) minmax(max-content, 1fr);
     column-gap: 16px;

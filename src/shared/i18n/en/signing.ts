@@ -29,6 +29,7 @@ export const signing: Messages['signing'] = {
     },
     certFile: 'Certificate',
     section: 'Digital signatures',
+    tabs: { versions: 'Versions and approvals', pdf: 'PDF', markdown: 'Markdown (experimental)', seals: 'Seals and signature images' },
     commit: {
         heading: 'Version signing',
         mode: 'Sign versions',
@@ -59,6 +60,7 @@ export const signing: Messages['signing'] = {
         remove: 'Delete',
         copyPublic: 'Copy public key',
         copied: 'Public key copied',
+        confirmRemove: 'Versions signed with this key will show as signed by an unknown key. Delete it?',
         confirmRecreate: 'Versions signed with the old key will show as signed by an unknown key. Register the new key on GitHub and GitLab again',
         register: (site, login) => `Register on ${site} (${login})`,
         registerDesc: "Once registered, the site shows your versions as Verified. The version's email address must be verified on that account",
@@ -186,6 +188,7 @@ export const signing: Messages['signing'] = {
         empty: 'None yet',
         create: 'Create',
         remove: 'Delete',
+        confirmRemove: 'Delete this seal or signature? Images already inserted into documents stay.',
         kinds: { seal: 'Seal', sign: 'Signature', image: 'Image' },
     },
     sealModal: {
@@ -207,8 +210,9 @@ export const signing: Messages['signing'] = {
         insert: 'Insert',
         saveOnly: 'Save',
         size: 'Size (mm)',
-        outsideClosing:
-            'The cursor is outside the signature block. Insert into the signature block? (One is added at the end if there is none. Cancel inserts at the cursor.)',
+        outsideClosing: 'The cursor is outside the signature block. Insert into the signature block?',
+        outsideClosingDesc: 'One is added at the end if there is none.',
+        toClosing: 'Insert into the signature block',
         addClosing: 'Add a signature block and insert',
         here: 'Insert here',
         tooMany: 'A kanji seal can have up to 4 characters',
@@ -302,6 +306,7 @@ export const signing: Messages['signing'] = {
         noKey: 'No key',
         addPerson: 'Add',
         addMyKey: 'Add my key',
+        addKey: 'Add a key',
         pasteKey: 'Paste public key',
         fromForge: 'Get from GitHub/GitLab',
         noForgeKeys: 'No published signing keys were found',

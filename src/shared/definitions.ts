@@ -55,15 +55,15 @@ function englishDefinitions(text: string, out: Definition[]) {
         const body = m[1]
         const quoted = [...body.matchAll(new RegExp(EN_TERM, 'g'))]
         if (!quoted.length || !EN_PAREN_FILLER.test(body.replace(new RegExp(EN_TERM, 'g'), ' '))) continue
-        const inner = m.index! + 1
+        const inner = m.index + 1
         for (const q of quoted) {
-            const from = inner + q.index! + 1
-            out.push({ term: q[1], from, to: from + q[1].length, sentenceFrom: sentenceStart(text, m.index!, true), kind: 'hereinafter' })
+            const from = inner + q.index + 1
+            out.push({ term: q[1], from, to: from + q[1].length, sentenceFrom: sentenceStart(text, m.index, true), kind: 'hereinafter' })
         }
     }
     for (const m of text.matchAll(EN_MEANS_RE)) {
-        const from = m.index! + 1
-        out.push({ term: m[1], from, to: from + m[1].length, sentenceFrom: sentenceStart(text, m.index!, true), kind: 'means' })
+        const from = m.index + 1
+        out.push({ term: m[1], from, to: from + m[1].length, sentenceFrom: sentenceStart(text, m.index, true), kind: 'means' })
     }
 }
 
@@ -71,15 +71,15 @@ export function findDefinitions(source: string): Definition[] {
     const text = maskIgnored(source.replace(/\r\n?/g, '\n'))
     const out: Definition[] = []
     for (const m of text.matchAll(/以下(?:単に|これらを|これを|単にこれらを)?(「[^（）\n]*?」)(?:という|と総称する)。?）/g)) {
-        const inner = m.index! + m[0].indexOf(m[1])
+        const inner = m.index + m[0].indexOf(m[1])
         for (const q of m[1].matchAll(/「([^「」\n]+)」/g)) {
-            const from = inner + q.index! + 1
-            out.push({ term: q[1], from, to: from + q[1].length, sentenceFrom: sentenceStart(text, m.index!), kind: 'hereinafter' })
+            const from = inner + q.index + 1
+            out.push({ term: q[1], from, to: from + q[1].length, sentenceFrom: sentenceStart(text, m.index), kind: 'hereinafter' })
         }
     }
     for (const m of text.matchAll(/「([^「」\n]+)」とは、/g)) {
-        const from = m.index! + 1
-        out.push({ term: m[1], from, to: from + m[1].length, sentenceFrom: sentenceStart(text, m.index!), kind: 'means' })
+        const from = m.index + 1
+        out.push({ term: m[1], from, to: from + m[1].length, sentenceFrom: sentenceStart(text, m.index), kind: 'means' })
     }
     if (/["\u201c]/.test(text)) englishDefinitions(text, out)
     return out.sort((a, b) => a.from - b.from)
@@ -112,7 +112,7 @@ function latinTermRe(term: string): RegExp {
 }
 
 function occurrences(text: string, term: string): number[] {
-    if (isLatinTerm(term)) return [...text.matchAll(latinTermRe(term))].map((m) => m.index!)
+    if (isLatinTerm(term)) return [...text.matchAll(latinTermRe(term))].map((m) => m.index)
     const out: number[] = []
     for (let i = text.indexOf(term); i >= 0; i = text.indexOf(term, i + term.length)) out.push(i)
     return out

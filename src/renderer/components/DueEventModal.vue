@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { KIND_COLORS, type DueEvent, type DueEventInput, type EventKind, type RepoSchedule } from '@shared/schedule'
 import { useApp } from '~/stores/app'
-import { todayISO } from '~/utils/format'
+import { todayISO } from '@shared/date'
 import { useT } from '~/composables/useT'
 
 const props = defineProps<{
@@ -171,7 +171,7 @@ function save() {
                     class="del"
                     @click="emit('remove', event.id, dir)"
                 />
-                <UButton :label="t.schedule.cancel" color="neutral" variant="outline" @click="emit('close')" />
+                <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="emit('close')" />
                 <UButton :label="event ? t.common.save : t.schedule.modal.add" :disabled="!!error" :loading="app.busy" @click="save" />
             </div>
         </template>

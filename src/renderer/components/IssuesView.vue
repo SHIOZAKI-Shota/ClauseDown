@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import MarkdownIt from 'markdown-it'
 import type { CommitInfo, Issue, IssueDetail } from '@shared/api'
+import type { IssueState } from '@shared/forge'
 import { useApp } from '~/stores/app'
 import { fmtDate } from '~/utils/format'
+import { ipcError } from '~/utils/ipc'
 import { MOD_KEY } from '~/utils/platform'
 import { useT } from '~/composables/useT'
 
@@ -19,10 +21,15 @@ const dir = app.repoDir!
 const list = ref<Issue[]>([])
 const loading = ref(true)
 const error = ref('')
-const filter = ref<'open' | 'closed'>('open')
+const filter = ref<IssueState>('open')
 const q = ref('')
 const selected = ref<number | null>(null)
 const detail = ref<IssueDetail | null>(null)
+const detailHtml = computed(() => {
+    const d = detail.value
+    if (!d) return { body: '', comments: new Map<string, string>() }
+    return { body: md.render(d.body), comments: new Map(d.comments.map((c) => [c.id, md.render(c.body)])) }
+})
 const pending = ref(0)
 
 const creating = ref(false)
@@ -52,7 +59,7 @@ async function load() {
         app.openIssueCount = list.value.filter((i) => i.state === 'open').length
         pending.value = await window.api.pendingLocalIssues(dir).catch(() => 0)
     } catch (e) {
-        error.value = String((e as Error).message ?? e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
+        error.value = ipcError(e)
     } finally {
         loading.value = false
     }
@@ -101,8 +108,11 @@ function startNew(draft?: { title: string; body: string }) {
     newBody.value = draft?.body ?? ''
 }
 
+const saving = ref(false)
 async function create() {
+    saving.value = true
     const made = await app.run(() => window.api.createIssue(dir, { title: newTitle.value, body: newBody.value }), t.value.issues.created)
+    saving.value = false
     if (!made) return
     await load()
     filter.value = 'open'
@@ -118,7 +128,9 @@ function startEdit() {
 
 async function saveEdit() {
     if (!detail.value) return
+    saving.value = true
     const ok = await app.run(() => window.api.updateIssue(dir, detail.value!.n, { title: editTitle.value, body: editBody.value }))
+    saving.value = false
     if (!ok) return
     editing.value = false
     await Promise.all([load(), open(detail.value.n)])
@@ -186,15 +198,7 @@ onMounted(async () => {
 
 <template>
     <div class="issues">
-        <UButton
-            :label="app.pageReturnLabel('issues')"
-            icon="i-lucide-arrow-left"
-            size="sm"
-            color="neutral"
-            variant="ghost"
-            class="back"
-            @click="app.leavePage('issues')"
-        />
+        <BackButton :label="app.pageReturnLabel('issues')" class="back" @click="app.leavePage('issues')" />
         <header class="head">
             <div class="title">
                 <h2>{{ t.issues.title }}</h2>
@@ -243,163 +247,173 @@ onMounted(async () => {
             </aside>
 
             <section class="detail">
-                <div v-if="creating" class="cd-form">
-                    <h3>{{ t.issues.new }}</h3>
-                    <UFormField :label="t.issues.fTitle">
-                        <UInput v-model="newTitle" class="w-full" autofocus :placeholder="t.issues.titlePlaceholder" />
-                    </UFormField>
-                    <UFormField :label="t.issues.fBody" :description="t.issues.bodyHelp">
-                        <UTextarea v-model="newBody" :rows="10" class="w-full" />
-                    </UFormField>
-                    <div class="cd-modal-foot">
-                        <UButton :label="t.issues.cancel" color="neutral" variant="outline" @click="creating = false" />
-                        <UButton :label="t.issues.create" icon="i-lucide-plus" :disabled="!newTitle.trim()" @click="create" />
+                <RenderScope>
+                    <div v-if="creating" class="cd-form">
+                        <h3>{{ t.issues.new }}</h3>
+                        <UFormField :label="t.issues.fTitle">
+                            <UInput v-model="newTitle" class="w-full" autofocus :placeholder="t.issues.titlePlaceholder" />
+                        </UFormField>
+                        <UFormField :label="t.issues.fBody" :description="t.issues.bodyHelp">
+                            <UTextarea v-model="newBody" :rows="10" class="w-full" />
+                        </UFormField>
+                        <div class="cd-modal-foot">
+                            <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="creating = false" />
+                            <UButton :label="t.issues.create" icon="i-lucide-plus" :loading="saving" :disabled="!newTitle.trim()" @click="create" />
+                        </div>
                     </div>
-                </div>
 
-                <template v-else-if="detail">
-                    <div class="d-head">
-                        <UBadge
-                            :label="detail.state === 'open' ? t.issues.open : t.issues.closedState"
-                            :color="detail.state === 'open' ? 'success' : 'neutral'"
-                            variant="subtle"
-                            :icon="detail.state === 'open' ? 'i-lucide-circle-dot' : 'i-lucide-circle-check'"
-                        />
-                        <h3 v-if="!editing">#{{ detail.n }} {{ detail.title }}</h3>
-                        <UInput v-else v-model="editTitle" class="grow" />
-                        <span class="cd-grow" />
-                        <UTooltip :text="t.issues.reloadTip">
+                    <template v-else-if="detail">
+                        <div class="d-head">
+                            <UBadge
+                                :label="detail.state === 'open' ? t.issues.open : t.issues.closedState"
+                                :color="detail.state === 'open' ? 'success' : 'neutral'"
+                                variant="subtle"
+                                :icon="detail.state === 'open' ? 'i-lucide-circle-dot' : 'i-lucide-circle-check'"
+                            />
+                            <h3 v-if="!editing">#{{ detail.n }} {{ detail.title }}</h3>
+                            <UInput v-else v-model="editTitle" class="cd-grow" />
+                            <span class="cd-grow" />
+                            <UTooltip :text="t.issues.reloadTip">
+                                <UButton
+                                    icon="i-lucide-refresh-cw"
+                                    size="sm"
+                                    color="neutral"
+                                    variant="ghost"
+                                    :aria-label="t.issues.reload"
+                                    :loading="reloading"
+                                    @click="reloadDetail"
+                                />
+                            </UTooltip>
                             <UButton
-                                icon="i-lucide-refresh-cw"
+                                v-if="detail.url"
+                                :label="t.issues.openOn(sourceLabel)"
+                                icon="i-lucide-external-link"
                                 size="sm"
                                 color="neutral"
                                 variant="ghost"
-                                :aria-label="t.issues.reload"
-                                :loading="reloading"
-                                @click="reloadDetail"
-                            />
-                        </UTooltip>
-                        <UButton
-                            v-if="detail.url"
-                            :label="t.issues.openOn(sourceLabel)"
-                            icon="i-lucide-external-link"
-                            size="sm"
-                            color="neutral"
-                            variant="ghost"
-                            @click="openOnSite(detail.url)"
-                        />
-                    </div>
-                    <p class="cd-muted sub">
-                        {{ t.issues.createdBy(detail.author ?? '', dateOf(detail.createdAt)) }}
-                        <template v-if="detail.state === 'closed' && detail.closedAt">{{ t.issues.closedOn(dateOf(detail.closedAt)) }}</template>
-                    </p>
-
-                    <div class="actions">
-                        <template v-if="!editing">
-                            <UButton
-                                :label="t.issues.linkVersion"
-                                icon="i-lucide-link"
-                                size="sm"
-                                color="neutral"
-                                variant="outline"
-                                @click="openPicker('link')"
-                            />
-                            <UButton
-                                v-if="detail.state === 'open'"
-                                :label="t.issues.close"
-                                icon="i-lucide-circle-check"
-                                size="sm"
-                                @click="openPicker('close')"
-                            />
-                            <UButton v-else :label="t.issues.reopen" icon="i-lucide-rotate-ccw" size="sm" color="neutral" variant="outline" @click="reopen" />
-                            <UButton :label="t.issues.edit" icon="i-lucide-pencil" size="sm" color="neutral" variant="ghost" @click="startEdit" />
-                        </template>
-                        <template v-else>
-                            <UButton :label="t.issues.cancel" size="sm" color="neutral" variant="outline" @click="editing = false" />
-                            <UButton :label="t.common.save" size="sm" :disabled="!editTitle.trim()" @click="saveEdit" />
-                        </template>
-                    </div>
-
-                    <UTextarea v-if="editing" v-model="editBody" :rows="10" class="w-full" />
-                    <div v-else-if="detail.body.trim()" class="md" v-html="md.render(detail.body)" />
-                    <p v-else class="cd-muted">{{ t.issues.noBody }}</p>
-
-                    <h4>{{ t.issues.linkedVersions }}</h4>
-                    <p v-if="!detail.versions.length" class="cd-muted">
-                        {{ t.issues.noLinked(detail.n) }}
-                    </p>
-                    <ul v-else class="vers">
-                        <li v-for="v in detail.versions" :key="v.oid">
-                            <UBadge :label="t.issues.how[v.how]" size="sm" :color="v.how === 'close' ? 'success' : 'neutral'" variant="subtle" />
-                            <UTooltip :text="app.currentDoc ? t.issues.openInHistory : t.issues.needDoc">
-                                <button class="oid" :disabled="!app.currentDoc" @click="openVersion(v.oid)">{{ short(v.oid) }}</button>
-                            </UTooltip>
-                            <span class="vmsg">{{ v.message.split('\n')[0] }}</span>
-                            <span class="cd-muted">{{ v.at ? fmtDate(v.at, 'ymd') : '' }}</span>
-                        </li>
-                    </ul>
-                    <template v-if="detail.drafts.length">
-                        <h4>{{ t.issues.linkedDrafts }}</h4>
-                        <ul class="vers">
-                            <li v-for="b in detail.drafts" :key="b"><UIcon name="i-lucide-git-branch" />{{ b.replace(/^案\//, '') }}</li>
-                        </ul>
-                    </template>
-
-                    <h4>
-                        {{ t.issues.comments
-                        }}<span v-if="detail.comments.some((c) => c.kind === 'user')" class="cd-muted count">{{
-                            detail.comments.filter((c) => c.kind === 'user').length
-                        }}</span>
-                    </h4>
-                    <ol class="thread">
-                        <template v-for="c in detail.comments" :key="c.id">
-                            <li v-if="c.kind === 'user'" class="comment">
-                                <div class="c-head">
-                                    <UIcon name="i-lucide-message-square" />
-                                    <strong>{{ c.by ?? t.issues.unknown }}</strong>
-                                    <span class="cd-muted">{{ fmtDate(c.at, 'ymdhm') }}</span>
-                                </div>
-                                <div class="md c-body" v-html="md.render(c.body)" />
-                            </li>
-                            <li v-else class="event cd-muted">
-                                <UIcon :name="c.kind === 'close' ? 'i-lucide-circle-check' : 'i-lucide-link'" />
-                                <span>{{ t.issues.eventPre(c.by ?? '', c.kind) }}</span>
-                                <UTooltip :text="app.currentDoc ? t.issues.openInHistory : t.issues.needDoc">
-                                    <button class="oid" :disabled="!app.currentDoc" @click="openVersion(c.oid!)">{{ short(c.oid!) }}</button>
-                                </UTooltip>
-                                <span v-if="t.issues.eventPost(c.kind)">{{ t.issues.eventPost(c.kind) }}</span>
-                                <span class="at">{{ fmtDate(c.at, 'ymdhm') }}</span>
-                            </li>
-                        </template>
-                    </ol>
-                    <div class="composer">
-                        <UTextarea
-                            v-model="draft"
-                            :rows="3"
-                            autoresize
-                            :maxrows="12"
-                            class="w-full"
-                            :placeholder="t.issues.commentPlaceholder"
-                            @keydown="onDraftKey"
-                        />
-                        <div class="c-foot">
-                            <span class="cd-muted hint">{{ t.issues.sendHint(MOD_KEY) }}</span>
-                            <UButton
-                                :label="t.issues.comment"
-                                icon="i-lucide-send"
-                                size="sm"
-                                :loading="posting"
-                                :disabled="!draft.trim()"
-                                @click="postComment"
+                                @click="openOnSite(detail.url)"
                             />
                         </div>
-                    </div>
-                </template>
+                        <p class="cd-muted sub">
+                            {{ t.issues.createdBy(detail.author ?? '', dateOf(detail.createdAt)) }}
+                            <template v-if="detail.state === 'closed' && detail.closedAt">{{ t.issues.closedOn(dateOf(detail.closedAt)) }}</template>
+                        </p>
 
-                <div v-else class="empty cd-muted">
-                    <UIcon name="i-lucide-list-todo" class="big" />
-                    <p>{{ t.issues.pickHint }}</p>
-                </div>
+                        <div class="actions">
+                            <template v-if="!editing">
+                                <UButton
+                                    :label="t.issues.linkVersion"
+                                    icon="i-lucide-link"
+                                    size="sm"
+                                    color="neutral"
+                                    variant="outline"
+                                    @click="openPicker('link')"
+                                />
+                                <UButton
+                                    v-if="detail.state === 'open'"
+                                    :label="t.issues.close"
+                                    icon="i-lucide-circle-check"
+                                    size="sm"
+                                    @click="openPicker('close')"
+                                />
+                                <UButton
+                                    v-else
+                                    :label="t.issues.reopen"
+                                    icon="i-lucide-rotate-ccw"
+                                    size="sm"
+                                    color="neutral"
+                                    variant="outline"
+                                    @click="reopen"
+                                />
+                                <UButton :label="t.issues.edit" icon="i-lucide-pencil" size="sm" color="neutral" variant="ghost" @click="startEdit" />
+                            </template>
+                            <template v-else>
+                                <UButton :label="t.common.cancel" size="sm" color="neutral" variant="outline" @click="editing = false" />
+                                <UButton :label="t.common.save" size="sm" :loading="saving" :disabled="!editTitle.trim()" @click="saveEdit" />
+                            </template>
+                        </div>
+
+                        <UTextarea v-if="editing" v-model="editBody" :rows="10" class="w-full" />
+                        <div v-else-if="detail.body.trim()" class="md" v-html="detailHtml.body" />
+                        <p v-else class="cd-muted">{{ t.issues.noBody }}</p>
+
+                        <h4>{{ t.issues.linkedVersions }}</h4>
+                        <p v-if="!detail.versions.length" class="cd-muted">
+                            {{ t.issues.noLinked(detail.n) }}
+                        </p>
+                        <ul v-else class="vers">
+                            <li v-for="v in detail.versions" :key="v.oid">
+                                <UBadge :label="t.issues.how[v.how]" size="sm" :color="v.how === 'close' ? 'success' : 'neutral'" variant="subtle" />
+                                <UTooltip :text="app.currentDoc ? t.issues.openInHistory : t.issues.needDoc">
+                                    <button class="oid" :disabled="!app.currentDoc" @click="openVersion(v.oid)">{{ short(v.oid) }}</button>
+                                </UTooltip>
+                                <span class="vmsg">{{ v.message.split('\n')[0] }}</span>
+                                <span class="cd-muted">{{ v.at ? fmtDate(v.at, 'ymd') : '' }}</span>
+                            </li>
+                        </ul>
+                        <template v-if="detail.drafts.length">
+                            <h4>{{ t.issues.linkedDrafts }}</h4>
+                            <ul class="vers">
+                                <li v-for="b in detail.drafts" :key="b"><UIcon name="i-lucide-git-branch" />{{ b.replace(/^案\//, '') }}</li>
+                            </ul>
+                        </template>
+
+                        <h4>
+                            {{ t.issues.comments
+                            }}<span v-if="detail.comments.some((c) => c.kind === 'user')" class="cd-muted count">{{
+                                detail.comments.filter((c) => c.kind === 'user').length
+                            }}</span>
+                        </h4>
+                        <ol class="thread">
+                            <template v-for="c in detail.comments" :key="c.id">
+                                <li v-if="c.kind === 'user'" class="comment">
+                                    <div class="c-head">
+                                        <UIcon name="i-lucide-message-square" />
+                                        <strong>{{ c.by ?? t.issues.unknown }}</strong>
+                                        <span class="cd-muted">{{ fmtDate(c.at, 'ymdhm') }}</span>
+                                    </div>
+                                    <div class="md c-body" v-html="detailHtml.comments.get(c.id)" />
+                                </li>
+                                <li v-else class="event cd-muted">
+                                    <UIcon :name="c.kind === 'close' ? 'i-lucide-circle-check' : 'i-lucide-link'" />
+                                    <span>{{ t.issues.eventPre(c.by ?? '', c.kind) }}</span>
+                                    <UTooltip :text="app.currentDoc ? t.issues.openInHistory : t.issues.needDoc">
+                                        <button class="oid" :disabled="!app.currentDoc" @click="openVersion(c.oid!)">{{ short(c.oid!) }}</button>
+                                    </UTooltip>
+                                    <span v-if="t.issues.eventPost(c.kind)">{{ t.issues.eventPost(c.kind) }}</span>
+                                    <span class="at">{{ fmtDate(c.at, 'ymdhm') }}</span>
+                                </li>
+                            </template>
+                        </ol>
+                        <div class="composer">
+                            <UTextarea
+                                v-model="draft"
+                                :rows="3"
+                                autoresize
+                                :maxrows="12"
+                                class="w-full"
+                                :placeholder="t.issues.commentPlaceholder"
+                                @keydown="onDraftKey"
+                            />
+                            <div class="c-foot">
+                                <span class="cd-muted hint">{{ t.issues.sendHint(MOD_KEY) }}</span>
+                                <UButton
+                                    :label="t.issues.comment"
+                                    icon="i-lucide-send"
+                                    size="sm"
+                                    :loading="posting"
+                                    :disabled="!draft.trim()"
+                                    @click="postComment"
+                                />
+                            </div>
+                        </div>
+                    </template>
+
+                    <div v-else class="empty cd-muted">
+                        <UIcon name="i-lucide-list-todo" class="big" />
+                        <p>{{ t.issues.pickHint }}</p>
+                    </div>
+                </RenderScope>
             </section>
         </div>
 
@@ -414,7 +428,7 @@ onMounted(async () => {
             </template>
             <template #footer>
                 <div class="cd-modal-foot">
-                    <UButton :label="t.issues.cancel" color="neutral" variant="outline" @click="picker = null" />
+                    <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="picker = null" />
                     <UButton :label="picker === 'close' ? t.issues.close : t.issues.link" :disabled="picker === 'link' && !pickOid" @click="confirmPicker" />
                 </div>
             </template>
@@ -552,10 +566,6 @@ onMounted(async () => {
 .d-head h3 {
     margin: 0;
     font-size: 18px;
-}
-
-.grow {
-    flex: 1;
 }
 
 .sub {

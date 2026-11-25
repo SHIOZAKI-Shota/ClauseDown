@@ -66,7 +66,7 @@ export function setRuleLoader(fn: RuleLoader) {
 // CommonJS の規則を ESM から読むと { default: { default: 規則 } } のように何重にも包まれることがある
 function unwrap(m: unknown): unknown {
     let cur = m
-    while (cur && typeof cur === 'object' && 'default' in cur && !('linter' in cur) && !('Processor' in cur)) cur = (cur as { default: unknown }).default
+    while (cur && typeof cur === 'object' && 'default' in cur && !('linter' in cur) && !('Processor' in cur)) cur = cur.default
     return cur
 }
 
@@ -104,7 +104,7 @@ async function load(): Promise<Lint> {
 export function ignoredRanges(source: string): [number, number][] {
     const out: [number, number][] = []
     const add = (re: RegExp) => {
-        for (const m of source.matchAll(re)) out.push([m.index!, m.index! + m[0].length])
+        for (const m of source.matchAll(re)) out.push([m.index, m.index + m[0].length])
     }
     add(/^---\n[\s\S]*?\n---(?=\n|$)/g)
     add(/<!--[\s\S]*?-->/g)

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { fmtDate } from '~/utils/format'
 import type { CommitInfo, SigInfo } from '@shared/api'
 import { useApp } from '~/stores/app'
 import { usePane } from '~/composables/usePane'
@@ -120,7 +121,14 @@ async function onEffectiveAdded() {
             <template v-if="selectedCommit">
                 <div class="cd-toolbar actions">
                     <div class="msg">
-                        <IssueText :text="selectedCommit.message.replace(/(^|\n)施行日: (\S+)\s*$/, `$1${t.history.effectiveTrailer}: $2`)" />
+                        <IssueText
+                            :text="
+                                selectedCommit.message.replace(
+                                    /(^|\n)施行日: (\S+)\s*$/,
+                                    (_, head, date) => `${head}${t.history.effectiveTrailer}: ${fmtDate(date, 'ymd')}`,
+                                )
+                            "
+                        />
                     </div>
                     <span class="cd-grow" />
                     <UButton :label="t.history.linkIssue" icon="i-lucide-link" size="sm" color="neutral" variant="outline" @click="showLink = true" />

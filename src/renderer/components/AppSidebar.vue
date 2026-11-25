@@ -18,6 +18,7 @@ const setSize = (px: number) => {
 }
 const sidePane: Pane = {
     state: stored,
+    collapsed: computed(() => stored.value.collapsed),
     opts: OPTS,
     measure: ref(null),
     setSize,

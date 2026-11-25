@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useConfirm } from '~/composables/useConfirm'
 import type { ForgeAccount, ForgeLogin } from '@shared/api'
 import { GITHUB_APP } from '@shared/about'
 import { GITLAB_BASE } from '@shared/forge'
@@ -8,6 +9,7 @@ import { useT } from '~/composables/useT'
 const props = defineProps<{ account: ForgeAccount }>()
 const app = useApp()
 const t = useT()
+const ask = useConfirm()
 const f = computed(() => t.value.settings.forge)
 
 const a = computed(() => props.account)
@@ -26,7 +28,7 @@ async function startLogin() {
     const info = await app.run(() => window.api.loginStart(a.value.base))
     if (!info) return
     login.value = info
-    const acc = await app.run(() => window.api.loginWait(a.value.base))
+    const acc = await app.run(() => window.api.loginWait(a.value.base), undefined, { busy: false })
     login.value = null
     if (acc) {
         await app.refreshAccounts()
@@ -40,8 +42,7 @@ async function logout() {
 const installApp = () => window.api.openExternal(GITHUB_APP.installUrl)
 async function copyCode() {
     if (!login.value) return
-    await navigator.clipboard.writeText(login.value.userCode)
-    app.notify(f.value.codeCopied)
+    await app.copy(login.value.userCode, f.value.codeCopied)
 }
 
 const token = ref('')
@@ -75,6 +76,7 @@ async function saveIds() {
     await app.refreshAccounts()
 }
 async function removeHost() {
+    if (!(await ask({ title: f.value.removeHost, description: f.value.removeHostDesc, confirmLabel: f.value.remove, color: 'error' }))) return
     await app.run(() => window.api.logout(a.value.base))
     const s = app.settings!
     await app.saveSettings({ ...s, gitlabHosts: (s.gitlabHosts ?? []).filter((h) => h.url !== a.value.base) })
@@ -112,6 +114,7 @@ async function removeHost() {
                     <template #trailing>
                         <UButton
                             :icon="showToken ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                            :aria-label="showToken ? t.common.hide : t.common.show"
                             size="xs"
                             color="neutral"
                             variant="link"

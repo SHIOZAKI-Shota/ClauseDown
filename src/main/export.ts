@@ -1,4 +1,6 @@
 import { BrowserWindow, dialog } from 'electron'
+import { remember } from './memo'
+import { localYmd } from '../shared/date'
 import { PDF } from '@libpdf/core'
 import { t } from '../shared/i18n'
 import { promises as fsp } from 'node:fs'
@@ -240,13 +242,14 @@ async function loadImages(source: string, base: DocBase | undefined): Promise<Im
 
 export function makeBuilders(style: DocStyle, css = '', base?: DocBase, signer?: SignSession): Builders {
     const sign = (bytes: Uint8Array) => (signer ? signer.sign(bytes) : bytes)
+    const parsed = new Map<string, LegalDoc>()
+    const parse = (src: string) => parsed.get(src) ?? remember(parsed, src, parseLegal(src), 4)
+    const compared = new Map<string, ReturnType<typeof compareSources>>()
+    const compare = (o: string, n: string) => compared.get(`${o}\0${n}`) ?? remember(compared, `${o}\0${n}`, compareSources(o, n), 4)
     return {
-        docPdf: async (src) => {
-            const doc = parseLegal(src)
-            return sign(await docToPdf(doc, style, css, base))
-        },
+        docPdf: async (src) => sign(await docToPdf(parse(src), style, css, base)),
         docDocx: async (src) => {
-            const doc = parseLegal(src)
+            const doc = parse(src)
             return docToDocx(doc, await rasterizeFigures(doc), style, await loadImages(src, base))
         },
         cmpPdf: async (o, n, title) =>
@@ -254,7 +257,7 @@ export function makeBuilders(style: DocStyle, css = '', base?: DocBase, signer?:
                 await toPdf(
                     await inlineImages(
                         page(
-                            renderCompareTable(compareSources(o, n), { title, omitUnchanged: true, lang: docLang(n || o) }),
+                            renderCompareTable(compare(o, n), { title, omitUnchanged: true, lang: docLang(n || o) }),
                             title,
                             style,
                             true,
@@ -267,7 +270,7 @@ export function makeBuilders(style: DocStyle, css = '', base?: DocBase, signer?:
                     style,
                 ),
             ),
-        cmpDocx: (o, n, title) => compareToDocx(compareSources(o, n), { title, omitUnchanged: true, style, lang: docLang(n || o) }),
+        cmpDocx: (o, n, title) => compareToDocx(compare(o, n), { title, omitUnchanged: true, style, lang: docLang(n || o) }),
     }
 }
 
@@ -315,11 +318,7 @@ async function build(req: ExportRequest, signer?: SignSession): Promise<Uint8Arr
     return sign(await toPdf(await inlineImages(page(renderCompareTable(rows, opts), req.title, style, true, prefs.typesetCss, lang), baseOf(req)), true, style))
 }
 
-const today = () => {
-    const d = new Date()
-    const p = (n: number) => String(n).padStart(2, '0')
-    return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}`
-}
+const today = () => localYmd(new Date(), '')
 
 export async function exportFile(parent: BrowserWindow | null, req: ExportRequest): Promise<string | null> {
     const { prefs } = await loadSettings()

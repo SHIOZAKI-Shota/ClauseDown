@@ -14,7 +14,7 @@ const experiment = <const Id extends Key>(id: Id) => ({
     },
 })
 
-export const EXPERIMENTS = [experiment('clauseLibrary'), experiment('lanAi'), experiment('houritsuExport')] as const
+export const EXPERIMENTS = [experiment('clauseLibrary'), experiment('lanAi'), experiment('houritsuExport'), experiment('cdsign')] as const
 
 export type ExperimentId = (typeof EXPERIMENTS)[number]['id']
 

@@ -79,7 +79,7 @@ async function publish() {
                 </li>
                 <li>
                     <strong>{{ t.repo.publish.pasteUrl }}</strong>
-                    <UInput v-model="url" :placeholder="example" class="cd-full" />
+                    <UInput v-model="url" :placeholder="example" class="cd-full" @keydown.enter="loggedIn && urlOk && !sending && publish()" />
                     <p v-if="url && !urlOk" class="warn">{{ t.repo.publish.urlFormat(example) }}</p>
                 </li>
             </ol>
@@ -87,7 +87,7 @@ async function publish() {
         </template>
         <template #footer>
             <div class="cd-modal-foot">
-                <UButton :label="t.repo.cancel" color="neutral" variant="outline" @click="open = false" />
+                <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="open = false" />
                 <UButton :label="t.repo.publish.submit" icon="i-lucide-cloud-upload" :loading="sending" :disabled="!loggedIn || !urlOk" @click="publish" />
             </div>
         </template>

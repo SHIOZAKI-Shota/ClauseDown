@@ -1,4 +1,5 @@
 import fs, { promises as fsp } from 'node:fs'
+import { sleep } from './util'
 import { t } from '../shared/i18n'
 import { join, resolve, sep } from 'node:path'
 import git from './igit'
@@ -37,8 +38,6 @@ export async function duplicateRepo(src: string, parent: string, rawName: string
     }
     return dest
 }
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 async function waitUntil(ready: () => Promise<boolean>) {
     for (let i = 0; i < 30; i++) {

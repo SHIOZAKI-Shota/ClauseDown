@@ -80,7 +80,7 @@ describe('画面', () => {
 
     it('左のペインをすべてのリポジトリの期日・有効期間に切り替え、一覧から済みにすると記録に残る', async () => {
         await win.getByRole('radio', { name: 'すべてのリポジトリの期日・有効期間' }).click()
-        await win.getByRole('button', { name: 'カレンダーに書き出す' }).waitFor()
+        await win.getByRole('button', { name: 'その他の操作' }).first().waitFor()
         await win.getByRole('radio', { name: '一覧' }).click()
         await win.getByRole('checkbox', { name: '済みにする' }).first().click()
         await expect.poll(async () => (await sch.listEvents(dir)).find((e) => e.id === overdueId)?.done, { timeout: 10000 }).toEqual([addDays(today, -10)])
@@ -88,7 +88,7 @@ describe('画面', () => {
         await win.getByRole('radio', { name: '最近開いた文書' }).click()
     })
 
-    it('リポジトリ・編集・改定履歴・新旧対照表・期日・有効期間・納品・期日・有効期間の画面を開ける', async () => {
+    it('リポジトリ・編集・改定履歴・新旧対照表・施行・納品・期日・有効期間の画面を開ける', async () => {
         await store(`s.view = 'docs'`)
         await seen('就業規則')
         await store(`s.openDoc(${JSON.stringify(DOC)})`)
@@ -144,6 +144,7 @@ describe('画面', () => {
             .getByText(/^SHA256:/)
             .first()
             .waitFor({ timeout: 15000 })
+        await win.getByRole('tab', { name: 'PDF', exact: true }).click()
         await win.getByRole('button', { name: '証明書を追加' }).click()
         await win.getByRole('menuitem', { name: '自己署名の証明書を作成' }).click()
         await win.getByLabel('名前').filter({ visible: true }).first().fill('個人')
@@ -171,7 +172,7 @@ describe('画面', () => {
 
         const out = join(tmp, 'signed.pdf')
         await app.evaluate(({ dialog }, path) => {
-            dialog.showSaveDialog = (async () => ({ canceled: false, filePath: path })) as typeof dialog.showSaveDialog
+            dialog.showSaveDialog = async () => ({ canceled: false, filePath: path })
         }, out)
         const req = { kind: 'doc', format: 'pdf', source: '# 就業規則\n\n### 目的\n- 本文\n', name: 'x', dir, docPath: DOC, sign: true }
         await win.evaluate(`window.api.exportFile(${JSON.stringify(req)})`)
@@ -180,7 +181,7 @@ describe('画面', () => {
         expect(pdf).toMatch(/\/ByteRange\s*\[/)
         expect(listSignatures(new Uint8Array(fs.readFileSync(out))).map((x) => x.signer)).toEqual(['テスト'])
 
-        const corp = (await win.evaluate(`window.api.createSelfSignedCert({ name: '見本株式会社 代表取締役', label: '法人' })`)) as { id: string }
+        const corp = await win.evaluate<{ id: string }>(`window.api.createSelfSignedCert({ name: '見本株式会社 代表取締役', label: '法人' })`)
         await win.evaluate(`window.api.exportFile(${JSON.stringify({ ...req, certId: corp.id })})`)
         expect(listSignatures(new Uint8Array(fs.readFileSync(out))).map((x) => x.signer)).toEqual(['見本株式会社 代表取締役'])
         await win.evaluate(`window.api.setRepoPdfCert(${JSON.stringify(dir)}, ${JSON.stringify(corp.id)})`)
@@ -192,7 +193,7 @@ describe('画面', () => {
     it('表紙と目次：PDF の 1 ページ目が表紙で、目次の番号がその条のあるページと合う', async () => {
         const out = join(tmp, 'cover-toc.pdf')
         await app.evaluate(({ dialog }, path) => {
-            dialog.showSaveDialog = (async () => ({ canceled: false, filePath: path })) as typeof dialog.showSaveDialog
+            dialog.showSaveDialog = async () => ({ canceled: false, filePath: path })
         }, out)
         const source = [
             '# 就業規則',
@@ -251,14 +252,24 @@ describe('画面', () => {
         await win.getByRole('button', { name: '挿入' }).first().click()
         await win.getByRole('menuitem', { name: '印影・署名' }).click()
         await win.getByRole('textbox').filter({ visible: true }).first().fill('山田')
-        win.once('dialog', (d) => void d.accept())
         await win.getByRole('button', { name: '挿入' }).click()
+        await win.getByRole('button', { name: '署名欄に挿入' }).click()
         await expect.poll(() => win.locator('.cm-content').first().textContent(), { timeout: 10000 }).toMatch(/!\[山田\]\(images\/.+\.png\)\{seal\}/)
         await expect.poll(() => win.locator('.cm-content').first().textContent(), { timeout: 10000 }).toContain('{closing}')
         const body = (await win.locator('.cm-content').first().textContent()) ?? ''
         expect(body.indexOf('{closing}')).toBeGreaterThan(body.indexOf('目的'))
         await win.locator('img.cd-seal').first().waitFor({ state: 'attached', timeout: 10000 })
         await win.screenshot({ path: join(tmp, '..', 'clausedown-seal-e2e.png') })
+    })
+
+    it('編集：入力すると自動で保存され、ファイルに書き込まれる', async () => {
+        await store(`s.view = 'docs'`)
+        await store(`s.openDoc(${JSON.stringify(DOC)})`)
+        await win.locator('.cm-content').first().click()
+        await win.keyboard.press('ControlOrMeta+End')
+        await win.keyboard.type('自動保存の確認')
+        await expect.poll(() => fs.readFileSync(join(dir, DOC), 'utf8'), { timeout: 10000 }).toContain('自動保存の確認')
+        await seen('版を保存していない変更があります')
     })
 
     it('規則の署名：署名なしの規則に署名し、承認者を足す変更を提案すると第 2 版になる', async () => {
@@ -282,28 +293,30 @@ describe('画面', () => {
         const outDir = join(tmp, 'delivered')
         fs.mkdirSync(outDir)
         await app.evaluate(({ dialog }, path) => {
-            dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [path] })) as typeof dialog.showOpenDialog
+            dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] })
         }, outDir)
         const oid = await win.evaluate(`window.api.log(${JSON.stringify(dir)}, ${JSON.stringify(DOC)}).then((l) => l[0].oid)`)
         const input = { docPath: DOC, oid, to: '相手方', memo: '', items: ['docPdf'], publishRelease: false, sign: true }
-        const rec = (await win.evaluate(`window.api.deliver(${JSON.stringify(dir)}, ${JSON.stringify(input)})`)) as {
+        const rec = await win.evaluate<{
             id: string
             folder: string
             files: string[]
-        }
+        }>(`window.api.deliver(${JSON.stringify(dir)}, ${JSON.stringify(input)})`)
         const returned = join(rec.folder, rec.files[0])
         await app.evaluate(({ dialog }, path) => {
-            dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [path] })) as typeof dialog.showOpenDialog
+            dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [path] })
         }, returned)
-        const picked = (await win.evaluate('window.api.pickReceivedPdf()')) as { path: string; signatures: { signer: string }[] }
+        const picked = await win.evaluate<{ path: string; signatures: { signer: string }[] }>('window.api.pickReceivedPdf()')
         expect(picked.signatures).toHaveLength(1)
-        const out = (await win.evaluate(`window.api.saveReceivedPdf(${JSON.stringify({ path: picked.path, dir, deliveryId: rec.id })})`)) as string
+        const out = await win.evaluate<string>(`window.api.saveReceivedPdf(${JSON.stringify({ path: picked.path, dir, deliveryId: rec.id })})`)
         expect(out).toBe(join(rec.folder, rec.files[0].replace(/\.pdf$/, '_受領.pdf')))
         expect(fs.readFileSync(out).equals(fs.readFileSync(returned))).toBe(true)
-        const list = (await win.evaluate(`window.api.listDeliveries(${JSON.stringify(dir)}, ${JSON.stringify(DOC)})`)) as {
-            id: string
-            received?: { file: string; signers: string[] }[]
-        }[]
+        const list = await win.evaluate<
+            {
+                id: string
+                received?: { file: string; signers: string[] }[]
+            }[]
+        >(`window.api.listDeliveries(${JSON.stringify(dir)}, ${JSON.stringify(DOC)})`)
         const got = list.find((d) => d.id === rec.id)?.received
         expect(got?.map((x) => x.file)).toEqual([out.split(/[\\/]/).pop()])
         expect(got?.[0].signers).toHaveLength(1)

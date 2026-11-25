@@ -1,5 +1,4 @@
 export const repo = {
-    cancel: 'やめる',
     notFound: '見つかりません',
     removeFromList: '一覧から外す',
     addManage: 'リポジトリの追加・管理',
@@ -16,12 +15,12 @@ export const repo = {
         thisRepo: 'このリポジトリ',
         note: '書式・承認規則・期日の種類は、このリポジトリの中に記録され、使う人全員に共有されます。',
         displayName: '表示名',
-        displayNameDesc: 'タイトルバーのリポジトリの切り替えに出る名前です。ローカル の中だけの名前で、ほかの人には影響しません。',
+        displayNameDesc: 'タイトルバーのリポジトリの切り替えに出る名前です。この PC の中だけの名前で、ほかの人には影響しません。',
         folder: 'フォルダ',
         openFolder: 'フォルダを開く',
-        removeDesc: 'ローカル の一覧から外すだけで、フォルダや版は消えません。',
+        removeDesc: 'この PC の一覧から外すだけで、フォルダや版は消えません。',
         scope: '設定する範囲',
-        scopeDesc: 'ディレクトリごとに変えられます。変えていない項目は、上（リポジトリ全体 → ローカル の設定）の設定を使用します。',
+        scopeDesc: 'ディレクトリごとに変えられます。変えていない項目は、上（リポジトリ全体 → この PC の設定）の設定を使用します。',
         styleNote: (folder: string) =>
             `書式は${folder ? `「${folder}」ディレクトリ` : 'リポジトリの直下'}の設定ファイルに記録され、変えると「書式を変更」という版が自動で保存されます。`,
         styleDraftNote: (label: string) => `今は改定案「${label}」を開いているので、この案の中だけが変わります（現行版に反映すると、現行版でも使われます）。`,
@@ -47,17 +46,17 @@ export const repo = {
         changeRemoteDesc: 'GitHub・GitLab でリポジトリの名前や持ち主を変えたときに、新しい URL を入れます。',
         change: '変更…',
         disconnect: 'リモートから外す',
-        disconnectDesc: 'ローカル だけで管理する形に戻します。リモートのリポジトリと、ローカル の版は消えません。',
+        disconnectDesc: 'この PC だけで管理する形に戻します。リモートのリポジトリと、この PC の版は消えません。',
         disconnectButton: '外す…',
         githubNote:
             'リモートが GitHub なので、確認依頼は GitHub のプルリクエストとしても作られます。GitHub の「ブランチ保護」で承認を必須にすると、アプリの外から現行版を変える操作も止められます。',
         gitlabNote:
             'リモートが GitLab なので、確認依頼は GitLab のマージリクエストとしても作られ、承認・コメントも GitLab に残ります。GitLab の「保護ブランチ」や承認ルールを使うと、アプリの外から現行版を変える操作も止められます。',
-        localOnly: 'ローカル（ローカル だけで管理しています）。GitHub・GitLab に送信すると、ほかの人と共有でき、確認依頼や納品の記録も残せます。',
+        localOnly: 'この PC だけで管理しています。GitHub・GitLab に送信すると、ほかの人と共有でき、確認依頼や納品の記録も残せます。',
         addRemote: 'リモートを追加…',
         disconnectConfirm: '外す',
         disconnectConfirmDesc: (url: string) =>
-            `リモート（${url}）とのつながりを外し、ローカル だけで管理する形に戻します。リモートのリポジトリと、ローカル の版は消えません。`,
+            `リモート（${url}）とのつながりを外し、この PC だけで管理する形に戻します。リモートのリポジトリと、この PC の版は消えません。`,
     },
     switcher: {
         home: 'リポジトリホーム',
@@ -99,7 +98,7 @@ export const repo = {
     },
     publish: {
         title: 'リモートを追加',
-        description: 'ローカル だけで管理していたリポジトリを GitHub・GitLab に送信して、ほかの人や別の PC と共有できるようにします。',
+        description: 'この PC だけで管理していたリポジトリを GitHub・GitLab に送信して、ほかの人や別の PC と共有できるようにします。',
         example: (base: string) => `${base}/組織名/リポジトリ名`,
         server: (label: string, login: string) => `${label}（${login}）`,
         chooseHost: 'リモートを置く場所を選ぶ',
@@ -124,7 +123,7 @@ export const repo = {
         openApp: 'App の設定を開く',
         pasteUrl: '作ったリポジトリの URL を貼り付ける',
         urlFormat: (example: string) => `${example} の形で入力してください。`,
-        note: '現行版・すべての改定案・承認や納品の記録・施行日をまとめて送ります。ローカル のフォルダはそのまま使い続けます。',
+        note: '現行版・すべての改定案・承認や納品の記録・施行日をまとめて送ります。手元のフォルダはそのまま使い続けます。',
         submit: 'リモートに送信する',
     },
     sectionName: {

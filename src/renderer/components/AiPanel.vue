@@ -210,7 +210,7 @@ function openSettings() {
                         <!-- eslint-disable-next-line vue/no-v-html -- markdown-it は html を無効にしている -->
                         <div v-if="turn.text" class="answer" v-html="turn.html" />
                         <div v-else-if="running && i === turns.length - 1 && !turn.thinking.trim()" class="thinking">
-                            <UIcon name="i-lucide-loader" class="spin" />{{ t.ai.panel.thinking }}
+                            <UIcon name="i-lucide-loader-circle" class="cd-spin" />{{ t.ai.panel.thinking }}
                         </div>
                         <UAlert v-if="turn.error" :description="turn.error" color="error" variant="subtle" icon="i-lucide-circle-alert" />
                     </template>
@@ -223,23 +223,25 @@ function openSettings() {
             </div>
 
             <footer class="foot">
-                <UTextarea
-                    v-model="input"
-                    :rows="2"
-                    autoresize
-                    :maxrows="8"
-                    class="cd-full"
-                    :placeholder="t.ai.panel.placeholder"
-                    :disabled="running"
-                    @keydown="onKey"
-                />
-                <div class="row">
-                    <UCheckbox v-model="useSelection" :label="t.ai.panel.useSelection" size="xs" />
-                    <span class="cd-grow" />
-                    <UButton v-if="running" :label="t.ai.panel.stop" icon="i-lucide-square" size="sm" color="neutral" variant="outline" @click="stop" />
-                    <UButton v-else :label="t.ai.panel.send" icon="i-lucide-send" size="sm" :disabled="!input.trim()" @click="send()" />
-                </div>
-                <p class="note">{{ sendNote }}{{ t.ai.panel.sendKey(keys('Ctrl+Enter')) }}</p>
+                <RenderScope>
+                    <UTextarea
+                        v-model="input"
+                        :rows="2"
+                        autoresize
+                        :maxrows="8"
+                        class="cd-full"
+                        :placeholder="t.ai.panel.placeholder"
+                        :disabled="running"
+                        @keydown="onKey"
+                    />
+                    <div class="row">
+                        <UCheckbox v-model="useSelection" :label="t.ai.panel.useSelection" size="xs" />
+                        <span class="cd-grow" />
+                        <UButton v-if="running" :label="t.ai.panel.stop" icon="i-lucide-square" size="sm" color="neutral" variant="outline" @click="stop" />
+                        <UButton v-else :label="t.ai.panel.send" icon="i-lucide-send" size="sm" :disabled="!input.trim()" @click="send()" />
+                    </div>
+                    <p class="note">{{ sendNote }}{{ t.ai.panel.sendKey(keys('Ctrl+Enter')) }}</p>
+                </RenderScope>
             </footer>
         </template>
     </aside>
@@ -455,16 +457,6 @@ function openSettings() {
     align-items: center;
     font-size: 12px;
     color: var(--ui-text-muted);
-}
-
-.spin {
-    animation: spin 1.2s linear infinite;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
 }
 
 .revert {

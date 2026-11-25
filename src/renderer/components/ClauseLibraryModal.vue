@@ -116,7 +116,7 @@ function finish() {
         <template #footer>
             <div class="cd-modal-foot">
                 <UButton v-if="step === 'map'" :label="t.editor.clauses.back" color="neutral" variant="ghost" @click="step = 'pick'" />
-                <UButton :label="t.editor.clauses.cancel" color="neutral" variant="outline" @click="emit('close')" />
+                <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="emit('close')" />
                 <UButton
                     v-if="step === 'pick'"
                     :label="selected?.refs.length ? t.editor.clauses.next : t.editor.clauses.insert"

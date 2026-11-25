@@ -1,4 +1,5 @@
 import http from 'node:http'
+import { errText } from './util'
 import { t as tr } from '../shared/i18n'
 import net from 'node:net'
 import os from 'node:os'
@@ -56,7 +57,7 @@ function buildServer(changed: ToolContext['changed']): McpServer {
                 try {
                     return { content: [{ type: 'text' as const, text: await t.run(args as never, ctx) }] }
                 } catch (e) {
-                    return { content: [{ type: 'text' as const, text: (e as Error).message }], isError: true }
+                    return { content: [{ type: 'text' as const, text: errText(e) }], isError: true }
                 }
             },
         )
@@ -134,7 +135,7 @@ async function listenSocket(path: string, changed: ToolContext['changed']): Prom
             if (req.headers.origin) return reply(res, 403, 'browser requests are not allowed')
             await handleMcp(req, res, changed)
         } catch (e) {
-            if (!res.headersSent) reply(res, 500, (e as Error).message)
+            if (!res.headersSent) reply(res, 500, errText(e))
         }
     })
     const error = await new Promise<string | null>((done) => {
@@ -169,7 +170,7 @@ export async function applyMcp(
 
             await handleMcp(req, res, changed)
         } catch (e) {
-            if (!res.headersSent) reply(res, 500, (e as Error).message)
+            if (!res.headersSent) reply(res, 500, errText(e))
         }
     })
     await new Promise<void>((done) => {

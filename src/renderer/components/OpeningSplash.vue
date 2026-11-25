@@ -254,7 +254,7 @@ onBeforeUnmount(() => {
 .anim {
     width: max(25%, 280px);
     aspect-ratio: 16 / 9;
-    color: rgb(32 30 208);
+    color: var(--cd-brand);
 }
 
 :global(.dark) .anim {

@@ -1,10 +1,11 @@
 /// <reference types="vite/client" />
-import { tagPath } from '../shared/tag-path'
+import { effectiveTag, withEffectiveNote } from './git'
+import { localYmd } from '../shared/date'
 import fs, { promises as fsp } from 'node:fs'
 import { dirname, join } from 'node:path'
 import git from './igit'
 
-const SOURCES = import.meta.glob('../../example_repository/**/*.md', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
+const SOURCES = import.meta.glob('../../example_repository/**/*.md', { query: '?raw', import: 'default', eager: true })
 const ROOT = '../../example_repository/'
 
 const PEOPLE: Record<string, string> = {
@@ -38,7 +39,7 @@ function sourceFiles(folder: string): Map<string, string> {
 function fromToday(days: number): string {
     const d = new Date()
     d.setDate(d.getDate() + days)
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return localYmd(d)
 }
 
 const signature = (who: string, date: string) => ({
@@ -101,12 +102,12 @@ class SampleRepo {
             else if (head !== work || work !== stage) await git.add({ fs, dir, filepath: path })
         }
         const sig = signature(who, date)
-        await git.commit({ fs, dir, message: effective ? `${message}\n\n施行日: ${effective}` : message, author: sig, committer: sig })
+        await git.commit({ fs, dir, message: effective ? withEffectiveNote(message, effective) : message, author: sig, committer: sig })
         for (const d of effective ? docs : []) {
             await git.annotatedTag({
                 fs,
                 dir,
-                ref: `施行/${tagPath(d)}/${effective}`,
+                ref: effectiveTag(d, effective!),
                 message: `${d} 施行日 ${effective}`,
                 tagger: sig,
                 force: true,

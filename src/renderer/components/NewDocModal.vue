@@ -87,7 +87,7 @@ async function create() {
         </template>
         <template #footer>
             <div class="cd-modal-foot">
-                <UButton :label="t.docs.cancel" color="neutral" variant="outline" @click="emit('close')" />
+                <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="emit('close')" />
                 <UButton :label="t.docs.create.submit" :disabled="!path || exists" :loading="app.busy" @click="create" />
             </div>
         </template>

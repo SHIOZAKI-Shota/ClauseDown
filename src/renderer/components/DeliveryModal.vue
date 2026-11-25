@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { fmtDate } from '~/utils/format'
 import type { DeliveryItem, EffectiveVersion } from '@shared/api'
 import { useApp } from '~/stores/app'
 import { folderOf } from '~/utils/folders'
@@ -34,7 +35,7 @@ onMounted(async () => {
 
 const baseItems = computed(() => [
     { label: t.value.releases.delivery.noCompare, value: NONE },
-    ...versions.value.filter((v) => v.oid !== props.oid).map((v) => ({ label: t.value.releases.effectiveVersion(v.date), value: v.oid })),
+    ...versions.value.filter((v) => v.oid !== props.oid).map((v) => ({ label: t.value.releases.effectiveVersion(fmtDate(v.date, 'ymd')), value: v.oid })),
 ])
 const itemOptions = computed(() => [
     { label: t.value.releases.item.docPdf, value: 'docPdf' },
@@ -119,7 +120,7 @@ async function go() {
         </template>
         <template #footer>
             <div class="cd-modal-foot">
-                <UButton :label="t.schedule.cancel" color="neutral" variant="outline" @click="emit('close')" />
+                <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="emit('close')" />
                 <UButton :label="t.releases.delivery.submit" icon="i-lucide-package" :disabled="!items.length" :loading="app.busy" @click="go" />
             </div>
         </template>

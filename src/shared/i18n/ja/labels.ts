@@ -63,6 +63,11 @@ export const labels = {
             label: 'Markdown（houritsu）に書き出す',
             description: '書き出しのメニューに、条番号・項番号を本文に書き込んだ houritsu の形式の Markdown に書き出す項目を出します。',
         },
+        cdsign: {
+            label: 'Markdown のまま署名をもらう（.cdsign）',
+            description:
+                'md-signature で文書に署名し、ClauseDown 署名依頼（.cdsign）を書き出します。相手は ClauseDown Sign で連署し、返されたファイルを取り込みます。署名検証のペインと、署名済みの文書の編集の制限も有効になります。',
+        },
     },
     aiProviders: {
         anthropic: {
@@ -75,9 +80,9 @@ export const labels = {
                 'OpenAI、Google Gemini、DeepSeek、LM Studio など、OpenAI 互換の API を持つサービスを、URL と API キーを指定して使用します。文書の内容はその接続先に送られます。',
         },
         ollama: {
-            label: 'Ollama（ローカル の中）',
+            label: 'Ollama（この PC の中）',
             description:
-                'ローカル で動いている Ollama を使用します。API キーは不要で、文書は PC の外に送られません。道具（tools）に対応したモデル（qwen3、llama3.1、gpt-oss など）が必要です。',
+                'この PC で動いている Ollama を使用します。API キーは不要で、文書は PC の外に送られません。道具（tools）に対応したモデル（qwen3、llama3.1、gpt-oss など）が必要です。',
         },
         openrouter: {
             label: 'OpenRouter（ブラウザでログイン）',
@@ -104,7 +109,7 @@ export const labels = {
         gitlab: (n: number) => `GitLab のマージリクエスト !${n}`,
     },
     styleSource: {
-        app: 'ローカル の設定',
+        app: 'この PC の設定',
         repo: 'リポジトリの設定',
         folder: (folder: string) => `「${folder}」の設定`,
     },

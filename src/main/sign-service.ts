@@ -1,9 +1,8 @@
 import { BrowserWindow, dialog, net } from 'electron'
-import { existsSync, promises as fsp } from 'node:fs'
-import { basename, dirname, join } from 'node:path'
+import { promises as fsp } from 'node:fs'
+import { basename } from 'node:path'
 import { HttpTimestampAuthority, type Signer } from '@libpdf/core'
 import { t } from '../shared/i18n'
-import { randomBytes } from 'node:crypto'
 import {
     CERT_ID_RE,
     cleanSigning,
@@ -18,8 +17,8 @@ import {
 import type { DeepPartial, ReceivedPdf, ReceivedPdfInput, SigningStatus } from '../shared/api'
 import { loadSecret, saveSecret, updateSettings } from './settings'
 import { certSummary, checkTsaUrl, createSelfSigned, keySigner, listSignatures, p12Signer, signPdf, TsaError, type Tsa } from './pdf-sign'
-import { listDeliveries, recordReceived } from './workflow'
-import { author, identity } from './git-base'
+import { findDelivery, pickFile, saveReceived } from './receive'
+import { shortId, errText } from './util'
 import { appKey, externalConfig, signingSettings } from './signing'
 import { chipAvailable } from './keychip'
 import { mynaAvailable, openMynaSigner } from './myna'
@@ -29,7 +28,7 @@ function merge<T>(base: T, patch: DeepPartial<T> | undefined): T {
     const out: Record<string, unknown> = { ...(base as Record<string, unknown>) }
     for (const [k, v] of Object.entries(patch)) {
         const cur = out[k]
-        out[k] = v && typeof v === 'object' && !Array.isArray(v) && cur && typeof cur === 'object' ? merge(cur, v as DeepPartial<typeof cur>) : v
+        out[k] = v && typeof v === 'object' && !Array.isArray(v) && cur && typeof cur === 'object' ? merge(cur, v) : v
     }
     return out as T
 }
@@ -72,11 +71,6 @@ export async function setTsaPassword(password: string): Promise<void> {
     await saveSecret('sign-tsa-pass', String(password ?? ''))
 }
 
-function newCertId(): string {
-    const a = 'abcdefghijklmnopqrstuvwxyz0123456789'
-    return [...randomBytes(12)].map((x) => a[x % a.length]).join('')
-}
-
 type CertSecret = 'p12' | 'pass' | 'key'
 const LEGACY_SECRET = { p12: 'sign-pdf-p12', pass: 'sign-pdf-pass', key: 'sign-pdf-key' } as const
 
@@ -115,7 +109,7 @@ export async function importPdfCert(data: Uint8Array, password: string, label?: 
     const bytes = new Uint8Array(data)
     const signer = await p12Signer(bytes, String(password ?? ''))
     const cert = await certSummary(signer.certificate)
-    const id = newCertId()
+    const id = shortId()
     await saveSecret(`sign-pdf-p12-${id}`, Buffer.from(bytes).toString('base64'))
     await saveSecret(`sign-pdf-pass-${id}`, String(password ?? ''))
     return addCert({ id, label: labelOf(label, cert.subject), kind: 'p12', cert })
@@ -126,7 +120,7 @@ export async function createSelfSignedCert(opts: { name: string; email?: string;
     const years = Math.min(10, Math.max(1, Math.round(Number(opts?.years) || 3)))
     const made = await createSelfSigned({ name: String(opts?.name ?? ''), email: opts?.email, org: opts?.org, years })
     const cert = await certSummary(made.cert)
-    const id = newCertId()
+    const id = shortId()
     await saveSecret(`sign-pdf-key-${id}`, Buffer.from(made.key).toString('base64'))
     return addCert({ id, label: labelOf(opts?.label, cert.subject), kind: 'self', cert, selfCert: Buffer.from(made.cert).toString('base64') })
 }
@@ -134,7 +128,7 @@ export async function createSelfSignedCert(opts: { name: string; email?: string;
 export async function addMynaCert(label?: string): Promise<PdfCertEntry> {
     if (!(await mynaAvailable())) throw new Error(t().signing.errors.mynaMissing)
     await assertRoom('myna')
-    return addCert({ id: newCertId(), label: labelOf(label, t().signing.pdf.mynaLabel), kind: 'myna' })
+    return addCert({ id: shortId(), label: labelOf(label, t().signing.pdf.mynaLabel), kind: 'myna' })
 }
 
 export async function updatePdfCert(id: string, patch: Pick<PdfCertEntry, 'label' | 'reason' | 'location' | 'contactInfo'>): Promise<SigningSettings> {
@@ -214,7 +208,7 @@ async function tsaOf(s: SigningSettings): Promise<Tsa | undefined> {
     const headers: Record<string, string> = {}
     const pass = await loadSecret('sign-tsa-pass')
     if (s.pdf.tsa.user && pass) headers.Authorization = `Basic ${Buffer.from(`${s.pdf.tsa.user}:${pass}`).toString('base64')}`
-    return { url: checkTsaUrl(url), headers, fetch: ((input, init) => net.fetch(input as string, init)) as typeof globalThis.fetch }
+    return { url: checkTsaUrl(url), headers, fetch: (input, init) => net.fetch(input as string, init) }
 }
 
 export async function testTimestamp(): Promise<{ ok: true }> {
@@ -226,7 +220,7 @@ export async function testTimestamp(): Promise<{ ok: true }> {
     try {
         await authority.timestamp(digest, 'SHA-256')
     } catch (e) {
-        throw new Error(t().signing.errors.tsa((e as Error).message))
+        throw new Error(t().signing.errors.tsa(errText(e)))
     }
     return { ok: true }
 }
@@ -242,10 +236,6 @@ async function signerFor(c: PdfCertEntry, pin?: string): Promise<{ signer: Signe
     }
     if (c.kind === 'myna') return openMynaSigner(pin ?? '')
     throw new Error(t().signing.errors.noCert)
-}
-
-export async function pdfSigningReady(): Promise<boolean> {
-    return (await signingSettings()).pdf.certs.length > 0
 }
 
 export interface SignSession {
@@ -306,10 +296,8 @@ const MAX_PDF = 100 * 1024 * 1024
 const picked = new Set<string>()
 
 export async function pickReceivedPdf(parent: BrowserWindow | null): Promise<ReceivedPdf | null> {
-    const opts = { properties: ['openFile'] as 'openFile'[], filters: [{ name: 'PDF', extensions: ['pdf'] }] }
-    const r = parent ? await dialog.showOpenDialog(parent, opts) : await dialog.showOpenDialog(opts)
-    const path = r.filePaths[0]
-    if (r.canceled || !path) return null
+    const path = await pickFile(parent, { name: 'PDF', extensions: ['pdf'] })
+    if (!path) return null
     const stat = await fsp.stat(path)
     if (stat.size > MAX_PDF) throw new Error(t().signing.received.tooLarge)
     const bytes = new Uint8Array(await fsp.readFile(path))
@@ -317,30 +305,20 @@ export async function pickReceivedPdf(parent: BrowserWindow | null): Promise<Rec
     return { path, name: basename(path), signatures: listSignatures(bytes) }
 }
 
-function freePath(folder: string, source: string): string {
-    const base = `${basename(source).replace(/\.pdf$/i, '')}${t().signing.received.suffix}`
-    let out = join(folder, `${base}.pdf`)
-    for (let i = 2; existsSync(out); i++) out = join(folder, `${base} (${i}).pdf`)
-    return out
-}
-
 export async function saveReceivedPdf(parent: BrowserWindow | null, input: ReceivedPdfInput): Promise<string | null> {
     if (!picked.has(input.path)) throw new Error(t().signing.received.notPicked)
-    const delivery = (await listDeliveries(input.dir)).find((d) => d.id === input.deliveryId)
+    const delivery = await findDelivery(input.dir, input.deliveryId)
     if (!delivery) return null
     const bytes = new Uint8Array(await fsp.readFile(input.path))
-    let out: string | null = null
-    if (delivery.folder && existsSync(delivery.folder)) out = freePath(delivery.folder, input.path)
-    else {
-        const opts = { defaultPath: freePath(dirname(input.path), input.path), filters: [{ name: 'PDF', extensions: ['pdf'] }] }
-        const r = parent ? await dialog.showSaveDialog(parent, opts) : await dialog.showSaveDialog(opts)
-        out = r.canceled || !r.filePath ? null : r.filePath
-    }
-    if (!out) return null
-    await fsp.writeFile(out, bytes)
-    picked.delete(input.path)
-    const me = (await identity(input.dir).catch(() => null))?.name ?? (await author(input.dir)).name
-    const entry = { file: basename(out), at: new Date().toISOString(), by: me, signers: listSignatures(bytes).map((s) => s.signer) }
-    await recordReceived(input.dir, delivery.id, entry)
+    const out = await saveReceived(parent, {
+        dir: input.dir,
+        delivery,
+        source: input.path,
+        ext: 'pdf',
+        filter: 'PDF',
+        data: bytes,
+        entry: { signers: listSignatures(bytes).map((s) => s.signer) },
+    })
+    if (out) picked.delete(input.path)
     return out
 }

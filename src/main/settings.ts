@@ -1,9 +1,10 @@
 import { app, safeStorage } from 'electron'
+import { githubWeb, gitlabWeb, oauthPost } from './forge-http'
 import { t } from '../shared/i18n'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import type { AppSettings } from '../shared/api'
-import { cleanGitLabHosts, GITHUB_BASE, type ForgeKind } from '../shared/forge'
+import { cleanGitLabHosts, GITHUB_BASE, type ForgeKind, type ForgeLoginMethod } from '../shared/forge'
 import { cleanAiConfig } from '../shared/ai-providers'
 import { isEnabled } from '../shared/experiments'
 import { cleanStyle, DEFAULT_PREFS } from '../shared/prefs'
@@ -24,7 +25,7 @@ function normalize(saved: Partial<AppSettings>): AppSettings {
         ai: cleanAiConfig(saved.ai, { lan: isEnabled(saved, 'lanAi') }),
         prefs: { ...prefs, docStyle: cleanStyle(prefs.docStyle) },
         signing: cleanSigning(saved.signing),
-    } as AppSettings
+    }
 }
 
 async function readJson(path: string): Promise<Partial<AppSettings> | null> {
@@ -79,7 +80,7 @@ export function forgetCachedSettings() {
 
 export interface Credential {
     provider?: ForgeKind
-    method: 'token' | 'app'
+    method: ForgeLoginMethod
     access: string
     refresh?: string
     expiresAt?: number
@@ -101,7 +102,15 @@ interface Store {
     hosts: Record<string, Credential>
 }
 
+let storeMemo: { mtime: number; store: Store } | null = null
+
 async function loadStore(): Promise<Store> {
+    const mtime = (await fs.stat(tokenPath()).catch(() => null))?.mtimeMs ?? 0
+    if (storeMemo?.mtime !== mtime) storeMemo = { mtime, store: await readStore() }
+    return structuredClone(storeMemo.store)
+}
+
+async function readStore(): Promise<Store> {
     let raw: string
     try {
         raw = safeStorage.decryptString(await fs.readFile(tokenPath()))
@@ -121,13 +130,14 @@ async function loadStore(): Promise<Store> {
 }
 
 async function saveStore(s: Store): Promise<void> {
+    storeMemo = null
     if (!Object.keys(s.hosts).length) {
         await fs.rm(tokenPath(), { force: true })
         return
     }
     if (!safeStorage.isEncryptionAvailable()) throw new Error(t().errors.settings.noEncryptionAuth)
     await fs.mkdir(app.getPath('userData'), { recursive: true })
-    await fs.writeFile(tokenPath(), safeStorage.encryptString(JSON.stringify(s)))
+    await writeAtomic(tokenPath(), safeStorage.encryptString(JSON.stringify(s)))
 }
 
 let storeQueue: Promise<unknown> = Promise.resolve()
@@ -160,22 +170,14 @@ export async function setToken(base: string, token: string, provider: ForgeKind)
     await saveCredential(base, token ? { provider, method: 'token', access: token } : null)
 }
 
-const githubWeb = () => process.env.CLAUSEDOWN_GITHUB_WEB ?? GITHUB_BASE
-export const gitlabWeb = (base: string) => process.env.CLAUSEDOWN_GITLAB_WEB ?? base
-
 async function refresh(base: string, c: Credential): Promise<Credential | null> {
     if (!c.refresh || !c.clientId) return null
     if (c.refreshExpiresAt && c.refreshExpiresAt < Date.now()) return null
     const gitlab = c.provider === 'gitlab'
     const url = gitlab ? `${gitlabWeb(base)}/oauth/token` : `${githubWeb()}/login/oauth/access_token`
     const body = { client_id: c.clientId, grant_type: 'refresh_token', refresh_token: c.refresh }
-    const res = await fetch(url, {
-        method: 'POST',
-        headers: { Accept: 'application/json', 'Content-Type': gitlab ? 'application/x-www-form-urlencoded' : 'application/json' },
-        body: gitlab ? new URLSearchParams(body).toString() : JSON.stringify(body),
-    })
-    const j = (await res.json().catch(() => ({}))) as OAuthResponse
-    if (!res.ok || !j.access_token) return null
+    const { ok, json: j } = await oauthPost(url, body, gitlab)
+    if (!ok || !j.access_token) return null
     const next = credentialFromResponse(j, c.provider ?? 'github', c.clientId, c)
     await saveCredential(base, next)
     return next
@@ -232,12 +234,13 @@ export async function saveSecret(name: SecretName, value: string): Promise<void>
     }
     if (!safeStorage.isEncryptionAvailable()) throw new Error(t().errors.settings.noEncryptionSecret)
     await fs.mkdir(app.getPath('userData'), { recursive: true })
-    await fs.writeFile(secretPath(name), safeStorage.encryptString(value))
+    await writeAtomic(secretPath(name), safeStorage.encryptString(value))
 }
 
 const OWN_FILE = /^(settings\.json(\.bak|\.broken-\d+)?|notified\.json|token\.bin|(ai-key|mcp-token)(-[a-z0-9-]+)?\.bin|sign-[a-z0-9-]+\.bin)$/
 
 export async function resetAllData(): Promise<void> {
+    storeMemo = null
     const dir = app.getPath('userData')
     const names = await fs.readdir(dir).catch(() => [] as string[])
     await Promise.all(names.filter((n) => OWN_FILE.test(n)).map((n) => fs.rm(join(dir, n), { force: true })))

@@ -5,7 +5,7 @@ import { DEMO_LANG, DRAFT_PREFIX, MAIN, newId, userFor, type DemoRepo, type Demo
 
 export { STATE_VERSION } from './seed-kit'
 
-const SOURCES = import.meta.glob('../../../example_repository/**/*.md', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
+const SOURCES = import.meta.glob('../../../example_repository/**/*.md', { query: '?raw', import: 'default', eager: true })
 
 function source(path: string): string {
     const hit = Object.entries(SOURCES).find(([p]) => p.endsWith(`example_repository/${path}`))

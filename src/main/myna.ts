@@ -1,4 +1,5 @@
 import type { Signer } from '@libpdf/core'
+import { errText } from './util'
 import { t } from '../shared/i18n'
 import type { MynaStatus } from '../shared/api'
 import { loadNative } from './native'
@@ -37,7 +38,7 @@ export async function mynaStatus(): Promise<MynaStatus> {
         const st = await n.status()
         return { available: true, reader: st.reader ?? null, card: !!st.card, signCert: !!st.signCert, retries: st.retries ?? null }
     } catch (e) {
-        return { available: true, reader: null, card: false, signCert: false, retries: null, error: (e as Error).message }
+        return { available: true, reader: null, card: false, signCert: false, retries: null, error: errText(e) }
     }
 }
 
@@ -52,7 +53,7 @@ export async function openMynaSigner(pin: string): Promise<{ signer: Signer; clo
     try {
         session = await n.openSession(p)
     } catch (e) {
-        throw new Error(t().signing.errors.myna((e as Error).message))
+        throw new Error(t().signing.errors.myna(errText(e)))
     }
     const signer: Signer = {
         certificate: new Uint8Array(session.certificate),

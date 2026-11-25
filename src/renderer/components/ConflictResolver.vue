@@ -199,8 +199,24 @@ const plain = (lines: string[]) => (lines.length ? esc(lines.join('\n')) : `<spa
         <section class="center">
             <div class="cd-toolbar toolbar">
                 <UFieldGroup size="sm">
-                    <UButton icon="i-lucide-chevron-up" color="neutral" variant="outline" square :disabled="index === 0" @click="go(-1)" />
-                    <UButton icon="i-lucide-chevron-down" color="neutral" variant="outline" square :disabled="index === spots.length - 1" @click="go(1)" />
+                    <UButton
+                        icon="i-lucide-chevron-up"
+                        color="neutral"
+                        variant="outline"
+                        square
+                        :aria-label="t.common.prev"
+                        :disabled="index === 0"
+                        @click="go(-1)"
+                    />
+                    <UButton
+                        icon="i-lucide-chevron-down"
+                        color="neutral"
+                        variant="outline"
+                        square
+                        :aria-label="t.common.next"
+                        :disabled="index === spots.length - 1"
+                        @click="go(1)"
+                    />
                 </UFieldGroup>
                 <span class="where">{{ spot.label }}</span>
                 <span class="cd-grow" />
@@ -308,11 +324,13 @@ const plain = (lines: string[]) => (lines.length ? esc(lines.join('\n')) : `<spa
                 <div class="paper cd-paper" v-html="previewHtml" />
             </div>
             <div v-else class="right-body text">
-                <textarea v-model="fullText" class="out full" spellcheck="false" :disabled="!fs.merge" />
-                <div v-if="fs.override !== null" class="sub">
-                    <span class="hint">{{ t.merge.conflict.overriding }}</span>
-                    <UButton :label="t.merge.conflict.undo" size="xs" color="neutral" variant="link" @click="fs.override = null" />
-                </div>
+                <RenderScope>
+                    <textarea v-model="fullText" class="out full" spellcheck="false" :disabled="!fs.merge" />
+                    <div v-if="fs.override !== null" class="sub">
+                        <span class="hint">{{ t.merge.conflict.overriding }}</span>
+                        <UButton :label="t.merge.conflict.undo" size="xs" color="neutral" variant="link" @click="fs.override = null" />
+                    </div>
+                </RenderScope>
             </div>
         </section>
 

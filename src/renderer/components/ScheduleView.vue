@@ -213,21 +213,23 @@ async function exportIcs() {
     const r = await app.run(() => window.api.exportSchedule(isAll.value ? '' : (app.repoDir ?? ''), s.today))
     if (r) app.notifyExported(t.value.schedule.exported(r.count), r.path)
 }
+const moreItems = computed(() => [
+    [
+        { label: t.value.schedule.exportLabel, icon: 'i-lucide-calendar-arrow-down', disabled: !s.repos.value.length, onSelect: exportIcs },
+        ...(isAll.value
+            ? []
+            : [
+                  { label: t.value.schedule.allRepos, icon: 'i-lucide-layers', onSelect: () => app.openScheduleAll() },
+                  { label: t.value.schedule.kindsLabel, icon: 'i-lucide-settings-2', onSelect: () => app.openSettings('repo', 'kinds') },
+              ]),
+    ],
+])
 </script>
 
 <template>
     <div class="schedule">
         <div class="main">
-            <UButton
-                v-if="!isAll"
-                :label="app.pageReturnLabel('schedule')"
-                icon="i-lucide-arrow-left"
-                size="sm"
-                color="neutral"
-                variant="ghost"
-                class="back"
-                @click="app.leavePage('schedule')"
-            />
+            <BackButton v-if="!isAll" :label="app.pageReturnLabel('schedule')" class="back" @click="app.leavePage('schedule')" />
             <div class="cd-toolbar head">
                 <strong v-if="!isAll" class="h">{{ t.schedule.title }}</strong>
                 <span v-if="docFilter" class="cd-chip only">
@@ -278,41 +280,9 @@ async function exportIcs() {
                         { value: 'list', icon: 'i-lucide-list', tooltip: t.schedule.list },
                     ]"
                 />
-                <UTooltip :text="isAll ? t.schedule.exportAllTip : t.schedule.exportTip">
-                    <UButton
-                        icon="i-lucide-calendar-arrow-down"
-                        size="sm"
-                        square
-                        color="neutral"
-                        variant="ghost"
-                        :aria-label="t.schedule.exportLabel"
-                        :disabled="!s.repos.value.length"
-                        @click="exportIcs"
-                    />
-                </UTooltip>
-                <UTooltip v-if="!isAll" :text="t.schedule.allReposTip">
-                    <UButton
-                        icon="i-lucide-layers"
-                        size="sm"
-                        square
-                        color="neutral"
-                        variant="ghost"
-                        :aria-label="t.schedule.allRepos"
-                        data-guide="schedule"
-                        @click="app.openScheduleAll()"
-                    />
-                </UTooltip>
-                <UTooltip v-if="!isAll" :text="t.schedule.kindsTip">
-                    <UButton
-                        icon="i-lucide-settings-2"
-                        size="sm"
-                        square
-                        color="neutral"
-                        variant="ghost"
-                        :aria-label="t.schedule.kindsLabel"
-                        @click="app.openSettings('repo', 'kinds')"
-                    />
-                </UTooltip>
+                <UDropdownMenu :items="moreItems" :content="{ align: 'end' }">
+                    <UButton icon="i-lucide-ellipsis" size="sm" square color="neutral" variant="ghost" :aria-label="t.common.more" data-guide="schedule" />
+                </UDropdownMenu>
             </div>
 
             <TimelineChart
@@ -369,7 +339,7 @@ async function exportIcs() {
             </div>
         </div>
 
-        <SidePane v-if="!isAll" :pane="pane" side="right" :label="t.schedule.detail" icon="i-lucide-calendar-clock">
+        <SidePane v-if="!isAll" :pane="pane" side="right" :label="sel ? t.schedule.detail : t.schedule.upcoming" icon="i-lucide-calendar-clock">
             <section v-if="sel" class="detail">
                 <div class="d-head">
                     <span class="d-kind" :style="{ '--k': KIND_COLORS[kindOf(sel).color] }">{{ kindOf(sel).label }}</span>

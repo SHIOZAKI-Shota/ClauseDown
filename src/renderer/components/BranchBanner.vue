@@ -69,7 +69,7 @@ async function discard() {
         />
         <UButton :label="t.sync.banner.merge" size="sm" icon="i-lucide-git-merge" data-guide="branch" @click="adopt" />
         <UDropdownMenu :items="more">
-            <UButton icon="i-lucide-ellipsis" size="sm" color="neutral" variant="ghost" />
+            <UButton icon="i-lucide-ellipsis" size="sm" color="neutral" variant="ghost" :aria-label="t.common.more" />
         </UDropdownMenu>
         <ConfirmModal
             v-model:open="confirmDiscard"

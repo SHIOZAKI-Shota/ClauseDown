@@ -2,7 +2,7 @@
 import { at, buildState, day, edit, insertBefore, removeArticle, Repo } from './seed-kit'
 import { DRAFT_PREFIX, MAIN, newId, userFor, type DemoRepo, type DemoState } from './state'
 
-const SOURCES = import.meta.glob('./samples-en/*.md', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
+const SOURCES = import.meta.glob('./samples-en/*.md', { query: '?raw', import: 'default', eager: true })
 
 function source(name: string): string {
     const hit = Object.entries(SOURCES).find(([p]) => p.endsWith(`/samples-en/${name}`))

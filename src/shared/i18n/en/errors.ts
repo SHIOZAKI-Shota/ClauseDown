@@ -102,7 +102,6 @@ export const errors: Messages['errors'] = {
         notFound: (folder) => `Folder "${folder}" not found`,
     },
     images: {
-        mdRequired: 'Specify a document (.md)',
         noData: 'No image data',
         tooLarge: 'The image is too large (20 MB max)',
         badType: 'Only PNG, JPEG, GIF, and WebP images can be pasted',
@@ -130,12 +129,14 @@ export const errors: Messages['errors'] = {
         ownPr: "On GitHub, you can't approve a draft you requested a review for yourself",
         notMergeable: (msg) => `GitHub settings don't allow merging yet (${msg})`,
     },
+    oauth: {
+        unknown: 'unknown error',
+        cancelled: 'Sign-in was cancelled',
+    },
     githubAuth: {
         noClientId: 'The GitHub App Client ID is not set. Enter it in Settings',
         cannotLogin: (why) => `Can't sign in to GitHub (${why})`,
-        unknown: 'unknown error',
         pressLoginFirst: 'Press "Sign in with GitHub" first',
-        cancelled: 'Sign-in was cancelled',
         denied: 'Sign-in was denied on GitHub',
         expired: 'The code has expired. Press "Sign in with GitHub" again',
         tokenLogin: '(token)',
@@ -250,7 +251,6 @@ export const errors: Messages['errors'] = {
         openrouter: {
             success: "You're signed in. Return to ClauseDown. You can close this page.",
             timeout: 'Sign-in timed out. Press "Sign in with OpenRouter" again',
-            cancelled: 'Sign-in was cancelled',
             noKey: (why) => `Couldn't receive the OpenRouter key (${why})`,
         },
     },

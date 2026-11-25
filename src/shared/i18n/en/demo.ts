@@ -11,7 +11,6 @@ export const demo: Messages['demo'] = {
     noRepo: 'This repository is not in the demo',
     issueNotFound: (n) => `Issue #${n} not found`,
     notFound: (path) => `“${path}” not found`,
-    docExists: 'A document with the same name already exists',
     defaultMessage: 'Save version',
     draftExists: (label) => `A draft named “${label}” already exists`,
     draftNotFound: (label) => `Draft “${label}” not found`,

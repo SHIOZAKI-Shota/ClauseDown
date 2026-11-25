@@ -240,17 +240,17 @@ function buildDecorations(view: EditorView): DecorationSet {
             if (PROP_LINE_RE.test(line.text)) marks.push({ from: line.from, to: line.to, deco: Decoration.mark({ class: 'cd-prop' }) })
             else
                 for (const r of line.text.matchAll(PROP_INLINE_RE))
-                    marks.push({ from: line.from + r.index! + 1, to: line.from + r.index! + r[0].length, deco: Decoration.mark({ class: 'cd-prop' }) })
+                    marks.push({ from: line.from + r.index + 1, to: line.from + r.index + r[0].length, deco: Decoration.mark({ class: 'cd-prop' }) })
             for (const m of findMath(line.text)) marks.push({ from: line.from + m.from, to: line.from + m.to, deco: Decoration.mark({ class: 'cd-math-src' }) })
             for (const r of line.text.matchAll(REF_RE)) {
                 if (ld?.toc?.line === line.number - 1) {
-                    marks.push({ from: line.from + r.index!, to: line.from + r.index! + r[0].length, deco: Decoration.mark({ class: 'cd-prop' }) })
+                    marks.push({ from: line.from + r.index, to: line.from + r.index + r[0].length, deco: Decoration.mark({ class: 'cd-prop' }) })
                     continue
                 }
                 const ok = !!ld?.refs[r[1].trim()]
                 marks.push({
-                    from: line.from + r.index!,
-                    to: line.from + r.index! + r[0].length,
+                    from: line.from + r.index,
+                    to: line.from + r.index + r[0].length,
                     deco: Decoration.mark({ class: ok ? 'cd-ref' : 'cd-ref-bad' }),
                 })
             }
@@ -339,20 +339,20 @@ const legalLinter = linter(
         const text = view.state.doc.toString()
         const msg = i18n().editor.lint
         for (const r of text.matchAll(REF_RE)) {
-            if (ld.toc && view.state.doc.lineAt(r.index!).number - 1 === ld.toc.line) continue
+            if (ld.toc && view.state.doc.lineAt(r.index).number - 1 === ld.toc.line) continue
             if (!ld.refs[r[1].trim()]) {
-                out.push({ from: r.index!, to: r.index! + r[0].length, severity: 'error', message: msg.noArticle(r[1]) })
+                out.push({ from: r.index, to: r.index + r[0].length, severity: 'error', message: msg.noArticle(r[1]) })
             }
         }
         for (const f of text.matchAll(/^[ \t]*(`{3,}|~{3,})\s*mermaid[^\n]*\n([\s\S]*?)\n[ \t]*\1[ \t]*$/gm)) {
             const fence = parseFence(f[0].replace(/^[ \t]+/gm, ''))
             if (!fence) continue
             const error = mermaidError(fence.body)
-            if (error) out.push({ from: f.index!, to: f.index! + f[0].length, severity: 'warning', message: msg.figure(error) })
+            if (error) out.push({ from: f.index, to: f.index + f[0].length, severity: 'warning', message: msg.figure(error) })
         }
         for (const f of text.matchAll(/^[ \t]*(`{3,}|~{3,})\s*math[^\n]*\n([\s\S]*?)\n[ \t]*\1[ \t]*$/gm)) {
             const error = mathError(f[2], true)
-            if (error) out.push({ from: f.index!, to: f.index! + f[0].length, severity: 'warning', source: msg.mathSource, message: msg.math(error) })
+            if (error) out.push({ from: f.index, to: f.index + f[0].length, severity: 'warning', source: msg.mathSource, message: msg.math(error) })
         }
         for (const m of findMath(text)) {
             const error = mathError(m.tex, m.display)

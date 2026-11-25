@@ -3,7 +3,8 @@ import type { ContextMenuItem } from '@nuxt/ui'
 import type { DocFile, RepoActivity } from '@shared/api'
 import { useApp } from '~/stores/app'
 import { findFolder, folderOf, folderTree, isUnder, type FolderNode } from '~/utils/folders'
-import { fmtDate, relTime, todayISO } from '~/utils/format'
+import { fmtDate, relTime } from '~/utils/format'
+import { todayISO } from '@shared/date'
 import { useStoredRef } from '~/composables/useStoredRef'
 import { usePane } from '~/composables/usePane'
 import { useDocActions } from '~/composables/useDocActions'
@@ -199,7 +200,8 @@ const VIEWS = computed(() => [
                 @click="app.openSchedule()"
             >
                 <template v-if="app.dueCount?.due" #trailing>
-                    <UBadge :label="String(app.dueCount.due)" :color="app.dueCount.overdue ? 'error' : 'neutral'" variant="subtle" size="sm" />
+                    <UBadge :label="String(app.dueCount.due)" color="neutral" variant="subtle" size="sm" />
+                    <UBadge v-if="app.dueCount.overdue" :label="t.schedule.overdueCount(app.dueCount.overdue)" color="error" variant="subtle" size="sm" />
                 </template>
             </UButton>
             <UButton :label="t.docs.list.issues" icon="i-lucide-list-todo" color="neutral" variant="outline" data-guide="issues" @click="app.openIssues()">
@@ -720,7 +722,7 @@ h2 {
 
 .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 380px));
     gap: 16px;
     padding: 2px;
 }

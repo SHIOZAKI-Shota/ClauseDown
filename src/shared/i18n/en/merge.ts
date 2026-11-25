@@ -21,7 +21,6 @@ export const merge: Messages['merge'] = {
     memo: 'Version message',
     effectiveDate: 'Effective date',
     deleteAfterShort: 'Delete draft after merging',
-    cancel: 'Cancel',
     adopt: 'Merge into current',
     update: 'Bring in changes',
     checking: 'Checking changes…',

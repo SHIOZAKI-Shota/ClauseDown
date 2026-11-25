@@ -50,7 +50,7 @@ describe('悪意のあるフォルダ・リポジトリ', () => {
 
         vi.stubEnv('CLAUSEDOWN_LOOPBACK_BASE', 'https://github.com')
         try {
-            expect(((await base.onAuth(url, {} as never)) as { password?: string }).password).toBe('SECRET-TOKEN')
+            expect(((await base.onAuth(url, {})) as { password?: string }).password).toBe('SECRET-TOKEN')
             await git.sync(dir).catch(() => {})
             await git.push(dir).catch(() => {})
         } finally {
@@ -61,7 +61,7 @@ describe('悪意のあるフォルダ・リポジトリ', () => {
     })
 
     it('この PC の中のサーバー（http://127.0.0.1 など）には、トークンを渡さない', async () => {
-        const ask = (u: string) => base.onAuth(u, {} as never) as Promise<{ cancel?: boolean }>
+        const ask = (u: string) => base.onAuth(u, {}) as Promise<{ cancel?: boolean }>
         expect((await ask('http://127.0.0.1:11434/x.git')).cancel).toBe(true)
         expect((await ask('http://localhost:8080/x.git')).cancel).toBe(true)
     })
@@ -97,7 +97,7 @@ describe('リモートから届く記録', () => {
     it('プルリクエストの番号は、正の整数のときだけ使う', () => {
         const ev = (pr: unknown) => ({ branch: '案/x', action: 'request', at: '2026-01-01', pr }) as never
         expect(prOf(ev(7))).toBe(7)
-        for (const bad of ['../../../victim/repo/pulls/7', '7', 7.5, -1, 0, {}, null]) expect(prOf(ev(bad)), String(bad)).toBeUndefined()
+        for (const bad of ['../../../victim/repo/pulls/7', '7', 7.5, -1, 0, {}, null]) expect(prOf(ev(bad)), JSON.stringify(bad)).toBeUndefined()
     })
 
     it('番号が正しくなければ、GitHub・GitLab の API を呼ばない', () => {

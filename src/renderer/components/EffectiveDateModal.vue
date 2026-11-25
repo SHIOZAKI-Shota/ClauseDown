@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useApp } from '~/stores/app'
-import { todayISO } from '~/utils/format'
+import { todayISO } from '@shared/date'
 import { useT } from '~/composables/useT'
 
 const props = defineProps<{ oid: string; path: string }>()
@@ -24,7 +24,7 @@ async function save() {
         </template>
         <template #footer>
             <div class="cd-modal-foot">
-                <UButton :label="t.schedule.cancel" color="neutral" variant="outline" @click="emit('close')" />
+                <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="emit('close')" />
                 <UButton :label="t.releases.effective.submit" :loading="app.busy" @click="save" />
             </div>
         </template>

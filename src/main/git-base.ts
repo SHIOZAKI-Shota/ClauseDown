@@ -1,15 +1,16 @@
 import fs from 'node:fs'
+import { isLoopbackHost } from '../shared/net'
 import { t } from '../shared/i18n'
 import type { AuthCallback } from 'isomorphic-git'
 import git from './igit'
 import { getToken, listCredentials, loadSettings } from './settings'
-import { baseLabel, GITHUB_BASE, knownBases, underBase, type ForgeBase, type GitLabHost } from '../shared/forge'
+import { baseLabel, knownBases, underBase, type ForgeBase, type GitLabHost } from '../shared/forge'
 import type { Identity } from '../shared/api'
 
 export function safeRemoteUrl(url: string): boolean {
     try {
         const u = new URL(url.trim())
-        return u.protocol === 'https:' || (u.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(u.hostname))
+        return u.protocol === 'https:' || (u.protocol === 'http:' && isLoopbackHost(u.hostname))
     } catch {
         return false
     }
@@ -23,7 +24,7 @@ export function tokenBaseFor(url: string, settings: { gitlabHosts?: GitLabHost[]
         return null
     }
     const bases = knownBases(settings)
-    if (u.protocol === 'http:' && ['127.0.0.1', 'localhost', '[::1]'].includes(u.hostname)) {
+    if (u.protocol === 'http:' && isLoopbackHost(u.hostname)) {
         const base = process.env.CLAUSEDOWN_LOOPBACK_BASE
         return base ? (bases.find((b) => b.base === base) ?? null) : null
     }
@@ -46,7 +47,7 @@ export async function identity(dir?: string | null): Promise<Identity | null> {
     const settings = await loadSettings()
     const creds = await Promise.resolve()
         .then(() => listCredentials())
-        .catch(() => ({}) as Awaited<ReturnType<typeof listCredentials>>)
+        .catch((): Awaited<ReturnType<typeof listCredentials>> => ({}))
     const bases = knownBases(settings)
     const fromLogin = (base: string): Identity | null => {
         const b = bases.find((x) => x.base === base)

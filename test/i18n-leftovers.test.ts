@@ -7,7 +7,7 @@ const ROOT = join(import.meta.dirname, '..')
 const JP = /[ぁ-んァ-ヶ一-龠]/
 
 // 文書の中身・日本の法令向けの規則・git の名前・AI に読ませる説明など、画面の言語と関係ないもの
-const WHOLE_FILES = [
+const WHOLE_FILES = new Set([
     'src/main/proofread-legal.ts',
     'src/main/proofread-core.ts',
     'src/main/samples.ts',
@@ -18,7 +18,7 @@ const WHOLE_FILES = [
     'src/renderer/demo/seed-en.ts',
     'src/renderer/demo/shims/assert.cjs',
     'src/renderer/components/StyleEditor.vue',
-]
+])
 const ALLOWED_LINES = [
     /施行\/|案\/|納品\//, // git のタグ・ブランチの名前
     /施行日: /, // 版のメッセージに書く施行日の印（読み取りに使う）
@@ -44,7 +44,7 @@ describe('画面の文字を辞書に置く', () => {
         const left: string[] = []
         for (const p of [...files(join(ROOT, 'src/renderer')), ...files(join(ROOT, 'src/main'))]) {
             const rel = relative(ROOT, p).replaceAll('\\', '/')
-            if (WHOLE_FILES.includes(rel)) continue
+            if (WHOLE_FILES.has(rel)) continue
             readFileSync(p, 'utf8')
                 .split('\n')
                 .forEach((line, i) => {

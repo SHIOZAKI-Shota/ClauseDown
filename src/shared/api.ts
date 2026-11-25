@@ -3,11 +3,12 @@ import type { ExperimentId } from './experiments'
 import type { RepoRules, ReviewAction, ReviewEvent } from './review'
 import type { AppPrefs, DocStyle } from './prefs'
 import type { StyleLayers, StyleOverride } from './folder-style'
-import type { ForgeKind, GitLabHost } from './forge'
+import type { ForgeKind, ForgeLoginMethod, GitLabHost, IssueState } from './forge'
 import type { AiConfig, AiProvider } from './ai-providers'
 import type { HouritsuConversion } from './houritsu'
 import type { DueEvent, DueEventInput, EventKind, Occurrence, Period, RepoSchedule, ScheduleItem } from './schedule'
 import type { CertInfo, KeyStorage, PdfCertEntry, SigInfo, SigningSettings } from './signing'
+import type { AddMdKeyInput, ExportCdsignInput, MdKeyEntry, MdSigningPatch, MdVerifyReport, ReceivedCdsign } from './mdsig'
 import type { PolicyDoc, PolicyDraft } from './policy'
 
 export type { RepoRules, ReviewAction, ReviewEvent, AppPrefs, DocStyle }
@@ -223,7 +224,14 @@ export interface DeliveryRecord {
     memo: string
     items: DeliveryItem[]
     signed?: boolean
-    received?: { file: string; at: string; by: string; signers: string[] }[]
+    received?: {
+        file: string
+        at: string
+        by: string
+        signers: string[]
+        kind?: 'pdf' | 'cdsign'
+        agreement?: 'none' | 'complete' | 'pending' | 'violated' | 'invalid'
+    }[]
     files: string[]
     folder: string
     at: string
@@ -262,7 +270,7 @@ export interface ForgeAccount {
     login: string | null
     name: string | null
     email: string | null
-    method: 'app' | 'token' | null
+    method: ForgeLoginMethod | null
     deviceLogin: boolean
 }
 
@@ -311,14 +319,14 @@ export interface Issue {
     n: number
     title: string
     body: string
-    state: 'open' | 'closed'
+    state: IssueState
     author?: string
     createdAt: string
     closedAt?: string
     closedBy?: string
     url?: string
     links: IssueLink[]
-    source: 'local' | 'github' | 'gitlab'
+    source: 'local' | ForgeKind
 }
 
 export interface IssueVersion {
@@ -346,7 +354,7 @@ export interface IssueDetail extends Issue {
 export interface IssuePatch {
     title?: string
     body?: string
-    state?: 'open' | 'closed'
+    state?: IssueState
 }
 
 export interface ProofreadConfig {
@@ -457,6 +465,14 @@ export interface Api {
     pickReceivedPdf(): Promise<ReceivedPdf | null>
     saveReceivedPdf(input: ReceivedPdfInput): Promise<string | null>
     exportAllowedSigners(dir: string): Promise<string | null>
+    verifyMd(dir: string, path: string, text: string): Promise<MdVerifyReport>
+    trustMdKey(signer: string, pubkey: string): Promise<void>
+    addMdKey(input: AddMdKeyInput): Promise<MdKeyEntry>
+    removeMdKey(id: string): Promise<void>
+    setMdSigning(patch: MdSigningPatch): Promise<void>
+    exportCdsign(input: ExportCdsignInput): Promise<string | null>
+    pickCdsign(dir: string, deliveryId: string): Promise<ReceivedCdsign | null>
+    saveCdsign(input: { path: string; dir: string; deliveryId: string }): Promise<string | null>
     listSeals(): Promise<SealMeta[]>
     saveSeal(meta: { kind: SealMeta['kind']; label: string }, png: Uint8Array): Promise<SealMeta>
     readSeal(id: string): Promise<Uint8Array>

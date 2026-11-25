@@ -93,7 +93,7 @@ describe('規則の署名（版の連鎖）', () => {
     })
 
     it('記録用ブランチの規則の中身を書き換えると、その版から先は採用しない', async () => {
-        const [[file, raw]] = (await readRecordEntries<{ envelope: { payload: string } }>(dir, 'policy/')).filter(([f]) => f.startsWith('policy/000002-'))
+        const [file, raw] = (await readRecordEntries<{ envelope: { payload: string } }>(dir, 'policy/')).find(([f]) => f.startsWith('policy/000002-'))!
         const doc = JSON.parse(Buffer.from(raw.envelope.payload, 'base64').toString())
         await writeRecord(dir, file, {
             ...raw,

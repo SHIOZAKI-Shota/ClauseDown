@@ -1,4 +1,4 @@
-node_modules/
+node_modules
 
 out/
 dist
@@ -42,3 +42,6 @@ desktop.ini
 *.p12
 *.pem
 *.key
+
+note.md
+note-src/

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { paneStyle, type Pane } from '~/composables/usePane'
+import { vLiveStyle } from '~/utils/live-style'
 
 const props = defineProps<{
     pane: Pane
@@ -7,13 +8,13 @@ const props = defineProps<{
     label: string
     icon?: string
 }>()
-const open = computed(() => !props.pane.state.value.collapsed)
+const open = computed(() => !props.pane.collapsed.value)
 </script>
 
 <template>
     <PaneRail v-if="!open" :pane="pane" :side="side" :label="label" :icon="icon" />
     <PaneResizer v-if="open && side === 'right'" :pane="pane" side="right" :label="label" />
-    <section v-show="open" class="cd-pane-col side-pane" :class="side" :style="paneStyle(pane)">
+    <section v-show="open" class="cd-pane-col side-pane" :class="side" v-live-style="() => paneStyle(pane)">
         <div class="cd-pane-bar">
             <span class="cd-pane-title">{{ label }}</span>
             <slot name="bar" />

@@ -32,7 +32,6 @@ export const issues = {
     titlePlaceholder: '例：第12条の休日の定義を見直す',
     fBody: '本文',
     bodyHelp: 'Markdown で書けます。',
-    cancel: 'やめる',
     create: '作る',
     reloadTip: 'サイトで書かれたコメントなどを読み直します',
     reload: '再読み込み',

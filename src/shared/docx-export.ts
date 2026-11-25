@@ -337,7 +337,7 @@ function richBlocks(raw: string, out: Block[], ctx: Ctx, inherit?: CdProps) {
     for (const m of raw.matchAll(re)) {
         text(raw.slice(last, m.index))
         attachBlocks([m[0].trim()], 0, out, ctx, [take()])
-        last = m.index! + m[0].length
+        last = m.index + m[0].length
     }
     text(raw.slice(last))
 }

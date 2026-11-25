@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { KIND_COLORS, type EventKind, type Occurrence } from '@shared/schedule'
-import { daysUntil, todayISO, untilLabel } from '~/utils/format'
+import { daysUntil, untilLabel } from '~/utils/format'
+import { todayISO } from '@shared/date'
 
 const props = defineProps<{
     o: Occurrence

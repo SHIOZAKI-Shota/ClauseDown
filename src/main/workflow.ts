@@ -1,5 +1,8 @@
 import { tagPath } from '../shared/tag-path'
+import { localYmd } from '../shared/date'
 import { promises as fsp } from 'node:fs'
+import { writeAtomic } from './atomic'
+import { safeFileName, uniquePath, errText } from './util'
 import { t } from '../shared/i18n'
 import { join } from 'node:path'
 import fs from 'node:fs'
@@ -277,15 +280,6 @@ export interface Builders {
     cmpDocx(oldSource: string, newSource: string, title: string): Promise<Uint8Array>
 }
 
-function safeName(s: string): string {
-    const n = s
-        // oxlint-disable-next-line no-control-regex -- ファイル名に使えない制御文字を除く
-        .replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_')
-        .trim()
-        .replace(/[. ]+$/, '')
-    return /^(con|prn|aux|nul|com\d|lpt\d)(\..*)?$/i.test(n) ? `${n}_` : n || '_'
-}
-
 const folderFile = (dir: string) => join(dir, '.git', 'clausedown-delivery-folders.json')
 
 async function deliveryFolders(dir: string): Promise<Record<string, string>> {
@@ -300,7 +294,7 @@ async function deliveryFolders(dir: string): Promise<Record<string, string>> {
 async function rememberFolder(dir: string, id: string, folder: string) {
     const all = await deliveryFolders(dir)
     all[id] = folder
-    await fsp.writeFile(folderFile(dir), JSON.stringify(all, null, 2), 'utf8')
+    await writeAtomic(folderFile(dir), JSON.stringify(all, null, 2))
 }
 
 export async function recordReceived(dir: string, id: string, entry: NonNullable<DeliveryRecord['received']>[number]): Promise<void> {
@@ -328,16 +322,14 @@ export async function deliver(dir: string, input: DeliverInput, outDir: string, 
     const title = parseLegal(source).title || input.docPath.replace(/\.md$/i, '')
     const client = input.docPath.includes('/') ? input.docPath.slice(0, input.docPath.lastIndexOf('/')) : ''
     const now = new Date()
-    const p = (n: number) => String(n).padStart(2, '0')
-    const stamp = `${now.getFullYear()}${p(now.getMonth() + 1)}${p(now.getDate())}`
-    const folderName = safeName([stamp, client.replace(/\//g, '_'), title, t().notify.delivery.folder].filter(Boolean).join('_'))
-    let folder = join(outDir, folderName)
-    for (let i = 2; fs.existsSync(folder); i++) folder = join(outDir, `${folderName}(${i})`)
+    const stamp = localYmd(now, '')
+    const folderName = safeFileName([stamp, client.replace(/\//g, '_'), title, t().notify.delivery.folder].filter(Boolean).join('_'))
+    const folder = uniquePath(outDir, folderName)
     await fsp.mkdir(folder, { recursive: true })
 
     const cmpTitle = t().notify.delivery.compareTitle(title)
     const files: { name: string; data: Uint8Array; type: string }[] = []
-    const add = (name: string, data: Uint8Array, type: string) => files.push({ name: safeName(name), data, type })
+    const add = (name: string, data: Uint8Array, type: string) => files.push({ name: safeFileName(name), data, type })
     const PDF = 'application/pdf'
     const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     for (const item of input.items) {
@@ -391,7 +383,7 @@ export async function deliver(dir: string, input: DeliverInput, outDir: string, 
                 .join('\n')
             record.releaseUrl = await forge.release(tag, t().notify.delivery.releaseTitle(title, stamp, input.to ?? ''), body, files)
         } catch (e) {
-            record.releaseError = (e as Error).message
+            record.releaseError = errText(e)
         }
     }
     await writeRecord(dir, `${RECORD.deliveries}${record.id}.json`, { ...record, folder: '' })

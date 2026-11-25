@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeTheme, net, protocol, shell } from 'electron'
 import { t } from '../shared/i18n'
-import type { AiStatus, AppSettings, DocChangedEvent, McpConfig } from '../shared/api'
+import type { AiStatus, Api, AppSettings, DocChangedEvent, McpConfig } from '../shared/api'
+import { API_METHODS, type ApiMethod } from '../shared/api-methods'
 import { existsSync, statSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, resolve, sep } from 'node:path'
@@ -11,6 +12,7 @@ import * as docOps from './doc-ops'
 import * as repoHome from './repo-home'
 import { deliverWithDialog, exportFile, exportScheduleIcs, previewPdf } from './export'
 import * as sign from './sign-service'
+import * as mdsig from './mdsig'
 import * as signing from './signing'
 import * as verify from './verify'
 import { mynaStatus } from './myna'
@@ -169,14 +171,16 @@ async function assertAllowedDir(dir: unknown, allowPicked = false): Promise<void
     throw new Error(t().errors.app.notRegistered)
 }
 
-const PICKED_OK = new Set(['openRepo', 'initRepo'])
-const DOC_PATH = new Set(['readDoc', 'writeDoc', 'createDoc', 'discardChanges'])
+const PICKED_OK = new Set<ApiMethod>(['openRepo', 'initRepo'])
+const DOC_PATH = new Set<ApiMethod>(['readDoc', 'writeDoc', 'createDoc', 'discardChanges'])
 
 function assertPicked(dir: unknown) {
     if (typeof dir !== 'string' || ![...pickedRoots].some((root) => under(norm(dir), root))) throw new Error(t().errors.app.repickFolder)
 }
 
-const DIR_FIRST = new Set([
+const DIR_FIRST = new Set<ApiMethod>([
+    'verifyMd',
+    'pickCdsign',
     'exportAllowedSigners',
     'verifyCommits',
     'publishSigningKey',
@@ -256,7 +260,7 @@ const DIR_FIRST = new Set([
     'moveIssuesToForge',
 ])
 
-const LOCKED = new Set([
+const LOCKED = new Set<ApiMethod>([
     'initRepo',
     'writeDoc',
     'createDoc',
@@ -342,7 +346,7 @@ async function openFolder(p: unknown): Promise<void> {
     else shell.showItemInFolder(full)
 }
 
-const handlers: Record<string, (...args: any[]) => unknown> = {
+const handlers: { [K in ApiMethod]: (...args: any[]) => ReturnType<Api[K]> | Awaited<ReturnType<Api[K]>> } = {
     getSettings: loadSettings,
     setTheme: async (theme: AppSettings['theme']) => {
         await updateSettings((s) => ({ ...s, theme }))
@@ -529,6 +533,24 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
         return sign.saveReceivedPdf(win, input)
     },
     exportAllowedSigners: (dir) => verify.exportAllowedSigners(win, dir),
+    verifyMd: async (dir, path, text) => {
+        git.assertDocPath(path)
+        return mdsig.verifyDocText(dir, path, String(text))
+    },
+    trustMdKey: (signer, pubkey) => mdsig.trustMdKey(String(signer), String(pubkey)),
+    addMdKey: (input) => mdsig.addMdKey(input),
+    removeMdKey: (id) => mdsig.removeMdKey(String(id)),
+    setMdSigning: (patch) => mdsig.setMdSettings(patch),
+    exportCdsign: async (input) => {
+        await assertAllowedDir(input?.dir)
+        git.assertDocPath(input.path)
+        return mdsig.exportCdsign(win, input)
+    },
+    pickCdsign: (dir, deliveryId) => mdsig.pickCdsign(win, dir, String(deliveryId)),
+    saveCdsign: async (input) => {
+        await assertAllowedDir(input?.dir)
+        return mdsig.saveCdsign(win, input)
+    },
     verifyCommits: async (dir, oids) => {
         await assertAllowedDir(dir)
         return verify.verifyCommits(dir, Array.isArray(oids) ? oids.map(String) : [])
@@ -653,7 +675,8 @@ const handlers: Record<string, (...args: any[]) => unknown> = {
     aiReset,
 }
 
-for (const [name, fn] of Object.entries(handlers)) {
+for (const name of API_METHODS) {
+    const fn = handlers[name] as (...args: unknown[]) => unknown
     ipcMain.handle(name, async (e, ...args) => {
         const from = e.senderFrame?.url ?? ''
         const dev = process.env.ELECTRON_RENDERER_URL

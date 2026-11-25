@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { computed, ref, shallowRef, watch } from 'vue'
+import { computed, ref, shallowReactive, shallowRef, watch } from 'vue'
 import type {
     AppSettings,
     PolicyPending,
@@ -19,19 +19,20 @@ import { FORGE_LABEL, type ForgeKind } from '@shared/forge'
 import { DEFAULT_PREFS, type AppPrefs, type DocStyle, type RecentDoc } from '@shared/prefs'
 import { messagesOf, resolveLocale, setLocale } from '@shared/i18n'
 import { resolveStyle, type StyleLayers } from '@shared/folder-style'
-import { toPlain } from '~/utils/ipc'
-import { todayISO } from '~/utils/format'
+import { ipcError, sameJson, toPlain } from '~/utils/ipc'
+import { useDebounced } from '~/composables/useDebounced'
 import { revealLabel } from '~/utils/platform'
 import { dissolveSection, placeRepo, renameSection } from '@shared/repo-sections'
-import { addDays } from '@shared/schedule'
+import { isDocView, useNav, type View } from './nav'
+import { useRepoBadges } from './badges'
 import { useStoredRef } from '~/composables/useStoredRef'
 
-export type View = 'home' | 'setup' | 'about' | 'repo' | 'docs' | 'schedule' | 'issues' | 'editor' | 'history' | 'compare' | 'releases'
+export type { View }
 
 export const useApp = defineStore('app', () => {
     const toast = useToast()
 
-    const settings = ref<AppSettings | null>(null)
+    const settings = shallowRef<AppSettings | null>(null)
     const view = ref<View>('home')
     const settingsTab = ref<Partial<Record<'setup' | 'repo', string>>>({})
     const paletteOpen = ref(false)
@@ -87,19 +88,32 @@ export const useApp = defineStore('app', () => {
         identity.value = await window.api.identity(repoDir.value).catch(() => null)
     }
     watch(
-        () => [repoDir.value, repo.value?.url, settings.value?.author, settings.value?.identityDefault, accounts.value],
+        () => JSON.stringify([repoDir.value, repo.value?.url, settings.value?.author, settings.value?.identityDefault, accounts.value]),
         () => void refreshIdentity(),
-        { deep: true },
     )
     const me = computed(() => identity.value?.name ?? '')
     const reviewer = computed<Reviewer>(() => ({ name: me.value || undefined, login: identity.value?.login }))
-    const prefs = computed<AppPrefs>(() => ({ ...DEFAULT_PREFS, ...settings.value?.prefs }))
+    const prefsState = shallowReactive<AppPrefs>({ ...DEFAULT_PREFS })
+    watch(
+        () => settings.value?.prefs,
+        (saved) => {
+            const next: AppPrefs = { ...DEFAULT_PREFS, ...saved }
+            for (const key of Object.keys(next) as (keyof AppPrefs)[]) {
+                if (!sameJson(prefsState[key], next[key])) Object.assign(prefsState, { [key]: next[key] })
+            }
+        },
+        { immediate: true, flush: 'sync' },
+    )
+    const prefs = computed<AppPrefs>(() => prefsState)
     const systemLanguages = ref<string[]>([...navigator.languages])
     const locale = computed(() => resolveLocale(prefs.value.language, systemLanguages.value))
     watch(locale, (l) => setLocale(l), { immediate: true, flush: 'sync' })
     const t = computed(() => messagesOf(locale.value))
     const styleFor = (path: string) => resolveStyle(prefs.value.docStyle, styleLayers.value, path).style
-    const style = computed<DocStyle>(() => styleFor(currentPath.value ?? ''))
+    const style = computed<DocStyle>((prev) => {
+        const next = styleFor(currentPath.value ?? '')
+        return prev && sameJson(prev, next) ? prev : next
+    })
 
     async function setPrefs(patch: Partial<AppPrefs>) {
         if (!settings.value) return
@@ -107,12 +121,11 @@ export const useApp = defineStore('app', () => {
         if (patch.uiScale !== undefined) await window.api.setZoom(patch.uiScale)
     }
 
-    let liveSave: ReturnType<typeof setTimeout> | undefined
+    const saveLive = useDebounced(() => settings.value && saveSettings(settings.value), 500)
     function setPrefsLive(patch: Partial<AppPrefs>) {
         if (!settings.value) return
         settings.value = { ...settings.value, prefs: { ...prefs.value, ...patch } }
-        clearTimeout(liveSave)
-        liveSave = setTimeout(() => void saveSettings(settings.value!), 500)
+        saveLive()
     }
 
     async function resetPrefs() {
@@ -164,20 +177,29 @@ export const useApp = defineStore('app', () => {
         })
     }
 
-    async function run<T>(fn: () => Promise<T>, done?: string): Promise<T | undefined> {
-        busyCount.value++
+    async function run<T>(fn: () => Promise<T>, done?: string, opts: { busy?: boolean } = {}): Promise<T | undefined> {
+        const counted = opts.busy ?? true
+        if (counted) busyCount.value++
         try {
             const r = await fn()
             if (done) notify(done)
             return r
         } catch (e) {
-            notify(String((e as Error).message ?? e).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''), true)
+            notify(ipcError(e), true)
             return undefined
         } finally {
-            busyCount.value--
+            if (counted) busyCount.value--
         }
     }
 
+    async function copy(text: string, done: string) {
+        try {
+            await navigator.clipboard.writeText(text)
+            notify(done)
+        } catch {
+            notify(t.value.common.copyFailed, true)
+        }
+    }
     async function runOk(fn: () => Promise<unknown>, done?: string): Promise<boolean> {
         const ok = await run(async () => {
             await fn()
@@ -191,12 +213,10 @@ export const useApp = defineStore('app', () => {
         docListeners.add(cb)
         return () => docListeners.delete(cb)
     }
-    let docChangeTimer: ReturnType<typeof setTimeout> | undefined
+    const refreshDocListSoon = useDebounced(() => refreshDocList(), 300)
     window.api.onDocChanged((e) => {
         for (const cb of docListeners) cb(e)
-        if (e.dir !== repoDir.value) return
-        clearTimeout(docChangeTimer)
-        docChangeTimer = setTimeout(() => void refreshDocList(), 300)
+        if (e.dir === repoDir.value) refreshDocListSoon()
     })
 
     async function load() {
@@ -239,6 +259,23 @@ export const useApp = defineStore('app', () => {
         notify(t.value.shell.notify.relocated)
     }
 
+    function clearRepoData() {
+        docs.value = []
+        branches.value = []
+        reviews.value = []
+    }
+    function resetRepoView() {
+        currentPath.value = null
+        syncState.value = null
+        clearRepoData()
+    }
+
+    async function checkHouritsu(dir: string): Promise<boolean> {
+        const paths = await window.api.detectHouritsu(dir).catch(() => [] as string[])
+        if (paths.length) dialog.value = { kind: 'houritsu', dir, paths }
+        return paths.length > 0
+    }
+
     async function forgetRepo(dir: string) {
         if (!settings.value) return
         const name = settings.value.repos.find((x) => x.dir === dir)?.name ?? dir
@@ -251,11 +288,7 @@ export const useApp = defineStore('app', () => {
         await checkRepos()
         notify(t.value.shell.notify.forgot(name))
         if (!wasCurrent) return
-        currentPath.value = null
-        syncState.value = null
-        docs.value = []
-        branches.value = []
-        reviews.value = []
+        resetRepoView()
         if (!repos.length) {
             if (!['home', 'setup', 'about'].includes(view.value)) view.value = 'home'
             return
@@ -310,12 +343,10 @@ export const useApp = defineStore('app', () => {
     async function loadRepoState() {
         if (!repoDir.value) return
         const dir = repoDir.value
-        const folderState = (await window.api.repoStatus([dir]).catch(() => ({}) as Record<string, RepoState>))[dir]
+        const folderState = (await window.api.repoStatus([dir]).catch((): Record<string, RepoState> => ({})))[dir]
         if (folderState) repoStates.value = { ...repoStates.value, [dir]: folderState }
         if (folderState && folderState !== 'ok') {
-            docs.value = []
-            branches.value = []
-            reviews.value = []
+            clearRepoData()
             return
         }
         const [d, b, r, rl, gh, st, ps] = await Promise.all([
@@ -324,7 +355,7 @@ export const useApp = defineStore('app', () => {
             window.api.listReviews(dir).catch(() => []),
             window.api.getRules(dir).catch(() => ({ ...DEFAULT_RULES })),
             window.api.forgeKind(dir).catch(() => null),
-            window.api.listFolderStyles(dir).catch(() => ({}) as StyleLayers),
+            window.api.listFolderStyles(dir).catch((): StyleLayers => ({})),
             isDemo() ? Promise.resolve(null) : window.api.policyStatus(dir).catch(() => null),
         ])
         if (dir !== repoDir.value) return
@@ -362,11 +393,7 @@ export const useApp = defineStore('app', () => {
         if (!settings.value || dir === repoDir.value) return
         await flushEditor()
         await saveSettings({ ...settings.value, current: dir })
-        currentPath.value = null
-        syncState.value = null
-        docs.value = []
-        branches.value = []
-        reviews.value = []
+        resetRepoView()
         await refreshDocs()
         view.value = 'docs'
         if (!repoProblem.value) await sync()
@@ -497,85 +524,21 @@ export const useApp = defineStore('app', () => {
         }
     }
 
-    const OVERLAY: View[] = ['setup', 'about', 'repo']
-    const DOC_VIEWS: View[] = ['editor', 'history', 'compare', 'releases']
-    type DocView = 'editor' | 'history' | 'compare' | 'releases'
-    const returnView = ref<View | null>(null)
-    const lastDocView = ref<DocView>('editor')
-    type Page = 'issues' | 'schedule'
-    const PAGES: View[] = ['issues', 'schedule']
-    const pageFrom = ref<Record<Page, View | null>>({ issues: null, schedule: null })
-    watch(view, (to, from) => {
-        if (OVERLAY.includes(to) && !OVERLAY.includes(from)) returnView.value = from
-        if (PAGES.includes(to) && from !== to && !OVERLAY.includes(from)) pageFrom.value[to as Page] = from
-        if (to === 'docs') void Promise.all([refreshIssueCount(), refreshDueCount()])
-        if (DOC_VIEWS.includes(to)) lastDocView.value = to as DocView
-    })
-    const backTarget = computed<View>(() => {
-        const v = returnView.value
-        if (!repoDir.value || !v) return 'home'
-        if (DOC_VIEWS.includes(v) && !currentDoc.value) return 'docs'
-        return v
-    })
-    const returnLabel = computed(() => labelForReturn(backTarget.value))
-    function pageBack(page: Page): View {
-        const v = pageFrom.value[page]
-        if (!v || v === page || !repoDir.value) return repoDir.value ? 'docs' : 'home'
-        if (DOC_VIEWS.includes(v) && !currentDoc.value) return 'docs'
-        return v
-    }
-    const pageReturnLabel = (page: Page) => labelForReturn(pageBack(page))
-    function leavePage(page: Page) {
-        view.value = pageBack(page)
-    }
-    const dueCount = ref<{ due: number; overdue: number } | null>(null)
-    let dueCountSeq = 0
-    async function refreshDueCount() {
-        const dir = repoDir.value
-        const seq = ++dueCountSeq
-        if (!dir) return (dueCount.value = null)
-        const today = todayISO()
-        const until = addDays(today, 30)
-        const r = await window.api.occurrences(dir, addDays(today, -365 * 5), until, today).catch(() => null)
-        if (seq !== dueCountSeq) return
-        if (!r) return (dueCount.value = null)
-        const due = r.items.filter((o) => o.source !== 'delivery' && (o.overdue || (!o.done && (o.end ?? o.date) >= today && o.date <= until)))
-        dueCount.value = { due: due.length, overdue: due.filter((o) => o.overdue).length }
-    }
-    watch(scheduleKey, () => void refreshDueCount())
-    const openIssueCount = ref<number | null>(null)
-    let issueCountSeq = 0
-    async function refreshIssueCount() {
-        const dir = repoDir.value
-        const seq = ++issueCountSeq
-        if (!dir) return (openIssueCount.value = null)
-        const list = await window.api.listIssues(dir).catch(() => null)
-        if (seq === issueCountSeq) openIssueCount.value = list ? list.filter((i) => i.state === 'open').length : null
-    }
-    watch(
-        repoDir,
-        () => {
-            openIssueCount.value = null
-            dueCount.value = null
-            void refreshIssueCount()
-            void refreshDueCount()
-        },
-        { immediate: true },
-    )
     function labelForReturn(v: View) {
         const r = t.value.shell.returnTo
-        if (DOC_VIEWS.includes(v)) return r.doc(currentDoc.value?.title ?? r.docFallback)
+        if (isDocView(v)) return r.doc(currentDoc.value?.title ?? r.docFallback)
         if (v === 'docs') return r.repoHome
         if (v === 'schedule') return r.schedule
         if (v === 'issues') return r.issues
         return r.home
     }
-    function goBack() {
-        view.value = backTarget.value
-    }
-    function goRepoHome() {
-        view.value = repoDir.value ? 'docs' : 'home'
-    }
+    const { dueCount, refreshDueCount, openIssueCount, refreshIssueCount } = useRepoBadges(repoDir, scheduleKey)
+    const { lastDocView, returnLabel, pageReturnLabel, leavePage, goBack, goRepoHome } = useNav(view, {
+        hasRepo: () => !!repoDir.value,
+        hasDoc: () => !!currentDoc.value,
+        label: labelForReturn,
+        onEnterDocs: () => void Promise.all([refreshIssueCount(), refreshDueCount()]),
+    })
 
     return {
         locale,
@@ -671,6 +634,8 @@ export const useApp = defineStore('app', () => {
         touchSchedule,
         run,
         runOk,
+        copy,
+        checkHouritsu,
         notify,
         notifyExported,
         sync,

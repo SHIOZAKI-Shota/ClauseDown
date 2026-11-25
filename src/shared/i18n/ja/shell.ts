@@ -18,7 +18,7 @@ export const shell = {
         switched: (label: string) => `「${label}」に切り替えました`,
         published: '共有を始めました。これからは「リモート」を押すと同期します',
         remoteChanged: 'リモートを変更しました',
-        remoteRemoved: 'リモートを外しました。ローカル だけで管理します',
+        remoteRemoved: 'リモートを外しました。この PC だけで管理します',
         pulled: '最新の版を取得しました',
     },
     docActions: {
@@ -111,7 +111,7 @@ export const shell = {
         edit: '編集',
         history: '改定履歴',
         compare: '新旧対照表',
-        releases: '期日・有効期間・納品',
+        releases: '施行・納品',
         due: '期日・有効期間',
         dueTitle: (overdue: number, soon: number) => `期限切れ ${overdue} 件・30 日以内 ${soon} 件`,
         versionTitle: (branch: string, message: string, author: string, at: string) => `${branch}：「${message}」（${author}・${at}）`,

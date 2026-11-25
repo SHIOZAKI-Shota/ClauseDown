@@ -69,6 +69,5 @@ export const history = {
         pickIssue: '課題を選ぶ…',
         searchIssue: '番号・題名で探す',
         recordEffective: '施行日を記録する',
-        cancel: 'やめる',
     },
 }

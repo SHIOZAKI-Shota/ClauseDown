@@ -1,16 +1,14 @@
 import { GITHUB_APP } from '../shared/about'
+import { deviceFlow, githubApi, githubWeb, oauthPost, oauthWhy, pollDeviceToken, type DeviceFlow } from './forge-http'
 import { t } from '../shared/i18n'
-import { GITHUB_BASE } from '../shared/forge'
+import { GITHUB_BASE, type ForgeLoginMethod } from '../shared/forge'
 import type { ForgeLogin } from '../shared/api'
 
 export interface GitHubAccount {
     login: string | null
-    method: 'app' | 'token' | null
+    method: ForgeLoginMethod | null
 }
-import { credentialFromResponse, loadCredential, loadSettings, saveCredential, type OAuthResponse, type Profile } from './settings'
-
-const webBase = () => process.env.CLAUSEDOWN_GITHUB_WEB ?? 'https://github.com'
-const apiBase = () => process.env.CLAUSEDOWN_GITHUB_API ?? 'https://api.github.com'
+import { credentialFromResponse, loadCredential, loadSettings, saveCredential, type Profile } from './settings'
 
 export const BUILTIN_CLIENT_ID = GITHUB_APP.clientId
 
@@ -20,66 +18,42 @@ export async function clientId(): Promise<string> {
     return id
 }
 
-async function post(path: string, body: Record<string, string>) {
-    const res = await fetch(webBase() + path, {
-        method: 'POST',
-        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-    })
-    return (await res.json()) as OAuthResponse
-}
-
-let pending: { deviceCode: string; interval: number; expiresAt: number; clientId: string } | null = null
+let pending: DeviceFlow | null = null
 
 export async function startLogin(): Promise<ForgeLogin> {
     const id = await clientId()
-    const j = await post('/login/device/code', { client_id: id })
-    if (!j.device_code) throw new Error(t().errors.githubAuth.cannotLogin(String(j.error_description ?? j.error ?? t().errors.githubAuth.unknown)))
-    pending = {
-        deviceCode: String(j.device_code),
-        interval: Number(j.interval ?? 5),
-        expiresAt: Date.now() + Number(j.expires_in ?? 900) * 1000,
-        clientId: id,
-    }
+    const { json: j } = await oauthPost(githubWeb() + '/login/device/code', { client_id: id }, false)
+    if (!j.device_code) throw new Error(t().errors.githubAuth.cannotLogin(oauthWhy(j)))
+    pending = deviceFlow(j, id, 900)
     return { userCode: String(j.user_code), verificationUri: String(j.verification_uri), expiresIn: Number(j.expires_in ?? 900) }
 }
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 export async function waitLogin(): Promise<GitHubAccount> {
     if (!pending) throw new Error(t().errors.githubAuth.pressLoginFirst)
     const p = pending
-    let interval = p.interval
-    while (Date.now() < p.expiresAt) {
-        await sleep(interval * 1000)
-        if (pending !== p) throw new Error(t().errors.githubAuth.cancelled)
-        const j = await post('/login/oauth/access_token', {
-            client_id: p.clientId,
-            device_code: p.deviceCode,
-            grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+    try {
+        const j = await pollDeviceToken(p, {
+            request: async () =>
+                (
+                    await oauthPost(
+                        githubWeb() + '/login/oauth/access_token',
+                        { client_id: p.clientId, device_code: p.deviceCode, grant_type: 'urn:ietf:params:oauth:grant-type:device_code' },
+                        false,
+                    )
+                ).json,
+            alive: () => pending === p,
+            errors: { denied: t().errors.githubAuth.denied, expired: t().errors.githubAuth.expired, failed: t().errors.githubAuth.cannotLogin },
         })
-        if (j.access_token) {
-            const who = await whoAmI(String(j.access_token))
-            await saveCredential(GITHUB_BASE, credentialFromResponse(j, 'github', p.clientId, who))
-            pending = null
-            return { login: who?.login ?? null, method: 'app' }
-        }
-        if (j.error === 'authorization_pending') continue
-        if (j.error === 'slow_down') {
-            interval = Number(j.interval ?? interval + 5)
-            continue
-        }
-        pending = null
-        if (j.error === 'access_denied') throw new Error(t().errors.githubAuth.denied)
-        if (j.error === 'expired_token') break
-        throw new Error(t().errors.githubAuth.cannotLogin(String(j.error_description ?? j.error)))
+        const who = await whoAmI(String(j.access_token))
+        await saveCredential(GITHUB_BASE, credentialFromResponse(j, 'github', p.clientId, who))
+        return { login: who?.login ?? null, method: 'app' }
+    } finally {
+        if (pending === p) pending = null
     }
-    pending = null
-    throw new Error(t().errors.githubAuth.expired)
 }
 
 export async function whoAmI(token: string): Promise<Profile | null> {
-    const get = (path: string) => fetch(apiBase() + path, { headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}` } })
+    const get = (path: string) => fetch(githubApi() + path, { headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}` } })
     try {
         const res = await get('/user')
         if (!res.ok) return null

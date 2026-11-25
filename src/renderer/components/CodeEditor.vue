@@ -11,6 +11,8 @@ import { legalExtensions, legalScopeGuides, proofreadLinter, setLegalDoc } from 
 import { ALL_GUIDES, type GuideOptions } from '~/utils/scope-guides'
 import { diffHighlight, setDiffBase } from '~/utils/diff-highlight'
 import { searchPanel } from '~/utils/search-panel'
+import { signatureLock } from '~/utils/signature-lock'
+import { useT } from '~/composables/useT'
 import type { EditorIssue } from '~/components/IssuePane.vue'
 
 const props = withDefaults(
@@ -23,14 +25,23 @@ const props = withDefaults(
         diffBase?: string | null
         spellLang?: string | null
         guides?: GuideOptions
+        signLock?: boolean
     }>(),
-    { wrap: true, readonly: false, diffBase: null, proofread: true, spellLang: null, guides: () => ALL_GUIDES },
+    { wrap: true, readonly: false, diffBase: null, proofread: true, spellLang: null, guides: () => ALL_GUIDES, signLock: false },
 )
 const guiding = new Compartment()
 const wrapping = new Compartment()
 const proofreading = new Compartment()
 const proofreadExt = proofreadLinter((text) => window.api.proofread(text))
 const locking = new Compartment()
+const signLocking = new Compartment()
+const signLockExt = (on: boolean) =>
+    on
+        ? signatureLock(
+              () => emit('blocked'),
+              (n) => t.value.mdsig.chain(n),
+          )
+        : []
 const spelling = new Compartment()
 const spellExt = (lang: string | null) =>
     EditorView.contentAttributes.of(lang ? { spellcheck: 'true', lang, autocorrect: 'off', autocapitalize: 'off' } : { spellcheck: 'false' })
@@ -47,7 +58,9 @@ const emit = defineEmits<{
     images: [File[]]
     issues: [EditorIssue[]]
     openIssues: []
+    blocked: []
 }>()
+const t = useT()
 const host = ref<HTMLDivElement>()
 let view: EditorView | null = null
 
@@ -62,6 +75,7 @@ onMounted(() => {
                 wrapping.of(props.wrap ? EditorView.lineWrapping : []),
                 proofreading.of(props.proofread ? proofreadExt : []),
                 locking.of(lockExt(props.readonly)),
+                signLocking.of(signLockExt(props.signLock)),
                 spelling.of(spellExt(props.spellLang)),
                 EditorState.tabSize.of(2),
                 ...legalExtensions(),
@@ -135,7 +149,7 @@ watch(
     (v) => {
         if (view && v !== lastEmitted && v !== view.state.doc.toString()) {
             lastEmitted = v
-            view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: v } })
+            view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: v }, filter: false })
             clearTimeout(emitTimer)
             emitTimer = undefined
         }
@@ -160,6 +174,10 @@ watch(
         view?.dispatch({ effects: spelling.reconfigure(spellExt(lang)) })
     },
     { immediate: true },
+)
+watch(
+    () => props.signLock,
+    (on) => view?.dispatch({ effects: signLocking.reconfigure(signLockExt(on)) }),
 )
 watch(
     () => props.readonly,

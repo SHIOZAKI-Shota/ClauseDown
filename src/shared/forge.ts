@@ -1,6 +1,8 @@
 import { t } from './i18n'
 
 export type ForgeKind = 'github' | 'gitlab'
+export type IssueState = 'open' | 'closed'
+export type ForgeLoginMethod = 'app' | 'token'
 
 export const FORGE_LABEL: Record<ForgeKind, string> = { github: 'GitHub', gitlab: 'GitLab' }
 

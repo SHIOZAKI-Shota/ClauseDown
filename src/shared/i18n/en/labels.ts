@@ -66,6 +66,11 @@ export const labels: Messages['labels'] = {
             label: 'Export to Markdown (houritsu)',
             description: 'Adds an export menu item for houritsu-format Markdown, with article and paragraph numbers written into the text.',
         },
+        cdsign: {
+            label: 'Get signatures on Markdown (.cdsign)',
+            description:
+                'Signs documents with md-signature and exports a ClauseDown signature request (.cdsign). The other party co-signs it in ClauseDown Sign, and you import the returned file. Also turns on the signature verification pane and editing restrictions for signed documents.',
+        },
     },
     aiProviders: {
         anthropic: {

@@ -1,7 +1,6 @@
 import type { Messages } from '../types'
 
 export const sync: Messages['sync'] = {
-    cancel: 'Cancel',
     status: {
         remote: 'Remote',
         remoteWith: (text: string) => `Remote · ${text}`,

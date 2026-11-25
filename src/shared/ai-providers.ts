@@ -1,4 +1,5 @@
 import { t } from './i18n'
+import { isLoopbackHost } from './net'
 
 export type AiProvider = 'anthropic' | 'openai' | 'ollama' | 'openrouter' | 'github'
 
@@ -7,8 +8,6 @@ export interface AiConfig {
     model?: string
     baseUrl?: string
 }
-
-export const DEFAULT_AI: AiConfig = { provider: 'anthropic' }
 
 export interface AiProviderInfo {
     label: string
@@ -49,8 +48,6 @@ export const OPENAI_PRESETS: { label: string; url: string }[] = [
     },
 ]
 
-const LOOPBACK = ['127.0.0.1', 'localhost', '[::1]']
-
 export interface BaseRules {
     lan?: boolean
 }
@@ -73,7 +70,7 @@ export function safeAiBase(url: unknown, rules: BaseRules = {}): boolean {
         const u = new URL(url)
         if (u.username || u.password || u.search || u.hash) return false
         if (u.protocol === 'https:') return true
-        return u.protocol === 'http:' && (LOOPBACK.includes(u.hostname) || (!!rules.lan && isLanHost(u.hostname)))
+        return u.protocol === 'http:' && (isLoopbackHost(u.hostname) || (!!rules.lan && isLanHost(u.hostname)))
     } catch {
         return false
     }
@@ -81,7 +78,7 @@ export function safeAiBase(url: unknown, rules: BaseRules = {}): boolean {
 
 export function isLocalBase(url: string): boolean {
     try {
-        return LOOPBACK.includes(new URL(url).hostname)
+        return isLoopbackHost(new URL(url).hostname)
     } catch {
         return false
     }

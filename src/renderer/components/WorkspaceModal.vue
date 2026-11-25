@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { useT } from '~/composables/useT'
+
 defineProps<{ title: string; summary?: string }>()
 const emit = defineEmits<{ close: [] }>()
+const t = useT()
 </script>
 
 <template>
@@ -14,7 +17,7 @@ const emit = defineEmits<{ close: [] }>()
                     </div>
                     <span class="cd-grow" />
                     <slot name="actions" />
-                    <UButton icon="i-lucide-x" color="neutral" variant="ghost" square @click="emit('close')" />
+                    <UButton icon="i-lucide-x" color="neutral" variant="ghost" square :aria-label="t.common.close" @click="emit('close')" />
                 </header>
                 <div class="ws-main">
                     <slot />

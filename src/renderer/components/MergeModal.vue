@@ -2,7 +2,7 @@
 import type { ConflictChoice, MergePreview } from '@shared/api'
 import { STATE_LABEL } from '@shared/review'
 import { useApp } from '~/stores/app'
-import { todayISO } from '~/utils/format'
+import { todayISO } from '@shared/date'
 import { toPlain } from '~/utils/ipc'
 import { useT } from '~/composables/useT'
 
@@ -99,7 +99,7 @@ function openReview() {
                 <UCheckbox v-model="deleteAfter" :label="t.merge.deleteAfterShort" size="sm" />
             </template>
             <span class="cd-grow" />
-            <UButton :label="t.merge.cancel" size="sm" color="neutral" variant="outline" @click="emit('close')" />
+            <UButton :label="t.common.cancel" size="sm" color="neutral" variant="outline" @click="emit('close')" />
             <UButton
                 :label="adopting ? t.merge.adopt : t.merge.update"
                 size="sm"
@@ -168,7 +168,7 @@ function openReview() {
         </template>
         <template #footer>
             <div class="cd-modal-foot">
-                <UButton :label="preview?.upToDate ? t.common.close : t.merge.cancel" color="neutral" variant="outline" @click="emit('close')" />
+                <UButton :label="preview?.upToDate ? t.common.close : t.common.cancel" color="neutral" variant="outline" @click="emit('close')" />
                 <UButton
                     v-if="preview && !preview.upToDate"
                     :label="adopting ? t.merge.adopt : t.merge.update"

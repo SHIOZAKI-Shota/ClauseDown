@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import { useConfirm } from '~/composables/useConfirm'
 import type { DropdownMenuItem } from '@nuxt/ui'
 import { parseLegal, articleTitle } from '@shared/legal-parser'
 import { renderDoc } from '@shared/legal-renderer'
-import { autoMerge } from '@shared/merge3'
 import { CONTRACT_PRESET, DEFAULT_CONFIG, readConfig, writeConfig, type DocConfig } from '@shared/config'
 import { extOfMime } from '@shared/images'
 import { clauseInsertLine, type ClauseInsert } from '@shared/clauses'
@@ -12,22 +12,27 @@ import { spellLang } from '@shared/legal-styles'
 import { docTemplates } from '@shared/doc-templates'
 import { titleEndLine } from '@shared/toc'
 import { useApp } from '~/stores/app'
-import { lastAtOrBefore, positionLabel } from '~/utils/legal-editor'
+import { lastAtOrBefore } from '~/utils/legal-editor'
 import { toPlain } from '~/utils/ipc'
 import { useStoredRef } from '~/composables/useStoredRef'
 import { useT } from '~/composables/useT'
 import { useArticleTrail } from '~/composables/useArticleTrail'
 import { useElementSize } from '@vueuse/core'
 import { usePane, paneStyle, type Pane } from '~/composables/usePane'
+import { vLiveStyle } from '~/utils/live-style'
 import CodeEditor from '~/components/CodeEditor.vue'
 import type { EditorIssue } from '~/components/IssuePane.vue'
 import type PdfPagesView from '~/components/PdfPages.vue'
 import type { SaveRequest } from '~/components/SaveVersionModal.vue'
 import type { SealInsert } from '~/components/SealModal.vue'
 import { usePdfSign } from '~/composables/usePdfSign'
+import { usePrintPreview } from '~/composables/usePrintPreview'
+import { useAutosave } from '~/composables/useAutosave'
+import { SIG_COLOR, SIG_ICON, useSignatureVerify } from '~/composables/useSignatureVerify'
 
 const app = useApp()
 const t = useT()
+const ask = useConfirm()
 const path = app.currentPath!
 const text = ref('')
 const loaded = ref(false)
@@ -36,9 +41,9 @@ const preview = ref<HTMLDivElement>()
 const showConfig = ref(false)
 const showSave = ref(false)
 const newDoc = ref(false)
-const saving = ref<'idle' | 'pending' | 'saved'>('idle')
 const confirmDiscard = ref(false)
 const cursorLine = ref(0)
+const cursor = { line: cursorLine }
 const history = ref({ undo: 0, redo: 0 })
 
 const layout = useStoredRef('clausedown.editorLayout', { mode: 'split' as 'split' | 'edit' | 'preview', ai: false })
@@ -101,37 +106,9 @@ const PREVIEW_KINDS = computed(() => [
 const demo = isDemo()
 const showPrint = computed(() => !demo && mode.value !== 'edit' && printKind.value === 'print')
 const html = computed(() => (mode.value === 'edit' || showPrint.value ? '' : withImages(renderDoc(doc.value), app.repoDir, path)))
-const pdfData = shallowRef<Uint8Array | null>(null)
 const PdfPages = defineAsyncComponent(() => import('~/components/PdfPages.vue'))
 const pdfPages = ref<InstanceType<typeof PdfPagesView>>()
-const pdfBusy = ref(false)
-const pdfError = ref('')
-let pdfSeq = 0
-let pdfTimer: ReturnType<typeof setTimeout> | undefined
-async function makePdf() {
-    const n = ++pdfSeq
-    pdfBusy.value = true
-    try {
-        const bytes = await window.api.previewPdf(settled.value, toPlain(app.style), { dir: app.repoDir!, docPath: path })
-        if (n !== pdfSeq) return
-        pdfData.value = bytes
-        pdfError.value = ''
-    } catch (e) {
-        if (n === pdfSeq) pdfError.value = (e as Error).message
-    } finally {
-        if (n === pdfSeq) pdfBusy.value = false
-    }
-}
-watch(
-    () => [showPrint.value, settled.value, app.style] as const,
-    ([on]) => {
-        clearTimeout(pdfTimer)
-        if (on && loaded.value) pdfTimer = setTimeout(() => void makePdf(), pdfData.value ? 900 : 0)
-    },
-    { deep: true },
-)
-watch(loaded, (v) => v && showPrint.value && void makePdf())
-onBeforeUnmount(() => clearTimeout(pdfTimer))
+const { pdfData, pdfBusy, pdfError } = usePrintPreview({ on: showPrint, ready: loaded, source: settled, path })
 
 const savedText = ref<string | null>(null)
 async function loadSaved() {
@@ -140,8 +117,7 @@ async function loadSaved() {
 
 onMounted(async () => {
     const [content] = await Promise.all([window.api.readDoc(app.repoDir!, path), loadSaved()])
-    lastWritten = content
-    text.value = content
+    reset(content)
     settled.value = content
     loaded.value = true
 })
@@ -157,42 +133,7 @@ watch(
     { immediate: true },
 )
 
-let timer: ReturnType<typeof setTimeout> | undefined
-let lastWritten = ''
-watch(text, (v) => {
-    if (!loaded.value || v === lastWritten) return
-    saving.value = 'pending'
-    clearTimeout(timer)
-    timer = setTimeout(() => writeNow(), 500)
-})
-
-let writing: Promise<void> = Promise.resolve()
-function writeNow(): Promise<void> {
-    editor.value?.flush()
-    clearTimeout(timer)
-    writing = writing
-        .then(async () => {
-            const v = text.value
-            if (v !== lastWritten) {
-                await window.api.writeDoc(app.repoDir!, path, v)
-                lastWritten = v
-                app.markChanged(path)
-            }
-            if (text.value === lastWritten) saving.value = 'saved'
-        })
-        .catch((e) => {
-            saving.value = 'pending'
-            app.notify(t.value.editor.saveFailed((e as Error).message), true)
-        })
-    return writing
-}
-
-app.setEditorFlush(writeNow)
-
-onBeforeUnmount(() => {
-    app.setEditorFlush(null)
-    void writeNow()
-})
+const { saving, writeNow, reset, reloadFromDisk, cancel: cancelSave } = useAutosave({ text, loaded, path, flush: () => editor.value?.flush() })
 
 const indentOf = () => /^(\s*)/.exec(editor.value?.currentLine() ?? '')![1].length
 function addChapter() {
@@ -322,7 +263,8 @@ async function insertSeal(s: SealInsert) {
     if (!saved) return
     const size = s.size && s.size !== (s.mark === 'sign' ? 12 : 15) ? `=${s.size}mm` : ''
     const mark = `![${s.label.replace(/[[\]]/g, '')}](${saved.src}){${s.mark ?? 'seal'}${size}}`
-    if (!inClosing() && confirm(t.value.signing.sealModal.outsideClosing)) {
+    const sm = t.value.signing.sealModal
+    if (!inClosing() && (await ask({ title: sm.outsideClosing, description: sm.outsideClosingDesc, confirmLabel: sm.toClosing, cancelLabel: sm.here }))) {
         const end = closingEnd()
         if (end === null) {
             editor.value?.goToLine(text.value.split('\n').length - 1)
@@ -370,13 +312,19 @@ const editMenu = computed<DropdownMenuItem[][]>(() => {
             { label: m.pageBreakBefore, icon: 'i-lucide-separator-horizontal', onSelect: addPageBreak },
         ],
         [{ label: m.insertRef, icon: 'i-lucide-link', onSelect: () => editor.value?.insertRef() }, backRefItem.value],
-        [{ label: articleHere() ? m.issueArticle : m.issueDoc, icon: 'i-lucide-list-todo', onSelect: issueHere }],
+        [{ label: hereLine.value >= 0 ? m.issueArticle : m.issueDoc, icon: 'i-lucide-list-todo', onSelect: issueHere }],
     ]
 })
-const backRefItem = computed<DropdownMenuItem>(() => {
+const articleLineAt = (withDeleted: boolean) => {
     let line = -1
-    for (const ch of doc.value.chapters) for (const a of ch.articles) if (a.line >= 0 && a.line <= cursorLine.value) line = a.line
-    const list = backs.value.get(line) ?? []
+    for (const ch of doc.value.chapters)
+        for (const a of ch.articles) if ((withDeleted || !a.deleted) && a.line >= 0 && a.line <= cursorLine.value) line = a.line
+    return line
+}
+const refLine = computed(() => articleLineAt(true))
+const hereLine = computed(() => articleLineAt(false))
+const backRefItem = computed<DropdownMenuItem>(() => {
+    const list = backs.value.get(refLine.value) ?? []
     return list.length
         ? {
               label: t.value.editor.context.backRefs(list.length),
@@ -386,10 +334,9 @@ const backRefItem = computed<DropdownMenuItem>(() => {
         : { label: t.value.editor.context.noBackRefs, icon: 'i-lucide-corner-up-left', disabled: true }
 })
 function articleHere() {
-    let hit: { label: string; title: string } | null = null
     for (const ch of doc.value.chapters)
-        for (const a of ch.articles) if (!a.deleted && a.line >= 0 && a.line <= cursorLine.value) hit = { label: a.label, title: articleTitle(a, doc.value) }
-    return hit
+        for (const a of ch.articles) if (!a.deleted && a.line === hereLine.value) return { label: a.label, title: articleTitle(a, doc.value) }
+    return null
 }
 function issueHere() {
     const name = app.docs.find((d) => d.path === path)?.title ?? path
@@ -432,10 +379,31 @@ function toggleIssues(kind: 'all' | 'error' | 'warning') {
     }
 }
 watch(text, () => (issueNote.value = null))
+const sigOpen = useStoredRef('clausedown.signatures.open', false)
+const { cdsign, sigReport, sigBusy, sigState, sigCount, sigFull, verifySignatures, trustSignature } = useSignatureVerify({ doc, source: settled, path })
+const cdsignOpen = ref(false)
+const hasImages = computed(() => /!\[[^\]]*\]\((?!https?:)/.test(settled.value))
+let blockedNoted = false
+function noteBlocked() {
+    if (blockedNoted) return
+    blockedNoted = true
+    app.notify(t.value.mdsig.blocked, true)
+    setTimeout(() => (blockedNoted = false), 5000)
+}
+watch(sigFull, (full) => {
+    if (full) showConfig.value = false
+})
+function toggleSignatures() {
+    sigOpen.value = !sigOpen.value
+    if (sigOpen.value) issuesOpen.value = false
+}
+watch(issuesOpen, (v) => {
+    if (v) sigOpen.value = false
+})
+const clauseLibraryOn = computed(() => isEnabled(app.settings, 'clauseLibrary'))
+const houritsuExportOn = computed(() => isEnabled(app.settings, 'houritsuExport'))
 const showClauses = ref(false)
-const clauseLibrary = computed(() =>
-    isEnabled(app.settings, 'clauseLibrary') ? (app.settings?.repos.find((r) => r.dir === app.settings?.clauseLibrary) ?? null) : null,
-)
+const clauseLibrary = computed(() => (clauseLibraryOn.value ? (app.settings?.repos.find((r) => r.dir === app.settings?.clauseLibrary) ?? null) : null))
 function openClauses() {
     if (!clauseLibrary.value) return app.notify(t.value.editor.clauseLibraryMissing, true)
     showClauses.value = true
@@ -511,7 +479,7 @@ const insertMenu = computed<DropdownMenuItem[][]>(() => {
             { label: m.pageBreak, icon: 'i-lucide-separator-horizontal', onSelect: addPageBreak },
             { label: m.format, icon: 'i-lucide-type', onSelect: addFormat },
         ],
-        ...(isEnabled(app.settings, 'clauseLibrary') ? [[{ label: m.clauseLibrary, icon: 'i-lucide-library', onSelect: openClauses }]] : []),
+        ...(clauseLibraryOn.value ? [[{ label: m.clauseLibrary, icon: 'i-lucide-library', onSelect: openClauses }]] : []),
     ]
 })
 function onShortcut(kind: 'article' | 'paragraph' | 'item') {
@@ -600,13 +568,6 @@ function zoomPreview(e: WheelEvent) {
     const d = e.deltaY < 0 ? 1 : -1
     zoomBy(app.prefs.zoomLinked ? d : 0, d)
 }
-function setPreviewZoom(v: number | number[] | null | undefined) {
-    const n = Number(Array.isArray(v) ? v[0] : v)
-    if (!Number.isFinite(n)) return
-    const next = clamp(Math.round(n), 50, 200)
-    const steps = app.prefs.zoomLinked ? Math.round((next - app.prefs.previewZoom) / PREVIEW_STEP) : 0
-    app.setPrefsLive({ previewZoom: next, editorFontSize: clamp(app.prefs.editorFontSize + steps * EDITOR_STEP, 10, 28) })
-}
 
 async function saveVersion(input: SaveRequest) {
     await writeNow()
@@ -630,29 +591,6 @@ async function saveVersion(input: SaveRequest) {
 const aiRunning = ref(false)
 const beforeAi = ref<string | null>(null)
 const aiChanged = ref(false)
-
-async function reloadFromDisk() {
-    editor.value?.flush()
-    await writing
-    const fresh = await window.api.readDoc(app.repoDir!, path)
-    const mine = text.value
-    const base = lastWritten
-    lastWritten = fresh
-    if (fresh === mine) {
-        saving.value = 'saved'
-        return
-    }
-    if (mine === base) {
-        clearTimeout(timer)
-        text.value = fresh
-        saving.value = 'saved'
-        return
-    }
-    const merged = autoMerge(base, mine, fresh)
-    if (merged !== null) text.value = merged
-    else app.notify(t.value.editor.conflictKept, true)
-    void writeNow()
-}
 
 const offDocChanged = app.onDocChanged(async (e) => {
     if (e.dir !== app.repoDir || e.path !== path) return
@@ -682,7 +620,7 @@ async function discard() {
     confirmDiscard.value = false
     editor.value?.flush()
     await nextTick()
-    clearTimeout(timer)
+    cancelSave()
     await app.run(() => window.api.discardChanges(app.repoDir!, path), t.value.editor.discarded)
     await app.refreshDocs()
     if (!app.docs.some((d) => d.path === path)) {
@@ -690,9 +628,7 @@ async function discard() {
         return
     }
     const [fresh] = await Promise.all([window.api.readDoc(app.repoDir!, path), loadSaved()])
-    lastWritten = fresh
-    text.value = fresh
-    saving.value = 'idle'
+    reset(fresh)
 }
 
 async function exportAs(format: 'pdf' | 'docx' | 'html' | 'md') {
@@ -719,7 +655,6 @@ async function saveShortcut() {
     else app.notify(t.value.editor.unchanged)
 }
 defineShortcuts({ meta_s: { handler: () => void saveShortcut(), usingInput: true } })
-const position = computed(() => positionLabel(doc.value, cursorLine.value))
 const trail = useArticleTrail(path, doc, cursorLine)
 const trailOpen = ref(false)
 watch(trailOpen, (v) => v && void trail.loadCommits())
@@ -745,7 +680,8 @@ const exportMenu = computed<DropdownMenuItem[]>(() => {
         { label: m.exportPdf, icon: 'i-lucide-file-text', onSelect: () => exportAs('pdf') },
         { label: m.exportWord, icon: 'i-lucide-file-type', onSelect: () => exportAs('docx') },
         { label: m.exportHtml, icon: 'i-lucide-file-code', onSelect: () => exportAs('html') },
-        ...(isEnabled(app.settings, 'houritsuExport') ? [{ label: m.exportMd, icon: 'i-lucide-file-code-2', onSelect: () => exportAs('md') }] : []),
+        ...(houritsuExportOn.value ? [{ label: m.exportMd, icon: 'i-lucide-file-code-2', onSelect: () => exportAs('md') }] : []),
+        ...(cdsign.value ? [{ label: t.value.mdsig.export.menu, icon: 'i-lucide-signature', onSelect: () => (cdsignOpen.value = true) }] : []),
     ]
 })
 const viewModes = computed(() => [
@@ -758,130 +694,135 @@ const viewModes = computed(() => [
 <template>
     <div v-if="loaded" class="editor-page">
         <div ref="toolbar" class="cd-toolbar toolbar">
-            <UTooltip :text="t.editor.toolbar.outline">
-                <UButton
-                    icon="i-lucide-list-tree"
-                    size="sm"
-                    square
-                    data-guide="outline"
-                    :color="outlinePane.state.value.collapsed ? 'neutral' : 'primary'"
-                    :variant="outlinePane.state.value.collapsed ? 'ghost' : 'soft'"
-                    @click="outlinePane.toggle()"
-                />
-            </UTooltip>
-            <span class="sep" />
-            <UFieldGroup size="sm" data-guide="undo">
-                <UTooltip :text="t.editor.toolbar.undoTip(keys('Ctrl+Z'))">
+            <RenderScope>
+                <UTooltip :text="t.editor.toolbar.outline">
                     <UButton
-                        icon="i-lucide-undo-2"
+                        icon="i-lucide-list-tree"
+                        :aria-label="t.editor.toolbar.outline"
+                        size="sm"
                         square
-                        color="neutral"
-                        variant="outline"
-                        :disabled="!history.undo"
-                        :aria-label="t.editor.toolbar.undo"
-                        @click="editor?.undo()"
+                        data-guide="outline"
+                        :color="outlinePane.collapsed.value ? 'neutral' : 'primary'"
+                        :variant="outlinePane.collapsed.value ? 'ghost' : 'soft'"
+                        @click="outlinePane.toggle()"
                     />
                 </UTooltip>
-                <UTooltip :text="t.editor.toolbar.redoTip(REDO_KEYS)">
+                <span class="sep" />
+                <UFieldGroup size="sm" data-guide="undo">
+                    <UTooltip :text="t.editor.toolbar.undoTip(keys('Ctrl+Z'))">
+                        <UButton
+                            icon="i-lucide-undo-2"
+                            square
+                            color="neutral"
+                            variant="outline"
+                            :disabled="!history.undo"
+                            :aria-label="t.editor.toolbar.undo"
+                            @click="editor?.undo()"
+                        />
+                    </UTooltip>
+                    <UTooltip :text="t.editor.toolbar.redoTip(REDO_KEYS)">
+                        <UButton
+                            icon="i-lucide-redo-2"
+                            square
+                            color="neutral"
+                            variant="outline"
+                            :disabled="!history.redo"
+                            :aria-label="t.editor.toolbar.redo"
+                            @click="editor?.redo()"
+                        />
+                    </UTooltip>
+                </UFieldGroup>
+                <UFieldGroup size="sm" data-guide="add">
+                    <UTooltip :text="t.editor.toolbar.addArticle(keys('Ctrl+Alt+A'))">
+                        <UButton :label="t.editor.toolbar.article" icon="i-lucide-plus" color="neutral" variant="outline" @click="addArticle" />
+                    </UTooltip>
+                    <UTooltip :text="t.editor.toolbar.addParagraph(keys('Ctrl+Alt+P'))">
+                        <UButton :label="t.editor.toolbar.paragraph" icon="i-lucide-plus" color="neutral" variant="outline" @click="addParagraph" />
+                    </UTooltip>
+                    <UTooltip :text="t.editor.toolbar.addItem(keys('Ctrl+Alt+I'))">
+                        <UButton :label="t.editor.toolbar.item" icon="i-lucide-plus" color="neutral" variant="outline" @click="addItem" />
+                    </UTooltip>
+                    <UTooltip :text="t.editor.toolbar.addSubitem">
+                        <UButton :label="t.editor.toolbar.subitem" icon="i-lucide-plus" color="neutral" variant="outline" @click="addSubitem" />
+                    </UTooltip>
+                </UFieldGroup>
+                <UTooltip :text="compact ? t.editor.toolbar.insertTip : ''">
+                    <UDropdownMenu :items="insertMenu" :disabled="sigFull" :content="{ onCloseAutoFocus: backToEditor }">
+                        <UButton
+                            :disabled="sigFull"
+                            :label="compact ? undefined : t.editor.toolbar.insert"
+                            :aria-label="t.editor.toolbar.insert"
+                            icon="i-lucide-square-plus"
+                            data-guide="insert"
+                            trailing-icon="i-lucide-chevron-down"
+                            size="sm"
+                            color="neutral"
+                            variant="outline"
+                        />
+                    </UDropdownMenu>
+                </UTooltip>
+                <UTooltip :text="compact ? t.editor.toolbar.formatting : ''">
                     <UButton
-                        icon="i-lucide-redo-2"
-                        square
-                        color="neutral"
-                        variant="outline"
-                        :disabled="!history.redo"
-                        :aria-label="t.editor.toolbar.redo"
-                        @click="editor?.redo()"
+                        :label="compact ? undefined : t.editor.toolbar.formatting"
+                        :aria-label="t.editor.toolbar.formatting"
+                        icon="i-lucide-sliders-horizontal"
+                        data-guide="config"
+                        size="sm"
+                        :color="showConfig ? 'primary' : 'neutral'"
+                        :variant="showConfig ? 'soft' : 'outline'"
+                        :disabled="sigFull"
+                        @click="showConfig = !showConfig"
+                    >
+                        <template v-if="doc.warnings.length" #trailing>
+                            <UBadge :label="String(doc.warnings.length)" color="error" size="sm" />
+                        </template>
+                    </UButton>
+                </UTooltip>
+                <span class="cd-grow" />
+                <SegmentSwitch v-model="layout.mode" :aria-label="t.editor.toolbar.view" :items="viewModes" />
+                <UTooltip :text="t.editor.toolbar.ai">
+                    <UButton
+                        v-if="!demo"
+                        label="AI"
+                        icon="i-lucide-sparkles"
+                        data-guide="ai"
+                        size="sm"
+                        :color="layout.ai ? 'primary' : 'neutral'"
+                        :variant="layout.ai ? 'soft' : 'outline'"
+                        @click="layout.ai = !layout.ai"
                     />
                 </UTooltip>
-            </UFieldGroup>
-            <UFieldGroup size="sm" data-guide="add">
-                <UTooltip :text="t.editor.toolbar.addArticle(keys('Ctrl+Alt+A'))">
-                    <UButton :label="t.editor.toolbar.article" icon="i-lucide-plus" color="neutral" variant="outline" @click="addArticle" />
-                </UTooltip>
-                <UTooltip :text="t.editor.toolbar.addParagraph(keys('Ctrl+Alt+P'))">
-                    <UButton :label="t.editor.toolbar.paragraph" icon="i-lucide-plus" color="neutral" variant="outline" @click="addParagraph" />
-                </UTooltip>
-                <UTooltip :text="t.editor.toolbar.addItem(keys('Ctrl+Alt+I'))">
-                    <UButton :label="t.editor.toolbar.item" icon="i-lucide-plus" color="neutral" variant="outline" @click="addItem" />
-                </UTooltip>
-                <UTooltip :text="t.editor.toolbar.addSubitem">
-                    <UButton :label="t.editor.toolbar.subitem" icon="i-lucide-plus" color="neutral" variant="outline" @click="addSubitem" />
-                </UTooltip>
-            </UFieldGroup>
-            <UTooltip :text="compact ? t.editor.toolbar.insertTip : ''">
-                <UDropdownMenu :items="insertMenu" :content="{ onCloseAutoFocus: backToEditor }">
+                <span class="sep" />
+                <UTooltip v-if="changed" :text="compact ? t.editor.toolbar.discard : ''">
                     <UButton
-                        :label="compact ? undefined : t.editor.toolbar.insert"
-                        :aria-label="t.editor.toolbar.insert"
-                        icon="i-lucide-square-plus"
-                        data-guide="insert"
+                        :label="compact ? undefined : t.editor.toolbar.discard"
+                        :aria-label="t.editor.toolbar.discard"
+                        :icon="compact ? 'i-lucide-undo-2' : undefined"
+                        size="sm"
+                        color="error"
+                        variant="ghost"
+                        @click="confirmDiscard = true"
+                    />
+                </UTooltip>
+                <UDropdownMenu :items="exportMenu">
+                    <UButton
+                        :label="compact ? undefined : t.editor.toolbar.export"
+                        :aria-label="t.editor.toolbar.export"
+                        :title="compact ? t.editor.toolbar.exportTip : undefined"
+                        icon="i-lucide-download"
+                        data-guide="export"
                         trailing-icon="i-lucide-chevron-down"
                         size="sm"
                         color="neutral"
                         variant="outline"
                     />
                 </UDropdownMenu>
-            </UTooltip>
-            <UTooltip :text="compact ? t.editor.toolbar.formatting : ''">
-                <UButton
-                    :label="compact ? undefined : t.editor.toolbar.formatting"
-                    :aria-label="t.editor.toolbar.formatting"
-                    icon="i-lucide-sliders-horizontal"
-                    data-guide="config"
-                    size="sm"
-                    :color="showConfig ? 'primary' : 'neutral'"
-                    :variant="showConfig ? 'soft' : 'outline'"
-                    @click="showConfig = !showConfig"
-                >
-                    <template v-if="doc.warnings.length" #trailing>
-                        <UBadge :label="String(doc.warnings.length)" color="error" size="sm" />
-                    </template>
-                </UButton>
-            </UTooltip>
-            <span class="cd-grow" />
-            <SegmentSwitch v-model="layout.mode" :aria-label="t.editor.toolbar.view" :items="viewModes" />
-            <UTooltip :text="t.editor.toolbar.ai">
-                <UButton
-                    v-if="!demo"
-                    label="AI"
-                    icon="i-lucide-sparkles"
-                    data-guide="ai"
-                    size="sm"
-                    :color="layout.ai ? 'primary' : 'neutral'"
-                    :variant="layout.ai ? 'soft' : 'outline'"
-                    @click="layout.ai = !layout.ai"
-                />
-            </UTooltip>
-            <span class="sep" />
-            <UTooltip v-if="changed" :text="compact ? t.editor.toolbar.discard : ''">
-                <UButton
-                    :label="compact ? undefined : t.editor.toolbar.discard"
-                    :aria-label="t.editor.toolbar.discard"
-                    :icon="compact ? 'i-lucide-rotate-ccw' : undefined"
-                    size="sm"
-                    color="error"
-                    variant="ghost"
-                    @click="confirmDiscard = true"
-                />
-            </UTooltip>
-            <UDropdownMenu :items="exportMenu">
-                <UButton
-                    :label="compact ? undefined : t.editor.toolbar.export"
-                    :aria-label="t.editor.toolbar.export"
-                    :title="compact ? t.editor.toolbar.exportTip : undefined"
-                    icon="i-lucide-download"
-                    data-guide="export"
-                    trailing-icon="i-lucide-chevron-down"
-                    size="sm"
-                    color="neutral"
-                    variant="outline"
-                />
-            </UDropdownMenu>
-            <UButton :label="t.editor.toolbar.saveVersion" icon="i-lucide-save" size="sm" :disabled="!changed" data-guide="save" @click="openSave" />
+                <UButton :label="t.editor.toolbar.saveVersion" icon="i-lucide-save" size="sm" :disabled="!changed" data-guide="save" @click="openSave" />
+            </RenderScope>
         </div>
         <div ref="body" class="body">
             <PaneRail
-                v-if="outlinePane.state.value.collapsed"
+                v-if="outlinePane.collapsed.value"
                 :pane="outlinePane"
                 side="left"
                 :label="t.editor.toolbar.outline"
@@ -889,16 +830,16 @@ const viewModes = computed(() => [
                 data-guide="outline"
             />
             <template v-else>
-                <div class="ed-left" :style="paneStyle(outlinePane)">
+                <div v-live-style="() => paneStyle(outlinePane)" class="ed-left">
                     <DocTree class="ed-docs" :pane="outlinePane" />
-                    <EditorOutline class="ed-outline-pane" :legal="doc" :line="cursorLine" @jump="(l) => editor?.goToLine(l)" />
+                    <EditorOutline class="ed-outline-pane" :legal="doc" :cursor="cursor" @jump="(l) => editor?.goToLine(l)" />
                 </div>
                 <PaneResizer :pane="outlinePane" side="left" :label="t.editor.toolbar.outline" />
             </template>
 
             <PaneRail v-if="mode === 'preview'" :pane="editPane" side="left" :label="t.editor.panes.edit" icon="i-lucide-square-pen" />
             <!-- v-if にすると「元に戻す」の履歴が消えるので、v-show で隠す -->
-            <div v-show="mode !== 'preview'" ref="editCol" class="cd-pane-col pane" :style="editStyle">
+            <div v-show="mode !== 'preview'" ref="editCol" v-live-style="() => editStyle" class="cd-pane-col pane">
                 <div class="cd-pane-bar">
                     <span class="cd-pane-title">{{ t.editor.panes.edit }}</span>
                     <PaneControls :pane="editPane" side="left" :label="t.editor.panes.edit" />
@@ -911,6 +852,7 @@ const viewModes = computed(() => [
                             :legal="doc"
                             :wrap="app.prefs.lineWrap"
                             :guides="guides"
+                            :sign-lock="cdsign"
                             :proofread="app.prefs.proofread"
                             :readonly="aiRunning"
                             :diff-base="savedText"
@@ -920,11 +862,21 @@ const viewModes = computed(() => [
                             @shortcut="onShortcut"
                             @history="(h) => (history = h)"
                             @images="addImages"
+                            @blocked="noteBlocked"
                             @issues="(l) => (issueList = l)"
                             @open-issues="issuesOpen ? (issuesOpen = false) : toggleIssues('all')"
                         />
                     </div>
                 </UContextMenu>
+                <SignaturePane
+                    v-if="cdsign && sigOpen"
+                    :report="sigReport"
+                    :busy="sigBusy"
+                    @line="(n) => editor?.goToLine(n - 1)"
+                    @trust="trustSignature"
+                    @recheck="verifySignatures"
+                    @close="sigOpen = false"
+                />
                 <IssuePane
                     v-if="issuesOpen"
                     v-model:filter="issueFilter"
@@ -938,63 +890,39 @@ const viewModes = computed(() => [
             <PaneResizer v-if="mode === 'split'" :pane="editBase" side="left" :label="t.editor.panes.edit" />
 
             <div v-show="mode !== 'edit'" class="cd-pane-col pane preview-col">
-                <div class="cd-pane-bar">
-                    <span class="cd-pane-title">{{ t.editor.panes.preview }}</span>
-                    <span v-if="showPrint" class="pdf-state">
-                        <UIcon v-if="pdfBusy" name="i-lucide-loader-circle" class="spin" :aria-label="t.editor.panes.rendering" />
-                    </span>
-                    <div class="zoom" data-guide="zoom">
-                        <USlider
-                            :model-value="app.prefs.previewZoom"
-                            :min="50"
-                            :max="200"
-                            :step="10"
+                <RenderScope>
+                    <div class="cd-pane-bar">
+                        <span class="cd-pane-title">{{ t.editor.panes.preview }}</span>
+                        <span v-if="showPrint" class="pdf-state">
+                            <UIcon v-if="pdfBusy" name="i-lucide-loader-circle" class="cd-spin" :aria-label="t.editor.panes.rendering" />
+                        </span>
+                        <PreviewZoom />
+                        <SegmentSwitch
+                            v-if="!demo"
+                            v-model="printKind"
                             size="xs"
-                            class="zoom-slider"
-                            :aria-label="t.editor.panes.zoom"
-                            @update:model-value="setPreviewZoom"
+                            :aria-label="t.editor.panes.previewKind"
+                            :items="PREVIEW_KINDS"
+                            class="kind"
                         />
-                        <UInputNumber
-                            :model-value="app.prefs.previewZoom"
-                            :min="50"
-                            :max="200"
-                            :step="1"
-                            size="xs"
-                            class="zoom-input"
-                            :aria-label="t.editor.panes.zoomPercent"
-                            @update:model-value="setPreviewZoom"
-                        />
-                        <span class="zoom-unit">%</span>
-                        <UTooltip :text="t.editor.panes.zoomLink">
-                            <UButton
-                                :icon="app.prefs.zoomLinked ? 'i-lucide-link' : 'i-lucide-unlink'"
-                                size="xs"
-                                :color="app.prefs.zoomLinked ? 'primary' : 'neutral'"
-                                :variant="app.prefs.zoomLinked ? 'soft' : 'ghost'"
-                                :aria-label="t.editor.panes.zoomLink"
-                                :aria-pressed="app.prefs.zoomLinked"
-                                @click="app.setPrefsLive({ zoomLinked: !app.prefs.zoomLinked })"
-                            />
-                        </UTooltip>
+                        <PaneControls :pane="previewPane" :side="layout.ai ? 'left' : 'right'" :label="t.editor.panes.preview" />
                     </div>
-                    <SegmentSwitch v-if="!demo" v-model="printKind" size="xs" :aria-label="t.editor.panes.previewKind" :items="PREVIEW_KINDS" class="kind" />
-                    <PaneControls :pane="previewPane" :side="layout.ai ? 'left' : 'right'" :label="t.editor.panes.preview" />
-                </div>
-                <div v-if="showPrint" class="pane-body cd-canvas print-body">
-                    <p v-if="pdfError" class="pdf-error">{{ t.editor.panes.pdfFailed(pdfError) }}</p>
-                    <PdfPages
-                        ref="pdfPages"
-                        class="pdf"
-                        :data="pdfData"
-                        :zoom="app.prefs.previewZoom"
-                        :line="cursorLine"
-                        @jump="(l) => editor?.goToLine(l)"
-                        @wheel="zoomPreview"
-                    />
-                </div>
-                <div v-else ref="preview" class="pane-body cd-preview cd-canvas" @click="onPreviewClick" @wheel="zoomPreview">
-                    <div class="paper cd-paper" :style="{ zoom: app.prefs.previewZoom / 100 }" v-html="html" />
-                </div>
+                    <div v-if="showPrint" class="pane-body cd-canvas print-body">
+                        <p v-if="pdfError" class="pdf-error">{{ t.editor.panes.pdfFailed(pdfError) }}</p>
+                        <PdfPages
+                            ref="pdfPages"
+                            class="pdf"
+                            :data="pdfData"
+                            :zoom="app.prefs.previewZoom"
+                            :cursor="cursor"
+                            @jump="(l) => editor?.goToLine(l)"
+                            @wheel="zoomPreview"
+                        />
+                    </div>
+                    <div v-else ref="preview" class="pane-body cd-preview cd-canvas" @click="onPreviewClick" @wheel="zoomPreview">
+                        <div v-live-style="() => ({ zoom: String(app.prefs.previewZoom / 100) })" class="paper cd-paper" v-html="html" />
+                    </div>
+                </RenderScope>
             </div>
             <PaneRail
                 v-if="mode === 'edit'"
@@ -1005,12 +933,12 @@ const viewModes = computed(() => [
             />
 
             <template v-if="layout.ai && !demo">
-                <PaneRail v-if="aiPane.state.value.collapsed" :pane="aiPane" side="right" label="AI" icon="i-lucide-sparkles" />
+                <PaneRail v-if="aiPane.collapsed.value" :pane="aiPane" side="right" label="AI" icon="i-lucide-sparkles" />
                 <PaneResizer v-else :pane="aiPane" side="right" label="AI" />
                 <!-- 畳んでも会話を残すため、v-if ではなく v-show で隠す -->
                 <AiPanel
-                    v-show="!aiPane.state.value.collapsed"
-                    :style="paneStyle(aiPane)"
+                    v-show="!aiPane.collapsed.value"
+                    v-live-style="() => paneStyle(aiPane)"
                     :pane="aiPane"
                     :path="path"
                     :selection="() => editor?.selectedText() ?? ''"
@@ -1034,73 +962,99 @@ const viewModes = computed(() => [
             </Transition>
         </div>
         <footer class="cd-statusbar">
-            <div class="issue-pills">
-                <div v-for="k in ISSUE_KINDS" :key="k.kind" class="pill" data-guide="proofread">
-                    <UTooltip :text="t.editor.status.issueList(k.kind, keys('Ctrl+Shift+M'))">
-                        <UButton
-                            :icon="k.icon"
-                            :label="String(issues[k.count])"
-                            size="xs"
-                            variant="soft"
-                            :color="issues[k.count] ? k.color : 'neutral'"
-                            class="seg first count"
-                            :class="{ on: issuesOpen && issueFilter === k.kind }"
-                            :disabled="mode === 'preview'"
-                            :aria-label="t.editor.status.issueListAria(k.kind)"
-                            @click="toggleIssues(k.kind)"
-                        />
-                    </UTooltip>
-                    <UButton
-                        icon="i-lucide-chevron-up"
-                        size="xs"
-                        variant="soft"
-                        :color="issues[k.count] ? k.color : 'neutral'"
-                        class="seg mid"
-                        :disabled="mode === 'preview' || !issues[k.count]"
-                        :aria-label="t.editor.status.prevIssue(k.kind)"
-                        :title="t.editor.status.prevIssue(k.kind)"
-                        @click="goIssue(k.kind, -1)"
-                    />
-                    <UButton
-                        icon="i-lucide-chevron-down"
-                        size="xs"
-                        variant="soft"
-                        :color="issues[k.count] ? k.color : 'neutral'"
-                        class="seg last"
-                        :disabled="mode === 'preview' || !issues[k.count]"
-                        :aria-label="t.editor.status.nextIssue(k.kind)"
-                        :title="t.editor.status.nextIssue(k.kind)"
-                        @click="goIssue(k.kind, 1)"
-                    />
+            <RenderScope>
+                <div class="issue-pills">
+                    <RenderScope>
+                        <div v-for="k in ISSUE_KINDS" :key="k.kind" class="pill" data-guide="proofread">
+                            <UTooltip :text="t.editor.status.issueList(k.kind, keys('Ctrl+Shift+M'))">
+                                <UButton
+                                    :icon="k.icon"
+                                    :label="String(issues[k.count])"
+                                    size="xs"
+                                    variant="soft"
+                                    :color="issues[k.count] ? k.color : 'neutral'"
+                                    class="seg first count"
+                                    :class="{ on: issuesOpen && issueFilter === k.kind }"
+                                    :disabled="mode === 'preview'"
+                                    :aria-label="t.editor.status.issueListAria(k.kind)"
+                                    @click="toggleIssues(k.kind)"
+                                />
+                            </UTooltip>
+                            <UButton
+                                icon="i-lucide-chevron-up"
+                                size="xs"
+                                variant="soft"
+                                :color="issues[k.count] ? k.color : 'neutral'"
+                                class="seg mid"
+                                :disabled="mode === 'preview' || !issues[k.count]"
+                                :aria-label="t.editor.status.prevIssue(k.kind)"
+                                :title="t.editor.status.prevIssue(k.kind)"
+                                @click="goIssue(k.kind, -1)"
+                            />
+                            <UButton
+                                icon="i-lucide-chevron-down"
+                                size="xs"
+                                variant="soft"
+                                :color="issues[k.count] ? k.color : 'neutral'"
+                                class="seg last"
+                                :disabled="mode === 'preview' || !issues[k.count]"
+                                :aria-label="t.editor.status.nextIssue(k.kind)"
+                                :title="t.editor.status.nextIssue(k.kind)"
+                                @click="goIssue(k.kind, 1)"
+                            />
+                        </div>
+                        <UTooltip v-if="cdsign" :text="t.mdsig.status.button">
+                            <UButton
+                                :icon="SIG_ICON[sigState]"
+                                :label="String(sigCount)"
+                                size="xs"
+                                variant="soft"
+                                :color="SIG_COLOR[sigState]"
+                                class="count sig"
+                                :class="{ on: sigOpen, spin: sigState === 'busy' }"
+                                :disabled="mode === 'preview'"
+                                :aria-label="t.mdsig.status.aria(sigCount)"
+                                @click="toggleSignatures"
+                            />
+                        </UTooltip>
+                    </RenderScope>
                 </div>
-            </div>
-            <span class="pos"> <UIcon name="i-lucide-map-pin" />{{ position || '—' }} </span>
-            <UPopover v-if="trail.trail.value && trail.article.value" v-model:open="trailOpen" :content="{ side: 'top', align: 'start' }">
-                <button class="trail-btn" :class="{ pending: trail.trail.value.pending }"><UIcon name="i-lucide-history" />{{ trail.summary.value }}</button>
-                <template #content>
-                    <ArticleTrail
-                        :label="trail.article.value.label"
-                        :versions="trail.versions.value"
-                        :trail="trail.trail.value"
-                        :commits="trail.commits.value"
-                        :commit-trail="trail.commitTrail.value"
-                        :loading="trail.commitsLoading.value"
-                        @version="(v) => openTrailVersion(v.date)"
-                        @commit="(c) => openTrailCommit(c.oid)"
-                    />
-                </template>
-            </UPopover>
-            <span>{{ t.editor.status.articles(articleCount) }}</span>
-            <span>{{ t.editor.status.chars(chars.toLocaleString()) }}</span>
-            <span class="cd-grow" />
-            <span v-if="issueNote" class="issue-note" :class="issueNote.kind">{{ issueNote.text }}</span>
-            <span v-else class="hint">{{ t.editor.status.hint(keys('Ctrl+F')) }}</span>
-            <span :class="['save', saving === 'pending' ? 'pending' : changed ? 'dirty' : 'clean']">
-                <UIcon :name="saving === 'pending' ? 'i-lucide-loader' : changed ? 'i-lucide-circle-dot' : 'i-lucide-circle-check'" />
-                {{ saveState }}
-            </span>
+                <CursorPosition :doc="doc" :cursor="cursor" />
+                <UPopover v-if="trail.trail.value && trail.article.value" v-model:open="trailOpen" :content="{ side: 'top', align: 'start' }">
+                    <button class="trail-btn" :class="{ pending: trail.trail.value.pending }">
+                        <UIcon name="i-lucide-history" />{{ trail.summary.value }}
+                    </button>
+                    <template #content>
+                        <ArticleTrail
+                            :label="trail.article.value.label"
+                            :versions="trail.versions.value"
+                            :trail="trail.trail.value"
+                            :commits="trail.commits.value"
+                            :commit-trail="trail.commitTrail.value"
+                            :loading="trail.commitsLoading.value"
+                            @version="(v) => openTrailVersion(v.date)"
+                            @commit="(c) => openTrailCommit(c.oid)"
+                        />
+                    </template>
+                </UPopover>
+                <span>{{ t.editor.status.articles(articleCount) }}</span>
+                <span>{{ t.editor.status.chars(chars.toLocaleString()) }}</span>
+                <span class="cd-grow" />
+                <span v-if="issueNote" class="issue-note" :class="issueNote.kind">{{ issueNote.text }}</span>
+                <span v-else class="hint">{{ t.editor.status.hint(keys('Ctrl+F')) }}</span>
+                <span :class="['save', saving === 'pending' ? 'pending' : changed ? 'dirty' : 'clean']">
+                    <RenderScope>
+                        <UIcon
+                            :name="saving === 'pending' ? 'i-lucide-loader-circle' : changed ? 'i-lucide-circle-dot' : 'i-lucide-circle-check'"
+                            :class="{ 'cd-spin': saving === 'pending' }"
+                        />
+                        {{ saveState }}
+                    </RenderScope>
+                </span>
+            </RenderScope>
         </footer>
         <SealModal v-model:open="sealOpen" @insert="insertSeal" />
+        <CdsignExportModal v-if="cdsignOpen" :path="path" :title="doc.title || path" :has-images="hasImages" @close="cdsignOpen = false" />
         <PropModal v-if="propFor" :sample="propFor.sample" :inline="propFor.inline" :can-inline="propFor.inline" @close="propFor = null" @apply="applyProp" />
         <ClauseLibraryModal
             v-if="showClauses && clauseLibrary"
@@ -1143,6 +1097,10 @@ const viewModes = computed(() => [
     border-radius: 4px;
     cursor: pointer;
     white-space: nowrap;
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .trail-btn:hover {
@@ -1194,7 +1152,23 @@ const viewModes = computed(() => [
     box-shadow: inset 0 0 0 1px currentColor;
 }
 
+.sig {
+    height: 20px;
+    min-width: 46px;
+    border-radius: 999px;
+    font-variant-numeric: tabular-nums;
+}
+
+.sig.on {
+    box-shadow: inset 0 0 0 1px currentColor;
+}
+
+.sig.spin :deep(.iconify) {
+    animation: cd-spin 1s linear infinite;
+}
+
 .issue-note {
+    flex-shrink: 1;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1213,6 +1187,7 @@ const viewModes = computed(() => [
     display: flex;
     flex-direction: column;
     height: 100%;
+    container: editor / inline-size;
 }
 
 .toolbar {
@@ -1261,10 +1236,6 @@ const viewModes = computed(() => [
     overflow: hidden;
 }
 
-.preview-col {
-    min-width: 240px;
-}
-
 .pane-body {
     flex: 1;
     min-height: 0;
@@ -1274,6 +1245,13 @@ const viewModes = computed(() => [
 .preview-col {
     min-width: 240px;
     border-left: 1px solid var(--ui-border);
+    container: preview / inline-size;
+}
+
+@container preview (max-width: 420px) {
+    .preview-col .cd-pane-title {
+        display: none;
+    }
 }
 
 .kind {
@@ -1288,16 +1266,6 @@ const viewModes = computed(() => [
     margin-left: 6px;
     font-size: 11px;
     color: var(--ui-text-muted);
-}
-
-.spin {
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
 }
 
 .print-body {
@@ -1319,27 +1287,6 @@ const viewModes = computed(() => [
     color: var(--ui-color-error-500);
 }
 
-.zoom {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-left: auto;
-    margin-right: 6px;
-}
-
-.zoom-slider {
-    width: 96px;
-}
-
-.zoom-input {
-    width: 84px;
-}
-
-.zoom-unit {
-    font-size: 12px;
-    color: var(--ui-text-muted);
-}
-
 .paper {
     max-width: 210mm;
     margin: 0 auto;
@@ -1357,13 +1304,18 @@ const viewModes = computed(() => [
     background: var(--cd-highlight);
 }
 
-.pos {
-    color: var(--ui-text-toned);
-    font-weight: 600;
-}
-
 .hint {
     color: var(--ui-text-dimmed);
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@container editor (max-width: 1180px) {
+    .hint {
+        display: none;
+    }
 }
 
 .save.dirty {
