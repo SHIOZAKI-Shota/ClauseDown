@@ -5,13 +5,13 @@ const info = (id: Key): { label: string; description: string } => t().labels.exp
 
 // label と description は読むたびに今の言語で返す
 const experiment = <const Id extends Key>(id: Id) => ({
-    id,
-    get label() {
-        return info(id).label
-    },
-    get description() {
-        return info(id).description
-    },
+	id,
+	get label() {
+		return info(id).label
+	},
+	get description() {
+		return info(id).description
+	},
 })
 
 export const EXPERIMENTS = [experiment('clauseLibrary'), experiment('lanAi'), experiment('houritsuExport'), experiment('cdsign')] as const

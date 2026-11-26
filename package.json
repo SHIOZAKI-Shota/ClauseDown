@@ -1,224 +1,240 @@
 {
-    "name": "clausedown",
-    "version": "0.11.0",
-    "private": true,
-    "license": "MIT",
-    "author": {
-        "name": "SHIOZAKI Shota",
-        "email": "me@shiozakishota.com",
-        "url": "https://shiozakishota.com"
-    },
-    "homepage": "https://shiozakishota.com",
-    "description": "法律案・契約書・規程など、条文でできた文書を Markdown+Git で作成・管理するデスクトップアプリ",
-    "main": "./out/main/index.js",
-    "type": "module",
-    "devEngines": {
-        "runtime": {
-            "name": "node",
-            "version": ">=26",
-            "onFail": "error"
-        },
-        "packageManager": {
-            "name": "npm",
-            "version": ">=12",
-            "onFail": "warn"
-        }
-    },
-    "scripts": {
-        "dev": "node scripts/dev.mjs",
-        "build": "electron-vite build && nuxt generate && node scripts/licenses.mjs",
-        "licenses": "node scripts/licenses.mjs",
-        "preview": "npm run build && electron .",
-        "typecheck": "tsc -p tsconfig.node.json && nuxt typecheck",
-        "test": "vitest run",
-        "test:e2e": "npm run build && vitest run -c vitest.e2e.config.ts",
-        "manual:shots": "node scripts/manual-shots.mjs",
-        "manual:shots:en": "node scripts/manual-shots.mjs en",
-        "manual:shots:ja": "node scripts/manual-shots.mjs ja",
-        "dist": "npm run build && npm run build:native && electron-builder --mac --win --publish never",
-        "dist:win": "npm run build && npm run build:native && electron-builder --win --publish never",
-        "dist:mac": "npm run build && npm run build:native && electron-builder --mac --publish never",
-        "release": "npm run build && npm run build:native && electron-builder --mac --win --publish always",
-        "release:win": "npm run build && npm run build:native && electron-builder --win --publish always",
-        "release:mac": "npm run build && npm run build:native && electron-builder --mac --publish always",
-        "ship": "node scripts/ship.mjs",
-        "postinstall": "node node_modules/electron/install.js && nuxt prepare",
-        "testdata": "node scripts/make-testdata.mjs",
-        "lint": "oxlint",
-        "format": "oxfmt",
-        "format:check": "oxfmt --check",
-        "build:demo": "CLAUSEDOWN_DEMO=1 nuxt generate",
-        "site": "node scripts/site.mjs",
-        "build:myna": "export RUSTFLAGS=\"--remap-path-prefix=$HOME=~\" && napi build --release --platform --cwd native/myna --output-dir . && napi build --release --platform --target x86_64-pc-windows-msvc -x --cwd native/myna --output-dir .",
-        "build:keychip": "export RUSTFLAGS=\"--remap-path-prefix=$HOME=~\" && napi build --release --platform --cwd native/keychip --output-dir . && napi build --release --platform --target x86_64-pc-windows-msvc -x --cwd native/keychip --output-dir .",
-        "build:native": "npm run build:myna && npm run build:keychip"
-    },
-    "dependencies": {
-        "@mdsig/core": "^0.0.5",
-        "@textlint/kernel": "^15.8.0",
-        "@textlint/textlint-plugin-markdown": "^15.8.0",
-        "electron-updater": "^6.8.11",
-        "textlint-rule-ja-no-abusage": "^3.0.0",
-        "textlint-rule-ja-no-redundant-expression": "^4.0.1",
-        "textlint-rule-max-ten": "^5.0.0",
-        "textlint-rule-no-double-negative-ja": "^2.0.1",
-        "textlint-rule-no-doubled-joshi": "^5.1.1",
-        "textlint-rule-no-dropping-the-ra": "^3.0.0",
-        "textlint-rule-no-mixed-zenkaku-and-hankaku-alphabet": "^1.0.1",
-        "textlint-rule-prh": "^6.1.1"
-    },
-    "devDependencies": {
-        "@anthropic-ai/sdk": "^1.4.0",
-        "@codemirror/autocomplete": "^6.20.4",
-        "@codemirror/commands": "^6.11.1",
-        "@codemirror/lang-css": "^6.3.1",
-        "@codemirror/lang-markdown": "^6.5.2",
-        "@codemirror/language": "^6.13.1",
-        "@codemirror/lint": "^6.9.7",
-        "@codemirror/search": "^6.7.2",
-        "@codemirror/state": "^6.7.6",
-        "@codemirror/view": "^6.43.15",
-        "@iconify-json/lucide": "^1.2.150",
-        "@internationalized/date": "^3.12.4",
-        "@lezer/highlight": "^1.2.5",
-        "@libpdf/core": "0.5.3",
-        "@modelcontextprotocol/sdk": "^1.32.2",
-        "@napi-rs/cli": "^3.10.12",
-        "@nuxt/ui": "^4.12.0",
-        "@pinia/nuxt": "^1.0.3",
-        "@types/node": "^26.6.6",
-        "@typescript/native": "npm:typescript@^7.0.2",
-        "@vueuse/core": "^14.4.0",
-        "asn1js": "^3.1.0",
-        "codemirror": "^6.0.2",
-        "diff": "^9.0.0",
-        "docx": "^9.15.1",
-        "electron": "^45.2.1",
-        "electron-builder": "^26.18.0",
-        "electron-vite": "^6.0.0",
-        "isomorphic-git": "^1.44.10",
-        "markdown-it": "^15.0.3",
-        "nuxt": "^4.6.4",
-        "openai": "^7.50.0",
-        "oxfmt": "^0.78.0",
-        "oxlint": "^1.93.0",
-        "oxlint-tsgolint": "^7.0.2006",
-        "pako": "^1.0.11",
-        "pathe": "^2.0.3",
-        "pdfjs-dist": "^6.5.438",
-        "pele": "^1.13.0",
-        "perfect-freehand": "^1.2.3",
-        "pinia": "^4.1.0",
-        "pkijs": "^3.4.3",
-        "playwright-core": "^1.64.1",
-        "tailwindcss": "^4.3.4",
-        "temml": "^0.14.0",
-        "typescript": "npm:@typescript/typescript6@^6.0.2",
-        "vite": "^8.3.5",
-        "vitest": "^5.1.0",
-        "vue": "^3.5.44",
-        "vue-tsc": "^3.3.14",
-        "yaml": "^2.9.1",
-        "zod": "^4.6.7"
-    },
-    "build": {
-        "appId": "com.clausedown.app",
-        "productName": "ClauseDown",
-        "publish": [
-            {
-                "provider": "github",
-                "owner": "SHIOZAKI-Shota",
-                "repo": "ClauseDown"
-            }
-        ],
-        "directories": {
-            "output": "release"
-        },
-        "files": [
-            "out/**/*",
-            "package.json"
-        ],
-        "extraResources": [
-            {
-                "from": "build/mcp-bridge",
-                "to": "mcp-bridge"
-            }
-        ],
-        "win": {
-            "extraResources": [
-                {
-                    "from": "native/myna",
-                    "to": "native/myna",
-                    "filter": [
-                        "clausedown-myna.win32-*.node"
-                    ]
-                },
-                {
-                    "from": "native/keychip",
-                    "to": "native/keychip",
-                    "filter": [
-                        "clausedown-keychip.win32-*.node"
-                    ]
-                }
-            ],
-            "target": [
-                {
-                    "target": "nsis",
-                    "arch": "x64"
-                }
-            ],
-            "icon": "build/icon.png"
-        },
-        "nsis": {
-            "oneClick": false,
-            "allowToChangeInstallationDirectory": true
-        },
-        "mac": {
-            "extraResources": [
-                {
-                    "from": "native/myna",
-                    "to": "native/myna",
-                    "filter": [
-                        "clausedown-myna.darwin-*.node"
-                    ]
-                },
-                {
-                    "from": "native/keychip",
-                    "to": "native/keychip",
-                    "filter": [
-                        "clausedown-keychip.darwin-*.node"
-                    ]
-                }
-            ],
-            "target": [
-                {
-                    "target": "dmg",
-                    "arch": "arm64"
-                },
-                {
-                    "target": "zip",
-                    "arch": "arm64"
-                }
-            ],
-            "icon": "build/icon-mac.png",
-            "category": "public.app-category.productivity"
-        },
-        "electronFuses": {
-            "runAsNode": false,
-            "enableCookieEncryption": true,
-            "enableNodeOptionsEnvironmentVariable": false,
-            "enableNodeCliInspectArguments": false,
-            "enableEmbeddedAsarIntegrityValidation": true,
-            "onlyLoadAppFromAsar": true,
-            "resetAdHocDarwinSignature": true
-        }
-    },
-    "allowScripts": {
-        "electron@45.3.1": true,
-        "esbuild@0.27.2": true,
-        "esbuild@0.28.2": true,
-        "electron-winstaller@5.4.0": true,
-        "fsevents@2.3.3": true,
-        "vue-demi@0.14.10": true
-    }
+	"name": "clausedown",
+	"version": "0.11.0",
+	"private": true,
+	"license": "MIT",
+	"author": {
+		"name": "SHIOZAKI Shota",
+		"email": "me@shiozakishota.com",
+		"url": "https://shiozakishota.com"
+	},
+	"homepage": "https://shiozakishota.com",
+	"description": "法律案・契約書・規程など、条文でできた文書を Markdown+Git で作成・管理するデスクトップアプリ",
+	"main": "./out/main/index.js",
+	"type": "module",
+	"devEngines": {
+		"runtime": {
+			"name": "node",
+			"version": ">=26",
+			"onFail": "error"
+		},
+		"packageManager": {
+			"name": "npm",
+			"version": ">=12",
+			"onFail": "warn"
+		}
+	},
+	"scripts": {
+		"dev": "node scripts/dev.mjs",
+		"build": "electron-vite build && nuxt generate && node scripts/licenses.mjs",
+		"licenses": "node scripts/licenses.mjs",
+		"preview": "npm run build && electron .",
+		"typecheck": "tsc -p tsconfig.node.json && nuxt typecheck",
+		"test": "vitest run",
+		"test:e2e": "npm run build && vitest run -c vitest.e2e.config.ts",
+		"manual:shots": "node scripts/manual-shots.mjs",
+		"manual:shots:en": "node scripts/manual-shots.mjs en",
+		"manual:shots:ja": "node scripts/manual-shots.mjs ja",
+		"dist": "npm run build && npm run build:native && electron-builder --mac --win --publish never",
+		"dist:win": "npm run build && npm run build:native && electron-builder --win --publish never",
+		"dist:mac": "npm run build && npm run build:native && electron-builder --mac --publish never",
+		"dist:store": "npm run build && node scripts/native-win.mjs && electron-builder --win appx --x64 --publish never",
+		"release": "npm run build && npm run build:native && electron-builder --mac --win --publish always",
+		"release:win": "npm run build && npm run build:native && electron-builder --win --publish always",
+		"release:mac": "npm run build && npm run build:native && electron-builder --mac --publish always",
+		"ship": "node scripts/ship.mjs",
+		"postinstall": "node node_modules/electron/install.js && nuxt prepare",
+		"testdata": "node scripts/make-testdata.mjs",
+		"lint": "oxlint",
+		"format": "oxfmt",
+		"format:check": "oxfmt --check",
+		"build:demo": "CLAUSEDOWN_DEMO=1 nuxt generate",
+		"site": "node scripts/site.mjs",
+		"build:myna": "export RUSTFLAGS=\"--remap-path-prefix=$HOME=~\" && napi build --release --platform --cwd native/myna --output-dir . && napi build --release --platform --target x86_64-pc-windows-msvc -x --cwd native/myna --output-dir .",
+		"build:keychip": "export RUSTFLAGS=\"--remap-path-prefix=$HOME=~\" && napi build --release --platform --cwd native/keychip --output-dir . && napi build --release --platform --target x86_64-pc-windows-msvc -x --cwd native/keychip --output-dir .",
+		"build:native": "npm run build:myna && npm run build:keychip"
+	},
+	"dependencies": {
+		"@mdsig/core": "^0.0.5",
+		"@textlint/kernel": "^15.8.0",
+		"@textlint/textlint-plugin-markdown": "^15.8.0",
+		"electron-updater": "^6.8.11",
+		"textlint-rule-ja-no-abusage": "^3.0.0",
+		"textlint-rule-ja-no-redundant-expression": "^4.0.1",
+		"textlint-rule-max-ten": "^5.0.0",
+		"textlint-rule-no-double-negative-ja": "^2.0.1",
+		"textlint-rule-no-doubled-joshi": "^5.1.1",
+		"textlint-rule-no-dropping-the-ra": "^3.0.0",
+		"textlint-rule-no-mixed-zenkaku-and-hankaku-alphabet": "^1.0.1",
+		"textlint-rule-prh": "^6.1.1"
+	},
+	"devDependencies": {
+		"@anthropic-ai/sdk": "^1.4.0",
+		"@codemirror/autocomplete": "^6.20.4",
+		"@codemirror/commands": "^6.11.1",
+		"@codemirror/lang-css": "^6.3.1",
+		"@codemirror/lang-markdown": "^6.5.2",
+		"@codemirror/language": "^6.13.1",
+		"@codemirror/lint": "^6.9.7",
+		"@codemirror/search": "^6.7.2",
+		"@codemirror/state": "^6.7.6",
+		"@codemirror/view": "^6.43.15",
+		"@iconify-json/lucide": "^1.2.150",
+		"@internationalized/date": "^3.12.4",
+		"@lezer/highlight": "^1.2.5",
+		"@libpdf/core": "0.5.3",
+		"@modelcontextprotocol/sdk": "^1.32.2",
+		"@napi-rs/cli": "^3.10.12",
+		"@nuxt/ui": "^4.12.0",
+		"@pinia/nuxt": "^1.0.3",
+		"@types/node": "^26.6.6",
+		"@typescript/native": "npm:typescript@^7.0.2",
+		"@vueuse/core": "^14.4.0",
+		"asn1js": "^3.1.0",
+		"codemirror": "^6.0.2",
+		"diff": "^9.0.0",
+		"docx": "^9.15.1",
+		"electron": "^45.2.1",
+		"electron-builder": "^26.18.0",
+		"electron-vite": "^6.0.0",
+		"isomorphic-git": "^1.44.10",
+		"markdown-it": "^15.0.3",
+		"nuxt": "^4.6.4",
+		"openai": "^7.50.0",
+		"oxfmt": "^0.78.0",
+		"oxlint": "^1.93.0",
+		"oxlint-tsgolint": "^7.0.2006",
+		"pako": "^1.0.11",
+		"pathe": "^2.0.3",
+		"pdfjs-dist": "^6.5.438",
+		"pele": "^1.13.0",
+		"perfect-freehand": "^1.2.3",
+		"pinia": "^4.1.0",
+		"pkijs": "^3.4.3",
+		"playwright-core": "^1.64.1",
+		"tailwindcss": "^4.3.4",
+		"temml": "^0.14.0",
+		"typescript": "npm:@typescript/typescript6@^6.0.2",
+		"vite": "^8.3.5",
+		"vitest": "^5.1.0",
+		"vue": "^3.5.44",
+		"vue-tsc": "^3.3.14",
+		"yaml": "^2.9.1",
+		"zod": "^4.6.7"
+	},
+	"build": {
+		"appId": "com.clausedown.app",
+		"productName": "ClauseDown",
+		"publish": [
+			{
+				"provider": "github",
+				"owner": "SHIOZAKI-Shota",
+				"repo": "ClauseDown"
+			}
+		],
+		"directories": {
+			"output": "release"
+		},
+		"files": [
+			"out/**/*",
+			"package.json"
+		],
+		"extraResources": [
+			{
+				"from": "build/mcp-bridge",
+				"to": "mcp-bridge"
+			}
+		],
+		"win": {
+			"extraResources": [
+				{
+					"from": "native/myna",
+					"to": "native/myna",
+					"filter": [
+						"clausedown-myna.win32-*.node"
+					]
+				},
+				{
+					"from": "native/keychip",
+					"to": "native/keychip",
+					"filter": [
+						"clausedown-keychip.win32-*.node"
+					]
+				}
+			],
+			"target": [
+				{
+					"target": "nsis",
+					"arch": "x64"
+				}
+			],
+			"icon": "build/icon.png"
+		},
+		"nsis": {
+			"oneClick": false,
+			"allowToChangeInstallationDirectory": true
+		},
+		"appx": {
+			"applicationId": "ClauseDown",
+			"identityName": "SHIOZAKIShota.ClauseDown",
+			"publisher": "CN=BC2AA8D8-EAE6-45D8-B496-0F5F103E48ED",
+			"displayName": "ClauseDown",
+			"publisherDisplayName": "SHIOZAKI Shota",
+			"languages": [
+				"ja-JP",
+				"en-US"
+			],
+			"backgroundColor": "transparent",
+			"minVersion": "10.0.19041.0",
+			"maxVersionTested": "10.0.26100.0",
+			"artifactName": "${productName}-${version}-${arch}.${ext}"
+		},
+		"mac": {
+			"extraResources": [
+				{
+					"from": "native/myna",
+					"to": "native/myna",
+					"filter": [
+						"clausedown-myna.darwin-*.node"
+					]
+				},
+				{
+					"from": "native/keychip",
+					"to": "native/keychip",
+					"filter": [
+						"clausedown-keychip.darwin-*.node"
+					]
+				}
+			],
+			"target": [
+				{
+					"target": "dmg",
+					"arch": "arm64"
+				},
+				{
+					"target": "zip",
+					"arch": "arm64"
+				}
+			],
+			"icon": "build/icon-mac.png",
+			"category": "public.app-category.productivity"
+		},
+		"electronFuses": {
+			"runAsNode": false,
+			"enableCookieEncryption": true,
+			"enableNodeOptionsEnvironmentVariable": false,
+			"enableNodeCliInspectArguments": false,
+			"enableEmbeddedAsarIntegrityValidation": true,
+			"onlyLoadAppFromAsar": true,
+			"resetAdHocDarwinSignature": true
+		}
+	},
+	"allowScripts": {
+		"electron@45.3.1": true,
+		"esbuild@0.27.2": true,
+		"esbuild@0.28.2": true,
+		"electron-winstaller@5.4.0": true,
+		"fsevents@2.3.3": true,
+		"vue-demi@0.14.10": true
+	}
 }

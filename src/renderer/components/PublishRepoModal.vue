@@ -23,110 +23,110 @@ const createHelp = computed(() => (github.value ? t.value.repo.publish.githubCre
 
 const ext = (u: string) => window.api.openExternal(u)
 function goLogin() {
-    open.value = false
-    app.openSettings('setup', 'remote')
+	open.value = false
+	app.openSettings('setup', 'remote')
 }
 async function publish() {
-    sending.value = true
-    try {
-        if (await app.publishRepo(url.value)) open.value = false
-    } finally {
-        sending.value = false
-    }
+	sending.value = true
+	try {
+		if (await app.publishRepo(url.value)) open.value = false
+	} finally {
+		sending.value = false
+	}
 }
 </script>
 
 <template>
-    <UModal v-model:open="open" :title="t.repo.publish.title" :description="t.repo.publish.description">
-        <template #body>
-            <ol class="steps">
-                <li>
-                    <strong>{{ t.repo.publish.chooseHost }}</strong>
-                    <p class="cd-muted">{{ t.repo.publish.chooseHostNote }}</p>
-                    <USelect v-model="baseSel" :items="serverItems" class="cd-w-input" />
-                </li>
-                <li :class="{ done: loggedIn }">
-                    <strong>{{ t.repo.publish.login(account?.label ?? '') }}</strong>
-                    <p v-if="loggedIn" class="cd-muted">{{ t.repo.publish.loggedInAs(account?.login ?? '') }}</p>
-                    <template v-else>
-                        <p class="cd-muted">{{ t.repo.publish.loginNote }}</p>
-                        <UButton :label="t.repo.publish.openLogin" :icon="github ? 'i-lucide-github' : 'i-lucide-gitlab'" size="sm" @click="goLogin" />
-                    </template>
-                </li>
-                <li>
-                    <strong>{{ t.repo.publish.createEmpty }}</strong>
-                    <p class="cd-muted">{{ createHelp.a }}<b>{{ createHelp.b1 }}</b>{{ createHelp.c }}<b>{{ createHelp.b2 }}</b>{{ createHelp.d }}</p>
-                    <UButton
-                        :label="t.repo.publish.createOn(github ? 'GitHub' : 'GitLab')"
-                        icon="i-lucide-external-link"
-                        size="sm"
-                        color="neutral"
-                        variant="outline"
-                        @click="ext(createUrl)"
-                    />
-                </li>
-                <li v-if="github">
-                    <strong>{{ t.repo.publish.installApp }}</strong>
-                    <p class="cd-muted">{{ t.repo.publish.installAppNote }}</p>
-                    <UButton
-                        :label="t.repo.publish.openApp"
-                        icon="i-lucide-external-link"
-                        size="sm"
-                        color="neutral"
-                        variant="outline"
-                        @click="ext(GITHUB_APP.installUrl)"
-                    />
-                </li>
-                <li>
-                    <strong>{{ t.repo.publish.pasteUrl }}</strong>
-                    <UInput v-model="url" :placeholder="example" class="cd-full" @keydown.enter="loggedIn && urlOk && !sending && publish()" />
-                    <p v-if="url && !urlOk" class="warn">{{ t.repo.publish.urlFormat(example) }}</p>
-                </li>
-            </ol>
-            <p class="cd-muted note">{{ t.repo.publish.note }}</p>
-        </template>
-        <template #footer>
-            <div class="cd-modal-foot">
-                <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="open = false" />
-                <UButton :label="t.repo.publish.submit" icon="i-lucide-cloud-upload" :loading="sending" :disabled="!loggedIn || !urlOk" @click="publish" />
-            </div>
-        </template>
-    </UModal>
+	<UModal v-model:open="open" :title="t.repo.publish.title" :description="t.repo.publish.description">
+		<template #body>
+			<ol class="steps">
+				<li>
+					<strong>{{ t.repo.publish.chooseHost }}</strong>
+					<p class="cd-muted">{{ t.repo.publish.chooseHostNote }}</p>
+					<USelect v-model="baseSel" :items="serverItems" class="cd-w-input" />
+				</li>
+				<li :class="{ done: loggedIn }">
+					<strong>{{ t.repo.publish.login(account?.label ?? '') }}</strong>
+					<p v-if="loggedIn" class="cd-muted">{{ t.repo.publish.loggedInAs(account?.login ?? '') }}</p>
+					<template v-else>
+						<p class="cd-muted">{{ t.repo.publish.loginNote }}</p>
+						<UButton :label="t.repo.publish.openLogin" :icon="github ? 'i-lucide-github' : 'i-lucide-gitlab'" size="sm" @click="goLogin" />
+					</template>
+				</li>
+				<li>
+					<strong>{{ t.repo.publish.createEmpty }}</strong>
+					<p class="cd-muted">{{ createHelp.a }}<b>{{ createHelp.b1 }}</b>{{ createHelp.c }}<b>{{ createHelp.b2 }}</b>{{ createHelp.d }}</p>
+					<UButton
+						:label="t.repo.publish.createOn(github ? 'GitHub' : 'GitLab')"
+						icon="i-lucide-external-link"
+						size="sm"
+						color="neutral"
+						variant="outline"
+						@click="ext(createUrl)"
+					/>
+				</li>
+				<li v-if="github">
+					<strong>{{ t.repo.publish.installApp }}</strong>
+					<p class="cd-muted">{{ t.repo.publish.installAppNote }}</p>
+					<UButton
+						:label="t.repo.publish.openApp"
+						icon="i-lucide-external-link"
+						size="sm"
+						color="neutral"
+						variant="outline"
+						@click="ext(GITHUB_APP.installUrl)"
+					/>
+				</li>
+				<li>
+					<strong>{{ t.repo.publish.pasteUrl }}</strong>
+					<UInput v-model="url" :placeholder="example" class="cd-full" @keydown.enter="loggedIn && urlOk && !sending && publish()" />
+					<p v-if="url && !urlOk" class="warn">{{ t.repo.publish.urlFormat(example) }}</p>
+				</li>
+			</ol>
+			<p class="cd-muted note">{{ t.repo.publish.note }}</p>
+		</template>
+		<template #footer>
+			<div class="cd-modal-foot">
+				<UButton :label="t.common.cancel" color="neutral" variant="outline" @click="open = false" />
+				<UButton :label="t.repo.publish.submit" icon="i-lucide-cloud-upload" :loading="sending" :disabled="!loggedIn || !urlOk" @click="publish" />
+			</div>
+		</template>
+	</UModal>
 </template>
 
 <style scoped>
 .steps {
-    margin: 0;
-    padding-left: 22px;
-    list-style: decimal;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    font-size: 13px;
+	margin: 0;
+	padding-left: 22px;
+	list-style: decimal;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	font-size: 13px;
 }
 
 .steps li::marker {
-    font-weight: 700;
-    color: var(--ui-color-primary-500);
+	font-weight: 700;
+	color: var(--ui-color-primary-500);
 }
 
 .steps li.done::marker {
-    color: var(--ui-color-success-500);
+	color: var(--ui-color-success-500);
 }
 
 .steps p {
-    margin: 2px 0 6px;
-    font-size: 12px;
-    line-height: 1.7;
+	margin: 2px 0 6px;
+	font-size: 12px;
+	line-height: 1.7;
 }
 
 .warn {
-    color: var(--ui-color-warning-600);
+	color: var(--ui-color-warning-600);
 }
 
 .note {
-    margin: 16px 0 0;
-    font-size: 12px;
-    line-height: 1.7;
+	margin: 16px 0 0;
+	font-size: 12px;
+	line-height: 1.7;
 }
 </style>

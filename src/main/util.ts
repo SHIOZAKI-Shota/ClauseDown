@@ -12,15 +12,15 @@ export const shortId = (length = 12): string => [...randomBytes(length)].map((x)
 const RESERVED = /^(con|prn|aux|nul|com\d|lpt\d)(\..*)?$/i
 
 export function safeFileName(s: string, fallback = '_'): string {
-    let out = ''
-    for (let i = 0; i < s.length; i++) out += s.charCodeAt(i) < 0x20 || '\\/:*?"<>|'.includes(s[i]) ? '_' : s[i]
-    out = out.trim().replace(/[. ]+$/, '')
-    return RESERVED.test(out) ? `${out}_` : out || fallback
+	let out = ''
+	for (let i = 0; i < s.length; i++) out += s.charCodeAt(i) < 0x20 || '\\/:*?"<>|'.includes(s[i]) ? '_' : s[i]
+	out = out.trim().replace(/[. ]+$/, '')
+	return RESERVED.test(out) ? `${out}_` : out || fallback
 }
 
 export function uniquePath(folder: string, stem: string, ext = ''): string {
-    const dot = ext ? `.${ext}` : ''
-    let out = join(folder, `${stem}${dot}`)
-    for (let i = 2; existsSync(out); i++) out = join(folder, `${stem} (${i})${dot}`)
-    return out
+	const dot = ext ? `.${ext}` : ''
+	let out = join(folder, `${stem}${dot}`)
+	for (let i = 2; existsSync(out); i++) out = join(folder, `${stem} (${i})${dot}`)
+	return out
 }

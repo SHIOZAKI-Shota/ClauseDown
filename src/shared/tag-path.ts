@@ -4,20 +4,20 @@
 const BAD = /[%\s~^:?*[\\\x00-\x1f\x7f]|\.(?=\.)|@(?=\{)|\.lock(?=\/|$)/g
 
 export function tagPath(docPath: string): string {
-    return docPath
-        .replace(/\.md$/i, '')
-        .replace(BAD, (c) =>
-            c === '.lock' ? '%2Elock' : [...new TextEncoder().encode(c)].map((b) => `%${b.toString(16).toUpperCase().padStart(2, '0')}`).join(''),
-        )
-        .split('/')
-        .map((part) => (part.startsWith('.') ? `%2E${part.slice(1)}` : part))
-        .join('/')
+	return docPath
+		.replace(/\.md$/i, '')
+		.replace(BAD, (c) =>
+			c === '.lock' ? '%2Elock' : [...new TextEncoder().encode(c)].map((b) => `%${b.toString(16).toUpperCase().padStart(2, '0')}`).join(''),
+		)
+		.split('/')
+		.map((part) => (part.startsWith('.') ? `%2E${part.slice(1)}` : part))
+		.join('/')
 }
 
 export function fromTagPath(part: string): string {
-    try {
-        return decodeURIComponent(part.replace(/%(?![0-9A-Fa-f]{2})/g, '%25'))
-    } catch {
-        return part
-    }
+	try {
+		return decodeURIComponent(part.replace(/%(?![0-9A-Fa-f]{2})/g, '%25'))
+	} catch {
+		return part
+	}
 }

@@ -12,95 +12,108 @@ const NAME = 'clausedown'
 const FILE = 'claude_desktop_config.json'
 
 export interface DesktopEntry {
-    command: string
-    args: string[]
+	command: string
+	args: string[]
+}
+
+export function inlineBridgeEntry(script: string, socket: string): DesktopEntry {
+	const body = script.replace(/^﻿/, '').replace(/^param\(\[string\]\$Pipe\)\r?\n/, '')
+	const code = `$Pipe = '${socket.replace(/'/g, "''")}'\n${body}`
+	return { command: 'powershell.exe', args: ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', Buffer.from(code, 'utf16le').toString('base64')] }
 }
 
 export function bridgeEntry(platform: NodeJS.Platform, bridgeDir: string, socket: string): DesktopEntry {
-    if (platform === 'win32') {
-        return { command: 'powershell.exe', args: ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', join(bridgeDir, 'mcp-bridge.ps1'), socket] }
-    }
-    return { command: join(bridgeDir, 'mcp-bridge.sh'), args: [socket] }
+	if (platform === 'win32') {
+		return { command: 'powershell.exe', args: ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', join(bridgeDir, 'mcp-bridge.ps1'), socket] }
+	}
+	return { command: join(bridgeDir, 'mcp-bridge.sh'), args: [socket] }
 }
 
 const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
 
 export function parseConfig(text: string | null): Record<string, unknown> {
-    if (text === null || !text.trim()) return {}
-    let v: unknown
-    try {
-        v = JSON.parse(text)
-    } catch {
-        throw new Error(t().errors.claudeDesktop.unreadable)
-    }
-    if (!isObject(v)) throw new Error(t().errors.claudeDesktop.badShape)
-    return v
+	if (text === null || !text.trim()) return {}
+	let v: unknown
+	try {
+		v = JSON.parse(text)
+	} catch {
+		throw new Error(t().errors.claudeDesktop.unreadable)
+	}
+	if (!isObject(v)) throw new Error(t().errors.claudeDesktop.badShape)
+	return v
 }
 
 export function withEntry(config: Record<string, unknown>, entry: DesktopEntry | null): Record<string, unknown> {
-    const servers = isObject(config.mcpServers) ? { ...config.mcpServers } : {}
-    if (entry) servers[NAME] = entry
-    else delete servers[NAME]
-    if (!entry && !isObject(config.mcpServers)) return config
-    return { ...config, mcpServers: servers }
+	const servers = isObject(config.mcpServers) ? { ...config.mcpServers } : {}
+	if (entry) servers[NAME] = entry
+	else delete servers[NAME]
+	if (!entry && !isObject(config.mcpServers)) return config
+	return { ...config, mcpServers: servers }
 }
 
 export function entryState(config: Record<string, unknown>, expected: DesktopEntry): 'registered' | 'unregistered' | 'outdated' {
-    const cur = isObject(config.mcpServers) ? config.mcpServers[NAME] : undefined
-    if (cur === undefined) return 'unregistered'
-    return JSON.stringify(cur) === JSON.stringify(expected) ? 'registered' : 'outdated'
+	const cur = isObject(config.mcpServers) ? config.mcpServers[NAME] : undefined
+	if (cur === undefined) return 'unregistered'
+	return JSON.stringify(cur) === JSON.stringify(expected) ? 'registered' : 'outdated'
 }
 
 function configDir(): string | null {
-    const home = os.homedir()
-    if (process.platform === 'darwin') return join(home, 'Library', 'Application Support', 'Claude')
-    if (process.platform === 'win32') {
-        const local = process.env.LOCALAPPDATA
-        if (local) {
-            const pkgs = join(local, 'Packages')
-            const store = fs.existsSync(pkgs) ? fs.readdirSync(pkgs).find((n) => /^Claude_/i.test(n)) : undefined
-            if (store) return join(pkgs, store, 'LocalCache', 'Roaming', 'Claude')
-        }
-        return process.env.APPDATA ? join(process.env.APPDATA, 'Claude') : null
-    }
-    return join(process.env.XDG_CONFIG_HOME || join(home, '.config'), 'Claude')
+	const home = os.homedir()
+	if (process.platform === 'darwin') return join(home, 'Library', 'Application Support', 'Claude')
+	if (process.platform === 'win32') {
+		const local = process.env.LOCALAPPDATA
+		if (local) {
+			const pkgs = join(local, 'Packages')
+			const store = fs.existsSync(pkgs) ? fs.readdirSync(pkgs).find((n) => /^Claude_/i.test(n)) : undefined
+			if (store) return join(pkgs, store, 'LocalCache', 'Roaming', 'Claude')
+		}
+		return process.env.APPDATA ? join(process.env.APPDATA, 'Claude') : null
+	}
+	return join(process.env.XDG_CONFIG_HOME || join(home, '.config'), 'Claude')
 }
 
 const bridgeDir = () => (app.isPackaged ? join(process.resourcesPath, 'mcp-bridge') : resolve(import.meta.dirname, '../../build/mcp-bridge'))
 
 function expected(): DesktopEntry {
-    const socket = mcpSocketPath()
-    if (!socket) throw new Error(t().errors.claudeDesktop.noSocket)
-    return bridgeEntry(process.platform, bridgeDir(), socket)
+	const socket = mcpSocketPath()
+	if (!socket) throw new Error(t().errors.claudeDesktop.noSocket)
+	if (process.windowsStore) return inlineBridgeEntry(fs.readFileSync(join(bridgeDir(), 'mcp-bridge.ps1'), 'utf8'), socket)
+	return bridgeEntry(process.platform, bridgeDir(), socket)
 }
 
 async function readConfig(file: string): Promise<string | null> {
-    return fsp.readFile(file, 'utf8').catch((e: NodeJS.ErrnoException) => {
-        if (e.code === 'ENOENT') return null
-        throw e
-    })
+	return fsp.readFile(file, 'utf8').catch((e: NodeJS.ErrnoException) => {
+		if (e.code === 'ENOENT') return null
+		throw e
+	})
 }
 
 export async function desktopStatus(): Promise<DesktopStatus> {
-    const dir = configDir()
-    if (!dir || !fs.existsSync(dir)) return { state: 'notInstalled', path: null }
-    const file = join(dir, FILE)
-    try {
-        return { state: entryState(parseConfig(await readConfig(file)), expected()), path: file }
-    } catch (e) {
-        return { state: 'broken', path: file, error: errText(e) }
-    }
+	const dir = configDir()
+	if (!dir || !fs.existsSync(dir)) return { state: 'notInstalled', path: null }
+	const file = join(dir, FILE)
+	try {
+		return { state: entryState(parseConfig(await readConfig(file)), expected()), path: file }
+	} catch (e) {
+		return { state: 'broken', path: file, error: errText(e) }
+	}
 }
 
 async function save(entry: DesktopEntry | null): Promise<DesktopStatus> {
-    const dir = configDir()
-    if (!dir || !fs.existsSync(dir)) throw new Error(t().errors.claudeDesktop.notInstalled)
-    const file = join(dir, FILE)
-    const text = await readConfig(file)
-    const next = withEntry(parseConfig(text), entry)
-    if (text !== null) await fsp.writeFile(`${file}.bak`, text, 'utf8')
-    await writeAtomic(file, JSON.stringify(next, null, 2) + '\n')
-    return desktopStatus()
+	const dir = configDir()
+	if (!dir || !fs.existsSync(dir)) throw new Error(t().errors.claudeDesktop.notInstalled)
+	const file = join(dir, FILE)
+	const text = await readConfig(file)
+	const next = withEntry(parseConfig(text), entry)
+	const out = JSON.stringify(next, null, 2) + '\n'
+	if (process.windowsStore) {
+		if (text === null) throw new Error(t().errors.claudeDesktop.noConfigFile)
+		await fsp.writeFile(file, out, 'utf8')
+		return desktopStatus()
+	}
+	if (text !== null) await fsp.writeFile(`${file}.bak`, text, 'utf8')
+	await writeAtomic(file, out)
+	return desktopStatus()
 }
 
 export const registerDesktop = () => save(expected())

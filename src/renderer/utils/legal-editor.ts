@@ -15,198 +15,198 @@ import { t as i18n } from '@shared/i18n'
 import { scopeGuides, scopeTheme, type GuideOptions } from './scope-guides'
 
 export const legalTheme = EditorView.theme({
-    '&': { height: '100%', fontSize: 'var(--cd-ed-size, 14px)', backgroundColor: 'var(--cd-ed-bg)', color: 'var(--cd-ed-text)' },
-    '.cm-scroller': { fontFamily: 'var(--cd-ed-font, "BIZ UDGothic", "Yu Gothic UI", "MS Gothic", monospace)', lineHeight: '1.8' },
-    '.cm-content': { caretColor: 'var(--cd-ed-cursor)', padding: '12px 0' },
-    '.cm-line': { padding: '0 16px 0 6px' },
-    '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--cd-ed-cursor)', borderLeftWidth: '2px' },
-    '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': { backgroundColor: 'var(--cd-ed-selection) !important' },
-    '.cm-activeLine': { backgroundColor: 'var(--cd-ed-active)' },
-    '.cm-gutters': { backgroundColor: 'var(--cd-ed-gutter)', color: 'var(--cd-ed-gutter-text)', border: 'none' },
-    '.cm-activeLineGutter': { backgroundColor: 'var(--cd-ed-active)', color: 'var(--cd-ed-text)' },
-    '.cm-foldPlaceholder': { backgroundColor: 'var(--ui-bg-accented)', border: 'none', color: 'var(--ui-text-muted)' },
-    '.cm-tooltip': { backgroundColor: 'var(--ui-bg-elevated)', border: '1px solid var(--ui-border)', borderRadius: '8px', color: 'var(--ui-text)' },
-    '.cm-tooltip-autocomplete > ul > li': { padding: '3px 10px' },
-    '.cm-tooltip-autocomplete > ul > li[aria-selected]': { backgroundColor: 'var(--ui-color-primary-500)', color: '#fff' },
-    '.cm-completionDetail': { marginLeft: '10px', opacity: 0.7, fontStyle: 'normal' },
-    '.cm-panels': { backgroundColor: 'var(--ui-bg-elevated)', color: 'var(--ui-text)', borderColor: 'var(--ui-border)' },
-    '.cm-panel input, .cm-panel button': { color: 'var(--ui-text)' },
-    '.cm-searchMatch': { backgroundColor: 'var(--cd-highlight)' },
-    '.cm-diagnostic': { padding: '4px 8px' },
-    '.cm-lintRange-error': { backgroundImage: 'none', textDecoration: 'underline wavy var(--cd-syn-ref-bad)', textUnderlineOffset: '3px' },
-    '.cm-lintRange-warning': { backgroundImage: 'none', textDecoration: 'underline wavy var(--cd-draft)', textUnderlineOffset: '3px' },
-    '.cm-panels-bottom': { borderTop: '1px solid var(--ui-border)', backgroundColor: 'var(--cd-ed-bg)' },
-    '.cm-panel.cm-panel-lint ul': { maxHeight: 'min(40vh, 320px)', fontSize: '13px' },
-    '.cm-panel.cm-panel-lint ul [aria-selected], .cm-panel.cm-panel-lint ul:focus [aria-selected]': {
-        backgroundColor: 'var(--cd-selected)',
-        color: 'var(--ui-text)',
-    },
-    '.cm-panel-lint .cm-diagnostic': {
-        display: 'flex',
-        alignItems: 'baseline',
-        gap: '10px',
-        padding: '5px 28px 5px 10px',
-        whiteSpace: 'normal',
-        cursor: 'pointer',
-    },
-    '.cm-panel-lint .cm-diagnostic:hover': { backgroundColor: 'var(--ui-bg-elevated)' },
-    '.cm-panel-lint .cm-diagnosticText': { flex: '1', minWidth: '0' },
-    '.cm-panel-lint .cm-diagnosticSource': { flexShrink: '0', fontSize: '11px', color: 'var(--ui-text-muted)', opacity: '1' },
-    '.cm-diagnostic-error': { borderLeft: '4px solid var(--cd-syn-ref-bad)' },
-    '.cm-diagnostic-warning': { borderLeft: '4px solid var(--cd-draft)' },
-    '.cm-panel.cm-panel-lint [name=close]': { top: '4px', right: '8px', color: 'var(--ui-text-muted)', cursor: 'pointer' },
-    '.cd-hint': { marginRight: '6px' },
-    '.cd-backref': {
-        marginLeft: '12px',
-        fontSize: '11px',
-        color: 'var(--cd-syn-hint)',
-        fontFamily: 'var(--ui-font-family)',
-        userSelect: 'none',
-        whiteSpace: 'nowrap',
-    },
-    '.cd-backref-to': { cursor: 'pointer', textDecoration: 'underline dotted', textUnderlineOffset: '3px' },
-    '.cd-backref-to:hover': { color: 'var(--cd-syn-article)' },
-    '.cd-attr': { color: 'var(--cd-syn-mark)' },
-    '.cd-prop': {
-        color: 'var(--cd-syn-mark)',
-        backgroundColor: 'color-mix(in srgb, var(--cd-syn-mark) 10%, transparent)',
-        borderRadius: '3px',
-        fontSize: '0.92em',
-    },
-    '.cd-ref': { color: 'var(--cd-syn-ref)', borderBottom: '1px dotted var(--cd-syn-ref)' },
-    '.cd-math-src': { color: 'var(--cd-syn-code)' },
-    '.cd-ref-bad': { color: 'var(--cd-syn-ref-bad)', borderBottom: '1px dotted var(--cd-syn-ref-bad)' },
+	'&': { height: '100%', fontSize: 'var(--cd-ed-size, 14px)', backgroundColor: 'var(--cd-ed-bg)', color: 'var(--cd-ed-text)' },
+	'.cm-scroller': { fontFamily: 'var(--cd-ed-font, "BIZ UDGothic", "Yu Gothic UI", "MS Gothic", monospace)', lineHeight: '1.8' },
+	'.cm-content': { caretColor: 'var(--cd-ed-cursor)', padding: '12px 0' },
+	'.cm-line': { padding: '0 16px 0 6px' },
+	'.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--cd-ed-cursor)', borderLeftWidth: '2px' },
+	'&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection': { backgroundColor: 'var(--cd-ed-selection) !important' },
+	'.cm-activeLine': { backgroundColor: 'var(--cd-ed-active)' },
+	'.cm-gutters': { backgroundColor: 'var(--cd-ed-gutter)', color: 'var(--cd-ed-gutter-text)', border: 'none' },
+	'.cm-activeLineGutter': { backgroundColor: 'var(--cd-ed-active)', color: 'var(--cd-ed-text)' },
+	'.cm-foldPlaceholder': { backgroundColor: 'var(--ui-bg-accented)', border: 'none', color: 'var(--ui-text-muted)' },
+	'.cm-tooltip': { backgroundColor: 'var(--ui-bg-elevated)', border: '1px solid var(--ui-border)', borderRadius: '8px', color: 'var(--ui-text)' },
+	'.cm-tooltip-autocomplete > ul > li': { padding: '3px 10px' },
+	'.cm-tooltip-autocomplete > ul > li[aria-selected]': { backgroundColor: 'var(--ui-color-primary-500)', color: '#fff' },
+	'.cm-completionDetail': { marginLeft: '10px', opacity: 0.7, fontStyle: 'normal' },
+	'.cm-panels': { backgroundColor: 'var(--ui-bg-elevated)', color: 'var(--ui-text)', borderColor: 'var(--ui-border)' },
+	'.cm-panel input, .cm-panel button': { color: 'var(--ui-text)' },
+	'.cm-searchMatch': { backgroundColor: 'var(--cd-highlight)' },
+	'.cm-diagnostic': { padding: '4px 8px' },
+	'.cm-lintRange-error': { backgroundImage: 'none', textDecoration: 'underline wavy var(--cd-syn-ref-bad)', textUnderlineOffset: '3px' },
+	'.cm-lintRange-warning': { backgroundImage: 'none', textDecoration: 'underline wavy var(--cd-draft)', textUnderlineOffset: '3px' },
+	'.cm-panels-bottom': { borderTop: '1px solid var(--ui-border)', backgroundColor: 'var(--cd-ed-bg)' },
+	'.cm-panel.cm-panel-lint ul': { maxHeight: 'min(40vh, 320px)', fontSize: '13px' },
+	'.cm-panel.cm-panel-lint ul [aria-selected], .cm-panel.cm-panel-lint ul:focus [aria-selected]': {
+		backgroundColor: 'var(--cd-selected)',
+		color: 'var(--ui-text)',
+	},
+	'.cm-panel-lint .cm-diagnostic': {
+		display: 'flex',
+		alignItems: 'baseline',
+		gap: '10px',
+		padding: '5px 28px 5px 10px',
+		whiteSpace: 'normal',
+		cursor: 'pointer',
+	},
+	'.cm-panel-lint .cm-diagnostic:hover': { backgroundColor: 'var(--ui-bg-elevated)' },
+	'.cm-panel-lint .cm-diagnosticText': { flex: '1', minWidth: '0' },
+	'.cm-panel-lint .cm-diagnosticSource': { flexShrink: '0', fontSize: '11px', color: 'var(--ui-text-muted)', opacity: '1' },
+	'.cm-diagnostic-error': { borderLeft: '4px solid var(--cd-syn-ref-bad)' },
+	'.cm-diagnostic-warning': { borderLeft: '4px solid var(--cd-draft)' },
+	'.cm-panel.cm-panel-lint [name=close]': { top: '4px', right: '8px', color: 'var(--ui-text-muted)', cursor: 'pointer' },
+	'.cd-hint': { marginRight: '6px' },
+	'.cd-backref': {
+		marginLeft: '12px',
+		fontSize: '11px',
+		color: 'var(--cd-syn-hint)',
+		fontFamily: 'var(--ui-font-family)',
+		userSelect: 'none',
+		whiteSpace: 'nowrap',
+	},
+	'.cd-backref-to': { cursor: 'pointer', textDecoration: 'underline dotted', textUnderlineOffset: '3px' },
+	'.cd-backref-to:hover': { color: 'var(--cd-syn-article)' },
+	'.cd-attr': { color: 'var(--cd-syn-mark)' },
+	'.cd-prop': {
+		color: 'var(--cd-syn-mark)',
+		backgroundColor: 'color-mix(in srgb, var(--cd-syn-mark) 10%, transparent)',
+		borderRadius: '3px',
+		fontSize: '0.92em',
+	},
+	'.cd-ref': { color: 'var(--cd-syn-ref)', borderBottom: '1px dotted var(--cd-syn-ref)' },
+	'.cd-math-src': { color: 'var(--cd-syn-code)' },
+	'.cd-ref-bad': { color: 'var(--cd-syn-ref-bad)', borderBottom: '1px dotted var(--cd-syn-ref-bad)' },
 })
 
 const highlight = HighlightStyle.define([
-    { tag: t.heading1, color: 'var(--cd-syn-title)', fontWeight: '700', fontSize: '1.15em' },
-    { tag: t.heading2, color: 'var(--cd-syn-chapter)', fontWeight: '700' },
-    { tag: t.heading3, color: 'var(--cd-syn-article)', fontWeight: '700' },
-    { tag: [t.heading4, t.heading5, t.heading6], color: 'var(--cd-syn-article)' },
-    { tag: t.processingInstruction, color: 'var(--cd-syn-mark)' },
-    { tag: t.list, color: 'var(--cd-ed-text)' },
-    { tag: t.strong, fontWeight: '700' },
-    { tag: t.emphasis, fontStyle: 'italic' },
-    { tag: t.link, color: 'var(--cd-syn-ref)' },
-    { tag: t.url, color: 'var(--cd-syn-mark)' },
-    { tag: [t.monospace, t.content], color: 'var(--cd-ed-text)' },
-    { tag: t.comment, color: 'var(--cd-syn-mark)', fontStyle: 'italic' },
-    { tag: t.meta, color: 'var(--cd-syn-code)' },
-    { tag: [t.keyword, t.string, t.number, t.operator, t.typeName], color: 'var(--cd-syn-code)' },
+	{ tag: t.heading1, color: 'var(--cd-syn-title)', fontWeight: '700', fontSize: '1.15em' },
+	{ tag: t.heading2, color: 'var(--cd-syn-chapter)', fontWeight: '700' },
+	{ tag: t.heading3, color: 'var(--cd-syn-article)', fontWeight: '700' },
+	{ tag: [t.heading4, t.heading5, t.heading6], color: 'var(--cd-syn-article)' },
+	{ tag: t.processingInstruction, color: 'var(--cd-syn-mark)' },
+	{ tag: t.list, color: 'var(--cd-ed-text)' },
+	{ tag: t.strong, fontWeight: '700' },
+	{ tag: t.emphasis, fontStyle: 'italic' },
+	{ tag: t.link, color: 'var(--cd-syn-ref)' },
+	{ tag: t.url, color: 'var(--cd-syn-mark)' },
+	{ tag: [t.monospace, t.content], color: 'var(--cd-ed-text)' },
+	{ tag: t.comment, color: 'var(--cd-syn-mark)', fontStyle: 'italic' },
+	{ tag: t.meta, color: 'var(--cd-syn-code)' },
+	{ tag: [t.keyword, t.string, t.number, t.operator, t.typeName], color: 'var(--cd-syn-code)' },
 ])
 
 export const setLegalDoc = StateEffect.define<LegalDoc>()
 interface LegalState {
-    ld: LegalDoc
-    hints: Map<number, Hint>
-    backs: Map<number, BackRef[]>
+	ld: LegalDoc
+	hints: Map<number, Hint>
+	backs: Map<number, BackRef[]>
 }
 const legalDocField = StateField.define<LegalState | null>({
-    create: () => null,
-    update: (v, tr) => {
-        for (const e of tr.effects) {
-            if (e.is(setLegalDoc))
-                return v?.ld === e.value
-                    ? v
-                    : { ld: e.value, hints: new Map(hintsOf(e.value).map((h) => [h.line, h])), backs: backRefs(tr.state.doc.toString(), e.value) }
-        }
-        return v
-    },
+	create: () => null,
+	update: (v, tr) => {
+		for (const e of tr.effects) {
+			if (e.is(setLegalDoc))
+				return v?.ld === e.value
+					? v
+					: { ld: e.value, hints: new Map(hintsOf(e.value).map((h) => [h.line, h])), backs: backRefs(tr.state.doc.toString(), e.value) }
+		}
+		return v
+	},
 })
 const hasLegalEffect = (u: ViewUpdate) => u.transactions.some((tr) => tr.effects.some((e) => e.is(setLegalDoc)))
 
 interface Hint {
-    line: number
-    label: string
-    kind: 'chapter' | 'article' | 'para' | 'item'
+	line: number
+	label: string
+	kind: 'chapter' | 'article' | 'para' | 'item'
 }
 
 export function hintsOf(doc: LegalDoc): Hint[] {
-    const out: Hint[] = []
-    const latin = !!doc.styleId && doc.styleId !== 'ja'
-    const deleted = (label: string) => (latin ? docStyle(doc).deletedLine(label) : `${label} 削除`)
-    const items = (list: Item[]) => {
-        for (const it of list) {
-            if (it.line >= 0) out.push({ line: it.line, label: it.label, kind: 'item' })
-            items(it.children)
-        }
-    }
-    const paras = (list: Paragraph[], first?: string) => {
-        list.forEach((p, i) => {
-            const label = i === 0 && first && !p.label ? '' : p.label
-            if (p.line >= 0 && label) out.push({ line: p.line, label, kind: 'para' })
-            items(p.items)
-        })
-    }
-    for (const ch of doc.chapters) {
-        if (ch.label && ch.line >= 0) out.push({ line: ch.line, label: ch.label, kind: 'chapter' })
-        paras(ch.intro)
-        for (const a of ch.articles) {
-            out.push({ line: a.line, label: a.deleted ? deleted(a.label) : a.label, kind: 'article' })
-            paras(a.paragraphs, a.label)
-        }
-    }
-    return out
+	const out: Hint[] = []
+	const latin = !!doc.styleId && doc.styleId !== 'ja'
+	const deleted = (label: string) => (latin ? docStyle(doc).deletedLine(label) : `${label} 削除`)
+	const items = (list: Item[]) => {
+		for (const it of list) {
+			if (it.line >= 0) out.push({ line: it.line, label: it.label, kind: 'item' })
+			items(it.children)
+		}
+	}
+	const paras = (list: Paragraph[], first?: string) => {
+		list.forEach((p, i) => {
+			const label = i === 0 && first && !p.label ? '' : p.label
+			if (p.line >= 0 && label) out.push({ line: p.line, label, kind: 'para' })
+			items(p.items)
+		})
+	}
+	for (const ch of doc.chapters) {
+		if (ch.label && ch.line >= 0) out.push({ line: ch.line, label: ch.label, kind: 'chapter' })
+		paras(ch.intro)
+		for (const a of ch.articles) {
+			out.push({ line: a.line, label: a.deleted ? deleted(a.label) : a.label, kind: 'article' })
+			paras(a.paragraphs, a.label)
+		}
+	}
+	return out
 }
 
 class HintWidget extends WidgetType {
-    constructor(
-        readonly label: string,
-        readonly kind: string,
-    ) {
-        super()
-    }
-    override eq(o: HintWidget) {
-        return o.label === this.label && o.kind === this.kind
-    }
-    toDOM() {
-        const el = document.createElement('span')
-        el.className = `cd-hint cd-hint-${this.kind}`
-        el.textContent = this.label
-        return el
-    }
-    override ignoreEvent() {
-        return true
-    }
+	constructor(
+		readonly label: string,
+		readonly kind: string,
+	) {
+		super()
+	}
+	override eq(o: HintWidget) {
+		return o.label === this.label && o.kind === this.kind
+	}
+	toDOM() {
+		const el = document.createElement('span')
+		el.className = `cd-hint cd-hint-${this.kind}`
+		el.textContent = this.label
+		return el
+	}
+	override ignoreEvent() {
+		return true
+	}
 }
 
 class BackRefWidget extends WidgetType {
-    readonly key: string
-    constructor(readonly list: BackRef[]) {
-        super()
-        this.key = list.map((b) => `${b.line}:${b.label}`).join('|')
-    }
-    override eq(o: BackRefWidget) {
-        return o.key === this.key
-    }
-    toDOM(view: EditorView) {
-        const el = document.createElement('span')
-        el.className = 'cd-backref'
-        el.title = this.list.map((b) => b.label).join('\n')
-        const m = i18n().editor.lint
-        el.append(m.backrefPrefix)
-        const firsts = new Map<string, BackRef>()
-        for (const b of this.list) if (!firsts.has(b.article)) firsts.set(b.article, b)
-        let n = 0
-        for (const [article, b] of firsts) {
-            if (n++) el.append(m.backrefSep)
-            const to = document.createElement('span')
-            to.className = 'cd-backref-to'
-            to.textContent = article
-            to.addEventListener('mousedown', (e) => {
-                e.preventDefault()
-                const line = view.state.doc.line(Math.min(b.line + 1, view.state.doc.lines))
-                view.dispatch({ selection: { anchor: line.to }, effects: EditorView.scrollIntoView(line.from, { y: 'center' }) })
-                view.focus()
-            })
-            el.append(to)
-        }
-        if (m.backrefSuffix) el.append(m.backrefSuffix)
-        return el
-    }
-    override ignoreEvent() {
-        return true
-    }
+	readonly key: string
+	constructor(readonly list: BackRef[]) {
+		super()
+		this.key = list.map((b) => `${b.line}:${b.label}`).join('|')
+	}
+	override eq(o: BackRefWidget) {
+		return o.key === this.key
+	}
+	toDOM(view: EditorView) {
+		const el = document.createElement('span')
+		el.className = 'cd-backref'
+		el.title = this.list.map((b) => b.label).join('\n')
+		const m = i18n().editor.lint
+		el.append(m.backrefPrefix)
+		const firsts = new Map<string, BackRef>()
+		for (const b of this.list) if (!firsts.has(b.article)) firsts.set(b.article, b)
+		let n = 0
+		for (const [article, b] of firsts) {
+			if (n++) el.append(m.backrefSep)
+			const to = document.createElement('span')
+			to.className = 'cd-backref-to'
+			to.textContent = article
+			to.addEventListener('mousedown', (e) => {
+				e.preventDefault()
+				const line = view.state.doc.line(Math.min(b.line + 1, view.state.doc.lines))
+				view.dispatch({ selection: { anchor: line.to }, effects: EditorView.scrollIntoView(line.from, { y: 'center' }) })
+				view.focus()
+			})
+			el.append(to)
+		}
+		if (m.backrefSuffix) el.append(m.backrefSuffix)
+		return el
+	}
+	override ignoreEvent() {
+		return true
+	}
 }
 
 const ATTR_RE = /\s\{[^{}]*\}\s*$/
@@ -215,282 +215,282 @@ const PROP_INLINE_RE = /\](\{[^{}]*\})/g
 const PROP_LINE_RE = /^\s*(?::{3,}.*|\{[^{}]*\})\s*$/
 
 function buildDecorations(view: EditorView): DecorationSet {
-    const st = view.state.field(legalDocField)
-    const ld = st?.ld
-    const builder = new RangeSetBuilder<Decoration>()
-    const hints = st?.hints
-    for (const { from, to } of view.visibleRanges) {
-        let pos = from
-        while (pos <= to) {
-            const line = view.state.doc.lineAt(pos)
-            const h = hints?.get(line.number - 1)
-            const marks: { from: number; to: number; deco: Decoration }[] = []
-            if (h) {
-                const m = /^(\s*(?:#{1,6}\s+|[-*+]\s+|\d+[.)]\s+)?)/.exec(line.text)!
-                marks.push({
-                    from: line.from + m[1].length,
-                    to: line.from + m[1].length,
-                    deco: Decoration.widget({ widget: new HintWidget(h.label, h.kind), side: -1 }),
-                })
-            }
-            if (/^#{1,6}\s/.test(line.text)) {
-                const a = ATTR_RE.exec(line.text)
-                if (a) marks.push({ from: line.from + a.index, to: line.to, deco: Decoration.mark({ class: 'cd-attr' }) })
-            }
-            if (PROP_LINE_RE.test(line.text)) marks.push({ from: line.from, to: line.to, deco: Decoration.mark({ class: 'cd-prop' }) })
-            else
-                for (const r of line.text.matchAll(PROP_INLINE_RE))
-                    marks.push({ from: line.from + r.index + 1, to: line.from + r.index + r[0].length, deco: Decoration.mark({ class: 'cd-prop' }) })
-            for (const m of findMath(line.text)) marks.push({ from: line.from + m.from, to: line.from + m.to, deco: Decoration.mark({ class: 'cd-math-src' }) })
-            for (const r of line.text.matchAll(REF_RE)) {
-                if (ld?.toc?.line === line.number - 1) {
-                    marks.push({ from: line.from + r.index, to: line.from + r.index + r[0].length, deco: Decoration.mark({ class: 'cd-prop' }) })
-                    continue
-                }
-                const ok = !!ld?.refs[r[1].trim()]
-                marks.push({
-                    from: line.from + r.index,
-                    to: line.from + r.index + r[0].length,
-                    deco: Decoration.mark({ class: ok ? 'cd-ref' : 'cd-ref-bad' }),
-                })
-            }
-            const backs = st?.backs.get(line.number - 1)
-            if (backs?.length && h?.kind === 'article')
-                marks.push({ from: line.to, to: line.to, deco: Decoration.widget({ widget: new BackRefWidget(backs), side: 1 }) })
-            marks.sort((x, y) => x.from - y.from)
-            for (const mk of marks) builder.add(mk.from, mk.to, mk.deco)
-            pos = line.to + 1
-        }
-    }
-    return builder.finish()
+	const st = view.state.field(legalDocField)
+	const ld = st?.ld
+	const builder = new RangeSetBuilder<Decoration>()
+	const hints = st?.hints
+	for (const { from, to } of view.visibleRanges) {
+		let pos = from
+		while (pos <= to) {
+			const line = view.state.doc.lineAt(pos)
+			const h = hints?.get(line.number - 1)
+			const marks: { from: number; to: number; deco: Decoration }[] = []
+			if (h) {
+				const m = /^(\s*(?:#{1,6}\s+|[-*+]\s+|\d+[.)]\s+)?)/.exec(line.text)!
+				marks.push({
+					from: line.from + m[1].length,
+					to: line.from + m[1].length,
+					deco: Decoration.widget({ widget: new HintWidget(h.label, h.kind), side: -1 }),
+				})
+			}
+			if (/^#{1,6}\s/.test(line.text)) {
+				const a = ATTR_RE.exec(line.text)
+				if (a) marks.push({ from: line.from + a.index, to: line.to, deco: Decoration.mark({ class: 'cd-attr' }) })
+			}
+			if (PROP_LINE_RE.test(line.text)) marks.push({ from: line.from, to: line.to, deco: Decoration.mark({ class: 'cd-prop' }) })
+			else
+				for (const r of line.text.matchAll(PROP_INLINE_RE))
+					marks.push({ from: line.from + r.index + 1, to: line.from + r.index + r[0].length, deco: Decoration.mark({ class: 'cd-prop' }) })
+			for (const m of findMath(line.text)) marks.push({ from: line.from + m.from, to: line.from + m.to, deco: Decoration.mark({ class: 'cd-math-src' }) })
+			for (const r of line.text.matchAll(REF_RE)) {
+				if (ld?.toc?.line === line.number - 1) {
+					marks.push({ from: line.from + r.index, to: line.from + r.index + r[0].length, deco: Decoration.mark({ class: 'cd-prop' }) })
+					continue
+				}
+				const ok = !!ld?.refs[r[1].trim()]
+				marks.push({
+					from: line.from + r.index,
+					to: line.from + r.index + r[0].length,
+					deco: Decoration.mark({ class: ok ? 'cd-ref' : 'cd-ref-bad' }),
+				})
+			}
+			const backs = st?.backs.get(line.number - 1)
+			if (backs?.length && h?.kind === 'article')
+				marks.push({ from: line.to, to: line.to, deco: Decoration.widget({ widget: new BackRefWidget(backs), side: 1 }) })
+			marks.sort((x, y) => x.from - y.from)
+			for (const mk of marks) builder.add(mk.from, mk.to, mk.deco)
+			pos = line.to + 1
+		}
+	}
+	return builder.finish()
 }
 
 const legalDecorations = ViewPlugin.fromClass(
-    class {
-        decorations: DecorationSet
-        constructor(view: EditorView) {
-            this.decorations = buildDecorations(view)
-        }
-        update(u: ViewUpdate) {
-            if (u.docChanged || u.viewportChanged || hasLegalEffect(u)) this.decorations = buildDecorations(u.view)
-        }
-    },
-    { decorations: (v) => v.decorations },
+	class {
+		decorations: DecorationSet
+		constructor(view: EditorView) {
+			this.decorations = buildDecorations(view)
+		}
+		update(u: ViewUpdate) {
+			if (u.docChanged || u.viewportChanged || hasLegalEffect(u)) this.decorations = buildDecorations(u.view)
+		}
+	},
+	{ decorations: (v) => v.decorations },
 )
 
 function idFor(a: Article, ld: LegalDoc): string {
-    const base = (a.title || a.label).replace(/[\s{}[\]:#]/g, '')
-    let id = base
-    for (let n = 2; ld.refs[id] && ld.refs[id] !== a; n++) id = `${base}${n}`
-    return id
+	const base = (a.title || a.label).replace(/[\s{}[\]:#]/g, '')
+	let id = base
+	for (let n = 2; ld.refs[id] && ld.refs[id] !== a; n++) id = `${base}${n}`
+	return id
 }
 
 function refCompletions(ctx: CompletionContext) {
-    const m = ctx.matchBefore(/\[\[[^\]\n]*/)
-    if (!m) return null
-    const ld = ctx.state.field(legalDocField)?.ld
-    if (!ld) return null
-    const options: Completion[] = []
-    for (const ch of ld.chapters) {
-        for (const a of ch.articles) {
-            if (a.deleted) continue
-            const id = a.id ?? idFor(a, ld)
-            options.push({
-                label: `${a.refLabel}${a.title ? (ld.styleId && ld.styleId !== 'ja' ? ` (${articleTitle(a, ld)})` : `（${articleTitle(a, ld)}）`) : ''}`,
-                detail: a.id ? `[[${a.id}]]` : i18n().editor.lint.refDetail,
-                apply: (view, _c, from, to) => {
-                    from -= 2
-                    if (view.state.sliceDoc(to, to + 2) === ']]') to += 2
-                    const changes = [{ from, to, insert: `[[${id}]]` }]
-                    if (!a.id) {
-                        const line = view.state.doc.line(a.line + 1)
-                        const attr = ATTR_RE.exec(line.text)
-                        if (attr)
-                            changes.push({
-                                from: line.from + attr.index + attr[0].indexOf('{') + 1,
-                                to: line.from + attr.index + attr[0].indexOf('{') + 1,
-                                insert: `#${id} `,
-                            })
-                        else changes.push({ from: line.to, to: line.to, insert: ` {#${id}}` })
-                    }
-                    const shift = changes.slice(1).reduce((n, c) => (c.from < from ? n + c.insert.length : n), 0)
-                    view.dispatch(view.state.update({ changes, selection: EditorSelection.cursor(from + shift + id.length + 4) }))
-                },
-            })
-        }
-    }
-    return { from: m.from + 2, options, filter: true, validFor: /^[^\]\n]*$/ }
+	const m = ctx.matchBefore(/\[\[[^\]\n]*/)
+	if (!m) return null
+	const ld = ctx.state.field(legalDocField)?.ld
+	if (!ld) return null
+	const options: Completion[] = []
+	for (const ch of ld.chapters) {
+		for (const a of ch.articles) {
+			if (a.deleted) continue
+			const id = a.id ?? idFor(a, ld)
+			options.push({
+				label: `${a.refLabel}${a.title ? (ld.styleId && ld.styleId !== 'ja' ? ` (${articleTitle(a, ld)})` : `（${articleTitle(a, ld)}）`) : ''}`,
+				detail: a.id ? `[[${a.id}]]` : i18n().editor.lint.refDetail,
+				apply: (view, _c, from, to) => {
+					from -= 2
+					if (view.state.sliceDoc(to, to + 2) === ']]') to += 2
+					const changes = [{ from, to, insert: `[[${id}]]` }]
+					if (!a.id) {
+						const line = view.state.doc.line(a.line + 1)
+						const attr = ATTR_RE.exec(line.text)
+						if (attr)
+							changes.push({
+								from: line.from + attr.index + attr[0].indexOf('{') + 1,
+								to: line.from + attr.index + attr[0].indexOf('{') + 1,
+								insert: `#${id} `,
+							})
+						else changes.push({ from: line.to, to: line.to, insert: ` {#${id}}` })
+					}
+					const shift = changes.slice(1).reduce((n, c) => (c.from < from ? n + c.insert.length : n), 0)
+					view.dispatch(view.state.update({ changes, selection: EditorSelection.cursor(from + shift + id.length + 4) }))
+				},
+			})
+		}
+	}
+	return { from: m.from + 2, options, filter: true, validFor: /^[^\]\n]*$/ }
 }
 
 const mermaidErrors = new Map<string, string | undefined>()
 function mermaidError(body: string): string | undefined {
-    if (mermaidErrors.has(body)) return mermaidErrors.get(body)
-    const { error } = mermaidSvg(body)
-    if (mermaidErrors.size >= 200) mermaidErrors.clear()
-    mermaidErrors.set(body, error)
-    return error
+	if (mermaidErrors.has(body)) return mermaidErrors.get(body)
+	const { error } = mermaidSvg(body)
+	if (mermaidErrors.size >= 200) mermaidErrors.clear()
+	mermaidErrors.set(body, error)
+	return error
 }
 
 const legalLinter = linter(
-    (view) => {
-        const ld = view.state.field(legalDocField)?.ld
-        if (!ld) return []
-        const out: Diagnostic[] = []
-        const text = view.state.doc.toString()
-        const msg = i18n().editor.lint
-        for (const r of text.matchAll(REF_RE)) {
-            if (ld.toc && view.state.doc.lineAt(r.index).number - 1 === ld.toc.line) continue
-            if (!ld.refs[r[1].trim()]) {
-                out.push({ from: r.index, to: r.index + r[0].length, severity: 'error', message: msg.noArticle(r[1]) })
-            }
-        }
-        for (const f of text.matchAll(/^[ \t]*(`{3,}|~{3,})\s*mermaid[^\n]*\n([\s\S]*?)\n[ \t]*\1[ \t]*$/gm)) {
-            const fence = parseFence(f[0].replace(/^[ \t]+/gm, ''))
-            if (!fence) continue
-            const error = mermaidError(fence.body)
-            if (error) out.push({ from: f.index, to: f.index + f[0].length, severity: 'warning', message: msg.figure(error) })
-        }
-        for (const f of text.matchAll(/^[ \t]*(`{3,}|~{3,})\s*math[^\n]*\n([\s\S]*?)\n[ \t]*\1[ \t]*$/gm)) {
-            const error = mathError(f[2], true)
-            if (error) out.push({ from: f.index, to: f.index + f[0].length, severity: 'warning', source: msg.mathSource, message: msg.math(error) })
-        }
-        for (const m of findMath(text)) {
-            const error = mathError(m.tex, m.display)
-            if (error) out.push({ from: m.from, to: m.to, severity: 'warning', source: msg.mathSource, message: msg.math(error) })
-        }
-        for (const d of checkDefinitions(text)) out.push({ from: d.from, to: d.to, severity: 'error', source: msg.definitions, message: d.message })
-        for (const w of ld.warnings) {
-            const n = warningLine(w)
-            const line = n ? view.state.doc.line(Math.min(n, view.state.doc.lines)) : view.state.doc.line(1)
-            out.push({ from: line.from, to: line.to, severity: 'warning', message: w })
-        }
-        return out
-    },
-    { delay: 400, needsRefresh: hasLegalEffect },
+	(view) => {
+		const ld = view.state.field(legalDocField)?.ld
+		if (!ld) return []
+		const out: Diagnostic[] = []
+		const text = view.state.doc.toString()
+		const msg = i18n().editor.lint
+		for (const r of text.matchAll(REF_RE)) {
+			if (ld.toc && view.state.doc.lineAt(r.index).number - 1 === ld.toc.line) continue
+			if (!ld.refs[r[1].trim()]) {
+				out.push({ from: r.index, to: r.index + r[0].length, severity: 'error', message: msg.noArticle(r[1]) })
+			}
+		}
+		for (const f of text.matchAll(/^[ \t]*(`{3,}|~{3,})\s*mermaid[^\n]*\n([\s\S]*?)\n[ \t]*\1[ \t]*$/gm)) {
+			const fence = parseFence(f[0].replace(/^[ \t]+/gm, ''))
+			if (!fence) continue
+			const error = mermaidError(fence.body)
+			if (error) out.push({ from: f.index, to: f.index + f[0].length, severity: 'warning', message: msg.figure(error) })
+		}
+		for (const f of text.matchAll(/^[ \t]*(`{3,}|~{3,})\s*math[^\n]*\n([\s\S]*?)\n[ \t]*\1[ \t]*$/gm)) {
+			const error = mathError(f[2], true)
+			if (error) out.push({ from: f.index, to: f.index + f[0].length, severity: 'warning', source: msg.mathSource, message: msg.math(error) })
+		}
+		for (const m of findMath(text)) {
+			const error = mathError(m.tex, m.display)
+			if (error) out.push({ from: m.from, to: m.to, severity: 'warning', source: msg.mathSource, message: msg.math(error) })
+		}
+		for (const d of checkDefinitions(text)) out.push({ from: d.from, to: d.to, severity: 'error', source: msg.definitions, message: d.message })
+		for (const w of ld.warnings) {
+			const n = warningLine(w)
+			const line = n ? view.state.doc.line(Math.min(n, view.state.doc.lines)) : view.state.doc.line(1)
+			out.push({ from: line.from, to: line.to, severity: 'warning', message: w })
+		}
+		return out
+	},
+	{ delay: 400, needsRefresh: hasLegalEffect },
 )
 
 const PROOFREAD_MAX = 200_000
 
 export const proofreadLinter = (proofread: (text: string) => Promise<ProofreadIssue[]>) =>
-    linter(
-        async (view) => {
-            const text = view.state.doc.toString()
-            if (!text.trim() || text.length > PROOFREAD_MAX) return []
-            const issues = await proofread(text).catch((): ProofreadIssue[] => [])
-            const len = view.state.doc.length
-            return issues
-                .filter((i) => i.from < len)
-                .map((i): Diagnostic => ({
-                    from: i.from,
-                    to: Math.min(i.to, len),
-                    severity: 'warning',
-                    source: i18n().editor.lint.proofread(i.rule),
-                    message: i.message,
-                }))
-        },
-        { delay: 1200 },
-    )
+	linter(
+		async (view) => {
+			const text = view.state.doc.toString()
+			if (!text.trim() || text.length > PROOFREAD_MAX) return []
+			const issues = await proofread(text).catch((): ProofreadIssue[] => [])
+			const len = view.state.doc.length
+			return issues
+				.filter((i) => i.from < len)
+				.map((i): Diagnostic => ({
+					from: i.from,
+					to: Math.min(i.to, len),
+					severity: 'warning',
+					source: i18n().editor.lint.proofread(i.rule),
+					message: i.message,
+				}))
+		},
+		{ delay: 1200 },
+	)
 
 function shiftList(dir: 1 | -1) {
-    return (view: EditorView) => {
-        const changes: { from: number; to: number; insert: string }[] = []
-        for (const r of view.state.selection.ranges) {
-            const first = view.state.doc.lineAt(r.from).number
-            const last = view.state.doc.lineAt(r.to).number
-            for (let n = first; n <= last; n++) {
-                const line = view.state.doc.line(n)
-                if (!/^\s*[-*+]\s/.test(line.text)) return false
-                if (dir === 1) changes.push({ from: line.from, to: line.from, insert: '  ' })
-                else {
-                    const sp = /^ {1,2}/.exec(line.text)
-                    if (sp) changes.push({ from: line.from, to: line.from + sp[0].length, insert: '' })
-                }
-            }
-        }
-        if (!changes.length) return false
-        view.dispatch({ changes })
-        return true
-    }
+	return (view: EditorView) => {
+		const changes: { from: number; to: number; insert: string }[] = []
+		for (const r of view.state.selection.ranges) {
+			const first = view.state.doc.lineAt(r.from).number
+			const last = view.state.doc.lineAt(r.to).number
+			for (let n = first; n <= last; n++) {
+				const line = view.state.doc.line(n)
+				if (!/^\s*[-*+]\s/.test(line.text)) return false
+				if (dir === 1) changes.push({ from: line.from, to: line.from, insert: '  ' })
+				else {
+					const sp = /^ {1,2}/.exec(line.text)
+					if (sp) changes.push({ from: line.from, to: line.from + sp[0].length, insert: '' })
+				}
+			}
+		}
+		if (!changes.length) return false
+		view.dispatch({ changes })
+		return true
+	}
 }
 
 export const legalScopeGuides = (opts: GuideOptions): Extension =>
-    scopeGuides(
-        (state) => state.field(legalDocField, false)?.ld ?? null,
-        (tr) => tr.effects.some((e) => e.is(setLegalDoc)),
-        opts,
-    )
+	scopeGuides(
+		(state) => state.field(legalDocField, false)?.ld ?? null,
+		(tr) => tr.effects.some((e) => e.is(setLegalDoc)),
+		opts,
+	)
 
 export function legalExtensions(): Extension[] {
-    return [
-        legalTheme,
-        syntaxHighlighting(highlight),
-        indentUnit.of('  '),
-        legalDocField,
-        legalDecorations,
-        scopeTheme,
-        autocompletion({ override: [refCompletions], activateOnTyping: true, icons: false }),
-        legalLinter,
-        keymap.of([
-            { key: 'Tab', run: shiftList(1) },
-            { key: 'Shift-Tab', run: shiftList(-1) },
-        ]),
-    ]
+	return [
+		legalTheme,
+		syntaxHighlighting(highlight),
+		indentUnit.of('  '),
+		legalDocField,
+		legalDecorations,
+		scopeTheme,
+		autocompletion({ override: [refCompletions], activateOnTyping: true, icons: false }),
+		legalLinter,
+		keymap.of([
+			{ key: 'Tab', run: shiftList(1) },
+			{ key: 'Shift-Tab', run: shiftList(-1) },
+		]),
+	]
 }
 
 interface PositionIndex {
-    lines: number[]
-    labels: string[]
+	lines: number[]
+	labels: string[]
 }
 const positionIndexes = new WeakMap<LegalDoc, PositionIndex>()
 function positionIndex(ld: LegalDoc): PositionIndex {
-    const hit = positionIndexes.get(ld)
-    if (hit) return hit
-    const idx: PositionIndex = { lines: [], labels: [] }
-    const add = (line: number, label: string) => {
-        idx.lines.push(line)
-        idx.labels.push(label)
-    }
-    if (ld.styleId && ld.styleId !== 'ja') {
-        for (const [line, label] of [...lineLabels(ld)].sort((a, b) => a[0] - b[0])) if (label) add(line, label)
-        positionIndexes.set(ld, idx)
-        return idx
-    }
-    for (const ch of ld.chapters) {
-        if (ch.line >= 0 && ch.label) add(ch.line, ch.label)
-        for (const a of ch.articles) {
-            add(a.line, a.label)
-            for (const p of a.paragraphs) {
-                if (p.line >= 0) add(p.line, `${a.label}第${p.number}項`)
-                const walk = (items: Item[]) => {
-                    for (const it of items) {
-                        add(it.line, `${a.label}第${p.number}項 ${it.label}`)
-                        walk(it.children)
-                    }
-                }
-                walk(p.items)
-            }
-        }
-    }
-    positionIndexes.set(ld, idx)
-    return idx
+	const hit = positionIndexes.get(ld)
+	if (hit) return hit
+	const idx: PositionIndex = { lines: [], labels: [] }
+	const add = (line: number, label: string) => {
+		idx.lines.push(line)
+		idx.labels.push(label)
+	}
+	if (ld.styleId && ld.styleId !== 'ja') {
+		for (const [line, label] of [...lineLabels(ld)].sort((a, b) => a[0] - b[0])) if (label) add(line, label)
+		positionIndexes.set(ld, idx)
+		return idx
+	}
+	for (const ch of ld.chapters) {
+		if (ch.line >= 0 && ch.label) add(ch.line, ch.label)
+		for (const a of ch.articles) {
+			add(a.line, a.label)
+			for (const p of a.paragraphs) {
+				if (p.line >= 0) add(p.line, `${a.label}第${p.number}項`)
+				const walk = (items: Item[]) => {
+					for (const it of items) {
+						add(it.line, `${a.label}第${p.number}項 ${it.label}`)
+						walk(it.children)
+					}
+				}
+				walk(p.items)
+			}
+		}
+	}
+	positionIndexes.set(ld, idx)
+	return idx
 }
 
 export function lastAtOrBefore(sorted: readonly number[], x: number): number {
-    let lo = 0
-    let hi = sorted.length - 1
-    let found = -1
-    while (lo <= hi) {
-        const mid = (lo + hi) >> 1
-        if (sorted[mid] <= x) {
-            found = mid
-            lo = mid + 1
-        } else hi = mid - 1
-    }
-    return found
+	let lo = 0
+	let hi = sorted.length - 1
+	let found = -1
+	while (lo <= hi) {
+		const mid = (lo + hi) >> 1
+		if (sorted[mid] <= x) {
+			found = mid
+			lo = mid + 1
+		} else hi = mid - 1
+	}
+	return found
 }
 
 export function positionLabel(ld: LegalDoc, line: number): string {
-    const idx = positionIndex(ld)
-    const i = lastAtOrBefore(idx.lines, line)
-    return i < 0 ? '' : idx.labels[i]
+	const idx = positionIndex(ld)
+	const i = lastAtOrBefore(idx.lines, line)
+	return i < 0 ? '' : idx.labels[i]
 }

@@ -9,16 +9,16 @@ fs.mkdirSync(PARENT, { recursive: true })
 fs.mkdirSync(DELIVER, { recursive: true })
 
 const PEOPLE = {
-    山田: 'yamada@office.example',
-    事務員A: 'staff-a@office.example',
-    事務員B: 'staff-b@office.example',
+	山田: 'yamada@office.example',
+	事務員A: 'staff-a@office.example',
+	事務員B: 'staff-b@office.example',
 }
 
 let now = new Date('2024-01-09T10:00:00+09:00')
 const SPREAD = 2.8
 function tick(days = 3, hours = 2) {
-    now = new Date(now.getTime() + days * SPREAD * 86400000 + hours * 3600000)
-    return now
+	now = new Date(now.getTime() + days * SPREAD * 86400000 + hours * 3600000)
+	return now
 }
 const iso = (d) => d.toISOString().replace(/\.\d{3}Z$/, 'Z')
 const gitDate = (d) => `${Math.floor(d.getTime() / 1000)} +0900`
@@ -26,152 +26,152 @@ const gitDate = (d) => `${Math.floor(d.getTime() / 1000)} +0900`
 const repos = []
 
 function createRepo(name, client, kind, by = '山田') {
-    const ROOT = path.join(PARENT, name)
-    fs.mkdirSync(ROOT, { recursive: true })
+	const ROOT = path.join(PARENT, name)
+	fs.mkdirSync(ROOT, { recursive: true })
 
-    function git(args, who = '山田', input) {
-        const env = {
-            ...process.env,
-            GIT_AUTHOR_NAME: who,
-            GIT_AUTHOR_EMAIL: PEOPLE[who],
-            GIT_COMMITTER_NAME: who,
-            GIT_COMMITTER_EMAIL: PEOPLE[who],
-            GIT_AUTHOR_DATE: gitDate(now),
-            GIT_COMMITTER_DATE: gitDate(now),
-        }
-        return execFileSync('git', ['-C', ROOT, ...args], { env, input, encoding: 'utf8' }).trim()
-    }
+	function git(args, who = '山田', input) {
+		const env = {
+			...process.env,
+			GIT_AUTHOR_NAME: who,
+			GIT_AUTHOR_EMAIL: PEOPLE[who],
+			GIT_COMMITTER_NAME: who,
+			GIT_COMMITTER_EMAIL: PEOPLE[who],
+			GIT_AUTHOR_DATE: gitDate(now),
+			GIT_COMMITTER_DATE: gitDate(now),
+		}
+		return execFileSync('git', ['-C', ROOT, ...args], { env, input, encoding: 'utf8' }).trim()
+	}
 
-    const full = (p) => path.join(ROOT, ...p.split('/'))
-    function write(p, text) {
-        fs.mkdirSync(path.dirname(full(p)), { recursive: true })
-        fs.writeFileSync(full(p), text.replace(/^\n/, ''), 'utf8')
-    }
-    const read = (p) => fs.readFileSync(full(p), 'utf8')
-    function edit(p, from, to) {
-        const s = read(p)
-        if (!s.includes(from)) throw new Error(`${name}/${p} に「${from}」がありません`)
-        fs.writeFileSync(full(p), s.replace(from, to), 'utf8')
-    }
+	const full = (p) => path.join(ROOT, ...p.split('/'))
+	function write(p, text) {
+		fs.mkdirSync(path.dirname(full(p)), { recursive: true })
+		fs.writeFileSync(full(p), text.replace(/^\n/, ''), 'utf8')
+	}
+	const read = (p) => fs.readFileSync(full(p), 'utf8')
+	function edit(p, from, to) {
+		const s = read(p)
+		if (!s.includes(from)) throw new Error(`${name}/${p} に「${from}」がありません`)
+		fs.writeFileSync(full(p), s.replace(from, to), 'utf8')
+	}
 
-    function tagEffective(docPath, date, who = '山田', ref = 'HEAD') {
-        const tag = `施行/${docPath.replace(/\.md$/, '')}/${date}`
-        git(['tag', '-a', '-f', tag, '-m', `${docPath} 施行日 ${date}`, ref], who)
-    }
+	function tagEffective(docPath, date, who = '山田', ref = 'HEAD') {
+		const tag = `施行/${docPath.replace(/\.md$/, '')}/${date}`
+		git(['tag', '-a', '-f', tag, '-m', `${docPath} 施行日 ${date}`, ref], who)
+	}
 
-    function save(message, who, opts = {}) {
-        tick(opts.days ?? 3, opts.hours ?? 2)
-        git(['add', '-A'], who)
-        const msg = opts.effective ? `${message}\n\n施行日: ${opts.effective}` : message
-        git(['commit', '-q', '-m', msg], who)
-        const oid = git(['rev-parse', 'HEAD'])
-        if (opts.effective) for (const d of opts.docs ?? []) tagEffective(d, opts.effective, who)
-        return oid
-    }
+	function save(message, who, opts = {}) {
+		tick(opts.days ?? 3, opts.hours ?? 2)
+		git(['add', '-A'], who)
+		const msg = opts.effective ? `${message}\n\n施行日: ${opts.effective}` : message
+		git(['commit', '-q', '-m', msg], who)
+		const oid = git(['rev-parse', 'HEAD'])
+		if (opts.effective) for (const d of opts.docs ?? []) tagEffective(d, opts.effective, who)
+		return oid
+	}
 
-    const checkout = (ref) => git(['checkout', '-q', ref])
-    const branch = (label, from = 'main') => git(['checkout', '-q', '-b', `案/${label}`, from])
+	const checkout = (ref) => git(['checkout', '-q', ref])
+	const branch = (label, from = 'main') => git(['checkout', '-q', '-b', `案/${label}`, from])
 
-    function adopt(label, who = '山田', opts = {}) {
-        checkout('main')
-        tick(opts.days ?? 2, 1)
-        git(['merge', '-q', '--no-ff', `案/${label}`, '-m', `改定案「${label}」を現行版に反映${opts.effective ? `\n\n施行日: ${opts.effective}` : ''}`], who)
-        const oid = git(['rev-parse', 'HEAD'])
-        if (opts.effective) for (const d of opts.docs ?? []) tagEffective(d, opts.effective, who)
-        if (opts.deleteAfter !== false) git(['branch', '-q', '-D', `案/${label}`])
-        return oid
-    }
+	function adopt(label, who = '山田', opts = {}) {
+		checkout('main')
+		tick(opts.days ?? 2, 1)
+		git(['merge', '-q', '--no-ff', `案/${label}`, '-m', `改定案「${label}」を現行版に反映${opts.effective ? `\n\n施行日: ${opts.effective}` : ''}`], who)
+		const oid = git(['rev-parse', 'HEAD'])
+		if (opts.effective) for (const d of opts.docs ?? []) tagEffective(d, opts.effective, who)
+		if (opts.deleteAfter !== false) git(['branch', '-q', '-D', `案/${label}`])
+		return oid
+	}
 
-    const records = { 'rules.json': { requireApproval: true, approvers: ['山田'] } }
-    const oidOf = (ref) => git(['rev-parse', ref])
+	const records = { 'rules.json': { requireApproval: true, approvers: ['山田'] } }
+	const oidOf = (ref) => git(['rev-parse', ref])
 
-    function review(branchName, action, who, when, text, oid = oidOf(branchName)) {
-        const id = idAt(when)
-        records[`review-${id}.json`] = { id, branch: branchName, action, oid, by: who, at: iso(when), text, source: 'app' }
-    }
+	function review(branchName, action, who, when, text, oid = oidOf(branchName)) {
+		const id = idAt(when)
+		records[`review-${id}.json`] = { id, branch: branchName, action, oid, by: who, at: iso(when), text, source: 'app' }
+	}
 
-    function deliver(docPath, title, effective, to, memo, items, who, when, baseRef) {
-        const id = idAt(when)
-        const oid = oidOf(`施行/${docPath.replace(/\.md$/, '')}/${effective}`)
-        const peeled = git(['rev-parse', `${oid}^{commit}`])
-        const stamp = iso(when).slice(0, 10).replace(/-/g, '')
-        const folder = path.join(DELIVER, `${stamp}_${client}_${title}_納品`)
-        const names = {
-            docPdf: `${title}.pdf`,
-            docDocx: `${title}.docx`,
-            cmpPdf: `${title} 新旧対照表.pdf`,
-            cmpDocx: `${title} 新旧対照表.docx`,
-            opinion: '意見書（ひな形）.docx',
-        }
-        const files = items.map((i) => names[i])
-        fs.mkdirSync(folder, { recursive: true })
-        fs.writeFileSync(
-            path.join(folder, 'このフォルダについて.txt'),
-            `テストデータの納品物フォルダです（中身は空です）。\r\n\r\nリポジトリ：${name}\r\n宛先：${to}\r\n施行日：${effective}\r\n納品物：\r\n${files.map((f) => `- ${f}`).join('\r\n')}\r\n`,
-            'utf8',
-        )
-        const baseOid = baseRef ? git(['rev-parse', `${baseRef}^{commit}`]) : undefined
-        records[`delivery-${id}.json`] = {
-            id,
-            docPath,
-            title,
-            client,
-            oid: peeled,
-            baseOid,
-            effectiveDate: effective,
-            to,
-            memo,
-            items,
-            files,
-            folder,
-            at: iso(when),
-            by: who,
-        }
-        git(['tag', '-a', `納品/${docPath.replace(/\.md$/, '')}/${id}`, '-m', `${title} 納品（${to}）`, peeled], who)
-    }
+	function deliver(docPath, title, effective, to, memo, items, who, when, baseRef) {
+		const id = idAt(when)
+		const oid = oidOf(`施行/${docPath.replace(/\.md$/, '')}/${effective}`)
+		const peeled = git(['rev-parse', `${oid}^{commit}`])
+		const stamp = iso(when).slice(0, 10).replace(/-/g, '')
+		const folder = path.join(DELIVER, `${stamp}_${client}_${title}_納品`)
+		const names = {
+			docPdf: `${title}.pdf`,
+			docDocx: `${title}.docx`,
+			cmpPdf: `${title} 新旧対照表.pdf`,
+			cmpDocx: `${title} 新旧対照表.docx`,
+			opinion: '意見書（ひな形）.docx',
+		}
+		const files = items.map((i) => names[i])
+		fs.mkdirSync(folder, { recursive: true })
+		fs.writeFileSync(
+			path.join(folder, 'このフォルダについて.txt'),
+			`テストデータの納品物フォルダです（中身は空です）。\r\n\r\nリポジトリ：${name}\r\n宛先：${to}\r\n施行日：${effective}\r\n納品物：\r\n${files.map((f) => `- ${f}`).join('\r\n')}\r\n`,
+			'utf8',
+		)
+		const baseOid = baseRef ? git(['rev-parse', `${baseRef}^{commit}`]) : undefined
+		records[`delivery-${id}.json`] = {
+			id,
+			docPath,
+			title,
+			client,
+			oid: peeled,
+			baseOid,
+			effectiveDate: effective,
+			to,
+			memo,
+			items,
+			files,
+			folder,
+			at: iso(when),
+			by: who,
+		}
+		git(['tag', '-a', `納品/${docPath.replace(/\.md$/, '')}/${id}`, '-m', `${title} 納品（${to}）`, peeled], who)
+	}
 
-    function writeRecords() {
-        const entries = Object.entries(records)
-            .sort(([a], [b]) => (a < b ? -1 : 1))
-            .map(([file, data]) => {
-                const blob = git(['hash-object', '-w', '--stdin'], '山田', JSON.stringify(data, null, 2))
-                return `100644 blob ${blob}\t${file}`
-            })
-        const tree = git(['mktree'], '山田', entries.join('\n') + '\n')
-        const rec = git(['commit-tree', tree, '-m', '記録を作成'], '山田')
-        git(['update-ref', 'refs/heads/clausedown-records', rec])
-        checkout('main')
-    }
+	function writeRecords() {
+		const entries = Object.entries(records)
+			.sort(([a], [b]) => (a < b ? -1 : 1))
+			.map(([file, data]) => {
+				const blob = git(['hash-object', '-w', '--stdin'], '山田', JSON.stringify(data, null, 2))
+				return `100644 blob ${blob}\t${file}`
+			})
+		const tree = git(['mktree'], '山田', entries.join('\n') + '\n')
+		const rec = git(['commit-tree', tree, '-m', '記録を作成'], '山田')
+		git(['update-ref', 'refs/heads/clausedown-records', rec])
+		checkout('main')
+	}
 
-    function summary() {
-        const count = (args) => git(args).split('\n').filter(Boolean).length
-        return {
-            folder: ROOT,
-            commits: Number(git(['rev-list', '--all', '--count'])),
-            branches: git(['branch', '--format=%(refname:short)']).split('\n'),
-            effectiveTags: count(['tag', '-l', '施行/*']),
-            deliveryTags: count(['tag', '-l', '納品/*']),
-            reviews: Object.keys(records).filter((k) => k.startsWith('review-')).length,
-            deliveries: Object.keys(records).filter((k) => k.startsWith('delivery-')).length,
-        }
-    }
+	function summary() {
+		const count = (args) => git(args).split('\n').filter(Boolean).length
+		return {
+			folder: ROOT,
+			commits: Number(git(['rev-list', '--all', '--count'])),
+			branches: git(['branch', '--format=%(refname:short)']).split('\n'),
+			effectiveTags: count(['tag', '-l', '施行/*']),
+			deliveryTags: count(['tag', '-l', '納品/*']),
+			reviews: Object.keys(records).filter((k) => k.startsWith('review-')).length,
+			deliveries: Object.keys(records).filter((k) => k.startsWith('delivery-')).length,
+		}
+	}
 
-    git(['init', '-q', '-b', 'main'])
-    git(['config', 'core.autocrlf', 'false'])
-    write('README.md', `# ${client} ${kind}\n\n社労士事務所が ${client} の${kind}を管理しているという想定のテスト用リポジトリです。\n`)
-    save('リポジトリを作成', by, { days: 0 })
+	git(['init', '-q', '-b', 'main'])
+	git(['config', 'core.autocrlf', 'false'])
+	write('README.md', `# ${client} ${kind}\n\n社労士事務所が ${client} の${kind}を管理しているという想定のテスト用リポジトリです。\n`)
+	save('リポジトリを作成', by, { days: 0 })
 
-    const r = { name, client, kind, git, write, edit, save, branch, checkout, adopt, tagEffective, oidOf, review, deliver, writeRecords, summary }
-    repos.push(r)
-    return r
+	const r = { name, client, kind, git, write, edit, save, branch, checkout, adopt, tagEffective, oidOf, review, deliver, writeRecords, summary }
+	repos.push(r)
+	return r
 }
 
 let seq = 0
 const idAt = (d) =>
-    `${d
-        .toISOString()
-        .replace(/[-:.TZ]/g, '')
-        .slice(0, 14)}-${(++seq).toString(36).padStart(6, '0')}`
+	`${d
+		.toISOString()
+		.replace(/[-:.TZ]/g, '')
+		.slice(0, 14)}-${(++seq).toString(36).padStart(6, '0')}`
 const at = (offsetDays) => new Date(now.getTime() + offsetDays * 86400000)
 
 const 就業規則 = (company) => `
@@ -433,8 +433,8 @@ D規程.save('就業規則の初版を作成', '事務員A')
 
 A規程.edit('就業規則.md', '新たに採用した者', '新たに採用した従業員')
 A規程.save('第5条 表現を統一', '山田', {
-    effective: '2024-04-01',
-    docs: ['就業規則.md', '賃金規程.md', '育児・介護休業規程.md'],
+	effective: '2024-04-01',
+	docs: ['就業規則.md', '賃金規程.md', '育児・介護休業規程.md'],
 })
 B規程.tagEffective('就業規則.md', '2024-04-01')
 C契約.tagEffective('業務委託契約書.md', '2024-04-01')
@@ -458,9 +458,9 @@ A規程.adopt('2025年4月改定', '山田', { effective: '2025-04-01', docs: ['
 
 B契約.branch('雇用契約見直し')
 B契約.edit(
-    '雇用契約書.md',
-    '- 期間の定めなし。',
-    '- 2025年7月1日から2026年6月30日までの1年間とする。\n- 契約の更新は、乙の勤務成績及び甲の業務量により判断する。',
+	'雇用契約書.md',
+	'- 期間の定めなし。',
+	'- 2025年7月1日から2026年6月30日までの1年間とする。\n- 契約の更新は、乙の勤務成績及び甲の業務量により判断する。',
 )
 B契約.save('第1条 有期契約に変更し更新基準を明記', '事務員B', { days: 30 })
 B契約.edit('雇用契約書.md', '月額200,000円', '月額210,000円')
@@ -487,9 +487,9 @@ A規程.save('第2条 申出期限を2週間前に短縮', '事務員A', { days:
 A規程.edit('育児・介護休業規程.md', '### 介護休業 {#介護}', '### 介護休業 {#介護}\n- 会社は、従業員が40歳に達したときに、介護休業制度について個別に周知する。')
 A規程.save('第3条 40歳時点の個別周知を追加', '事務員A')
 A規程.edit(
-    '就業規則.md',
-    '- 1歳（保育所に入所できない等の事情がある場合は2歳）に満たない子を養育する従業員は、申出により育児休業をすることができる。',
-    '- 1歳（保育所に入所できない等の事情がある場合は2歳）に満たない子を養育する従業員は、申出により育児休業をすることができる。\n- 3歳から小学校就学前の子を養育する従業員は、柔軟な働き方を実現するための措置を選択して利用することができる。',
+	'就業規則.md',
+	'- 1歳（保育所に入所できない等の事情がある場合は2歳）に満たない子を養育する従業員は、申出により育児休業をすることができる。',
+	'- 1歳（保育所に入所できない等の事情がある場合は2歳）に満たない子を養育する従業員は、申出により育児休業をすることができる。\n- 3歳から小学校就学前の子を養育する従業員は、柔軟な働き方を実現するための措置を選択して利用することができる。',
 )
 A規程.save('第11条 柔軟な働き方の措置を追加', '事務員B')
 
@@ -499,9 +499,9 @@ A規程.save('第11条 措置の例を明記', '山田', { days: 4 })
 
 A規程.checkout('main')
 A規程.edit(
-    '育児・介護休業規程.md',
-    '原則として育児休業を開始しようとする日の1か月前までに',
-    '原則として育児休業を開始しようとする日の1か月前（出生時育児休業は2週間前）までに',
+	'育児・介護休業規程.md',
+	'原則として育児休業を開始しようとする日の1か月前までに',
+	'原則として育児休業を開始しようとする日の1か月前（出生時育児休業は2週間前）までに',
 )
 A規程.save('第2条 出生時育児休業の申出期限を追記', '山田', { days: 6 })
 
@@ -527,29 +527,29 @@ C契約.save('第2条 委託料を暫定改定', '山田', { days: 3 })
 
 B規程.branch('就業規則全面見直し')
 B規程.edit(
-    '就業規則.md',
-    '## 人事',
-    '## 人事\n\n### 労働条件の明示 {#明示}\n- 会社は、従業員を採用するときは、賃金、労働時間その他の労働条件を書面で明示する。',
+	'就業規則.md',
+	'## 人事',
+	'## 人事\n\n### 労働条件の明示 {#明示}\n- 会社は、従業員を採用するときは、賃金、労働時間その他の労働条件を書面で明示する。',
 )
 B規程.save('第4条 労働条件の明示を追加', '事務員B', { days: 7 })
 B規程.edit(
-    '就業規則.md',
-    '### 試用期間 {#試用期間}',
-    '### 試用期間の延長 {branch}\n- 会社は、必要と認めたときは、試用期間を最長3か月延長することがある。\n\n### 試用期間 {#試用期間}',
+	'就業規則.md',
+	'### 試用期間 {#試用期間}',
+	'### 試用期間の延長 {branch}\n- 会社は、必要と認めたときは、試用期間を最長3か月延長することがある。\n\n### 試用期間 {#試用期間}',
 )
 B規程.save('試用期間の延長を枝番号の条で追加', '事務員B')
 B規程.edit('就業規則.md', '45分', '1時間')
 B規程.save('第8条 休憩時間を1時間に統一', '事務員B')
 B規程.edit(
-    '就業規則.md',
-    '## 附則 {supplement}',
-    '## 服務規律\n\n### 服務の基本\n- 従業員は、[[目的]]の趣旨に従い、誠実に職務を遂行しなければならない。\n\n### ハラスメントの禁止\n- 従業員は、職場におけるあらゆるハラスメントを行ってはならない。\n\n## 附則 {supplement}',
+	'就業規則.md',
+	'## 附則 {supplement}',
+	'## 服務規律\n\n### 服務の基本\n- 従業員は、[[目的]]の趣旨に従い、誠実に職務を遂行しなければならない。\n\n### ハラスメントの禁止\n- 従業員は、職場におけるあらゆるハラスメントを行ってはならない。\n\n## 附則 {supplement}',
 )
 B規程.save('服務規律の章を新設', '山田')
 B規程.edit(
-    '就業規則.md',
-    '- この規則は、2024年4月1日から施行する。',
-    '- この規則は、2024年4月1日から施行する。\n- この規則の改正は、2026年4月1日から施行する。',
+	'就業規則.md',
+	'- この規則は、2024年4月1日から施行する。',
+	'- この規則は、2024年4月1日から施行する。\n- この規則の改正は、2026年4月1日から施行する。',
 )
 B規程.save('附則 改正の施行日を追加', '事務員B')
 
@@ -581,92 +581,92 @@ B規程.review('案/就業規則全面見直し', 'approve', '山田', at(-14), 
 事務所契約.review('案/ひな形整備', 'request', '山田', at(-3), '秘密保持契約書のひな形です。')
 
 A規程.deliver(
-    '就業規則.md',
-    '就業規則',
-    '2024-04-01',
-    '株式会社A 人事部 田中様',
-    '初回の作成分',
-    ['docPdf', 'docDocx', 'opinion'],
-    '山田',
-    new Date('2024-03-15T15:00:00+09:00'),
+	'就業規則.md',
+	'就業規則',
+	'2024-04-01',
+	'株式会社A 人事部 田中様',
+	'初回の作成分',
+	['docPdf', 'docDocx', 'opinion'],
+	'山田',
+	new Date('2024-03-15T15:00:00+09:00'),
 )
 A規程.deliver('賃金規程.md', '賃金規程', '2024-04-01', '株式会社A 人事部 田中様', '', ['docPdf', 'docDocx'], '事務員A', new Date('2024-03-15T15:30:00+09:00'))
 A規程.deliver(
-    '就業規則.md',
-    '就業規則',
-    '2025-04-01',
-    '株式会社A 人事部 田中様',
-    '2025年4月改定分（夏季休暇・育休延長）',
-    ['docPdf', 'docDocx', 'cmpPdf', 'cmpDocx', 'opinion'],
-    '山田',
-    new Date('2025-03-10T11:00:00+09:00'),
-    '施行/就業規則/2024-04-01',
+	'就業規則.md',
+	'就業規則',
+	'2025-04-01',
+	'株式会社A 人事部 田中様',
+	'2025年4月改定分（夏季休暇・育休延長）',
+	['docPdf', 'docDocx', 'cmpPdf', 'cmpDocx', 'opinion'],
+	'山田',
+	new Date('2025-03-10T11:00:00+09:00'),
+	'施行/就業規則/2024-04-01',
 )
 A規程.deliver(
-    '賃金規程.md',
-    '賃金規程',
-    '2025-04-01',
-    '株式会社A 人事部 田中様',
-    '住宅手当の改定',
-    ['docPdf', 'cmpPdf'],
-    '事務員B',
-    new Date('2025-03-10T11:30:00+09:00'),
-    '施行/賃金規程/2024-04-01',
+	'賃金規程.md',
+	'賃金規程',
+	'2025-04-01',
+	'株式会社A 人事部 田中様',
+	'住宅手当の改定',
+	['docPdf', 'cmpPdf'],
+	'事務員B',
+	new Date('2025-03-10T11:30:00+09:00'),
+	'施行/賃金規程/2024-04-01',
 )
 B規程.deliver('就業規則.md', '就業規則', '2024-04-01', 'B商店 店主 鈴木様', '', ['docPdf', 'opinion'], '事務員B', new Date('2024-03-20T10:00:00+09:00'))
 B契約.deliver(
-    '雇用契約書.md',
-    '雇用契約書',
-    '2025-07-01',
-    'B商店 店主 鈴木様',
-    '有期契約への変更',
-    ['docDocx', 'cmpPdf'],
-    '事務員B',
-    new Date('2025-06-20T16:00:00+09:00'),
+	'雇用契約書.md',
+	'雇用契約書',
+	'2025-07-01',
+	'B商店 店主 鈴木様',
+	'有期契約への変更',
+	['docDocx', 'cmpPdf'],
+	'事務員B',
+	new Date('2025-06-20T16:00:00+09:00'),
 )
 C契約.deliver(
-    '業務委託契約書.md',
-    '業務委託契約書',
-    '2024-04-01',
-    'C法律事務所 事務局',
-    '',
-    ['docPdf', 'docDocx'],
-    '山田',
-    new Date('2024-03-25T14:00:00+09:00'),
+	'業務委託契約書.md',
+	'業務委託契約書',
+	'2024-04-01',
+	'C法律事務所 事務局',
+	'',
+	['docPdf', 'docDocx'],
+	'山田',
+	new Date('2024-03-25T14:00:00+09:00'),
 )
 C契約.deliver(
-    '業務委託契約書.md',
-    '業務委託契約書',
-    '2025-04-01',
-    'C法律事務所 事務局',
-    '更新分',
-    ['docPdf', 'cmpPdf'],
-    '山田',
-    new Date('2025-03-25T14:00:00+09:00'),
-    '施行/業務委託契約書/2024-04-01',
+	'業務委託契約書.md',
+	'業務委託契約書',
+	'2025-04-01',
+	'C法律事務所 事務局',
+	'更新分',
+	['docPdf', 'cmpPdf'],
+	'山田',
+	new Date('2025-03-25T14:00:00+09:00'),
+	'施行/業務委託契約書/2024-04-01',
 )
 D規程.deliver('旅費規程.md', '旅費規程', '2025-10-01', '合同会社D 総務 佐藤様', '新設', ['docPdf', 'docDocx'], '事務員A', new Date('2025-09-25T13:00:00+09:00'))
 D規程.deliver(
-    '旅費規程.md',
-    '旅費規程',
-    '2026-04-01',
-    '合同会社D 総務 佐藤様',
-    '宿泊料の改定',
-    ['docPdf', 'cmpPdf', 'cmpDocx'],
-    '山田',
-    new Date('2026-03-18T13:00:00+09:00'),
-    '施行/旅費規程/2025-10-01',
+	'旅費規程.md',
+	'旅費規程',
+	'2026-04-01',
+	'合同会社D 総務 佐藤様',
+	'宿泊料の改定',
+	['docPdf', 'cmpPdf', 'cmpDocx'],
+	'山田',
+	new Date('2026-03-18T13:00:00+09:00'),
+	'施行/旅費規程/2025-10-01',
 )
 D規程.deliver(
-    '就業規則.md',
-    '就業規則',
-    '2026-04-01',
-    '合同会社D 総務 佐藤様',
-    '始業・終業時刻の変更',
-    ['docPdf', 'docDocx', 'cmpPdf', 'opinion'],
-    '山田',
-    new Date('2026-03-18T13:30:00+09:00'),
-    '施行/就業規則/2024-05-01',
+	'就業規則.md',
+	'就業規則',
+	'2026-04-01',
+	'合同会社D 総務 佐藤様',
+	'始業・終業時刻の変更',
+	['docPdf', 'docDocx', 'cmpPdf', 'opinion'],
+	'山田',
+	new Date('2026-03-18T13:30:00+09:00'),
+	'施行/就業規則/2024-05-01',
 )
 
 tick(0, 1)

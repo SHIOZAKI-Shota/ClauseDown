@@ -7,9 +7,9 @@ import { loadSettings } from './settings'
 const TIMEOUT_MS = 20_000
 
 interface Pending {
-    resolve: (r: ProofreadIssue[]) => void
-    reject: (e: Error) => void
-    timer: ReturnType<typeof setTimeout>
+	resolve: (r: ProofreadIssue[]) => void
+	reject: (e: Error) => void
+	timer: ReturnType<typeof setTimeout>
 }
 
 let child: UtilityProcess | null = null
@@ -17,57 +17,57 @@ let seq = 0
 const pending = new Map<number, Pending>()
 
 function failAll(message: string) {
-    for (const [id, p] of pending) {
-        clearTimeout(p.timer)
-        p.reject(new Error(message))
-        pending.delete(id)
-    }
+	for (const [id, p] of pending) {
+		clearTimeout(p.timer)
+		p.reject(new Error(message))
+		pending.delete(id)
+	}
 }
 
 function worker(): UtilityProcess {
-    if (child) return child
-    const c = utilityProcess.fork(join(import.meta.dirname, 'proofread-worker.js'), [], { serviceName: 'ClauseDown 校閲' })
-    c.on('message', (msg: { id: number; result?: ProofreadIssue[]; error?: string }) => {
-        const p = pending.get(msg.id)
-        if (!p) return
-        pending.delete(msg.id)
-        clearTimeout(p.timer)
-        if (msg.error !== undefined) p.reject(new Error(msg.error))
-        else p.resolve(msg.result ?? [])
-    })
-    c.on('exit', () => {
-        if (child === c) child = null
-        failAll(t().errors.proofread.exited)
-    })
-    child = c
-    return c
+	if (child) return child
+	const c = utilityProcess.fork(join(import.meta.dirname, 'proofread-worker.js'), [], { serviceName: 'ClauseDown 校閲' })
+	c.on('message', (msg: { id: number; result?: ProofreadIssue[]; error?: string }) => {
+		const p = pending.get(msg.id)
+		if (!p) return
+		pending.delete(msg.id)
+		clearTimeout(p.timer)
+		if (msg.error !== undefined) p.reject(new Error(msg.error))
+		else p.resolve(msg.result ?? [])
+	})
+	c.on('exit', () => {
+		if (child === c) child = null
+		failAll(t().errors.proofread.exited)
+	})
+	child = c
+	return c
 }
 
 async function configFor(_ctx: ProofreadContext | undefined): Promise<ProofreadConfig> {
-    const { prefs } = await loadSettings()
-    return {
-        rules: prefs.proofreadRules ?? {},
-        joshiAllow: Array.isArray(prefs.proofreadJoshiAllow) ? prefs.proofreadJoshiAllow.filter((s) => typeof s === 'string') : undefined,
-        locale: locale(),
-    }
+	const { prefs } = await loadSettings()
+	return {
+		rules: prefs.proofreadRules ?? {},
+		joshiAllow: Array.isArray(prefs.proofreadJoshiAllow) ? prefs.proofreadJoshiAllow.filter((s) => typeof s === 'string') : undefined,
+		locale: locale(),
+	}
 }
 
 export async function proofread(text: unknown, ctx?: ProofreadContext): Promise<ProofreadIssue[]> {
-    if (typeof text !== 'string' || !text.trim()) return []
-    const config = await configFor(ctx)
-    const id = ++seq
-    return new Promise((resolve, reject) => {
-        const timer = setTimeout(() => {
-            pending.delete(id)
-            reject(new Error(t().errors.proofread.timeout))
-            child?.kill()
-        }, TIMEOUT_MS)
-        pending.set(id, { resolve, reject, timer })
-        worker().postMessage({ id, text, config })
-    })
+	if (typeof text !== 'string' || !text.trim()) return []
+	const config = await configFor(ctx)
+	const id = ++seq
+	return new Promise((resolve, reject) => {
+		const timer = setTimeout(() => {
+			pending.delete(id)
+			reject(new Error(t().errors.proofread.timeout))
+			child?.kill()
+		}, TIMEOUT_MS)
+		pending.set(id, { resolve, reject, timer })
+		worker().postMessage({ id, text, config })
+	})
 }
 
 export function stopProofread() {
-    child?.kill()
-    child = null
+	child?.kill()
+	child = null
 }

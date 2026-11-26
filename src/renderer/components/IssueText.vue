@@ -11,25 +11,25 @@ const open = (n: number) => app.openIssues({ n })
 </script>
 
 <template>
-    <span class="cd-issue-text"
-        ><template v-for="(p, i) in parts" :key="i"
-            ><button v-if="typeof p === 'number'" type="button" class="ref" :title="t.issues.openIssue(p)" @click.stop="open(p)">#{{ p }}</button
-            ><template v-else>{{ p }}</template></template
-        ></span
-    >
+	<span class="cd-issue-text"
+		><template v-for="(p, i) in parts" :key="i"
+			><button v-if="typeof p === 'number'" type="button" class="ref" :title="t.issues.openIssue(p)" @click.stop="open(p)">#{{ p }}</button
+			><template v-else>{{ p }}</template></template
+		></span
+	>
 </template>
 
 <style scoped>
 .cd-issue-text {
-    white-space: pre-wrap;
+	white-space: pre-wrap;
 }
 
 .ref {
-    color: var(--ui-primary);
-    cursor: pointer;
+	color: var(--ui-primary);
+	cursor: pointer;
 }
 
 .ref:hover {
-    text-decoration: underline;
+	text-decoration: underline;
 }
 </style>

@@ -19,194 +19,194 @@ const step = ref<'pick' | 'map'>('pick')
 const choices = ref<Record<string, string>>({})
 
 onMounted(async () => {
-    try {
-        const docs = await window.api.listDocs(props.libraryDir)
-        const out: Clause[] = []
-        for (const d of docs) {
-            const src = await window.api.readDoc(props.libraryDir, d.path).catch(() => null)
-            if (typeof src === 'string') out.push(...extractClauses(src, d.path, d.title))
-        }
-        clauses.value = out
-        selected.value = out[0] ?? null
-    } catch (e) {
-        error.value = (e as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
-    } finally {
-        loading.value = false
-    }
+	try {
+		const docs = await window.api.listDocs(props.libraryDir)
+		const out: Clause[] = []
+		for (const d of docs) {
+			const src = await window.api.readDoc(props.libraryDir, d.path).catch(() => null)
+			if (typeof src === 'string') out.push(...extractClauses(src, d.path, d.title))
+		}
+		clauses.value = out
+		selected.value = out[0] ?? null
+	} catch (e) {
+		error.value = (e as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
+	} finally {
+		loading.value = false
+	}
 })
 
 const norm = (s: string) => s.normalize('NFKC').toLowerCase()
 const filtered = computed(() => {
-    const q = norm(query.value.trim())
-    return q ? clauses.value.filter((c) => norm(`${c.title} ${c.docTitle} ${c.body}`).includes(q)) : clauses.value
+	const q = norm(query.value.trim())
+	return q ? clauses.value.filter((c) => norm(`${c.title} ${c.docTitle} ${c.body}`).includes(q)) : clauses.value
 })
 const groups = computed(() => {
-    const m = new Map<string, Clause[]>()
-    for (const c of filtered.value) m.set(c.docTitle, [...(m.get(c.docTitle) ?? []), c])
-    return [...m.entries()]
+	const m = new Map<string, Clause[]>()
+	for (const c of filtered.value) m.set(c.docTitle, [...(m.get(c.docTitle) ?? []), c])
+	return [...m.entries()]
 })
 const preview = computed(() => (selected.value ? withImages(renderDoc(parseLegal(selected.value.body)), props.libraryDir, selected.value.docPath) : ''))
 
 const encode = (c: RefChoice) => (c.kind === 'article' ? `a:${c.index}` : c.kind)
 const decode = (v: string): RefChoice => (v.startsWith('a:') ? { kind: 'article', index: Number(v.slice(2)) } : { kind: v as 'text' | 'keep' })
 const choiceItems = computed(() => [
-    ...targetArticles(props.target).map((a, i) => ({
-        label: a.title ? t.value.editor.clauses.articleOption(a.label, articleTitle(a, props.target)) : a.label,
-        value: `a:${i}`,
-    })),
-    { label: t.value.editor.clauses.asText, value: 'text' },
-    { label: t.value.editor.clauses.keep, value: 'keep' },
+	...targetArticles(props.target).map((a, i) => ({
+		label: a.title ? t.value.editor.clauses.articleOption(a.label, articleTitle(a, props.target)) : a.label,
+		value: `a:${i}`,
+	})),
+	{ label: t.value.editor.clauses.asText, value: 'text' },
+	{ label: t.value.editor.clauses.keep, value: 'keep' },
 ])
 
 function next() {
-    const c = selected.value
-    if (!c) return
-    if (!c.refs.length) return finish()
-    choices.value = Object.fromEntries(c.refs.map((r) => [r.id, encode(defaultChoice(r, props.target))]))
-    step.value = 'map'
+	const c = selected.value
+	if (!c) return
+	if (!c.refs.length) return finish()
+	choices.value = Object.fromEntries(c.refs.map((r) => [r.id, encode(defaultChoice(r, props.target))]))
+	step.value = 'map'
 }
 
 function finish() {
-    const c = selected.value
-    if (!c) return
-    const picked = Object.fromEntries(Object.entries(choices.value).map(([k, v]) => [k, decode(v)]))
-    emit('insert', applyClause(c, props.target, props.targetText.replace(/\r\n/g, '\n').split('\n'), picked))
+	const c = selected.value
+	if (!c) return
+	const picked = Object.fromEntries(Object.entries(choices.value).map(([k, v]) => [k, decode(v)]))
+	emit('insert', applyClause(c, props.target, props.targetText.replace(/\r\n/g, '\n').split('\n'), picked))
 }
 </script>
 
 <template>
-    <UModal
-        :open="true"
-        :title="step === 'pick' ? t.editor.clauses.pickTitle : t.editor.clauses.mapTitle"
-        :description="step === 'pick' ? t.editor.clauses.pickDescription(libraryName) : t.editor.clauses.mapDescription(String(selected?.title))"
-        :ui="{ content: 'cd-wide' }"
-        @update:open="(v) => !v && emit('close')"
-    >
-        <template #body>
-            <div v-if="step === 'pick'" class="pick">
-                <div class="list">
-                    <UInput v-model="query" icon="i-lucide-search" :placeholder="t.editor.clauses.search" class="w-full" autofocus />
-                    <p v-if="loading" class="cd-muted">{{ t.editor.clauses.loading }}</p>
-                    <p v-else-if="error" class="err">{{ error }}</p>
-                    <p v-else-if="!clauses.length" class="cd-muted">{{ t.editor.clauses.empty }}</p>
-                    <p v-else-if="!filtered.length" class="cd-muted">{{ t.editor.clauses.noMatch }}</p>
-                    <div v-for="[title, list] in groups" :key="title" class="group">
-                        <p class="group-head">{{ title }}</p>
-                        <button v-for="c in list" :key="c.key" class="item" :class="{ on: selected?.key === c.key }" @click="selected = c" @dblclick="next">
-                            <span class="nm">{{ c.title || c.label }}</span>
-                            <UBadge v-if="c.refs.length" :label="t.editor.clauses.refCount(c.refs.length)" size="sm" color="neutral" variant="subtle" />
-                        </button>
-                    </div>
-                </div>
-                <div class="preview cd-canvas">
-                    <div v-if="selected" class="paper cd-paper" v-html="preview" />
-                </div>
-            </div>
-            <div v-else class="cd-form">
-                <div v-for="r in selected?.refs ?? []" :key="r.id" class="map-row">
-                    <div class="from">
-                        <code>[[{{ r.id }}]]</code>
-                        <span class="cd-muted">{{ r.title ? t.editor.clauses.refTitle(r.title) : t.editor.clauses.refMissing }}</span>
-                    </div>
-                    <UIcon name="i-lucide-arrow-right" class="arrow" />
-                    <USelect v-model="choices[r.id]" :items="choiceItems" class="to" />
-                </div>
-            </div>
-        </template>
-        <template #footer>
-            <div class="cd-modal-foot">
-                <UButton v-if="step === 'map'" :label="t.editor.clauses.back" color="neutral" variant="ghost" @click="step = 'pick'" />
-                <UButton :label="t.common.cancel" color="neutral" variant="outline" @click="emit('close')" />
-                <UButton
-                    v-if="step === 'pick'"
-                    :label="selected?.refs.length ? t.editor.clauses.next : t.editor.clauses.insert"
-                    :disabled="!selected"
-                    @click="next"
-                />
-                <UButton v-else :label="t.editor.clauses.insert" @click="finish" />
-            </div>
-        </template>
-    </UModal>
+	<UModal
+		:open="true"
+		:title="step === 'pick' ? t.editor.clauses.pickTitle : t.editor.clauses.mapTitle"
+		:description="step === 'pick' ? t.editor.clauses.pickDescription(libraryName) : t.editor.clauses.mapDescription(String(selected?.title))"
+		:ui="{ content: 'cd-wide' }"
+		@update:open="(v) => !v && emit('close')"
+	>
+		<template #body>
+			<div v-if="step === 'pick'" class="pick">
+				<div class="list">
+					<UInput v-model="query" icon="i-lucide-search" :placeholder="t.editor.clauses.search" class="w-full" autofocus />
+					<p v-if="loading" class="cd-muted">{{ t.editor.clauses.loading }}</p>
+					<p v-else-if="error" class="err">{{ error }}</p>
+					<p v-else-if="!clauses.length" class="cd-muted">{{ t.editor.clauses.empty }}</p>
+					<p v-else-if="!filtered.length" class="cd-muted">{{ t.editor.clauses.noMatch }}</p>
+					<div v-for="[title, list] in groups" :key="title" class="group">
+						<p class="group-head">{{ title }}</p>
+						<button v-for="c in list" :key="c.key" class="item" :class="{ on: selected?.key === c.key }" @click="selected = c" @dblclick="next">
+							<span class="nm">{{ c.title || c.label }}</span>
+							<UBadge v-if="c.refs.length" :label="t.editor.clauses.refCount(c.refs.length)" size="sm" color="neutral" variant="subtle" />
+						</button>
+					</div>
+				</div>
+				<div class="preview cd-canvas">
+					<div v-if="selected" class="paper cd-paper" v-html="preview" />
+				</div>
+			</div>
+			<div v-else class="cd-form">
+				<div v-for="r in selected?.refs ?? []" :key="r.id" class="map-row">
+					<div class="from">
+						<code>[[{{ r.id }}]]</code>
+						<span class="cd-muted">{{ r.title ? t.editor.clauses.refTitle(r.title) : t.editor.clauses.refMissing }}</span>
+					</div>
+					<UIcon name="i-lucide-arrow-right" class="arrow" />
+					<USelect v-model="choices[r.id]" :items="choiceItems" class="to" />
+				</div>
+			</div>
+		</template>
+		<template #footer>
+			<div class="cd-modal-foot">
+				<UButton v-if="step === 'map'" :label="t.editor.clauses.back" color="neutral" variant="ghost" @click="step = 'pick'" />
+				<UButton :label="t.common.cancel" color="neutral" variant="outline" @click="emit('close')" />
+				<UButton
+					v-if="step === 'pick'"
+					:label="selected?.refs.length ? t.editor.clauses.next : t.editor.clauses.insert"
+					:disabled="!selected"
+					@click="next"
+				/>
+				<UButton v-else :label="t.editor.clauses.insert" @click="finish" />
+			</div>
+		</template>
+	</UModal>
 </template>
 
 <style scoped>
 .pick {
-    display: grid;
-    grid-template-columns: 280px 1fr;
-    gap: 16px;
-    height: min(60vh, 560px);
+	display: grid;
+	grid-template-columns: 280px 1fr;
+	gap: 16px;
+	height: min(60vh, 560px);
 }
 
 .list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    overflow-y: auto;
-    padding-right: 4px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	overflow-y: auto;
+	padding-right: 4px;
 }
 
 .group-head {
-    margin: 8px 0 2px;
-    font-size: 11px;
-    color: var(--ui-text-muted);
+	margin: 8px 0 2px;
+	font-size: 11px;
+	color: var(--ui-text-muted);
 }
 
 .item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    padding: 6px 10px;
-    border-radius: 6px;
-    text-align: left;
-    cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	padding: 6px 10px;
+	border-radius: 6px;
+	text-align: left;
+	cursor: pointer;
 }
 
 .item:hover {
-    background: var(--ui-bg-elevated);
+	background: var(--ui-bg-elevated);
 }
 
 .item.on {
-    background: var(--cd-selected);
-    color: var(--ui-primary);
+	background: var(--cd-selected);
+	color: var(--ui-primary);
 }
 
 .item .nm {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .preview {
-    overflow-y: auto;
-    border-radius: 8px;
-    padding: 16px;
+	overflow-y: auto;
+	border-radius: 8px;
+	padding: 16px;
 }
 
 .preview .paper {
-    padding: 24px 32px;
+	padding: 24px 32px;
 }
 
 .err {
-    color: var(--ui-error);
+	color: var(--ui-error);
 }
 
 .map-row {
-    display: grid;
-    grid-template-columns: 1fr auto 1.2fr;
-    align-items: center;
-    gap: 12px;
+	display: grid;
+	grid-template-columns: 1fr auto 1.2fr;
+	align-items: center;
+	gap: 12px;
 }
 
 .from {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
 }
 
 .arrow {
-    color: var(--ui-text-muted);
+	color: var(--ui-text-muted);
 }
 </style>

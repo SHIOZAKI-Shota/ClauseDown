@@ -10,23 +10,23 @@ const app = useApp()
 const t = useT()
 const kinds = ref<EventKind[] | null>(null)
 onMounted(async () => {
-    kinds.value = await window.api.getEventKinds(app.repoDir!).catch(() => null)
-    if (!kinds.value) emit('close')
+	kinds.value = await window.api.getEventKinds(app.repoDir!).catch(() => null)
+	if (!kinds.value) emit('close')
 })
 async function save(input: DueEventInput) {
-    const ok = await app.runOk(() => window.api.saveEvent(app.repoDir!, toPlain(input)), t.value.schedule.saved)
-    if (!ok) return
-    app.touchSchedule(app.repoDir!)
-    emit('close')
+	const ok = await app.runOk(() => window.api.saveEvent(app.repoDir!, toPlain(input)), t.value.schedule.saved)
+	if (!ok) return
+	app.touchSchedule(app.repoDir!)
+	emit('close')
 }
 </script>
 
 <template>
-    <DueEventModal
-        v-if="kinds"
-        :kinds="kinds"
-        :initial="{ docPath: props.docPath ?? app.currentPath ?? '', date: props.date }"
-        @close="emit('close')"
-        @save="save"
-    />
+	<DueEventModal
+		v-if="kinds"
+		:kinds="kinds"
+		:initial="{ docPath: props.docPath ?? app.currentPath ?? '', date: props.date }"
+		@close="emit('close')"
+		@save="save"
+	/>
 </template>

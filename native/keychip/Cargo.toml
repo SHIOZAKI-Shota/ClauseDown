@@ -13,13 +13,7 @@ napi = { version = "3", default-features = false, features = ["napi6"] }
 napi-derive = "3"
 
 [target.'cfg(windows)'.dependencies]
-windows = { version = "0.61", features = [
-    "Foundation",
-    "Security_Credentials",
-    "Security_Cryptography",
-    "Security_Cryptography_Core",
-    "Storage_Streams",
-] }
+windows = { version = "0.61", features = ["Foundation", "Security_Credentials", "Security_Cryptography", "Security_Cryptography_Core", "Storage_Streams"] }
 
 [build-dependencies]
 napi-build = "2"

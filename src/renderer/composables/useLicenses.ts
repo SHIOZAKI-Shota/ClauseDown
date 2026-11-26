@@ -5,9 +5,9 @@ const loaded = ref(false)
 let pending: Promise<void> | undefined
 
 export function useLicenses() {
-    pending ??= window.api.getLicenses().then((r) => {
-        data.value = r
-        loaded.value = true
-    })
-    return { data, loaded }
+	pending ??= window.api.getLicenses().then((r) => {
+		data.value = r
+		loaded.value = true
+	})
+	return { data, loaded }
 }

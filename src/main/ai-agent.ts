@@ -12,72 +12,72 @@ const running = new Map<string, AbortController>()
 const sessionTarget = new Map<string, string>()
 
 function forget(session: string) {
-    resetAnthropic(session)
-    resetOpenAi(session)
-    sessionTarget.delete(session)
+	resetAnthropic(session)
+	resetOpenAi(session)
+	sessionTarget.delete(session)
 }
 
 export async function aiRun(dir: string, input: AiRunInput, send: (e: AiEvent) => void, changed: ToolContext['changed']): Promise<void> {
-    const { session } = input
-    if (running.has(session)) throw new Error(t().errors.ai.busy)
-    const r = await resolveAi()
-    if (!r.ready) throw new Error(t().errors.ai.notReady(r.reason ?? ''))
-    const repo = (await loadSettings()).repos.find((x) => x.dir === dir)
-    if (!repo) throw new Error(t().errors.ai.noRepo)
+	const { session } = input
+	if (running.has(session)) throw new Error(t().errors.ai.busy)
+	const r = await resolveAi()
+	if (!r.ready) throw new Error(t().errors.ai.notReady(r.reason ?? ''))
+	const repo = (await loadSettings()).repos.find((x) => x.dir === dir)
+	if (!repo) throw new Error(t().errors.ai.noRepo)
 
-    const target = `${r.config.provider}|${r.base}|${r.model}`
-    if (sessionTarget.get(session) !== target) {
-        forget(session)
-        sessionTarget.set(session, target)
-    }
+	const target = `${r.config.provider}|${r.base}|${r.model}`
+	if (sessionTarget.get(session) !== target) {
+		forget(session)
+		sessionTarget.set(session, target)
+	}
 
-    const branch = await g.currentLabel(dir)
-    const context = [aiPrompts().openDoc(repo.name, input.path, branch), input.selection ? aiPrompts().selection(input.selection) : '']
-        .filter(Boolean)
-        .join('\n')
-    const userText = `${context}\n\n${input.instruction}`
+	const branch = await g.currentLabel(dir)
+	const context = [aiPrompts().openDoc(repo.name, input.path, branch), input.selection ? aiPrompts().selection(input.selection) : '']
+		.filter(Boolean)
+		.join('\n')
+	const userText = `${context}\n\n${input.instruction}`
 
-    const ac = new AbortController()
-    running.set(session, ac)
-    const ctx: ToolContext = { by: 'ai', changed, repoDir: dir }
-    try {
-        if (r.kind === 'anthropic') await runAnthropic(r.key!, r.model, session, userText, send, ctx, ac.signal)
-        else await runOpenAi(r, session, userText, send, ctx, ac.signal)
-        send({ session, type: 'done' })
-    } catch (e) {
-        if (ac.signal.aborted || isAnthropicAbort(e) || isOpenAiAbort(e)) send({ session, type: 'done' })
-        else send({ session, type: 'error', message: r.kind === 'anthropic' ? explainAnthropic(e) : explainOpenAi(e, r) })
-    } finally {
-        running.delete(session)
-    }
+	const ac = new AbortController()
+	running.set(session, ac)
+	const ctx: ToolContext = { by: 'ai', changed, repoDir: dir }
+	try {
+		if (r.kind === 'anthropic') await runAnthropic(r.key!, r.model, session, userText, send, ctx, ac.signal)
+		else await runOpenAi(r, session, userText, send, ctx, ac.signal)
+		send({ session, type: 'done' })
+	} catch (e) {
+		if (ac.signal.aborted || isAnthropicAbort(e) || isOpenAiAbort(e)) send({ session, type: 'done' })
+		else send({ session, type: 'error', message: r.kind === 'anthropic' ? explainAnthropic(e) : explainOpenAi(e, r) })
+	} finally {
+		running.delete(session)
+	}
 }
 
 export async function aiStop(session: string) {
-    running.get(session)?.abort()
+	running.get(session)?.abort()
 }
 
 export async function aiReset(session: string) {
-    running.get(session)?.abort()
-    forget(session)
+	running.get(session)?.abort()
+	forget(session)
 }
 
 export async function testAi(): Promise<string> {
-    const r = await resolveAi()
-    if (!r.ready) throw new Error(r.reason)
-    try {
-        const text = r.kind === 'anthropic' ? await testAnthropic(r.key!, r.model) : await testOpenAi(r)
-        return text || t().errors.ai.emptyAnswer
-    } catch (e) {
-        throw new Error(r.kind === 'anthropic' ? explainAnthropic(e) : explainOpenAi(e, r))
-    }
+	const r = await resolveAi()
+	if (!r.ready) throw new Error(r.reason)
+	try {
+		const text = r.kind === 'anthropic' ? await testAnthropic(r.key!, r.model) : await testOpenAi(r)
+		return text || t().errors.ai.emptyAnswer
+	} catch (e) {
+		throw new Error(r.kind === 'anthropic' ? explainAnthropic(e) : explainOpenAi(e, r))
+	}
 }
 
 export async function aiAsk(system: string, prompt: string): Promise<string> {
-    const r = await resolveAi()
-    if (!r.ready) throw new Error(r.reason)
-    try {
-        return r.kind === 'anthropic' ? await askAnthropic(r.key!, r.model, system, prompt) : await askOpenAi(r, system, prompt)
-    } catch (e) {
-        throw new Error(r.kind === 'anthropic' ? explainAnthropic(e) : explainOpenAi(e, r))
-    }
+	const r = await resolveAi()
+	if (!r.ready) throw new Error(r.reason)
+	try {
+		return r.kind === 'anthropic' ? await askAnthropic(r.key!, r.model, system, prompt) : await askOpenAi(r, system, prompt)
+	} catch (e) {
+		throw new Error(r.kind === 'anthropic' ? explainAnthropic(e) : explainOpenAi(e, r))
+	}
 }

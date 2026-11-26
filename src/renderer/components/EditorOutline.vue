@@ -10,137 +10,137 @@ const emit = defineEmits<{ jump: [number] }>()
 const q = ref('')
 
 interface Entry {
-    key: string
-    line: number
-    label: string
-    title: string
-    kind: 'chapter' | 'article'
-    deleted?: boolean
+	key: string
+	line: number
+	label: string
+	title: string
+	kind: 'chapter' | 'article'
+	deleted?: boolean
 }
 
 const entries = computed<Entry[]>(() =>
-    tocEntries(props.legal).map((e) => ({ key: e.key, line: e.line, label: e.label, title: e.title, kind: e.kind, deleted: e.deleted })),
+	tocEntries(props.legal).map((e) => ({ key: e.key, line: e.line, label: e.label, title: e.title, kind: e.kind, deleted: e.deleted })),
 )
 const articleLines = computed(() => entries.value.filter((e) => e.kind === 'article').map((e) => e.line))
 
 const filtered = computed(() => {
-    const w = q.value.trim()
-    return w ? entries.value.filter((e) => `${e.label}${e.title}`.includes(w)) : entries.value
+	const w = q.value.trim()
+	return w ? entries.value.filter((e) => `${e.label}${e.title}`.includes(w)) : entries.value
 })
 
 const active = computed(() => {
-    const i = lastAtOrBefore(articleLines.value, props.cursor.line.value)
-    return i < 0 ? -1 : articleLines.value[i]
+	const i = lastAtOrBefore(articleLines.value, props.cursor.line.value)
+	return i < 0 ? -1 : articleLines.value[i]
 })
 
 const list = ref<HTMLElement>()
 watch(active, async () => {
-    await nextTick()
-    list.value?.querySelector('.on')?.scrollIntoView({ block: 'nearest' })
+	await nextTick()
+	list.value?.querySelector('.on')?.scrollIntoView({ block: 'nearest' })
 })
 </script>
 
 <template>
-    <aside class="ed-outline">
-        <div class="cd-pane-bar">
-            <span class="cd-pane-title">{{ t.editor.outline.title }} <span class="count">{{ t.editor.outline.count(articleLines.length) }}</span></span>
-        </div>
-        <UInput v-model="q" icon="i-lucide-search" size="xs" :placeholder="t.editor.outline.search" class="search" />
-        <div ref="list" class="list">
-            <button v-for="e in filtered" :key="e.key" :class="[e.kind, { on: e.line === active, deleted: e.deleted }]" @click="emit('jump', e.line)">
-                <span class="label">{{ e.label }}</span>
-                <span class="title">{{ e.deleted ? t.editor.outline.deleted : e.title }}</span>
-            </button>
-            <p v-if="!filtered.length" class="empty">{{ q ? t.editor.outline.notFound : t.editor.outline.empty }}</p>
-        </div>
-    </aside>
+	<aside class="ed-outline">
+		<div class="cd-pane-bar">
+			<span class="cd-pane-title">{{ t.editor.outline.title }} <span class="count">{{ t.editor.outline.count(articleLines.length) }}</span></span>
+		</div>
+		<UInput v-model="q" icon="i-lucide-search" size="xs" :placeholder="t.editor.outline.search" class="search" />
+		<div ref="list" class="list">
+			<button v-for="e in filtered" :key="e.key" :class="[e.kind, { on: e.line === active, deleted: e.deleted }]" @click="emit('jump', e.line)">
+				<span class="label">{{ e.label }}</span>
+				<span class="title">{{ e.deleted ? t.editor.outline.deleted : e.title }}</span>
+			</button>
+			<p v-if="!filtered.length" class="empty">{{ q ? t.editor.outline.notFound : t.editor.outline.empty }}</p>
+		</div>
+	</aside>
 </template>
 
 <style scoped>
 .ed-outline {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    height: 100%;
-    border-right: 1px solid var(--ui-border);
-    background: var(--cd-sidebar);
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+	height: 100%;
+	border-right: 1px solid var(--ui-border);
+	background: var(--cd-sidebar);
 }
 
 .count {
-    font-weight: 400;
-    margin-left: 4px;
+	font-weight: 400;
+	margin-left: 4px;
 }
 
 .ed-outline .cd-pane-bar {
-    background: transparent;
-    border-bottom: none;
+	background: transparent;
+	border-bottom: none;
 }
 
 .search {
-    margin: 2px 8px 6px;
+	margin: 2px 8px 6px;
 }
 
 .list {
-    flex: 1;
-    overflow: auto;
-    padding: 0 6px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
+	flex: 1;
+	overflow: auto;
+	padding: 0 6px 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
 }
 
 button {
-    display: flex;
-    gap: 6px;
-    align-items: baseline;
-    text-align: left;
-    width: 100%;
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 12px;
-    color: var(--ui-text-toned);
-    cursor: pointer;
+	display: flex;
+	gap: 6px;
+	align-items: baseline;
+	text-align: left;
+	width: 100%;
+	padding: 4px 8px;
+	border-radius: 6px;
+	font-size: 12px;
+	color: var(--ui-text-toned);
+	cursor: pointer;
 }
 
 button:hover {
-    background: var(--ui-bg-accented);
+	background: var(--ui-bg-accented);
 }
 
 button.chapter {
-    margin-top: 8px;
-    font-weight: 700;
-    color: var(--cd-syn-chapter);
+	margin-top: 8px;
+	font-weight: 700;
+	color: var(--cd-syn-chapter);
 }
 
 button .label {
-    white-space: nowrap;
+	white-space: nowrap;
 }
 
 button.article .label {
-    color: var(--cd-syn-article);
-    flex-shrink: 0;
-    font-variant-numeric: tabular-nums;
+	color: var(--cd-syn-article);
+	flex-shrink: 0;
+	font-variant-numeric: tabular-nums;
 }
 
 button.on {
-    background: var(--cd-selected);
-    color: var(--ui-text-highlighted);
+	background: var(--cd-selected);
+	color: var(--ui-text-highlighted);
 }
 
 button.deleted .title {
-    color: var(--ui-text-dimmed);
+	color: var(--ui-text-dimmed);
 }
 
 .title {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .empty {
-    font-size: 12px;
-    color: var(--ui-text-muted);
-    padding: 8px;
-    margin: 0;
+	font-size: 12px;
+	color: var(--ui-text-muted);
+	padding: 8px;
+	margin: 0;
 }
 </style>

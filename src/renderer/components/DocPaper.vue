@@ -11,16 +11,16 @@ const html = computed(() => (typeof props.text === 'string' ? withImages(renderD
 </script>
 
 <template>
-    <div class="cd-preview cd-canvas">
-        <p v-if="text === null" class="cd-muted">{{ empty ?? t.docs.paper.notInVersion }}</p>
-        <div v-else-if="text !== undefined" class="paper cd-paper" v-html="html" />
-    </div>
+	<div class="cd-preview cd-canvas">
+		<p v-if="text === null" class="cd-muted">{{ empty ?? t.docs.paper.notInVersion }}</p>
+		<div v-else-if="text !== undefined" class="paper cd-paper" v-html="html" />
+	</div>
 </template>
 
 <style scoped>
 .paper {
-    max-width: 210mm;
-    margin: 0 auto;
-    padding: var(--cd-margin, 20mm);
+	max-width: 210mm;
+	margin: 0 auto;
+	padding: var(--cd-margin, 20mm);
 }
 </style>

@@ -3,9 +3,9 @@ import { daysUntil, urgencyOf } from '~/utils/format'
 import { todayISO } from '@shared/date'
 
 const props = defineProps<{
-    date: string
-    active?: boolean
-    fadePast?: boolean
+	date: string
+	active?: boolean
+	fadePast?: boolean
 }>()
 const t = useT()
 const today = todayISO()
@@ -15,54 +15,54 @@ const n = computed(() => daysUntil(props.date, today))
 </script>
 
 <template>
-    <span class="tile" :class="[urgencyOf(n), { active, past: fadePast && n < 0 }]" :title="date">
-        <span v-if="otherYear" class="y">{{ d.getFullYear() }}</span>
-        <span class="md">{{ d.getMonth() + 1 }}/{{ d.getDate() }}</span>
-        <span class="w">{{ t.common.weekday(d.getDay()) }}</span>
-    </span>
+	<span class="tile" :class="[urgencyOf(n), { active, past: fadePast && n < 0 }]" :title="date">
+		<span v-if="otherYear" class="y">{{ d.getFullYear() }}</span>
+		<span class="md">{{ d.getMonth() + 1 }}/{{ d.getDate() }}</span>
+		<span class="w">{{ t.common.weekday(d.getDay()) }}</span>
+	</span>
 </template>
 
 <style scoped>
 .tile {
-    flex-shrink: 0;
-    width: 46px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 3px 0;
-    border-radius: 8px;
-    border: 1px solid var(--ui-border);
-    background: var(--ui-bg-elevated);
-    line-height: 1.2;
-    font-variant-numeric: tabular-nums;
+	flex-shrink: 0;
+	width: 46px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 3px 0;
+	border-radius: 8px;
+	border: 1px solid var(--ui-border);
+	background: var(--ui-bg-elevated);
+	line-height: 1.2;
+	font-variant-numeric: tabular-nums;
 }
 
 .y,
 .w {
-    font-size: 10px;
-    color: var(--ui-text-muted);
+	font-size: 10px;
+	color: var(--ui-text-muted);
 }
 
 .md {
-    font-size: 14px;
-    font-weight: 700;
+	font-size: 14px;
+	font-weight: 700;
 }
 
 .near {
-    border-color: color-mix(in oklab, var(--ui-color-warning-500) 50%, transparent);
+	border-color: color-mix(in oklab, var(--ui-color-warning-500) 50%, transparent);
 }
 
 .soon {
-    border-color: var(--ui-color-error-500);
-    background: color-mix(in oklab, var(--ui-color-error-500) 10%, transparent);
+	border-color: var(--ui-color-error-500);
+	background: color-mix(in oklab, var(--ui-color-error-500) 10%, transparent);
 }
 
 .active {
-    border-color: var(--ui-color-primary-500);
-    background: color-mix(in oklab, var(--ui-color-primary-500) 10%, transparent);
+	border-color: var(--ui-color-primary-500);
+	background: color-mix(in oklab, var(--ui-color-primary-500) 10%, transparent);
 }
 
 .past {
-    opacity: 0.6;
+	opacity: 0.6;
 }
 </style>

@@ -8,11 +8,11 @@ import { newDocText } from '@shared/doc-preset'
 import { useT } from '~/composables/useT'
 
 const props = defineProps<{
-    modelValue: StyleOverride
-    inherited: DocStyle
-    from?: Record<keyof DocStyle, StyleSource>
-    full?: boolean
-    scopeName?: string
+	modelValue: StyleOverride
+	inherited: DocStyle
+	from?: Record<keyof DocStyle, StyleSource>
+	full?: boolean
+	scopeName?: string
 }>()
 const emit = defineEmits<{ 'update:modelValue': [StyleOverride] }>()
 const t = useT()
@@ -21,15 +21,15 @@ const ts = computed(() => t.value.settings.style)
 const value = <K extends keyof DocStyle>(k: K): DocStyle[K] => (props.modelValue[k] ?? props.inherited[k]) as DocStyle[K]
 const isSet = (k: keyof DocStyle) => props.full || props.modelValue[k] !== undefined
 function set<K extends keyof DocStyle>(k: K, v: DocStyle[K]) {
-    emit('update:modelValue', { ...props.modelValue, [k]: v })
+	emit('update:modelValue', { ...props.modelValue, [k]: v })
 }
 function unset(k: keyof DocStyle) {
-    const next = { ...props.modelValue }
-    delete next[k]
-    emit('update:modelValue', next)
+	const next = { ...props.modelValue }
+	delete next[k]
+	emit('update:modelValue', next)
 }
 function inheritNote(k: keyof DocStyle, text: string) {
-    return ts.value.inherit(sourceLabel(props.from?.[k] ?? 'app'), text)
+	return ts.value.inherit(sourceLabel(props.from?.[k] ?? 'app'), text)
 }
 
 const SIZES = [9, 10, 10.5, 11, 12].map((v) => ({ label: `${v}pt`, value: v }))
@@ -38,148 +38,148 @@ const MARGINS = [15, 20, 25, 30].map((v) => ({ label: `${v}mm`, value: v }))
 const PRESET_LABEL = computed(() => ts.value.presets)
 
 const ROWS = computed<{ key: keyof DocStyle; label: string; desc?: string; show: (s: DocStyle) => string }[]>(() => {
-    const r = ts.value.rows
-    return [
-        { key: 'font', label: r.font, desc: r.fontDesc, show: (s) => s.font },
-        { key: 'fontSize', label: r.fontSize, show: (s) => `${s.fontSize}pt` },
-        { key: 'lineHeight', label: r.lineHeight, show: (s) => ts.value.times(s.lineHeight) },
-        { key: 'margin', label: r.margin, show: (s) => `${s.margin}mm` },
-        { key: 'pageNumbers', label: r.pageNumbers, desc: r.pageNumbersDesc, show: (s) => (s.pageNumbers ? ts.value.on : ts.value.off) },
-        { key: 'newDocPreset', label: r.newDocPreset, desc: r.newDocPresetDesc, show: (s) => PRESET_LABEL.value[s.newDocPreset] },
-    ]
+	const r = ts.value.rows
+	return [
+		{ key: 'font', label: r.font, desc: r.fontDesc, show: (s) => s.font },
+		{ key: 'fontSize', label: r.fontSize, show: (s) => `${s.fontSize}pt` },
+		{ key: 'lineHeight', label: r.lineHeight, show: (s) => ts.value.times(s.lineHeight) },
+		{ key: 'margin', label: r.margin, show: (s) => `${s.margin}mm` },
+		{ key: 'pageNumbers', label: r.pageNumbers, desc: r.pageNumbersDesc, show: (s) => (s.pageNumbers ? ts.value.on : ts.value.off) },
+		{ key: 'newDocPreset', label: r.newDocPreset, desc: r.newDocPresetDesc, show: (s) => PRESET_LABEL.value[s.newDocPreset] },
+	]
 })
 
 const effective = computed<DocStyle>(() => ({ ...props.inherited, ...props.modelValue }))
 
 const app = useApp()
 const SAMPLE = {
-    law: newDocText(
-        '〇〇に関する法律',
-        'law',
-        `## 総則
+	law: newDocText(
+		'〇〇に関する法律',
+		'law',
+		`## 総則
 ### 目的
 - この法律は、〇〇に関し必要な事項を定めることを目的とする。
 - この法律において、次の各号に掲げる用語の意義は、当該各号に定めるところによる。
   - 事業者
   - 利用者
 `,
-    ),
-    contract: newDocText(
-        '業務委託契約書',
-        'contract',
-        `### 目的
+	),
+	contract: newDocText(
+		'業務委託契約書',
+		'contract',
+		`### 目的
 - 本契約は、甲が乙に委託する業務の内容及び条件を定めるものである。
 - 乙は、次の業務を行う。
   - 調査及び報告
   - 資料の作成
 `,
-    ),
+	),
 }
 // 英語の画面では、海外の書式の見本を出す（書式の系統を明示して、短い文でも英文の番号にする）
 const SAMPLE_EN = {
-    law: `# Data Protection Act\n<!-- clausedown\ndoc: { style: uk-law }\n-->\n\n## PART 1 Preliminary\n\n### Purpose\n\n- This Act sets out rules for the protection of personal data.\n- In this Act:\n  - "controller" means a person who determines the purposes of processing;\n  - "data subject" means the individual to whom personal data relates.\n`,
-    contract: `# Services Agreement\n<!-- clausedown\ndoc: { style: contract }\n-->\n\n### Services\n\n- The Supplier shall provide the services described in Schedule 1.\n- The Supplier shall:\n  - perform the services with reasonable skill and care; and\n  - comply with all applicable laws.\n`,
+	law: `# Data Protection Act\n<!-- clausedown\ndoc: { style: uk-law }\n-->\n\n## PART 1 Preliminary\n\n### Purpose\n\n- This Act sets out rules for the protection of personal data.\n- In this Act:\n  - "controller" means a person who determines the purposes of processing;\n  - "data subject" means the individual to whom personal data relates.\n`,
+	contract: `# Services Agreement\n<!-- clausedown\ndoc: { style: contract }\n-->\n\n### Services\n\n- The Supplier shall provide the services described in Schedule 1.\n- The Supplier shall:\n  - perform the services with reasonable skill and care; and\n  - comply with all applicable laws.\n`,
 }
 const sampleHtml = computed(() => renderDoc(parseLegal((app.locale === 'en' ? SAMPLE_EN : SAMPLE)[effective.value.newDocPreset])))
 const sampleStyle = computed(() => ({
-    '--cd-font': cssFont(effective.value.font),
-    ...(isLatinFont(effective.value.font) ? { '--cd-latin-font': cssFont(effective.value.font) } : {}),
-    '--cd-size': `${effective.value.fontSize}pt`,
-    '--cd-line': String(effective.value.lineHeight),
-    padding: `${effective.value.margin / 2}mm`,
+	'--cd-font': cssFont(effective.value.font),
+	...(isLatinFont(effective.value.font) ? { '--cd-latin-font': cssFont(effective.value.font) } : {}),
+	'--cd-size': `${effective.value.fontSize}pt`,
+	'--cd-line': String(effective.value.lineHeight),
+	padding: `${effective.value.margin / 2}mm`,
 }))
 </script>
 
 <template>
-    <div>
-        <SettingRow
-            v-for="r in ROWS"
-            :key="r.key"
-            :label="r.label"
-            :description="isSet(r.key) ? r.desc : inheritNote(r.key, r.show(inherited))"
-            :class="{ inherit: !isSet(r.key) }"
-        >
-            <template v-if="isSet(r.key)">
-                <FontPicker
-                    v-if="r.key === 'font'"
-                    :model-value="value('font')"
-                    :recommended="BODY_FONTS"
-                    class="cd-w-input"
-                    @update:model-value="(v) => set('font', v)"
-                />
-                <USelect
-                    v-else-if="r.key === 'fontSize'"
-                    :model-value="value('fontSize')"
-                    :items="SIZES"
-                    class="cd-w-small"
-                    @update:model-value="(v: number) => set('fontSize', v)"
-                />
-                <USelect
-                    v-else-if="r.key === 'lineHeight'"
-                    :model-value="value('lineHeight')"
-                    :items="LINES"
-                    class="cd-w-small"
-                    @update:model-value="(v: number) => set('lineHeight', v)"
-                />
-                <USelect
-                    v-else-if="r.key === 'margin'"
-                    :model-value="value('margin')"
-                    :items="MARGINS"
-                    class="cd-w-small"
-                    @update:model-value="(v: number) => set('margin', v)"
-                />
-                <USwitch v-else-if="r.key === 'pageNumbers'" :model-value="value('pageNumbers')" @update:model-value="(v: boolean) => set('pageNumbers', v)" />
-                <SegmentSwitch
-                    v-else-if="r.key === 'newDocPreset'"
-                    :model-value="value('newDocPreset')"
-                    :aria-label="ts.rows.newDocPreset"
-                    :items="[
-                        { value: 'law', label: PRESET_LABEL.law },
-                        { value: 'contract', label: PRESET_LABEL.contract },
-                    ]"
-                    @update:model-value="(v) => v && set('newDocPreset', v)"
-                />
-                <UTooltip v-if="!full" :text="ts.revertTo(sourceLabel(from?.[r.key] ?? 'app'))">
-                    <UButton
-                        icon="i-lucide-undo-2"
-                        size="sm"
-                        square
-                        color="neutral"
-                        variant="ghost"
-                        :aria-label="ts.revertAria(r.label)"
-                        @click="unset(r.key)"
-                    />
-                </UTooltip>
-            </template>
-            <UButton
-                v-else
-                :label="ts.changeHere(scopeName)"
-                icon="i-lucide-pencil"
-                size="sm"
-                color="neutral"
-                variant="outline"
-                @click="set(r.key, inherited[r.key])"
-            />
-        </SettingRow>
-        <div class="sample cd-canvas">
-            <div class="paper cd-paper" :style="sampleStyle" v-html="sampleHtml" />
-        </div>
-    </div>
+	<div>
+		<SettingRow
+			v-for="r in ROWS"
+			:key="r.key"
+			:label="r.label"
+			:description="isSet(r.key) ? r.desc : inheritNote(r.key, r.show(inherited))"
+			:class="{ inherit: !isSet(r.key) }"
+		>
+			<template v-if="isSet(r.key)">
+				<FontPicker
+					v-if="r.key === 'font'"
+					:model-value="value('font')"
+					:recommended="BODY_FONTS"
+					class="cd-w-input"
+					@update:model-value="(v) => set('font', v)"
+				/>
+				<USelect
+					v-else-if="r.key === 'fontSize'"
+					:model-value="value('fontSize')"
+					:items="SIZES"
+					class="cd-w-small"
+					@update:model-value="(v: number) => set('fontSize', v)"
+				/>
+				<USelect
+					v-else-if="r.key === 'lineHeight'"
+					:model-value="value('lineHeight')"
+					:items="LINES"
+					class="cd-w-small"
+					@update:model-value="(v: number) => set('lineHeight', v)"
+				/>
+				<USelect
+					v-else-if="r.key === 'margin'"
+					:model-value="value('margin')"
+					:items="MARGINS"
+					class="cd-w-small"
+					@update:model-value="(v: number) => set('margin', v)"
+				/>
+				<USwitch v-else-if="r.key === 'pageNumbers'" :model-value="value('pageNumbers')" @update:model-value="(v: boolean) => set('pageNumbers', v)" />
+				<SegmentSwitch
+					v-else-if="r.key === 'newDocPreset'"
+					:model-value="value('newDocPreset')"
+					:aria-label="ts.rows.newDocPreset"
+					:items="[
+						{ value: 'law', label: PRESET_LABEL.law },
+						{ value: 'contract', label: PRESET_LABEL.contract },
+					]"
+					@update:model-value="(v) => v && set('newDocPreset', v)"
+				/>
+				<UTooltip v-if="!full" :text="ts.revertTo(sourceLabel(from?.[r.key] ?? 'app'))">
+					<UButton
+						icon="i-lucide-undo-2"
+						size="sm"
+						square
+						color="neutral"
+						variant="ghost"
+						:aria-label="ts.revertAria(r.label)"
+						@click="unset(r.key)"
+					/>
+				</UTooltip>
+			</template>
+			<UButton
+				v-else
+				:label="ts.changeHere(scopeName)"
+				icon="i-lucide-pencil"
+				size="sm"
+				color="neutral"
+				variant="outline"
+				@click="set(r.key, inherited[r.key])"
+			/>
+		</SettingRow>
+		<div class="sample cd-canvas">
+			<div class="paper cd-paper" :style="sampleStyle" v-html="sampleHtml" />
+		</div>
+	</div>
 </template>
 
 <style scoped>
 .inherit :deep(.label) {
-    color: var(--ui-text-toned);
+	color: var(--ui-text-toned);
 }
 
 .sample {
-    margin-top: 12px;
-    padding: 16px;
-    border-radius: 6px;
+	margin-top: 12px;
+	padding: 16px;
+	border-radius: 6px;
 }
 
 .paper {
-    max-width: 520px;
-    margin: 0 auto;
+	max-width: 520px;
+	margin: 0 auto;
 }
 </style>

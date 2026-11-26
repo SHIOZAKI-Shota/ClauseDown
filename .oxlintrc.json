@@ -1,18 +1,18 @@
 {
-    "$schema": "./node_modules/oxlint/configuration_schema.json",
-    "plugins": ["eslint", "typescript", "unicorn", "oxc", "import", "vue"],
-    "categories": {
-        "correctness": "error"
-    },
-    "options": {
-        "typeAware": true
-    },
-    "ignorePatterns": ["docs/**", "example_repository/**", "build/**", "out/**", "release/**", ".nuxt/**", ".output/**"],
-    "rules": {
-        "typescript/no-unnecessary-type-assertion": "error",
-        "typescript/no-unnecessary-template-expression": "error",
-        "typescript/no-unnecessary-boolean-literal-compare": "error",
-        "unicorn/prefer-set-has": "error",
-        "unicorn/prefer-array-find": "error"
-    }
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"plugins": ["eslint", "typescript", "unicorn", "oxc", "import", "vue"],
+	"categories": {
+		"correctness": "error"
+	},
+	"options": {
+		"typeAware": true
+	},
+	"ignorePatterns": ["docs/**", "example_repository/**", "build/**", "out/**", "release/**", ".nuxt/**", ".output/**"],
+	"rules": {
+		"typescript/no-unnecessary-type-assertion": "error",
+		"typescript/no-unnecessary-template-expression": "error",
+		"typescript/no-unnecessary-boolean-literal-compare": "error",
+		"unicorn/prefer-set-has": "error",
+		"unicorn/prefer-array-find": "error"
+	}
 }

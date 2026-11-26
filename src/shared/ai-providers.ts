@@ -4,108 +4,108 @@ import { isLoopbackHost } from './net'
 export type AiProvider = 'anthropic' | 'openai' | 'ollama' | 'openrouter' | 'github'
 
 export interface AiConfig {
-    provider: AiProvider
-    model?: string
-    baseUrl?: string
+	provider: AiProvider
+	model?: string
+	baseUrl?: string
 }
 
 export interface AiProviderInfo {
-    label: string
-    description: string
-    base?: string
-    model?: string
-    auth: 'key' | 'none' | 'oauth' | 'github'
+	label: string
+	description: string
+	base?: string
+	model?: string
+	auth: 'key' | 'none' | 'oauth' | 'github'
 }
 
 // label と description は読むたびに今の言語で返す
 const providerInfo = (id: AiProvider, rest: Omit<AiProviderInfo, 'label' | 'description'>): AiProviderInfo => ({
-    get label() {
-        return t().labels.aiProviders[id].label
-    },
-    get description() {
-        return t().labels.aiProviders[id].description
-    },
-    ...rest,
+	get label() {
+		return t().labels.aiProviders[id].label
+	},
+	get description() {
+		return t().labels.aiProviders[id].description
+	},
+	...rest,
 })
 
 export const AI_PROVIDERS: Record<AiProvider, AiProviderInfo> = {
-    anthropic: providerInfo('anthropic', { model: 'claude-opus-5-5', auth: 'key' }),
-    openai: providerInfo('openai', { base: 'https://api.openai.com/v1', auth: 'key' }),
-    ollama: providerInfo('ollama', { base: 'http://127.0.0.1:11434/v1', auth: 'none' }),
-    openrouter: providerInfo('openrouter', { base: 'https://openrouter.ai/api/v1', auth: 'oauth' }),
-    github: providerInfo('github', { base: 'https://models.github.ai/inference', model: 'openai/gpt-4.1', auth: 'github' }),
+	anthropic: providerInfo('anthropic', { model: 'claude-opus-5-5', auth: 'key' }),
+	openai: providerInfo('openai', { base: 'https://api.openai.com/v1', auth: 'key' }),
+	ollama: providerInfo('ollama', { base: 'http://127.0.0.1:11434/v1', auth: 'none' }),
+	openrouter: providerInfo('openrouter', { base: 'https://openrouter.ai/api/v1', auth: 'oauth' }),
+	github: providerInfo('github', { base: 'https://models.github.ai/inference', model: 'openai/gpt-4.1', auth: 'github' }),
 }
 
 export const OPENAI_PRESETS: { label: string; url: string }[] = [
-    { label: 'OpenAI', url: 'https://api.openai.com/v1' },
-    { label: 'Google Gemini', url: 'https://generativelanguage.googleapis.com/v1beta/openai' },
-    { label: 'DeepSeek', url: 'https://api.deepseek.com/v1' },
-    {
-        get label() {
-            return t().labels.lmStudioLocal
-        },
-        url: 'http://127.0.0.1:1234/v1',
-    },
+	{ label: 'OpenAI', url: 'https://api.openai.com/v1' },
+	{ label: 'Google Gemini', url: 'https://generativelanguage.googleapis.com/v1beta/openai' },
+	{ label: 'DeepSeek', url: 'https://api.deepseek.com/v1' },
+	{
+		get label() {
+			return t().labels.lmStudioLocal
+		},
+		url: 'http://127.0.0.1:1234/v1',
+	},
 ]
 
 export interface BaseRules {
-    lan?: boolean
+	lan?: boolean
 }
 
 export function isLanHost(host: string): boolean {
-    const h = host.toLowerCase()
-    const v4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(h)
-    if (v4) {
-        const [a, b] = [Number(v4[1]), Number(v4[2])]
-        if (v4.slice(1).some((n) => Number(n) > 255)) return false
-        return a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254)
-    }
-    if (h.startsWith('[')) return /^\[(f[cd][0-9a-f]{2}|fe[89ab][0-9a-f]):/.test(h)
-    return /^[a-z0-9-]+$/.test(h) || /\.(local|lan|home\.arpa|internal)$/.test(h)
+	const h = host.toLowerCase()
+	const v4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(h)
+	if (v4) {
+		const [a, b] = [Number(v4[1]), Number(v4[2])]
+		if (v4.slice(1).some((n) => Number(n) > 255)) return false
+		return a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 169 && b === 254)
+	}
+	if (h.startsWith('[')) return /^\[(f[cd][0-9a-f]{2}|fe[89ab][0-9a-f]):/.test(h)
+	return /^[a-z0-9-]+$/.test(h) || /\.(local|lan|home\.arpa|internal)$/.test(h)
 }
 
 export function safeAiBase(url: unknown, rules: BaseRules = {}): boolean {
-    if (typeof url !== 'string') return false
-    try {
-        const u = new URL(url)
-        if (u.username || u.password || u.search || u.hash) return false
-        if (u.protocol === 'https:') return true
-        return u.protocol === 'http:' && (isLoopbackHost(u.hostname) || (!!rules.lan && isLanHost(u.hostname)))
-    } catch {
-        return false
-    }
+	if (typeof url !== 'string') return false
+	try {
+		const u = new URL(url)
+		if (u.username || u.password || u.search || u.hash) return false
+		if (u.protocol === 'https:') return true
+		return u.protocol === 'http:' && (isLoopbackHost(u.hostname) || (!!rules.lan && isLanHost(u.hostname)))
+	} catch {
+		return false
+	}
 }
 
 export function isLocalBase(url: string): boolean {
-    try {
-        return isLoopbackHost(new URL(url).hostname)
-    } catch {
-        return false
-    }
+	try {
+		return isLoopbackHost(new URL(url).hostname)
+	} catch {
+		return false
+	}
 }
 
 export function cleanAiConfig(raw: unknown, rules: BaseRules = {}): AiConfig {
-    const r = (raw ?? {}) as Partial<AiConfig>
-    const provider: AiProvider = r.provider && r.provider in AI_PROVIDERS ? r.provider : 'anthropic'
-    const out: AiConfig = { provider }
-    const model = typeof r.model === 'string' ? r.model.trim().slice(0, 200) : ''
-    if (model && /^[\w.:/@+-]+$/.test(model)) out.model = model
-    if (provider === 'openai' || provider === 'ollama') {
-        const base = typeof r.baseUrl === 'string' ? r.baseUrl.trim().replace(/\/+$/, '') : ''
-        if (base && safeAiBase(base, rules)) out.baseUrl = base
-    }
-    return out
+	const r = (raw ?? {}) as Partial<AiConfig>
+	const provider: AiProvider = r.provider && r.provider in AI_PROVIDERS ? r.provider : 'anthropic'
+	const out: AiConfig = { provider }
+	const model = typeof r.model === 'string' ? r.model.trim().slice(0, 200) : ''
+	if (model && /^[\w.:/@+-]+$/.test(model)) out.model = model
+	if (provider === 'openai' || provider === 'ollama') {
+		const base = typeof r.baseUrl === 'string' ? r.baseUrl.trim().replace(/\/+$/, '') : ''
+		if (base && safeAiBase(base, rules)) out.baseUrl = base
+	}
+	return out
 }
 
 export function aiBaseOf(c: AiConfig): string {
-    return c.baseUrl ?? AI_PROVIDERS[c.provider].base ?? ''
+	return c.baseUrl ?? AI_PROVIDERS[c.provider].base ?? ''
 }
 
 export function aiShortLabel(c: AiConfig): string {
-    const name =
-        c.provider === 'openai'
-            ? (OPENAI_PRESETS.find((p) => p.url === aiBaseOf(c))?.label ?? t().labels.openaiCompatible)
-            : { anthropic: 'Claude', ollama: 'Ollama', openrouter: 'OpenRouter', github: 'GitHub Models' }[c.provider]
-    const model = c.model ?? AI_PROVIDERS[c.provider].model
-    return model ? `${name}${t().common.sep}${model}` : name
+	const name =
+		c.provider === 'openai'
+			? (OPENAI_PRESETS.find((p) => p.url === aiBaseOf(c))?.label ?? t().labels.openaiCompatible)
+			: { anthropic: 'Claude', ollama: 'Ollama', openrouter: 'OpenRouter', github: 'GitHub Models' }[c.provider]
+	const model = c.model ?? AI_PROVIDERS[c.provider].model
+	return model ? `${name}${t().common.sep}${model}` : name
 }

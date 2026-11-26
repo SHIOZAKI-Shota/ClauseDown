@@ -6,77 +6,77 @@ import { useApp } from '~/stores/app'
 import { fmtWareki } from '~/utils/format'
 
 async function readAll<T extends { oid: string }>(dir: string, path: string, list: T[]) {
-    const sources = await Promise.all(list.map((v) => window.api.readAt(dir, v.oid, path).catch(() => null)))
-    const kept = list.filter((_, i) => sources[i] !== null)
-    return { kept, traced: kept.length ? stepUnits(sources.filter((s): s is string => s !== null)) : null }
+	const sources = await Promise.all(list.map((v) => window.api.readAt(dir, v.oid, path).catch(() => null)))
+	const kept = list.filter((_, i) => sources[i] !== null)
+	return { kept, traced: kept.length ? stepUnits(sources.filter((s): s is string => s !== null)) : null }
 }
 
 export function useArticleTrail(path: string, doc: Ref<LegalDoc>, cursorLine: Ref<number>) {
-    const app = useApp()
-    const versions = shallowRef<EffectiveVersion[]>([])
-    const traced = shallowRef<TracedUnit[] | null>(null)
-    let seq = 0
-    async function loadEffective() {
-        const dir = app.repoDir
-        if (!dir) return
-        const n = ++seq
-        const list = (await window.api.listEffective(dir, path).catch(() => [] as EffectiveVersion[])).slice().reverse()
-        const r = await readAll(dir, path, list)
-        if (n !== seq) return
-        versions.value = r.kept
-        traced.value = r.traced
-        commitsLoaded = false
-        commits.value = []
-        commitTraced.value = null
-    }
-    onMounted(loadEffective)
-    watch(() => app.scheduleKey, loadEffective)
+	const app = useApp()
+	const versions = shallowRef<EffectiveVersion[]>([])
+	const traced = shallowRef<TracedUnit[] | null>(null)
+	let seq = 0
+	async function loadEffective() {
+		const dir = app.repoDir
+		if (!dir) return
+		const n = ++seq
+		const list = (await window.api.listEffective(dir, path).catch(() => [] as EffectiveVersion[])).slice().reverse()
+		const r = await readAll(dir, path, list)
+		if (n !== seq) return
+		versions.value = r.kept
+		traced.value = r.traced
+		commitsLoaded = false
+		commits.value = []
+		commitTraced.value = null
+	}
+	onMounted(loadEffective)
+	watch(() => app.scheduleKey, loadEffective)
 
-    const article = computed(() => {
-        let hit: { line: number; label: string } | null = null
-        for (const ch of doc.value.chapters)
-            for (const a of ch.articles) if (a.line >= 0 && a.line <= cursorLine.value) hit = { line: a.line, label: a.refLabel }
-        return hit
-    })
-    const articleLine = computed(() => article.value?.line ?? -1)
-    const trails = computed(() => trailsFor(traced.value, doc.value))
-    const trail = computed(() => trails.value.get(articleLine.value) ?? null)
-    const summary = computed(() => {
-        const tr = trail.value
-        if (!tr) return ''
-        const m = app.t.shell.trail
-        const e = tr.events.at(-1)
-        if (!e) return m.notEffective
-        const head = m.summary(fmtWareki(versions.value[e.step]?.date ?? ''), m.kind[e.kind])
-        return tr.pending ? m.pending(head) : head
-    })
+	const article = computed(() => {
+		let hit: { line: number; label: string } | null = null
+		for (const ch of doc.value.chapters)
+			for (const a of ch.articles) if (a.line >= 0 && a.line <= cursorLine.value) hit = { line: a.line, label: a.refLabel }
+		return hit
+	})
+	const articleLine = computed(() => article.value?.line ?? -1)
+	const trails = computed(() => trailsFor(traced.value, doc.value))
+	const trail = computed(() => trails.value.get(articleLine.value) ?? null)
+	const summary = computed(() => {
+		const tr = trail.value
+		if (!tr) return ''
+		const m = app.t.shell.trail
+		const e = tr.events.at(-1)
+		if (!e) return m.notEffective
+		const head = m.summary(fmtWareki(versions.value[e.step]?.date ?? ''), m.kind[e.kind])
+		return tr.pending ? m.pending(head) : head
+	})
 
-    const commits = shallowRef<CommitInfo[]>([])
-    const commitTraced = shallowRef<TracedUnit[] | null>(null)
-    const commitsLoading = ref(false)
-    let commitsLoaded = false
-    async function loadCommits() {
-        const dir = app.repoDir
-        if (!dir || commitsLoaded || commitsLoading.value) return
-        commitsLoading.value = true
-        try {
-            const list = (await window.api.log(dir, path).catch(() => [] as CommitInfo[])).slice().reverse()
-            const r = await readAll(dir, path, list)
-            commits.value = r.kept
-            commitTraced.value = r.traced
-            commitsLoaded = true
-        } finally {
-            commitsLoading.value = false
-        }
-    }
-    watch(
-        () => app.currentBranch?.oid,
-        () => {
-            commitsLoaded = false
-            commitTraced.value = null
-        },
-    )
-    const commitTrail = computed(() => (commitTraced.value ? (trailsFor(commitTraced.value, doc.value).get(articleLine.value) ?? null) : null))
+	const commits = shallowRef<CommitInfo[]>([])
+	const commitTraced = shallowRef<TracedUnit[] | null>(null)
+	const commitsLoading = ref(false)
+	let commitsLoaded = false
+	async function loadCommits() {
+		const dir = app.repoDir
+		if (!dir || commitsLoaded || commitsLoading.value) return
+		commitsLoading.value = true
+		try {
+			const list = (await window.api.log(dir, path).catch(() => [] as CommitInfo[])).slice().reverse()
+			const r = await readAll(dir, path, list)
+			commits.value = r.kept
+			commitTraced.value = r.traced
+			commitsLoaded = true
+		} finally {
+			commitsLoading.value = false
+		}
+	}
+	watch(
+		() => app.currentBranch?.oid,
+		() => {
+			commitsLoaded = false
+			commitTraced.value = null
+		},
+	)
+	const commitTrail = computed(() => (commitTraced.value ? (trailsFor(commitTraced.value, doc.value).get(articleLine.value) ?? null) : null))
 
-    return { versions, article, trail, summary, commits, commitTrail, commitsLoading, loadCommits }
+	return { versions, article, trail, summary, commits, commitTrail, commitsLoading, loadCommits }
 }

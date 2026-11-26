@@ -14,139 +14,139 @@ const titleOf = (path: string) => (!path ? t.value.home.wholeRepo : (app.docs.fi
 const exists = (path: string) => !!path && app.docs.some((d) => d.path === path)
 
 const upcoming = computed(() => {
-    const until = addDays(s.today, 60)
-    return s.items.value.filter((o) => o.source !== 'delivery' && (o.overdue || (!o.done && (o.end ?? o.date) >= s.today && o.date <= until)))
+	const until = addDays(s.today, 60)
+	return s.items.value.filter((o) => o.source !== 'delivery' && (o.overdue || (!o.done && (o.end ?? o.date) >= s.today && o.date <= until)))
 })
 const overdueCount = computed(() => upcoming.value.filter((o) => o.overdue).length)
 const deliveries = computed(() =>
-    s.items.value
-        .filter((o) => o.source === 'delivery')
-        .slice(-3)
-        .reverse(),
+	s.items.value
+		.filter((o) => o.source === 'delivery')
+		.slice(-3)
+		.reverse(),
 )
 const thisYear = s.today.slice(0, 4)
 const shortDate = (d: string) => fmtDate(`${d}T00:00:00`, d.startsWith(thisYear) ? 'md' : 'ymd')
 </script>
 
 <template>
-    <section class="cd-side-sec">
-        <SectionHead :label="t.home.schedule.title" icon="i-lucide-calendar-clock" :count="upcoming.length">
-            <UTooltip :text="t.home.schedule.addDue">
-                <UButton
-                    icon="i-lucide-calendar-plus"
-                    size="xs"
-                    square
-                    color="neutral"
-                    variant="ghost"
-                    :aria-label="t.home.schedule.addDue"
-                    @click="app.dialog = { kind: 'newEvent', docPath: '' }"
-                />
-            </UTooltip>
-            <UTooltip :text="t.home.schedule.timeline">
-                <UButton
-                    icon="i-lucide-calendar-range"
-                    size="xs"
-                    square
-                    color="neutral"
-                    variant="ghost"
-                    :aria-label="t.home.schedule.timeline"
-                    @click="app.openSchedule()"
-                />
-            </UTooltip>
-        </SectionHead>
-        <p v-if="overdueCount" class="over"><UIcon name="i-lucide-alarm-clock-off" />{{ t.home.schedule.overdue(overdueCount) }}</p>
-        <p v-if="!s.loaded.value" class="cd-muted">{{ t.common.loading }}</p>
-        <p v-else-if="!upcoming.length" class="cd-muted">{{ t.home.schedule.empty }}</p>
-        <div v-else class="rows">
-            <OccurrenceRow
-                v-for="o in upcoming.slice(0, LIMIT)"
-                :key="o.key"
-                :o="o"
-                :kind="s.kindOf.value(o.kind)"
-                :where="titleOf(o.docPath)"
-                @click="app.openSchedule()"
-                @toggle="s.toggleDone(o)"
-            />
-        </div>
-        <button v-if="upcoming.length > LIMIT" class="more" @click="app.openSchedule()">{{ t.home.schedule.moreInTimeline(upcoming.length - LIMIT) }}</button>
+	<section class="cd-side-sec">
+		<SectionHead :label="t.home.schedule.title" icon="i-lucide-calendar-clock" :count="upcoming.length">
+			<UTooltip :text="t.home.schedule.addDue">
+				<UButton
+					icon="i-lucide-calendar-plus"
+					size="xs"
+					square
+					color="neutral"
+					variant="ghost"
+					:aria-label="t.home.schedule.addDue"
+					@click="app.dialog = { kind: 'newEvent', docPath: '' }"
+				/>
+			</UTooltip>
+			<UTooltip :text="t.home.schedule.timeline">
+				<UButton
+					icon="i-lucide-calendar-range"
+					size="xs"
+					square
+					color="neutral"
+					variant="ghost"
+					:aria-label="t.home.schedule.timeline"
+					@click="app.openSchedule()"
+				/>
+			</UTooltip>
+		</SectionHead>
+		<p v-if="overdueCount" class="over"><UIcon name="i-lucide-alarm-clock-off" />{{ t.home.schedule.overdue(overdueCount) }}</p>
+		<p v-if="!s.loaded.value" class="cd-muted">{{ t.common.loading }}</p>
+		<p v-else-if="!upcoming.length" class="cd-muted">{{ t.home.schedule.empty }}</p>
+		<div v-else class="rows">
+			<OccurrenceRow
+				v-for="o in upcoming.slice(0, LIMIT)"
+				:key="o.key"
+				:o="o"
+				:kind="s.kindOf.value(o.kind)"
+				:where="titleOf(o.docPath)"
+				@click="app.openSchedule()"
+				@toggle="s.toggleDone(o)"
+			/>
+		</div>
+		<button v-if="upcoming.length > LIMIT" class="more" @click="app.openSchedule()">{{ t.home.schedule.moreInTimeline(upcoming.length - LIMIT) }}</button>
 
-        <template v-if="deliveries.length">
-            <SectionHead :label="t.home.schedule.deliveries" icon="i-lucide-package-check" class="sub" />
-            <ul class="deliv">
-                <li v-for="d in deliveries" :key="d.key">
-                    <span class="cd-muted when">{{ shortDate(d.date) }}</span>
-                    <button v-if="exists(d.docPath)" class="name" :title="d.title" @click="app.openDoc(d.docPath, 'releases')">{{ d.title }}</button>
-                    <span v-else class="name">{{ d.title }}</span>
-                </li>
-            </ul>
-        </template>
-    </section>
+		<template v-if="deliveries.length">
+			<SectionHead :label="t.home.schedule.deliveries" icon="i-lucide-package-check" class="sub" />
+			<ul class="deliv">
+				<li v-for="d in deliveries" :key="d.key">
+					<span class="cd-muted when">{{ shortDate(d.date) }}</span>
+					<button v-if="exists(d.docPath)" class="name" :title="d.title" @click="app.openDoc(d.docPath, 'releases')">{{ d.title }}</button>
+					<span v-else class="name">{{ d.title }}</span>
+				</li>
+			</ul>
+		</template>
+	</section>
 </template>
 
 <style scoped>
 .rows {
-    margin: 0 -12px;
+	margin: 0 -12px;
 }
 
 .over {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin: 0 0 4px;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--ui-color-error-500);
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin: 0 0 4px;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--ui-color-error-500);
 }
 
 .more {
-    margin-top: 2px;
-    font-size: 12px;
-    color: var(--ui-color-primary-500);
-    cursor: pointer;
+	margin-top: 2px;
+	font-size: 12px;
+	color: var(--ui-color-primary-500);
+	cursor: pointer;
 }
 
 .more:hover {
-    text-decoration: underline;
+	text-decoration: underline;
 }
 
 .sub {
-    margin-top: 8px;
+	margin-top: 8px;
 }
 
 .deliv {
-    list-style: none;
-    margin: 0;
-    padding: 0;
+	list-style: none;
+	margin: 0;
+	padding: 0;
 }
 
 .deliv li {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    padding: 2px 0;
-    font-size: 12px;
-    min-width: 0;
+	display: flex;
+	align-items: baseline;
+	gap: 6px;
+	padding: 2px 0;
+	font-size: 12px;
+	min-width: 0;
 }
 
 .when {
-    flex-shrink: 0;
-    min-width: 36px;
-    font-variant-numeric: tabular-nums;
+	flex-shrink: 0;
+	min-width: 36px;
+	font-variant-numeric: tabular-nums;
 }
 
 .name {
-    min-width: 0;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    text-align: left;
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	text-align: left;
 }
 
 button.name {
-    cursor: pointer;
+	cursor: pointer;
 }
 
 button.name:hover {
-    color: var(--ui-color-primary-500);
+	color: var(--ui-color-primary-500);
 }
 </style>

@@ -14,59 +14,59 @@ const PAGE = (msg: string) => `<!doctype html><meta charset="utf-8"><title>Claus
 let current: (() => void) | null = null
 
 export async function loginOpenRouter(open: (url: string) => Promise<void>): Promise<string> {
-    current?.()
-    const verifier = b64url(randomBytes(32))
-    const challenge = b64url(createHash('sha256').update(verifier).digest())
-    const nonce = b64url(randomBytes(16))
+	current?.()
+	const verifier = b64url(randomBytes(32))
+	const challenge = b64url(createHash('sha256').update(verifier).digest())
+	const nonce = b64url(randomBytes(16))
 
-    let done!: (code: string) => void
-    let fail!: (e: Error) => void
-    const got = new Promise<string>((res, rej) => {
-        done = res
-        fail = rej
-    })
-    const handler: http.RequestListener = (req, res) => {
-        const u = new URL(req.url ?? '/', 'http://localhost')
-        const code = u.searchParams.get('code')
-        if (u.pathname !== `/cb/${nonce}` || !code) {
-            res.writeHead(404).end()
-            return
-        }
-        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
-        res.end(PAGE(t().errors.ai.openrouter.success))
-        done(code)
-    }
+	let done!: (code: string) => void
+	let fail!: (e: Error) => void
+	const got = new Promise<string>((res, rej) => {
+		done = res
+		fail = rej
+	})
+	const handler: http.RequestListener = (req, res) => {
+		const u = new URL(req.url ?? '/', 'http://localhost')
+		const code = u.searchParams.get('code')
+		if (u.pathname !== `/cb/${nonce}` || !code) {
+			res.writeHead(404).end()
+			return
+		}
+		res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+		res.end(PAGE(t().errors.ai.openrouter.success))
+		done(code)
+	}
 
-    const v4 = http.createServer(handler)
-    await new Promise<void>((r, j) => v4.once('error', j).listen(0, '127.0.0.1', () => r()))
-    const port = (v4.address() as AddressInfo).port
-    const v6 = http.createServer(handler)
-    await new Promise<void>((r) => v6.once('error', () => r()).listen(port, '::1', () => r()))
-    const close = () => {
-        v4.close()
-        v6.close()
-    }
-    const timer = setTimeout(() => fail(new Error(t().errors.ai.openrouter.timeout)), TIMEOUT())
-    current = () => fail(new Error(t().errors.oauth.cancelled))
+	const v4 = http.createServer(handler)
+	await new Promise<void>((r, j) => v4.once('error', j).listen(0, '127.0.0.1', () => r()))
+	const port = (v4.address() as AddressInfo).port
+	const v6 = http.createServer(handler)
+	await new Promise<void>((r) => v6.once('error', () => r()).listen(port, '::1', () => r()))
+	const close = () => {
+		v4.close()
+		v6.close()
+	}
+	const timer = setTimeout(() => fail(new Error(t().errors.ai.openrouter.timeout)), TIMEOUT())
+	current = () => fail(new Error(t().errors.oauth.cancelled))
 
-    try {
-        const callback = `http://localhost:${port}/cb/${nonce}`
-        await open(`${web()}/auth?callback_url=${encodeURIComponent(callback)}&code_challenge=${challenge}&code_challenge_method=S256`)
-        const code = await got
-        const res = await fetch(`${api()}/auth/keys`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-            body: JSON.stringify({ code, code_verifier: verifier, code_challenge_method: 'S256' }),
-        })
-        const j = (await res.json().catch(() => ({}))) as { key?: string; error?: { message?: string } | string }
-        if (!res.ok || !j.key) {
-            const m = typeof j.error === 'string' ? j.error : j.error?.message
-            throw new Error(t().errors.ai.openrouter.noKey(m ?? `HTTP ${res.status}`))
-        }
-        return j.key
-    } finally {
-        clearTimeout(timer)
-        current = null
-        close()
-    }
+	try {
+		const callback = `http://localhost:${port}/cb/${nonce}`
+		await open(`${web()}/auth?callback_url=${encodeURIComponent(callback)}&code_challenge=${challenge}&code_challenge_method=S256`)
+		const code = await got
+		const res = await fetch(`${api()}/auth/keys`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+			body: JSON.stringify({ code, code_verifier: verifier, code_challenge_method: 'S256' }),
+		})
+		const j = (await res.json().catch(() => ({}))) as { key?: string; error?: { message?: string } | string }
+		if (!res.ok || !j.key) {
+			const m = typeof j.error === 'string' ? j.error : j.error?.message
+			throw new Error(t().errors.ai.openrouter.noKey(m ?? `HTTP ${res.status}`))
+		}
+		return j.key
+	} finally {
+		clearTimeout(timer)
+		current = null
+		close()
+	}
 }

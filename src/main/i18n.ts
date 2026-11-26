@@ -7,7 +7,7 @@ export const systemLanguages = (): string[] => app.getPreferredSystemLanguages()
 
 // 設定の言語を反映する。変わったらメニューを作り直す
 export function applyLocale(settings: Pick<AppSettings, 'prefs'>): void {
-    const before = locale()
-    setLocale(resolveLocale(settings.prefs?.language, systemLanguages()))
-    if (locale() !== before) setAppMenu()
+	const before = locale()
+	setLocale(resolveLocale(settings.prefs?.language, systemLanguages()))
+	if (locale() !== before) setAppMenu()
 }

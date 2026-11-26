@@ -8,12 +8,12 @@ const label = computed(() => positionLabel(props.doc, props.cursor.line.value))
 </script>
 
 <template>
-    <span class="pos"><UIcon name="i-lucide-map-pin" />{{ label || '—' }}</span>
+	<span class="pos"><UIcon name="i-lucide-map-pin" />{{ label || '—' }}</span>
 </template>
 
 <style scoped>
 .pos {
-    color: var(--ui-text-toned);
-    font-weight: 600;
+	color: var(--ui-text-toned);
+	font-weight: 600;
 }
 </style>

@@ -3,70 +3,70 @@ defineProps<{ label?: string; description?: string; stacked?: boolean }>()
 </script>
 
 <template>
-    <div class="row" :class="{ stacked }">
-        <div class="text">
-            <div class="label">
-                <slot name="label">{{ label }}</slot>
-            </div>
-            <div v-if="description || $slots.description" class="desc">
-                <slot name="description">{{ description }}</slot>
-            </div>
-        </div>
-        <div class="control">
-            <slot />
-        </div>
-    </div>
+	<div class="row" :class="{ stacked }">
+		<div class="text">
+			<div class="label">
+				<slot name="label">{{ label }}</slot>
+			</div>
+			<div v-if="description || $slots.description" class="desc">
+				<slot name="description">{{ description }}</slot>
+			</div>
+		</div>
+		<div class="control">
+			<slot />
+		</div>
+	</div>
 </template>
 
 <style scoped>
 .row {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--ui-border);
+	display: flex;
+	align-items: center;
+	gap: 24px;
+	padding: 12px 0;
+	border-bottom: 1px solid var(--ui-border);
 }
 
 .row:last-child {
-    border-bottom: none;
+	border-bottom: none;
 }
 
 .row.stacked {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 8px;
 }
 
 .text {
-    flex: 1;
-    min-width: 0;
+	flex: 1;
+	min-width: 0;
 }
 
 .label {
-    font-size: 13px;
-    color: var(--ui-text-highlighted);
+	font-size: 13px;
+	color: var(--ui-text-highlighted);
 }
 
 .desc {
-    font-size: 12px;
-    color: var(--ui-text-muted);
-    margin-top: 2px;
-    line-height: 1.6;
+	font-size: 12px;
+	color: var(--ui-text-muted);
+	margin-top: 2px;
+	line-height: 1.6;
 }
 
 .control {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	gap: 8px;
 }
 
 .stacked .control {
-    flex-shrink: 1;
+	flex-shrink: 1;
 }
 
 .row:not(.stacked) .control :deep(.seg-wrap) {
-    align-items: flex-end;
-    text-align: right;
+	align-items: flex-end;
+	text-align: right;
 }
 </style>

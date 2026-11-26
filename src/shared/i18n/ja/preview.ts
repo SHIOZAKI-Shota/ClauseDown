@@ -1,3 +1,3 @@
 export const preview = {
-    pageBreak: '改ページ',
+	pageBreak: '改ページ',
 }

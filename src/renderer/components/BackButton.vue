@@ -4,5 +4,5 @@ const emit = defineEmits<{ click: [] }>()
 </script>
 
 <template>
-    <UButton :label="label" icon="i-lucide-arrow-left" size="sm" color="neutral" variant="ghost" @click="emit('click')" />
+	<UButton :label="label" icon="i-lucide-arrow-left" size="sm" color="neutral" variant="ghost" @click="emit('click')" />
 </template>

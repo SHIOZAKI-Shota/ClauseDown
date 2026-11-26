@@ -1,7 +1,7 @@
 {
-    "name": "clausedown-keychip",
-    "private": true,
-    "napi": {
-        "binaryName": "clausedown-keychip"
-    }
+	"name": "clausedown-keychip",
+	"private": true,
+	"napi": {
+		"binaryName": "clausedown-keychip"
+	}
 }
