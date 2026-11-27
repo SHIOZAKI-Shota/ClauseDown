@@ -135,8 +135,16 @@
 		"directories": {
 			"output": "release"
 		},
+		"electronLanguages": [
+			"ja",
+			"en",
+			"en-US"
+		],
 		"files": [
-			"out/**/*",
+			"out/main/**/*",
+			"out/preload/**/*",
+			"out/renderer/**/*",
+			"out/licenses.json",
 			"package.json"
 		],
 		"extraResources": [
